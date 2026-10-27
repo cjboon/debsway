@@ -35,4 +35,7 @@ can change what the scripts rely on.
 - `prep/fetch-offline-debs.sh`, `prep/fetch-tor-browser.sh`: download
   things you need before a reinstall (see the README).
 - `tools/pack-usb.sh /path/to/stick`: puts the last commit and `offline/`
-  on a stick, without personal files.
+  on a stick, without personal files, labels the stick `DEBSWAY` (only a
+  removable drive, and it asks first) and writes `START-HERE.txt`.
+- `start.sh`: what a user runs from the stick on a fresh install
+  (`sudo mount -L DEBSWAY /mnt && bash /mnt/debsway/start.sh`).

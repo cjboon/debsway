@@ -31,13 +31,17 @@ then run them.
 
 1. Install Debian 13 with disk encryption and no desktop (details in
    [Installing Debian](#installing-debian)).
-2. Log in on the text console, copy this folder over, then:
+2. Log in on the text console, plug in the USB stick (labelled `DEBSWAY`,
+   which `tools/pack-usb.sh` does for you) and type one line:
 
 ```bash
-cd ~/debsway
-bash wifi.sh             # get online (skip if you already are)
-bash install-base.sh     # the core desktop
+sudo mount -L DEBSWAY /mnt && bash /mnt/debsway/start.sh
 ```
+
+   `start.sh` copies debsway to `~/debsway`, unmounts the stick, runs
+   `wifi.sh` if you aren't online, and starts `install-base.sh`, which
+   explains what it will do and asks before changing anything. (Without
+   the stick, see [After the first boot](#after-the-first-boot).)
 
 3. Log out and log in on tty1: sway starts. Super+? shows every key.
 4. `install-base.sh` ends with a list of optional programs: arrow keys and
@@ -52,6 +56,7 @@ still works.
 ```
 debsway/
 ├── README.md, THREAT-MODEL.md, LICENSE (MIT)
+├── start.sh                 from the stick on a fresh install: copies debsway home, unmounts, wifi.sh if needed, install-base.sh
 ├── install-base.sh          the core desktop: explains and asks, packages, sway, bar, every part, then the extras list
 ├── install-extras.sh        pick optional programs from a list (install-base.sh ends with it)
 ├── wifi.sh                  get online over Wi-Fi, whatever is installed
@@ -97,15 +102,26 @@ executable bit.
    disk. A plain USB stick isn't encrypted, so delete anything sensitive
    from it once it's restored.
 4. Copy debsway to a USB stick: `bash tools/pack-usb.sh /media/you/STICK`
-   copies the last commit and `offline/` (not your `ignore/` folder), or
-   copy the whole `debsway` folder yourself.
+   copies the last commit and `offline/` (not your `ignore/` folder),
+   labels the stick `DEBSWAY` (it asks) and adds a `START-HERE.txt` you can
+   read on another computer. The label is what lets one line find the stick
+   on the new system. Or copy the whole `debsway` folder yourself and label
+   the stick yourself (`fatlabel /dev/sdX1 DEBSWAY` for FAT,
+   `e2label /dev/sdX1 DEBSWAY` for ext4).
 
 ## Installing Debian
 
 In the installer:
 
-- **Root password: leave it empty.** Debian then installs sudo and gives
-  it to your user. If you set one, run `prep/setup-sudo.sh` later.
+- **Root password: leave it empty, don't set one.** Debian then locks the
+  root account (nobody can log in as root, on the console or anywhere
+  else) and gives your user sudo. A root password is one more password
+  that unlocks the whole system, typed at a login prompt where every
+  command runs with full rights and nothing records which user did what;
+  with sudo, root is used only for single commands, after your own
+  password, and the system logs each one. If you set one anyway, run
+  `prep/setup-sudo.sh` later, and lock root afterwards with
+  `sudo passwd -l root`.
 - **Software selection: only "standard system utilities".** Untick
   "Debian desktop environment" and every desktop listed under it.
 - **Partitioning: "Guided - use entire disk and set up encrypted LVM".**
@@ -123,14 +139,26 @@ In the installer:
 
 ## After the first boot
 
+The quick way is the one line in the [Quick start](#quick-start). By hand,
+or without the stick:
+
 ```bash
-# 1. Copy the scripts off the USB stick (lsblk shows its name, e.g. sdb1)
-lsblk
-sudo mount /dev/sdb1 /mnt
+# 1. Get the scripts. From the USB stick (labelled DEBSWAY):
+sudo mount -L DEBSWAY /mnt
 cp -r /mnt/debsway ~ && sudo umount /mnt
+#    If it can't find the label, lsblk -f lists the drives and dmesg | tail
+#    shows the name the stick got (e.g. sdb1): sudo mount /dev/sdb1 /mnt
+#
+#    Or, with no stick, if you're already online (a cable, USB tethering from
+#    a phone, or Wi-Fi you set up in the installer; wifi.sh is one of the
+#    scripts you're downloading, so it can't help yet):
+#    wget -qO- https://github.com/cjboon/debsway/archive/refs/heads/main.tar.gz | tar xz
+#    mv debsway-main debsway
+#    (git isn't part of "standard system utilities", wget is. Read the
+#    scripts before you run them: this comes over https from GitHub only.)
 cd ~/debsway
 
-# 2. Get online (skip if the installer already connected you)
+# 2. Get online (skip if you already are: a cable, or the installer's Wi-Fi)
 bash wifi.sh
 
 # 3. Only if you set a root password in the installer

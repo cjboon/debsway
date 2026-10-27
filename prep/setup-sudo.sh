@@ -28,3 +28,5 @@ if ! command -v sudo >/dev/null; then
 fi
 adduser "$user" sudo
 say "Done. $user must log out and back in before sudo works."
+note "Once sudo works, lock the root password (no one can log in as root, sudo is unaffected):"
+note "  sudo passwd -l root"

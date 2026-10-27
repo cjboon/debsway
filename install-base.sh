@@ -23,6 +23,11 @@ fi
 . "$DEBSWAY_DIR/packages.sh"
 
 need_user
+# A root account with a password is another way to full control of the system
+if [ "$(sudo passwd -S root 2>/dev/null | awk '{ print $2 }')" = P ]; then
+    warn "The root account has a password. sudo already gives you root when you need it, so"
+    warn "that password is one more way in. Lock it (sudo keeps working): sudo passwd -l root"
+fi
 . /etc/os-release
 [ "${VERSION_CODENAME:-}" = "$DEBIAN_RELEASE" ] ||
     warn "Written for Debian 13 ($DEBIAN_RELEASE); this is ${PRETTY_NAME:-unknown}."
