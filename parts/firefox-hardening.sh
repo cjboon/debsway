@@ -6,13 +6,14 @@
 #    ublock-allow example.com
 #  - The JavaScript JIT is off. Most serious Firefox exploits target it.
 #    JavaScript still works, a bit slower; heavy web apps may lag. A
-#    profile can turn it back on (firefox-profiles/new-profile.sh asks).
+#    profile can turn it back on (extras/firefox-profiles/new-profile.sh asks).
 #  - HTTPS-Only Mode: Firefox won't load unencrypted pages without asking,
 #    so nobody on café or hotel Wi-Fi can tamper with them.
 #  - A notice when Firefox was updated while it's running: the running
 #    browser keeps the old, unfixed version until you restart it.
 # These are defaults: change one in a profile at about:config.
 # Usage: bash firefox-hardening.sh [--remove]
+# status: file:/etc/firefox-esr/debsway-hardening.js
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
@@ -21,18 +22,19 @@ need_user
 ETC=/etc/firefox-esr
 PREFS="$ETC/debsway-hardening.js"
 ALLOW=/usr/local/bin/ublock-allow
-CHECK="$HOME/.local/bin/firefox-restart-check"
 UNITS="$HOME/.config/systemd/user"
 
 if [ "${1:-}" = --remove ]; then
     systemctl --user disable --now firefox-restart-check.timer >/dev/null 2>&1 || true
     rm -f "$UNITS/firefox-restart-check.service" "$UNITS/firefox-restart-check.timer"
-    if grep -qs 'written by debsway' "$CHECK"; then rm -f "$CHECK"; fi
+    remove_bin firefox-restart-check
     if [ -f "$ETC/policies/.debsway-written" ] && sha256sum --status -c "$ETC/policies/.debsway-written"; then
         sudo rm -f "$ETC/policies/policies.json" "$ETC/policies/.debsway-written"
         sudo rmdir "$ETC/policies" 2>/dev/null || true
     fi
     sudo rm -f "$PREFS" "$ETC/debsway-ublock-allow" "$ALLOW"
+    # Firefox and uBlock Origin are part of the core (install-base.sh), so they stay
+    apt_purge
     note "Firefox is back to its own defaults after a restart. uBlock Origin stays installed."
     exit
 fi
@@ -54,7 +56,7 @@ printf '%s\n' \
     'pref("javascript.options.asmjs", false);' | sudo tee "$PREFS" >/dev/null
 note "HTTPS-Only Mode on, JavaScript JIT off ($PREFS)"
 
-sudo install -m 0755 "$DEBSWAY_DIR/config/ublock-allow" "$ALLOW"
+sudo install -m 0755 "$DEBSWAY_DIR/bin/ublock-allow" "$ALLOW"
 if sudo "$ALLOW" --refresh; then
     note "uBlock Origin blocks other sites' scripts and frames. When a site breaks:"
     note "  ublock-allow example.com   (then restart Firefox; ublock-allow --list shows them)"
@@ -63,30 +65,15 @@ else
 fi
 
 say "Firefox update notice"
-mkdir -p "$(dirname -- "$CHECK")" "$UNITS"
-cat >"$CHECK" <<'EOF'
-#!/bin/sh
-# firefox-restart-check: written by debsway parts/firefox-hardening.sh.
-# Says so when Firefox was updated while running. The running browser
-# keeps the old, unfixed version until it's restarted.
-notified=${XDG_RUNTIME_DIR:-/tmp}/firefox-restart-notified
-for pid in $(pgrep -u "$(id -u)" -x firefox-esr); do
-    exe=$(readlink "/proc/$pid/exe") || continue
-    case $exe in *" (deleted)") ;; *) continue ;; esac
-    grep -qx "$pid" "$notified" 2>/dev/null && continue
-    notify-send -u critical "Firefox was updated" \
-        "Restart Firefox (close it, open it again) to use the fixed version." &&
-        echo "$pid" >>"$notified"
-done
-EOF
-chmod +x "$CHECK"
+mkdir -p "$UNITS"
+install_bin firefox-restart-check
 cat >"$UNITS/firefox-restart-check.service" <<EOF
 [Unit]
 Description=Tell me when Firefox needs a restart after an update (debsway)
 
 [Service]
 Type=oneshot
-ExecStart=$CHECK
+ExecStart=$BIN/firefox-restart-check
 EOF
 cat >"$UNITS/firefox-restart-check.timer" <<'EOF'
 [Unit]

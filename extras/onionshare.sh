@@ -6,9 +6,13 @@
 # OnionShare starts its own private tor. Debian's package also installs
 # the system tor service, which would connect to Tor directly the moment
 # it's installed, so that service is masked (blocked) first and never runs.
-# Your obfs4 bridges are written into OnionShare's settings before its
-# first start, so its first connection goes through them.
+# It first asks whether you need a bridge to reach Tor (built-in obfs4,
+# your own obfs4 lines, or Snowflake; OnionShare can't use webtunnel or
+# meek on Debian). The choice is written into OnionShare's settings before
+# its first start, so its first connection goes through the bridge.
 # Usage: bash onionshare.sh [--remove]
+# summary: Share files, sites and chat over Tor
+# status: apt:onionshare-cli apt:onionshare
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
@@ -21,59 +25,78 @@ if [ "${1:-}" = --remove ]; then
     exit
 fi
 
-say "Blocking the system tor service"
-sudo systemctl mask tor.service tor@default.service >/dev/null
-note "Masked tor.service and tor@default.service: installing tor won't start it."
-
-say "Installing OnionShare"
-pkgs=(onionshare-cli obfs4proxy)
-if ask "Also install the graphical OnionShare app?" y; then
-    # qt6-wayland: lets the Qt 6 app run on Wayland without XWayland
-    pkgs+=(onionshare qt6-wayland)
-fi
-apt_install "${pkgs[@]}"
-if systemctl is-active --quiet tor.service tor@default.service; then
-    warn "The system tor service is running anyway. Stop it: sudo systemctl stop tor@default.service"
-fi
-
+# Asked first, before anything is installed
 say "Bridges"
-mapfile -t old < <(python3 -I - "$SETTINGS" <<'PY' 2>/dev/null
+old=()
+if [ -f "$SETTINGS" ] && command -v python3 >/dev/null; then
+    mapfile -t old < <(python3 -I - "$SETTINGS" <<'PY' 2>/dev/null
 import json, sys
 s = json.load(open(sys.argv[1]))
 if s.get("bridges_enabled") and s.get("bridges_type") == "custom":
     print("\n".join(l for l in s.get("bridges_custom", "").split("\n") if l.strip()))
 PY
-)
+    )
+fi
 if [ ${#old[@]} -gt 0 ] && ask "Keep the ${#old[@]} bridge line(s) OnionShare already has?" y; then
     BRIDGES=("${old[@]}")
+    BRIDGE_TYPE=obfs4
+    BRIDGE_WANTED=true
 else
-    read_bridges obfs4
+    pick_bridges onionshare
 fi
 
-# Only these settings are written; OnionShare fills in the rest
+say "Blocking the system tor service"
+if [ -e /etc/tor/.debsway-apt-tor ]; then
+    # parts/apt-tor.sh runs it, with your bridge, to download packages
+    note "The system tor service stays on: it downloads packages (parts/apt-tor.sh)."
+else
+    sudo systemctl mask tor.service tor@default.service >/dev/null
+    note "Masked tor.service and tor@default.service: installing tor won't start it."
+fi
+
+say "Installing OnionShare"
+pkgs=(onionshare-cli obfs4proxy)
+# OnionShare finds the Snowflake program by name
+[ "$BRIDGE_TYPE" != snowflake ] || pkgs+=(snowflake-client)
+if ask "Also install the graphical OnionShare app?" y; then
+    # qt6-wayland: lets the Qt 6 app run on Wayland without XWayland
+    pkgs+=(onionshare qt6-wayland)
+fi
+apt_install "${pkgs[@]}"
+if [ ! -e /etc/tor/.debsway-apt-tor ] && systemctl is-active --quiet tor.service tor@default.service; then
+    warn "The system tor service is running anyway. Stop it: sudo systemctl stop tor@default.service"
+fi
+
+# Only these settings are written; OnionShare fills in the rest. Its own
+# tor then connects through the bridge, from its very first start.
 mkdir -p "$(dirname -- "$SETTINGS")"
-python3 -I - "$SETTINGS" "${BRIDGES[@]}" <<'PY'
+python3 -I - "$SETTINGS" "$BRIDGE_TYPE" "${BRIDGES[@]}" <<'PY'
 import json, os, sys
-path, bridges = sys.argv[1], sys.argv[2:]
+path, kind, lines = sys.argv[1], sys.argv[2], sys.argv[3:]
 try:
     s = json.load(open(path))
 except (OSError, ValueError):
     s = {}
 s["connection_type"] = "bundled"
-s["bridges_enabled"] = bool(bridges)
-if bridges:
+s["bridges_enabled"] = kind != "none"
+if kind == "obfs4" and lines:
     s["bridges_type"] = "custom"
-    s["bridges_custom"] = "\n".join(bridges)
+    s["bridges_custom"] = "\n".join(lines)
+elif kind in ("obfs4-builtin", "snowflake"):
+    s["bridges_type"] = "built-in"
+    s["bridges_builtin_pt"] = kind.replace("-builtin", "")
 tmp = path + ".tmp"
 with open(tmp, "w") as f:
     json.dump(s, f, indent=2)
 os.chmod(tmp, 0o600)
 os.replace(tmp, path)
 PY
-if [ ${#BRIDGES[@]} -gt 0 ]; then
-    note "OnionShare's tor connects through your ${#BRIDGES[@]} obfs4 bridge(s)."
+if [ "$BRIDGE_TYPE" != none ]; then
+    note "OnionShare's tor connects through a bridge: $(bridge_summary)."
+elif $BRIDGE_WANTED; then
+    warn "You said you need a bridge but none was set up: OnionShare connects to Tor directly. Run this again."
 else
-    warn "No bridges: OnionShare connects to Tor directly. Run this again to add some."
+    note "No bridge: OnionShare's tor connects directly."
 fi
 
 cat <<'EOF'

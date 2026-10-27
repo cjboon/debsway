@@ -3,18 +3,23 @@
 # password prompt needs GTK, so this installs a small one of its own:
 # wmenu in password mode if wmenu is installed, else a floating foot window.
 # Usage: bash udiskie.sh [--remove]
+# status: apt:udiskie
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
-ASKPASS="$HOME/.local/bin/luks-askpass"
+ASKPASS="$BIN/luks-askpass"
+UCONF="$HOME/.config/udiskie/config.yml"
+UMARK="# Written by debsway parts/udiskie.sh"
 # udiskie runs the prompt without a shell, so the path must be absolute
 UDISKIE_CMD="udiskie --no-tray --no-file-manager --password-prompt '$ASKPASS {device_presentation}'"
 
 if [ "${1:-}" = --remove ]; then
     remove_snippet automount
     pkill -x udiskie || true
-    rm -f "$ASKPASS"
+    remove_bin luks-askpass
+    if grep -qxF "$UMARK" "$UCONF" 2>/dev/null; then rm -f "$UCONF"; fi
     # cryptsetup stays: an encrypted system disk needs it to boot
+    sudo apt-mark manual cryptsetup >/dev/null
     apt_purge udiskie udisks2 gir1.2-notify-0.7
     exit
 fi
@@ -24,27 +29,23 @@ fi
 say "Installing udiskie, udisks2 and cryptsetup"
 apt_install udiskie udisks2 cryptsetup polkitd gir1.2-notify-0.7
 
-mkdir -p "${ASKPASS%/*}"
-cat >"$ASKPASS" <<'EOF'
-#!/bin/sh
-# luks-askpass DEVICE: asks for a LUKS password and prints it for udiskie.
-# Written by debsway parts/udiskie.sh
-prompt="Password for $1:"
-if command -v wmenu >/dev/null; then
-    exec wmenu -P -p "$prompt" </dev/null
+install_bin luks-askpass
+
+# A stranger's USB stick is mounted the moment it's plugged in, so nothing
+# on it may run: no setuid files, no device files, no executables. The
+# stick with debsway on it still works, since scripts run as "bash x.sh".
+if [ -f "$UCONF" ]; then
+    note "Keeping existing $UCONF"
+else
+    mkdir -p "${UCONF%/*}"
+    cat >"$UCONF" <<EOF2
+$UMARK
+# Mount options for every drive. Delete noexec to run programs from a stick.
+mount_options:
+  - options: [nosuid, nodev, noexec]
+EOF2
+    note "Wrote $UCONF (drives mount with nosuid, nodev, noexec)"
 fi
-# No wmenu: ask in a foot window, pass the answer back in a private file
-f=$(mktemp) || exit 1
-trap 'rm -f "$f"' EXIT
-foot --app-id=luks-askpass --title="Unlock $1" sh -c '
-    printf "%s " "$1"
-    stty -echo; read -r p; stty echo
-    printf "%s" "$p" >"$2"' sh "$prompt" "$f"
-[ -s "$f" ] || exit 1
-cat "$f"
-EOF
-chmod +x "$ASKPASS"
-note "Wrote $ASKPASS"
 
 put_snippet automount <<EOF
 # USB automount (debsway parts/udiskie.sh)

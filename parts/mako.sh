@@ -2,6 +2,7 @@
 # Desktop notifications. mako starts by itself the first time an app
 # sends one, so the sway config only gets keys to dismiss them.
 # Usage: bash mako.sh [--remove]
+# status: apt:mako-notifier
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 

@@ -4,17 +4,21 @@
 # encrypted with a password that restic asks for each time; it isn't
 # stored anywhere. Backups only store what changed since the last one.
 # This sets up the backup place and a "backup" command.
+# For backups that run without you (a timer, a script), the config can hold
+# a command that prints the password, e.g. one that asks a password manager;
+# the password itself is never written down.
 # Usage: bash backup.sh [--remove]
+# summary: Encrypted backups of your home folder (restic)
+# status: apt:restic
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
 CONF_DIR="$HOME/.config/debsway"
 CONF="$CONF_DIR/backup.conf"
 EXCLUDES="$CONF_DIR/backup-excludes"
-CMD="$HOME/.local/bin/backup"
 
 if [ "${1:-}" = --remove ]; then
-    if grep -qs 'written by debsway extras/backup.sh' "$CMD"; then rm -f "$CMD"; fi
+    remove_bin backup
     rm -f "$CONF" "$EXCLUDES"
     apt_purge restic
     note "Your backups themselves are left where they are."
@@ -55,8 +59,17 @@ else
     restic -r "$repo" init </dev/tty || die "restic couldn't create the backup."
 fi
 
-mkdir -p "$CONF_DIR" "$(dirname -- "$CMD")"
+mkdir -p "$CONF_DIR"
+cmd=$(sed -n 's/^PASSWORD_COMMAND=//p' "$CONF" 2>/dev/null || true)
+if [ -n "$cmd" ]; then
+    ask "Keep getting the backup password with: $cmd ?" y || cmd=
+else
+    note "restic asks for the backup password each time. To run backups without typing it,"
+    note "give a command that prints it (for example one that reads a secret store you unlock at login)."
+    tty_read cmd "    password command (Enter to be asked each time)> "
+fi
 printf '# Written by debsway extras/backup.sh\nBACKUP_REPO=%s\n' "$repo" >"$CONF"
+if [ -n "$cmd" ]; then printf 'PASSWORD_COMMAND=%s\n' "$cmd" >>"$CONF"; fi
 
 # Left out: caches, trash, and big things that can be downloaded again.
 # Edit the file to change it; one pattern per line.
@@ -66,31 +79,13 @@ if [ ! -f "$EXCLUDES" ]; then
 $HOME/.cache
 $HOME/.local/share/Trash
 $HOME/.local/share/libvirt/images
-$HOME/debsway/debs
-$HOME/debsway/torbrowser
-$HOME/debsway/whonix
+$DEBSWAY_DIR/offline
 EOF
 fi
+# Folders of earlier versions moved into offline/
+grep -qxF "$DEBSWAY_DIR/offline" "$EXCLUDES" || echo "$DEBSWAY_DIR/offline" >>"$EXCLUDES"
 
-cat >"$CMD" <<'EOF'
-#!/bin/bash
-# backup: written by debsway extras/backup.sh
-#   backup            back up your home folder now
-#   backup ARGS...    any restic command, on your backup (e.g. backup snapshots)
-conf="$HOME/.config/debsway/backup.conf"
-[ -f "$conf" ] || { echo "Not set up. Run: bash ~/debsway/extras/backup.sh" >&2; exit 1; }
-repo=$(sed -n 's/^BACKUP_REPO=//p' "$conf")
-if [ ! -f "$repo/config" ]; then
-    echo "Backup not found at $repo. Is the drive plugged in?" >&2
-    exit 1
-fi
-export RESTIC_REPOSITORY="$repo"
-if [ $# -eq 0 ]; then
-    exec restic backup --exclude-caches --exclude-file="$HOME/.config/debsway/backup-excludes" "$HOME"
-fi
-exec restic "$@"
-EOF
-chmod +x "$CMD"
+install_bin backup
 note "Backups go to: $repo"
 note "Left out (edit to change): $EXCLUDES"
 

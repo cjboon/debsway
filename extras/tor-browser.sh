@@ -7,15 +7,18 @@
 # Tor Browser runs on X11 on purpose (less fingerprintable), so XWayland
 # is installed too.
 # Before Tor Browser's first start this also writes a user.js into its
-# profile: the Safest security level, JavaScript off, and your bridge
-# lines, so its very first connection goes through a bridge. Firefox
+# profile: the Safest security level, JavaScript off, and a bridge if you
+# need one (it asks first, then offers obfs4, webtunnel, Snowflake or meek),
+# so its very first connection goes through it. Firefox
 # applies user.js at every start, so these come back after a restart even
 # if changed in the browser; run this again to change them.
-# If fetch-tor-browser.sh saved a copy into ../torbrowser, that copy is
+# If prep/fetch-tor-browser.sh saved a copy into ../offline/torbrowser, that copy is
 # checked and installed, so nothing is fetched from torproject.org.
 # Usage: bash tor-browser.sh [--remove]
+# summary: Tor Browser with your bridges (bridge lines needed)
+# status: apt:torbrowser-launcher
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/extras/appimage.sh"
+. "$DEBSWAY_DIR/lib/appimage.sh"
 need_user
 
 MARK=/etc/apt/debsway-enabled-contrib
@@ -94,10 +97,10 @@ USERJS="$PROFILE/user.js"
 JS_BEGIN='// >>> debsway extras/tor-browser.sh >>>'
 JS_END='// <<< debsway <<<'
 
-OFFLINE="$DEBSWAY_DIR/torbrowser"
+OFFLINE="$DEBSWAY_DIR/offline/torbrowser"
 TBL_SETTINGS="$HOME/.config/torbrowser/settings.json"
 
-# Unpack the copy fetch-tor-browser.sh saved, checked against the key it
+# Unpack the copy prep/fetch-tor-browser.sh saved, checked against the key it
 # saved, so torbrowser-launcher finds Tor Browser installed and just runs it
 install_offline_copy() {
     local copies tarball
@@ -109,7 +112,7 @@ install_offline_copy() {
     fi
     tarball=$(printf '%s\n' "${copies[@]}" | sort -V | tail -1)
     verify_detached "$TB_FPR" "$OFFLINE/tor-browser-developers.asc" "$tarball.asc" "$tarball" ||
-        die "The saved copy $tarball didn't pass its signature check. Run fetch-tor-browser.sh again."
+        die "The saved copy $tarball didn't pass its signature check. Run prep/fetch-tor-browser.sh again."
     mkdir -p "$(dirname -- "$TBB")"
     tar -xJf "$tarball" -C "$(dirname -- "$TBB")"
     # Without a settings file the launcher doesn't look for an installed
@@ -129,7 +132,13 @@ current_bridges() {
         sed -n 's/^user_pref("torbrowser\.settings\.bridges\.bridge_strings\.[0-9]*", "\(.*\)");$/\1/p'
 }
 
-# Safest and JavaScript off (config/tor-browser-safest.js), plus bridges
+# Our block's built-in bridge type (obfs4, snowflake, meek), if any
+current_builtin() {
+    sed -n "\|^$JS_BEGIN\$|,\|^$JS_END\$|p" "$USERJS" 2>/dev/null |
+        sed -n 's/^user_pref("torbrowser\.settings\.bridges\.builtin_type", "\(.*\)");$/\1/p' | head -1
+}
+
+# Safest and JavaScript off (data/tor-browser-safest.js), plus bridges
 write_userjs() {
     local i tmp
     mkdir -p "$PROFILE"
@@ -140,44 +149,56 @@ write_userjs() {
     fi
     {
         echo "$JS_BEGIN"
-        cat "$DEBSWAY_DIR/config/tor-browser-safest.js"
-        if [ ${#BRIDGES[@]} -gt 0 ]; then
-            echo 'user_pref("torbrowser.settings.bridges.enabled", true);'
-            echo 'user_pref("torbrowser.settings.bridges.source", 2);'
-            for i in "${!BRIDGES[@]}"; do
-                printf 'user_pref("torbrowser.settings.bridges.bridge_strings.%d", "%s");\n' "$i" "${BRIDGES[$i]}"
-            done
-        fi
+        cat "$DEBSWAY_DIR/data/tor-browser-safest.js"
+        # source: 0 = Tor Browser's built-in bridges, 2 = lines you provide
+        case $BRIDGE_TYPE in
+            obfs4 | webtunnel)
+                echo 'user_pref("torbrowser.settings.bridges.enabled", true);'
+                echo 'user_pref("torbrowser.settings.bridges.source", 2);'
+                for i in "${!BRIDGES[@]}"; do
+                    printf 'user_pref("torbrowser.settings.bridges.bridge_strings.%d", "%s");\n' "$i" "${BRIDGES[$i]}"
+                done ;;
+            obfs4-builtin | snowflake | meek)
+                echo 'user_pref("torbrowser.settings.bridges.enabled", true);'
+                echo 'user_pref("torbrowser.settings.bridges.source", 0);'
+                printf 'user_pref("torbrowser.settings.bridges.builtin_type", "%s");\n' "${BRIDGE_TYPE%-builtin}" ;;
+        esac
         echo "$JS_END"
     } >>"$tmp"
     chmod 600 "$tmp"
     mv "$tmp" "$USERJS"
     # Bridges saved earlier from the browser's settings would be used too,
     # so drop them; Tor Browser rewrites prefs.js from user.js at start.
-    if [ ${#BRIDGES[@]} -gt 0 ] && [ -f "$PROFILE/prefs.js" ]; then
+    if [ "$BRIDGE_TYPE" != none ] && [ -f "$PROFILE/prefs.js" ]; then
         sed -i '/^user_pref("torbrowser\.settings\.bridges\.bridge_strings\./d' "$PROFILE/prefs.js"
     fi
 }
 
 prepare_profile() {
-    local old
+    local old old_builtin
     if tor_browser_running; then
         warn "Tor Browser is running. Quit it and run this again to set its security level and bridges."
         return 0
     fi
     mapfile -t old < <(current_bridges)
+    old_builtin=$(current_builtin)
     if [ ${#old[@]} -gt 0 ] && ask "Keep the ${#old[@]} bridge line(s) set up last time?" y; then
         BRIDGES=("${old[@]}")
+        BRIDGE_TYPE=obfs4
+        [[ ${old[0]} != webtunnel* ]] || BRIDGE_TYPE=webtunnel
+    elif [ -n "$old_builtin" ] && ask "Keep using Tor Browser's built-in $old_builtin bridges, set up last time?" y; then
+        BRIDGE_TYPE=$old_builtin
+        [ "$BRIDGE_TYPE" != obfs4 ] || BRIDGE_TYPE=obfs4-builtin
     else
-        read_bridges webtunnel
+        pick_bridges tor-browser
     fi
     write_userjs
     note "Tor Browser starts at the Safest level with JavaScript off ($USERJS)."
-    if [ ${#BRIDGES[@]} -gt 0 ]; then
-        note "Its first connection goes through your ${#BRIDGES[@]} webtunnel bridge(s)."
+    if [ "$BRIDGE_TYPE" != none ]; then
+        note "Its first connection goes through a bridge: $(bridge_summary)."
     else
-        warn "No bridge lines given. Unless you add bridges in Tor Browser's settings before"
-        warn "clicking Connect, it connects to Tor directly. Run this again to add some."
+        note "No bridge: Tor Browser connects to Tor directly. Run this again to set one up,"
+        note "or choose one in its settings before you click Connect."
     fi
     if [ ! -e "$TBB/start-tor-browser.desktop" ]; then
         note "Note: the first run downloads Tor Browser from torproject.org without Tor,"
@@ -197,7 +218,6 @@ if [ "${1:-}" = --remove ]; then
         sed -i "\|^$JS_BEGIN\$|,\|^$JS_END\$|d" "$USERJS"
         note "Took the debsway settings out of $USERJS; Tor Browser keeps their last values."
     fi
-    note "XWayland is kept, since other apps may need it."
     exit
 fi
 

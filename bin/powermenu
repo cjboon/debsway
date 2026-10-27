@@ -1,0 +1,12 @@
+#!/bin/sh
+# powermenu: written by debsway parts/power-menu.sh
+# Lock, suspend, log out, reboot or power off, picked from a small menu.
+# Escape closes it without doing anything.
+choice=$(printf '%s\n' Lock Suspend "Log out" Reboot "Power off" | wmenu -p "Power:") || exit 0
+case $choice in
+    Lock) exec swaylock -f -c 000000 ;;
+    Suspend) exec systemctl suspend ;;
+    "Log out") exec swaymsg exit ;;
+    Reboot) exec systemctl reboot ;;
+    "Power off") exec systemctl poweroff ;;
+esac

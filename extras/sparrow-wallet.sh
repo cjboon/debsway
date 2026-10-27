@@ -6,16 +6,17 @@
 # app, which is X11-only, so XWayland is installed.
 # Running it again installs a newer release if there is one.
 # Usage: bash sparrow-wallet.sh [--remove]
+# summary: Sparrow Bitcoin wallet (signed .deb)
+# status: apt:sparrowwallet
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/extras/appimage.sh"
+. "$DEBSWAY_DIR/lib/appimage.sh"
 need_user
 
 # Craig Raw's key: SPARROW_FPR and SPARROW_KEY_URL in pins.sh
-CMD="$BIN/sparrow"
 
 if [ "${1:-}" = --remove ]; then
     apt_purge sparrowwallet
-    if grep -qs 'written by debsway extras/sparrow-wallet.sh' "$CMD"; then rm -f "$CMD"; fi
+    remove_bin sparrow
     note "Your wallets are kept in ~/.sparrow. Back them up before deleting anything."
     exit
 fi
@@ -48,9 +49,7 @@ else
 fi
 
 # The package puts Sparrow in /opt without a command on PATH
-mkdir -p "$BIN"
-printf '#!/bin/sh\n# sparrow: written by debsway extras/sparrow-wallet.sh\nexec /opt/sparrowwallet/bin/Sparrow "$@"\n' >"$CMD"
-chmod +x "$CMD"
+install_bin sparrow
 note "Run it with: sparrow   (or Super+d). Wallets live in ~/.sparrow."
 note "On first start it asks which server to use. A public server sees your wallet's"
 note "addresses; Sparrow's Tor (proxy) setting hides your IP address from it, and"

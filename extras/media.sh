@@ -3,13 +3,13 @@
 # run natively on Wayland. Debian names the viewer imv-wayland, so an
 # "imv" command is added for it.
 # Usage: bash media.sh [--remove]
+# summary: imv image viewer and mpv video and music player
+# status: apt:imv apt:mpv
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
-IMV="$HOME/.local/bin/imv"
-
 if [ "${1:-}" = --remove ]; then
-    if grep -qs 'written by debsway extras/media.sh' "$IMV"; then rm -f "$IMV"; fi
+    remove_bin imv
     apt_purge imv mpv
     exit
 fi
@@ -17,9 +17,7 @@ fi
 say "Installing imv and mpv"
 apt_install imv mpv
 if [ ! -e /usr/bin/imv ]; then
-    mkdir -p "$(dirname -- "$IMV")"
-    printf '#!/bin/sh\n# imv: written by debsway extras/media.sh\nexec imv-wayland "$@"\n' >"$IMV"
-    chmod +x "$IMV"
+    install_bin imv
 fi
 
 cat <<'EOF'

@@ -3,12 +3,15 @@
 # Moves any Wi-Fi already set up by the Debian installer or wifi.sh
 # over to NetworkManager, so it keeps connecting after a reboot.
 # Usage: bash network-manager.sh [--remove]
+# status: apt:network-manager
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
 if [ "${1:-}" = --remove ]; then
     warn "Removing NetworkManager disconnects you. Run 'bash $DEBSWAY_DIR/wifi.sh' afterwards."
     ask "Continue?" n || exit 0
+    # wifi.sh needs these to get you back online
+    sudo apt-mark manual wpasupplicant wireless-regdb >/dev/null
     apt_purge network-manager
     exit
 fi
@@ -55,11 +58,16 @@ for ifc in $(wifi_ifaces); do
 
     say "Moving Wi-Fi \"$ssid\" on $ifc to NetworkManager"
     sudo nmcli connection delete id "$ssid" >/dev/null 2>&1 || true
-    args=(connection add type wifi con-name "$ssid" ifname "$ifc" ssid "$ssid")
-    if [ "$hidden" = 1 ]; then args+=(802-11-wireless.hidden yes); fi
-    # WPA2 first; a WPA3-only network is retried as SAE below
-    if [ -n "$psk" ]; then args+=(wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$psk"); fi
-    sudo nmcli "${args[@]}" >/dev/null
+    # WPA2 first; a WPA3-only network is retried as SAE below. The connection
+    # is written to NetworkManager's config folder, so the password never
+    # appears in the command line of a running nmcli; nmcli add is the
+    # fallback for names and passwords that file format can't hold.
+    if ! nm_write_wifi "$ssid" "$psk" "$hidden" "$ifc"; then
+        args=(connection add type wifi con-name "$ssid" ifname "$ifc" ssid "$ssid")
+        if [ "$hidden" = 1 ]; then args+=(802-11-wireless.hidden yes); fi
+        if [ -n "$psk" ]; then args+=(wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$psk"); fi
+        sudo nmcli "${args[@]}" >/dev/null
+    fi
 
     # Stop the old setup, then remove its config
     sudo ifdown "$ifc" >/dev/null 2>&1 || true

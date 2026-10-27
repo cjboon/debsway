@@ -9,7 +9,8 @@
 #   bash test.sh            everything (needs internet)
 #   bash test.sh --offline  only what needs no internet
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
-. "$DEBSWAY_DIR/extras/appimage.sh"
+. "$DEBSWAY_DIR/lib/appimage.sh"
+. "$DEBSWAY_DIR/lib/offline.sh"
 . "$DEBSWAY_DIR/packages.sh"
 # Keep going after a failure; every check reports for itself
 set +e +o pipefail
@@ -26,8 +27,8 @@ section() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 online() { ! $OFFLINE; }
 
 cd "$DEBSWAY_DIR" || exit 1
-mapfile -t SCRIPTS < <(find . -path ./ignore -prune -o -path ./debs -prune -o \
-    \( -name '*.sh' -o -path ./config/sway-status -o -path ./config/ublock-allow \) -type f -print | sort)
+mapfile -t SCRIPTS < <(find . -path ./.git -prune -o -path ./ignore -prune -o -path ./offline -prune -o \
+    \( -name '*.sh' -o -path './bin/*' \) -type f -print | sort)
 
 # --------------------------------------------------------------------
 section "Scripts"
@@ -46,9 +47,53 @@ else
     meh "shellcheck isn't installed (sudo apt install shellcheck), skipped"
 fi
 for f in parts/*.sh extras/*.sh; do
-    case $f in extras/appimage.sh | extras/mullvad-repo.sh) continue ;; esac
     grep -q -- '--remove' "$f" || meh "$f has no --remove"
+    grep -q '^# status: ' "$f" || meh "$f has no '# status:' line (status.sh can't show it)"
 done
+# install-extras.sh lists the extras with these one-line summaries
+for f in extras/*.sh; do
+    line=$(sed -n 's/^# summary: //p' "$f" | head -1)
+    if [ -z "$line" ]; then
+        meh "$f has no '# summary:' line (install-extras.sh can't describe it)"
+    elif [ ${#line} -gt 52 ]; then
+        meh "$f: the summary is ${#line} characters; over 52 is cut off in the list"
+    fi
+done
+# parts/incognito.sh installs these as root
+for f in bin/incognito bin/incognito-session data/incognito-user.js data/incognito-firewall.nft; do
+    [ -f "$f" ] || bad "parts/incognito.sh needs $f"
+done
+# The hardening parts read these
+for f in data/sysctl-hardening.conf data/module-blacklist.conf data/foot.ini data/mousepad.settings data/snowflake-bridges.txt; do
+    [ -f "$f" ] || bad "a part needs $f"
+done
+# bin/powermenu can't source lib/sway.sh, so its lock command is a copy
+grep -qF "$LOCK_CMD" bin/powermenu || bad "bin/powermenu's lock command differs from LOCK_CMD in lib/sway.sh"
+# Every sysctl key in the hardening file exists on this kernel
+while read -r key _; do
+    [ -e "/proc/sys/${key//.//}" ] || meh "sysctl $key doesn't exist on this kernel (data/sysctl-hardening.conf)"
+done < <(grep -E '^[a-z]' data/sysctl-hardening.conf)
+# Every helper a script installs from bin/ has to be there
+mapfile -t wanted < <(grep -rhoE 'install_bin [a-z-]+' --include='*.sh' . | awk '{ print $2 }' | sort -u)
+for name in "${wanted[@]}"; do
+    [ -f "bin/$name" ] || bad "install_bin $name: there is no bin/$name"
+done
+
+# --------------------------------------------------------------------
+section "Package markers (apt_install / apt_purge), simulated"
+if out=$(bash tools/test-apt-markers.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") marker checks"
+else
+    bad "package marker checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "Bridge chooser (Tor Browser, Whonix, OnionShare, apt over Tor), scripted"
+if out=$(bash tools/test-bridges.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") bridge checks"
+else
+    bad "bridge checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
 
 # --------------------------------------------------------------------
 section "Pinned keys and versions (pins.sh): checked by hand within a year?"
@@ -97,8 +142,8 @@ if online; then
     # Every package name in the scripts' apt_install lines and package lists
     mapfile -t names < <(
         {
-            printf '%s\n' "${PKGS[@]}" "${PARTS_PKGS[@]}"
-            cat parts/*.sh extras/*.sh firefox-profiles/*.sh wifi.sh | awk '
+            printf '%s\n' "${PKGS[@]}"
+            cat parts/*.sh extras/*.sh extras/firefox-profiles/*.sh wifi.sh | awk '
                 /(PKGS|LIBS|pkgs)\+?=\(/ { grab = 1 }
                 /apt_install / && !/apt_install "/ { sub(/.*apt_install /, ""); sub(/[;|#].*/, ""); print; next }
                 grab { line = $0; sub(/.*=\(/, "", line); if (sub(/\).*/, "", line)) grab = 0; print line }' |
@@ -158,10 +203,10 @@ if online; then
         sed -n 's/^[[:space:]]*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
     if [[ $v =~ ^[0-9.]+$ ]]; then
         u="https://dist.torproject.org/torbrowser/$v/tor-browser-linux-x86_64-$v.tar.xz"
-        exists "$u" && exists "$u.asc" && ok "Tor Browser $v (fetch-tor-browser.sh)" ||
+        exists "$u" && exists "$u.asc" && ok "Tor Browser $v (prep/fetch-tor-browser.sh)" ||
             bad "Tor Browser $v: download or signature missing at $u"
         [ "${v%%.*}" = "$TB_SAFEST_VERSION" ] ||
-            meh "Tor Browser is now $v; re-check config/tor-browser-safest.js against its SecurityLevel.sys.mjs, then TB_SAFEST_VERSION in pins.sh"
+            meh "Tor Browser is now $v; re-check data/tor-browser-safest.js against its SecurityLevel.sys.mjs, then TB_SAFEST_VERSION in pins.sh"
     else
         bad "Tor Browser: can't read the newest version (download-linux-x86_64.json changed?)"
     fi
@@ -210,6 +255,29 @@ if online; then
         bad "Sparrow ${v:-?}: release, manifest or signature not as expected"
     fi
 
+    # Apps installed earlier that have a newer release by now: NAME REPO SCRIPT
+    while read -r app repo script; do
+        have=$(installed_version "$app")
+        [ -n "$have" ] || continue
+        v=$(latest_github_tag "$repo")
+        if [ -n "$v" ] && [ "$v" != "$have" ]; then
+            meh "$app $have is installed, $v is out: bash extras/$script"
+        fi
+    done <<'LIST'
+feather feather-wallet/feather feather-wallet.sh
+simplex simplex-chat/simplex-chat simplex-chat.sh
+LIST
+    # Apps from other apt repositories only update by themselves if allowed
+    while read -r pkg conf; do
+        is_installed "$pkg" || continue
+        [ -f "/etc/apt/apt.conf.d/52debsway-$conf" ] ||
+            meh "$pkg gets no automatic updates; run its script in extras/ again"
+    done <<'LIST'
+mullvad-vpn mullvad
+mullvad-browser mullvad
+claude-code claude-code
+LIST
+
     check_repo() { # NAME FPR KEYURL BASE PACKAGES...
         local name=$1 fpr=$2 key=$3 base=$4 p
         shift 4
@@ -234,21 +302,26 @@ fi
 # --------------------------------------------------------------------
 section "Saved offline copies"
 any=false
-for f in torbrowser/tor-browser-linux-*.tar.xz; do
+for f in offline/torbrowser/tor-browser-linux-*.tar.xz; do
     [ -f "$f" ] || continue
     any=true
-    verify_detached "$TB_FPR" torbrowser/tor-browser-developers.asc "$f.asc" "$f" 2>/dev/null &&
-        ok "$f verifies" || bad "$f doesn't verify: run fetch-tor-browser.sh again"
+    verify_detached "$TB_FPR" offline/torbrowser/tor-browser-developers.asc "$f.asc" "$f" 2>/dev/null &&
+        ok "$f verifies" || bad "$f doesn't verify: run prep/fetch-tor-browser.sh again"
 done
-for f in whonix/Whonix-*.libvirt.xz; do
+for f in offline/whonix/Whonix-*.libvirt.xz; do
     [ -f "$f" ] || continue
     any=true
-    verify_detached "$WHONIX_FPR" whonix/derivative.asc "$f.asc" "$f" 2>/dev/null &&
+    verify_detached "$WHONIX_FPR" offline/whonix/derivative.asc "$f.asc" "$f" 2>/dev/null &&
         ok "$f verifies" || bad "$f doesn't verify: run extras/whonix.sh --fetch again"
 done
-if [ -f debs/Packages ]; then
+if [ -f offline/debs/Packages ]; then
     any=true
-    ok "debs/: $(grep -c '^Package:' debs/Packages) packages for wifi.sh"
+    if [ -d offline/debs/verify ] && verify_offline_lists offline/debs/verify "$TMP/sums" 2>"$TMP/err" &&
+        check_offline_debs offline/debs "$TMP/sums" 2>>"$TMP/err"; then
+        ok "offline/debs: $(grep -c '^Package:' offline/debs/Packages) packages for wifi.sh, all in Debian's signed lists"
+    else
+        bad "offline/debs doesn't check out ($(head -1 "$TMP/err")): run prep/fetch-offline-debs.sh again"
+    fi
 fi
 $any || ok "none saved (that's fine)"
 

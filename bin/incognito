@@ -1,0 +1,77 @@
+#!/bin/bash
+# incognito [--no-audio] [URL]: written by debsway parts/incognito.sh
+# Opens Firefox as a different, locked-down user (incognito), inside its own
+# small window system, so it shares no clipboard and no folder with you.
+# Everything it stores is kept in memory and deleted when you close it.
+# Sound: incognito runs its own audio server with no sound card; all it can
+# do is write sound into one pipe, which a player of yours reads and plays.
+# It never gets to your audio server, so it can't hear your microphone or
+# your other programs.
+set -euo pipefail
+
+die() { printf 'incognito: %s\n' "$*" >&2; exit 1; }
+
+audio=true
+if [ "${1:-}" = --no-audio ]; then audio=false; shift; fi
+
+[ "$(id -u)" -ne 0 ] || die "run it as your normal user, not root."
+[ -n "${WAYLAND_DISPLAY:-}" ] || die "it needs your sway session; start sway first."
+rt=${XDG_RUNTIME_DIR:-}
+[ -n "$rt" ] && [ -d "$rt" ] || die "XDG_RUNTIME_DIR isn't set."
+case $WAYLAND_DISPLAY in
+    */*) die "WAYLAND_DISPLAY should be a plain name like wayland-1." ;;
+esac
+sock=$rt/$WAYLAND_DISPLAY
+[ -S "$sock" ] || die "can't find your Wayland socket ($sock)."
+command -v setfacl >/dev/null || die "setfacl is missing (package acl)."
+command -v flock >/dev/null || die "flock is missing (package util-linux)."
+# The one command your user may run as incognito (see /etc/sudoers.d)
+sudo -n -u incognito -l /usr/local/libexec/incognito-session >/dev/null 2>&1 ||
+    die "your user isn't set up to start it. Run: bash ~/debsway/parts/incognito.sh"
+
+# One at a time: the second would take back the access the first one needs
+exec 9>"$rt/incognito.lock"
+flock -n 9 || die "it is already open."
+
+# The sound pipe: incognito writes, a player of yours reads and plays it.
+# Only raw sound can come through it.
+fifo=$rt/incognito-audio.fifo
+player=
+if $audio && command -v pw-cat >/dev/null && [ -S "$rt/pipewire-0" ]; then
+    :
+else
+    audio=false
+fi
+
+# incognito may only reach your Wayland socket (and the sound pipe), and only
+# while it runs. It gets no read access to the runtime folder: it can open
+# what it is given and nothing it isn't told the name of.
+# shellcheck disable=SC2317  # runs from the EXIT trap
+cleanup() {
+    if [ -n "$player" ]; then kill "$player" 2>/dev/null || true; fi
+    rm -f "$fifo"
+    setfacl -x u:incognito "$rt" "$sock" 2>/dev/null || true
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM HUP
+setfacl -m u:incognito:--x "$rt"
+setfacl -m u:incognito:rw- "$sock"
+
+if $audio; then
+    rm -f "$fifo"
+    mkfifo -m 600 "$fifo"
+    setfacl -m u:incognito:rw- "$fifo"
+    # Opening the pipe waits until incognito's sound server opens its end.
+    # This is the only thing of yours it can send sound to, and it is a
+    # normal stream in your volume control.
+    ( exec pw-cat -p -a --format s16 --rate 48000 --channels 2 --media-role Movie - <"$fifo" ) &
+    player=$!
+    audio_arg=incognito-audio.fifo
+else
+    audio_arg=-
+fi
+
+rc=0
+sudo -n -u incognito /usr/local/libexec/incognito-session "$rt" "$WAYLAND_DISPLAY" "$audio_arg" "$@" || rc=$?
+exit "$rc"

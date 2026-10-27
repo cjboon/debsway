@@ -2,12 +2,15 @@
 # Random Wi-Fi MAC address: NetworkManager makes up a new hardware
 # address every time it connects, and another while scanning, so networks
 # (and whoever runs them) can't recognise this laptop from place to place.
+# It also stops sending this computer's name to the network's DHCP server,
+# and uses temporary IPv6 addresses instead of ones built from the hardware.
 # Side effects: Wi-Fi login pages at cafés and hotels may ask again after
 # reconnecting, and your home router sees a "new" device each time. For
 # one made-up address per network instead, change "random" to "stable"
 # in the file below.
 # Runs after parts/network-manager.sh.
 # Usage: bash random-mac.sh [--remove]
+# status: file:/etc/NetworkManager/conf.d/90-debsway-random-mac.conf
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
@@ -30,7 +33,9 @@ is_installed network-manager ||
 say "Random Wi-Fi MAC address"
 printf '%s\n' "# Written by debsway parts/random-mac.sh" \
     '[device]' 'wifi.scan-rand-mac-address=yes' '' \
-    '[connection]' 'wifi.cloned-mac-address=random' | sudo tee "$CONF" >/dev/null
+    '[connection]' 'wifi.cloned-mac-address=random' \
+    'ipv4.dhcp-send-hostname=false' 'ipv6.dhcp-send-hostname=false' \
+    'ipv6.ip6-privacy=2' | sudo tee "$CONF" >/dev/null
 reload_nm
 
 # A connection with its own setting ignores the default above

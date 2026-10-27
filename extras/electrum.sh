@@ -2,6 +2,8 @@
 # Electrum (Bitcoin wallet) from Debian's own packages, which Debian
 # keeps patched. It uses Qt5, which runs on Wayland via qtwayland5 (base).
 # Usage: bash electrum.sh [--remove]
+# summary: Electrum Bitcoin wallet
+# status: apt:electrum
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 

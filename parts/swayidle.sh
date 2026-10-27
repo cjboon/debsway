@@ -2,6 +2,7 @@
 # Lock after 5 minutes idle, screen off after 10, lock before suspend.
 # Installs swaylock too, since that's what does the locking.
 # Usage: bash swayidle.sh [--remove]
+# status: apt:swayidle
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
@@ -15,7 +16,8 @@ fi
 say "Installing swayidle and swaylock"
 apt_install swayidle swaylock
 
-IDLE_CMD="swayidle -w timeout 300 'swaylock -f -c 000000' timeout 600 'swaymsg \"output * power off\"' resume 'swaymsg \"output * power on\"' before-sleep 'swaylock -f -c 000000'"
+# LOCK_CMD (lib/sway.sh) is the one place that says how the screen locks
+IDLE_CMD="swayidle -w timeout 300 '$LOCK_CMD' timeout 600 'swaymsg \"output * power off\"' resume 'swaymsg \"output * power on\"' before-sleep '$LOCK_CMD'"
 
 put_snippet idle <<EOF
 # Idle lock and screen off (debsway parts/swayidle.sh)

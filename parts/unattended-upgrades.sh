@@ -5,6 +5,7 @@
 # Code, Mullvad) are left for you to update. What it did is logged in
 # /var/log/unattended-upgrades/.
 # Usage: bash unattended-upgrades.sh [--remove]
+# status: apt:unattended-upgrades
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 

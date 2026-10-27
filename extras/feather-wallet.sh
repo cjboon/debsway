@@ -4,8 +4,10 @@
 # hash list signed by Feather's key (FEATHER_FPR in pins.sh).
 # Feather forces X11 itself (QT_QPA_PLATFORM=xcb), so XWayland is installed.
 # Usage: bash feather-wallet.sh [--remove]
+# summary: Feather Monero wallet (signed AppImage)
+# status: opt:feather
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/extras/appimage.sh"
+. "$DEBSWAY_DIR/lib/appimage.sh"
 need_user
 
 NAME=feather
@@ -15,6 +17,7 @@ FILES=https://featherwallet.org/files/releases
 
 if [ "${1:-}" = --remove ]; then
     remove_appimage "$NAME"
+    apt_purge
     note "Your wallet files are left where you saved them."
     exit
 fi

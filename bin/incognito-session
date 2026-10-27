@@ -1,0 +1,115 @@
+#!/bin/bash
+# incognito-session: written by debsway parts/incognito.sh
+# Runs as the user "incognito" (the incognito command starts it through
+# sudo; it is the only thing your user may run as incognito). Opens Firefox
+# inside cage, a tiny Wayland compositor shown as one window in your sway.
+# Home folder, profile, cache and downloads all live in /dev/shm (memory)
+# and are deleted when Firefox closes.
+# Sound: its own PipeWire (no sound card, no devices) whose only output is
+# a pipe into your user's player; see the incognito command.
+set -euo pipefail
+umask 077
+export PATH=/usr/local/bin:/usr/bin:/bin
+
+die() { printf 'incognito: %s\n' "$*" >&2; exit 1; }
+
+[ "$(id -un)" = incognito ] || die "this runs as the user incognito; use the incognito command."
+[ $# -ge 3 ] || die "usage: incognito-session RUNTIME_DIR WAYLAND_DISPLAY AUDIO [URL...]"
+host_rt=$1 host_wl=$2 audio=$3
+shift 3
+
+# These come from the user who called us, so nothing else is accepted
+[[ $host_rt =~ ^/run/user/[0-9]+$ ]] || die "unexpected runtime folder."
+[[ $host_wl =~ ^[A-Za-z0-9._-]+$ ]] || die "unexpected Wayland display name."
+[ -S "$host_rt/$host_wl" ] || die "can't reach the Wayland socket."
+[[ $audio == - || $audio == incognito-audio.fifo ]] || die "unexpected sound pipe name."
+if [ "$audio" != - ]; then
+    [ -p "$host_rt/$audio" ] || audio=-
+    for c in pipewire wireplumber pipewire-pulse; do
+        command -v "$c" >/dev/null || audio=-
+    done
+fi
+for a in "$@"; do
+    [[ $a =~ ^https?://[^[:space:]]+$ ]] || die "only http:// and https:// addresses can be opened."
+done
+
+[ -d /dev/shm ] || die "/dev/shm (memory) isn't available."
+# Left behind by a crash or a power cut
+find /dev/shm -maxdepth 1 -name 'incognito.*' -user incognito -exec rm -rf {} + 2>/dev/null || true
+
+base=$(mktemp -d /dev/shm/incognito.XXXXXXXX)
+mkdir "$base/home" "$base/run" "$base/profile" "$base/tmp"
+pid=
+
+cleanup() {
+    trap - EXIT INT TERM HUP
+    if [ -n "$pid" ]; then
+        kill -TERM -- "-$pid" 2>/dev/null || true
+        sleep 1
+        kill -KILL -- "-$pid" 2>/dev/null || true
+    fi
+    rm -rf "$base"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM HUP
+
+cp /usr/local/share/debsway/incognito-user.js "$base/profile/user.js"
+# Downloads go to memory too, and are gone when the window closes
+{
+    echo 'user_pref("browser.download.folderList", 2);'
+    echo "user_pref(\"browser.download.dir\", \"$base/tmp\");"
+    echo 'user_pref("browser.download.useDownloadDir", true);'
+} >>"$base/profile/user.js"
+
+# Its own sound server. The only sink it has writes into the pipe; there
+# are no sound cards and no microphone to reach. WirePlumber's "policy"
+# profile does the linking without looking for any hardware.
+if [ "$audio" != - ]; then
+    mkdir -p "$base/home/.config/pipewire/pipewire.conf.d"
+    cat >"$base/home/.config/pipewire/pipewire.conf.d/10-incognito.conf" <<EOF
+context.modules = [
+  { name = libpipewire-module-pipe-tunnel
+    args = {
+      tunnel.mode = sink
+      pipe.filename = "$host_rt/$audio"
+      audio.format = S16LE
+      audio.rate = 48000
+      audio.channels = 2
+      audio.position = [ FL FR ]
+      node.name = incognito-out
+      node.description = "incognito"
+    }
+  }
+]
+EOF
+fi
+
+# cage connects to your sway through the absolute WAYLAND_DISPLAY and makes
+# its own socket in XDG_RUNTIME_DIR for Firefox. Software rendering: no
+# access to the graphics card is given. Everything below runs in one
+# session, so closing it all is one signal to the group.
+# shellcheck disable=SC2016  # expanded by the inner bash, on purpose
+start='
+    waitfor() { for _ in $(seq 50); do [ -S "$1" ] && return 0; sleep 0.1; done; return 1; }
+    if [ -n "$INCOGNITO_AUDIO" ]; then
+        pipewire &
+        if waitfor "$XDG_RUNTIME_DIR/pipewire-0"; then
+            wireplumber -p policy &
+            pipewire-pulse &
+            waitfor "$XDG_RUNTIME_DIR/pulse/native" || true
+        fi
+    fi
+    exec cage -d -- firefox-esr --no-remote --profile "$INCOGNITO_PROFILE" "$@"'
+setsid env -i \
+    PATH="$PATH" LANG=C.UTF-8 \
+    HOME="$base/home" TMPDIR="$base/tmp" XDG_RUNTIME_DIR="$base/run" \
+    XDG_CONFIG_HOME="$base/home/.config" XDG_CACHE_HOME="$base/home/.cache" \
+    XDG_DATA_HOME="$base/home/.local/share" \
+    WAYLAND_DISPLAY="$host_rt/$host_wl" WLR_BACKENDS=wayland WLR_RENDERER=pixman \
+    LIBGL_ALWAYS_SOFTWARE=1 MOZ_ENABLE_WAYLAND=1 MOZ_DBUS_REMOTE=0 GTK_USE_PORTAL=0 \
+    PULSE_SERVER="unix:$base/run/pulse/native" \
+    INCOGNITO_AUDIO="$([ "$audio" != - ] && echo 1)" INCOGNITO_PROFILE="$base/profile" \
+    bash -c "$start" incognito-start "$@" &
+pid=$!
+wait "$pid" || true

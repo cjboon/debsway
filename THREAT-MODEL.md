@@ -8,38 +8,67 @@ this page to decide what else you need.
 
 - **Known bugs being used against you.** Debian's security fixes install
   themselves every day (`parts/unattended-upgrades.sh`), and you're told
-  when Firefox needs a restart to use its fixed version.
-- **Attacks through websites.** In every Firefox profile, uBlock Origin
+  when Firefox needs a restart to use its fixed version. Packages from
+  Mullvad's and Anthropic's apt repositories are updated the same way. The
+  AppImages (Feather, SimpleX) are not: run their script again, or let
+  `test.sh` tell you when a newer release is out.
+- **Attacks through websites.** In every Firefox profile (the Firefox
+  extra, `extras/firefox.sh`), uBlock Origin
   blocks scripts and frames from other sites, where most malicious ads
   and drive-by attacks come from; the JavaScript JIT, the part of
   Firefox most exploits target, is off; and HTTPS-Only Mode refuses
   unencrypted pages unless you agree (`parts/firefox-hardening.sh`).
+- **Some kernel attacks.** Kernel addresses are hidden, memory is cleared
+  when it is allocated and freed, rare protocols and filesystems and
+  FireWire can't be loaded (`parts/sysctl-hardening.sh`,
+  `parts/boot-hardening.sh`, `parts/module-blacklist.sh`). These make
+  exploits harder; they don't make the kernel bug-free.
 - **People on the same network.** Nothing on the laptop accepts incoming
   connections (`parts/ufw.sh`). HTTPS-Only Mode stops tampering on café
   and hotel Wi-Fi.
 - **Being recognised from network to network.** Wi-Fi uses a new,
-  made-up hardware (MAC) address every time it connects
+  made-up hardware (MAC) address every time it connects, doesn't send this
+  computer's name to the network, and uses temporary IPv6 addresses
   (`parts/random-mac.sh`).
+- **Your network seeing which packages you install**, if you chose to
+  download through Tor (`parts/apt-tor.sh`, with a bridge if you need one).
 - **Tampered downloads.** Everything debsway downloads from outside
   Debian is checked against the project's signing key, pinned by
   fingerprint in `pins.sh`, before it's used. `test.sh` re-checks them.
+  The Wi-Fi packages carried on a USB stick (`offline/debs`) are matched,
+  one by one, to Debian's signed package lists before `wifi.sh` installs
+  them as root.
 - **Sites tracking you across each other**, if you give the sites you
-  log into their own Firefox profile (`firefox-profiles/`).
+  log into their own Firefox profile (`extras/firefox-profiles/`).
+- **A risky website reaching the rest of your session.** `incognito`
+  (`parts/incognito.sh`) opens Firefox as a separate user with no
+  password and no files of yours, in its own window system so the
+  clipboard isn't shared, with everything kept in memory and deleted when
+  you close it. Video and sound work; the sound leaves through a one-way
+  pipe, so it can't hear your microphone or your other programs. A hacked
+  browser there gets a user that owns nothing.
+- **A stranger's USB stick running something.** Drives mount with
+  `nosuid`, `nodev` and `noexec` (`parts/udiskie.sh`), so nothing on a stick
+  can run from it by itself. They still mount the moment they're plugged
+  in, so the kernel's filesystem code reads whatever a stick contains:
+  don't plug in sticks you don't trust.
 - **A stolen laptop, while it's switched off**, if you installed Debian
   with disk encryption (see the README). `status.sh` warns when you
   didn't.
 
 With the extras:
 
-- **Your network or ISP seeing that you use Tor**: Tor Browser
-  (`extras/tor-browser.sh`), OnionShare and Whonix connect through
-  bridges you supply, set up before their first connection.
+- **Your network or ISP seeing that you use Tor**, if you say you need a
+  bridge: Tor Browser, OnionShare, Whonix and apt over Tor ask first, then
+  offer obfs4, webtunnel, Snowflake or meek, whichever that program can use
+  (docs/install-base.md, "Bridges"). The bridge is set up before the first
+  connection.
 - **A hacked browser revealing your real IP address**: Whonix
   (`extras/whonix.sh`) runs the browser in a virtual machine whose only
   way out is Tor.
 - **Losing everything to a dead or stolen disk**: encrypted backups
   (`extras/backup.sh`).
-- **Hidden data in files you share**: mat2 (`extras/mat2.sh`).
+- **Hidden data in files you share**: Metadata Cleaner and mat2 (`extras/metadata-cleaner.sh`).
 
 ## What it doesn't protect against
 
@@ -54,6 +83,9 @@ With the extras:
   debsway doesn't set up Secure Boot measurement or tamper evidence.
 - **Being identified while logged in.** A VPN, Tor or Mullvad Browser
   hides your IP address, not who you are to a site you've logged into.
+- **`incognito` hiding who you are**: it is your network and your IP
+  address, it shares the kernel (a kernel bug could get out), and the
+  window is visible to you and to your screenshots, as any window is.
 - **Your Wi-Fi network or ISP seeing where you go**, outside Tor or a
   VPN. They see which sites you visit (not what's on the pages).
 - **Weak or reused passwords, or phishing.** Use a password manager
@@ -70,7 +102,7 @@ With the extras:
 - **Some sites break** with uBlock's medium mode. Allow one with
   `ublock-allow example.com`, then restart Firefox.
 - **JavaScript is slower** without the JIT. Heavy web apps can get it
-  back in their own profile (`firefox-profiles/new-profile.sh`, "fast
+  back in their own profile (`extras/firefox-profiles/new-profile.sh`, "fast
   JavaScript").
 - **Wi-Fi login pages may ask again** after reconnecting, because of the
   random MAC address. Switch to one made-up address per network in

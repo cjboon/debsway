@@ -1,11 +1,16 @@
 #!/bin/bash
-# Sound through PipeWire, with the volume keys bound to wpctl.
+# Sound through PipeWire. Installs ~/.local/bin/volume, which changes the
+# volume by 5%, never above 100%, unmutes on a change and refreshes the status
+# bar right away. Keys: the volume and mute keys, or Super+F10 (mute), Super+F11
+# (down) and Super+F12 (up) for keyboards without them.
 # Usage: bash pipewire-audio.sh [--remove]
+# status: apt:pipewire-audio
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
 if [ "${1:-}" = --remove ]; then
     remove_snippet audio
+    remove_bin volume
     apt_purge pipewire-audio
     exit
 fi
@@ -17,12 +22,17 @@ say "Starting the user audio services"
 systemctl --user enable --now pipewire.socket pipewire-pulse.socket wireplumber.service ||
     warn "Couldn't start them now; they start at your next login."
 
-# The stock config binds these keys to pactl, which isn't installed
+install_bin volume
+
+# The stock config binds the media keys to pactl, which isn't installed
 put_snippet audio <<'EOF'
-# Volume keys (debsway parts/pipewire-audio.sh)
-bindsym --locked XF86AudioRaiseVolume exec wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+
-bindsym --locked XF86AudioLowerVolume exec wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
-bindsym --locked XF86AudioMute exec wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
-bindsym --locked XF86AudioMicMute exec wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
+# Volume (debsway parts/pipewire-audio.sh)
+bindsym --locked XF86AudioRaiseVolume exec ~/.local/bin/volume up
+bindsym --locked XF86AudioLowerVolume exec ~/.local/bin/volume down
+bindsym --locked XF86AudioMute exec ~/.local/bin/volume mute
+bindsym --locked XF86AudioMicMute exec ~/.local/bin/volume micmute
+bindsym $mod+F10 exec ~/.local/bin/volume mute
+bindsym $mod+F11 exec ~/.local/bin/volume down
+bindsym $mod+F12 exec ~/.local/bin/volume up
 EOF
 note "Check it with: wpctl status"

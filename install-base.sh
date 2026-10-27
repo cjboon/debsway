@@ -1,12 +1,24 @@
 #!/bin/bash
-# The core desktop: sway, foot and Firefox (with video codecs and uBlock
-# Origin), a status bar, a key cheat sheet, and every part in parts/:
-# automatic security updates, sound, launcher, lock and idle, brightness,
-# screenshots, clipboard, notifications, USB automount, emoji, firewall,
-# power profiles, Firefox hardening, NetworkManager and a random Wi-Fi MAC
-# address. Apps people may not want are in extras/.
-# Run as your normal user after you're online: bash install-base.sh
+# The core desktop: sway and foot, a status bar, a key cheat sheet, and
+# every part in parts/: automatic security updates, sound, launcher, lock
+# and idle, brightness, screenshots, clipboard, notifications, USB
+# automount, emoji, firewall, power profiles, NetworkManager and a random
+# Wi-Fi MAC address. Everything else is in extras/, Firefox included (with
+# its hardening and the throwaway "incognito" Firefox); a list at the end
+# lets you pick some.
+# It starts by explaining what it will do and asking whether to go on.
+# Run as your normal user after you're online:
+#   bash install-base.sh          explains, asks, installs
+#   bash install-base.sh --yes    skips the explanation and the question
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
+
+assume_yes=false
+if [ "${1:-}" = --yes ]; then
+    assume_yes=true
+    shift
+else
+    bash "$DEBSWAY_DIR/prep/intro.sh" || exit 1
+fi
 
 . "$DEBSWAY_DIR/packages.sh"
 
@@ -15,8 +27,20 @@ need_user
 [ "${VERSION_CODENAME:-}" = "$DEBIAN_RELEASE" ] ||
     warn "Written for Debian 13 ($DEBIAN_RELEASE); this is ${PRETTY_NAME:-unknown}."
 
+# Before anything is downloaded, so all of it can go through Tor
+if ! $assume_yes; then
+    say "Packages through Tor?"
+    note "apt can download Debian's packages through Tor, over https, with obfs4 bridges"
+    note "that you paste in: your network then can't see which packages you get, and it's"
+    note "slower. You can also do it later: bash parts/apt-tor.sh"
+    if ask "Download packages through Tor?" n; then
+        bash "$DEBSWAY_DIR/parts/apt-tor.sh" ||
+            warn "apt-tor didn't finish; packages will download the normal way."
+    fi
+fi
+
 say "Installing packages"
-apt_install "${PKGS[@]}" "${PARTS_PKGS[@]}"
+apt_install "${PKGS[@]}"
 
 say "sway config"
 ensure_sway_config
@@ -24,21 +48,11 @@ check_sway_config || die "sway reports errors in $SWAY_CONFIG"
 note "$SWAY_CONFIG (stock config + include for $SWAY_SNIPPETS)"
 
 say "Key cheat sheet"
-# Super+? shows config/keys.txt; it also opens once on the first login
+# Super+? shows data/keys.txt; it also opens once on the first login
 KEYS="$HOME/.local/share/debsway/keys.txt"
-WELCOME="$HOME/.local/bin/debsway-welcome"
-mkdir -p "${KEYS%/*}" "${WELCOME%/*}"
-install -m 0644 "$DEBSWAY_DIR/config/keys.txt" "$KEYS"
-cat >"$WELCOME" <<'EOF'
-#!/bin/sh
-# Shows the key cheat sheet on the first sway login only.
-# Written by debsway install-base.sh
-marker=${XDG_STATE_HOME:-$HOME/.local/state}/debsway/welcome-seen
-[ -e "$marker" ] && exit 0
-mkdir -p "${marker%/*}" && touch "$marker"
-exec foot --app-id=debsway-keys less "$HOME/.local/share/debsway/keys.txt"
-EOF
-chmod +x "$WELCOME"
+mkdir -p "${KEYS%/*}"
+install -m 0644 "$DEBSWAY_DIR/data/keys.txt" "$KEYS"
+install_bin debsway-welcome
 put_snippet help <<'EOF'
 # Key cheat sheet on Super+? (debsway install-base.sh)
 bindsym $mod+Shift+slash exec foot --app-id=debsway-keys less ~/.local/share/debsway/keys.txt
@@ -48,14 +62,8 @@ EOF
 note "Super+? shows it. It also opens by itself on your first login."
 
 say "sway status bar"
-# config/sway-status shows wifi | volume | brightness | battery | date
-STATUS="$HOME/.local/bin/sway-status"
-if [ -f "$STATUS" ] && ! cmp -s "$DEBSWAY_DIR/config/sway-status" "$STATUS"; then
-    cp "$STATUS" "$STATUS.bak"
-    note "Old one kept as $STATUS.bak"
-fi
-install -m 0755 "$DEBSWAY_DIR/config/sway-status" "$STATUS"
-note "Installed $STATUS"
+# bin/sway-status shows wifi | volume | brightness | battery | date
+install_bin sway-status
 # Edit the stock bar in place; a second bar block would add a second bar
 if grep -q 'status_command while date' "$SWAY_CONFIG"; then
     sed -i 's|^\([[:space:]]*\)status_command while date.*|\1status_command ~/.local/bin/sway-status|' "$SWAY_CONFIG"
@@ -89,12 +97,19 @@ for part in "${PARTS[@]}"; do
     bash "$DEBSWAY_DIR/parts/$part.sh" || failed+=("$part")
 done
 
-say "Done"
 if [ ${#failed[@]} -gt 0 ]; then
     warn "These parts failed: ${failed[*]}. Re-run one with: bash parts/NAME.sh"
 fi
+
+# The optional programs: a list to check boxes in, or none
+bash "$DEBSWAY_DIR/install-extras.sh" ||
+    warn "Some extras didn't install; the message above says which."
+
+say "Done"
 cat <<'EOF'
     Log out (exit) and log in on tty1. Super+? lists every key; it also
     opens by itself the first time. bash status.sh shows what's installed;
-    extras/ has optional apps (bash extras/NAME.sh).
+    bash install-extras.sh picks more extras any time. incognito opens a
+    throwaway Firefox. Reboot once: the boot hardening applies after it
+    (check with: cat /proc/cmdline).
 EOF

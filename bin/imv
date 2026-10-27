@@ -1,0 +1,3 @@
+#!/bin/sh
+# imv: written by debsway extras/media.sh
+exec imv-wayland "$@"

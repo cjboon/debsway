@@ -1,6 +1,7 @@
 #!/bin/bash
 # Firewall: block everything coming in, allow everything going out.
 # Usage: bash ufw.sh [--remove]
+# status: apt:ufw
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 

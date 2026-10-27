@@ -9,5 +9,5 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: sudo apt-get update && sudo apt-get install -y shellcheck
-      - run: shellcheck $(git ls-files '*.sh' config/sway-status config/ublock-allow)
+      - run: shellcheck $(git ls-files '*.sh' 'bin/*')
       - run: bash test.sh --offline

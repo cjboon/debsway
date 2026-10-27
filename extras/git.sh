@@ -3,6 +3,8 @@
 # Asks for the name and email to put on your commits, and offers to log
 # in to GitHub.
 # Usage: bash git.sh [--remove]
+# summary: git, and optionally GitHub's gh
+# status: apt:git apt:gh
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 

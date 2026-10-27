@@ -5,8 +5,10 @@
 # another), and it forgets everything when closed. It's built on Tor
 # Browser, which runs on X11, so XWayland is installed.
 # Usage: bash mullvad-browser.sh [--remove]
+# summary: Mullvad Browser (Tor Browser's privacy, no Tor)
+# status: apt:mullvad-browser
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/extras/mullvad-repo.sh"
+. "$DEBSWAY_DIR/lib/mullvad-repo.sh"
 need_user
 
 if [ "${1:-}" = --remove ]; then

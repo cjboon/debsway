@@ -2,6 +2,7 @@
 # Power profiles (power-saver / balanced / performance) for better
 # battery life. It runs as a system service and starts on balanced.
 # Usage: bash power-profiles-daemon.sh [--remove]
+# status: apt:power-profiles-daemon
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 

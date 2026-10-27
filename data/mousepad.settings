@@ -1,0 +1,11 @@
+# Mousepad's look and editing settings, applied by extras/mousepad.sh with
+# gsettings set. One per line: SCHEMA KEY VALUE (the value as gsettings
+# writes it). Only what differs from Mousepad's own defaults.
+org.xfce.mousepad.preferences.view color-scheme 'solarized-dark'
+org.xfce.mousepad.preferences.view use-default-monospace-font false
+org.xfce.mousepad.preferences.view font-name 'Monospace 16'
+org.xfce.mousepad.preferences.view tab-width 4
+org.xfce.mousepad.preferences.view insert-spaces true
+org.xfce.mousepad.preferences.view match-braces true
+org.xfce.mousepad.preferences.view show-line-numbers true
+org.xfce.mousepad.preferences.view show-right-margin true

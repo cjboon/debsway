@@ -1,0 +1,28 @@
+# Keeps the incognito user off your computer and your local network
+# (debsway parts/incognito.sh). Only that user's traffic is touched.
+# A hacked page can still reach the internet, but not:
+#   - programs on this machine that listen on the network (a local server,
+#     the Tor Browser proxy, a printing service, ...)
+#   - your router, printers, other computers, or your phone's hotspot
+# DNS stays open (your resolver is usually the router). Wi-Fi login pages
+# at cafes are on the local network too: sign in with your own Firefox.
+
+table inet debsway_incognito
+delete table inet debsway_incognito
+
+table inet debsway_incognito {
+    chain output {
+        type filter hook output priority 0; policy accept;
+        meta skuid "incognito" jump incognito
+    }
+
+    chain incognito {
+        # Answers to connections that others made to it (it can listen)
+        ct state established,related accept
+        udp dport 53 accept
+        tcp dport 53 accept
+        ip daddr { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8,
+                   169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16 } reject
+        ip6 daddr { ::1, fc00::/7, fe80::/10 } reject
+    }
+}

@@ -5,6 +5,8 @@
 # (parts/udiskie.sh), so Thunar's own volume manager isn't needed.
 # Made the default for folders, e.g. "open containing folder" in Firefox.
 # Usage: bash file-manager.sh [--remove]
+# summary: Thunar file manager with Trash and thumbnails
+# status: apt:thunar
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
@@ -13,7 +15,6 @@ APP=thunar.desktop
 if [ "${1:-}" = --remove ]; then
     apt_purge thunar tumbler
     unset_default_app "$APP"
-    note "gvfs is kept, since other apps may use it."
     exit
 fi
 

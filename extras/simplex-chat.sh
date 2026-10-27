@@ -4,8 +4,10 @@
 # signed by SimpleX's release key (build@simplex.chat, SIMPLEX_FPR in pins.sh).
 # It's a Java app, and Java's GUI is X11-only, so XWayland is installed.
 # Usage: bash simplex-chat.sh [--remove]
+# summary: SimpleX Chat desktop (signed AppImage)
+# status: opt:simplex
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/extras/appimage.sh"
+. "$DEBSWAY_DIR/lib/appimage.sh"
 need_user
 
 NAME=simplex
@@ -20,6 +22,7 @@ LIBS=(libx11-6 libx11-xcb1 libxext6 libxi6 libxrender1 libxtst6 libxcb1 libxcb-d
 
 if [ "${1:-}" = --remove ]; then
     remove_appimage "$NAME"
+    apt_purge
     note "Your chats and profile data are left in place."
     exit
 fi

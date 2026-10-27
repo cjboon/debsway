@@ -4,7 +4,7 @@
 #   git config core.hooksPath hooks
 command -v shellcheck >/dev/null || { echo "pre-commit: install shellcheck (sudo apt install shellcheck)" >&2; exit 1; }
 cd "$(git rev-parse --show-toplevel)" || exit 1
-files=$(git ls-files '*.sh' config/sway-status config/ublock-allow)
+files=$(git ls-files '*.sh' 'bin/*')
 [ -n "$files" ] || exit 0
 # shellcheck disable=SC2086
 shellcheck $files || { echo "pre-commit: fix the shellcheck findings above, then commit again." >&2; exit 1; }

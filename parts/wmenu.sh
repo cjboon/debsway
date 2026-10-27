@@ -2,6 +2,7 @@
 # App launcher on Super+d. The stock sway config already binds it to
 # wmenu-run, so this only installs the package.
 # Usage: bash wmenu.sh [--remove]
+# status: apt:wmenu
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 

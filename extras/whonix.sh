@@ -6,26 +6,30 @@
 # setup.
 #
 # Before the first boot, this writes into the images:
-#   Gateway:     your obfs4 bridges, so its first connection uses them.
-#                Whonix 18 connects to Tor at first boot, so without
-#                bridges Tor is kept off until you turn it on.
+#   Gateway:     a bridge if you need one (it asks first; obfs4 with lines
+#                you paste, or Snowflake; the Gateway has no webtunnel
+#                client), so its first connection uses it. Whonix 18
+#                connects to Tor at first boot; if you need a bridge but
+#                have none yet, Tor is kept off until you turn it on.
 #   Workstation: Tor Browser at Safest with JavaScript off.
 # Nothing is mounted: the images are edited with qemu-img and debugfs.
 #
 # The download (about 1.9 GB) is checked against Whonix's signing key and
-# kept in ../whonix, so a reinstall doesn't fetch it again.
+# kept in ../offline/whonix, so a reinstall doesn't fetch it again.
 #
 # Usage: bash whonix.sh            download (if needed) and install
 #        bash whonix.sh --fetch    only download and check, for later
 #        bash whonix.sh --remove
+# summary: Whonix Gateway + Workstation VMs (1.9 GB download)
+# status: bin:whonix
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/extras/appimage.sh"
+. "$DEBSWAY_DIR/lib/appimage.sh"
 need_user
 
 # WHONIX_FPR (pins.sh): Patrick Schleizer, signs all Whonix releases
 KEY_URL=$WHONIX_KEY_URL
 EDITION=LXQt
-SAVED="$DEBSWAY_DIR/whonix"
+SAVED="$DEBSWAY_DIR/offline/whonix"
 KEY="$SAVED/derivative.asc"
 IMAGES="$HOME/.local/share/libvirt/images"
 VIRSH=(virsh -c qemu:///session)
@@ -137,18 +141,19 @@ image_put() {
     mv "$img.new" "$img"
 }
 
+# Prints "SOURCE DEST" for the file to put in the Gateway, or nothing when
+# the Gateway should just connect to Tor by itself at first boot
 gateway_config() {
-    local work=$1 b
-    if [ ${#BRIDGES[@]} -gt 0 ]; then
+    local work=$1
+    if [ "$BRIDGE_TYPE" != none ]; then
         {
             echo "# Written by debsway extras/whonix.sh before the first boot."
-            echo "UseBridges 1"
-            echo "ClientTransportPlugin obfs4 exec /usr/bin/obfs4proxy"
-            for b in "${BRIDGES[@]}"; do echo "Bridge $b"; done
+            tor_bridge_config
         } >"$work/50_user.conf"
         echo "$work/50_user.conf /usr/local/etc/torrc.d/50_user.conf"
-    else
-        # Whonix's own off switch: Tor Control Panel turns it to 0
+    elif $BRIDGE_WANTED; then
+        # They need a bridge but have none yet. Whonix's own off switch:
+        # Tor Control Panel turns it to 0
         {
             echo "# Written by debsway extras/whonix.sh: Tor stays off until you"
             echo "# turn it on in Tor Control Panel (Anon Connection Wizard)."
@@ -156,28 +161,6 @@ gateway_config() {
         } >"$work/40_tor_control_panel.conf"
         echo "$work/40_tor_control_panel.conf /usr/local/etc/torrc.d/40_tor_control_panel.conf"
     fi
-}
-
-write_launcher_whonix() {
-    mkdir -p "$BIN"
-    cat >"$BIN/whonix" <<'EOF'
-#!/bin/sh
-# whonix: written by debsway extras/whonix.sh
-#   whonix          start both VMs and open the Workstation
-#   whonix gateway  start the Gateway and open it (Tor settings)
-#   whonix stop     shut both down
-v="virsh -c qemu:///session"
-up() { [ "$($v domstate "$1" 2>/dev/null)" = running ] || $v start "$1" >/dev/null; }
-case "${1:-start}" in
-    start) up Whonix-Gateway && up Whonix-Workstation &&
-        exec virt-manager -c qemu:///session --show-domain-console Whonix-Workstation ;;
-    gateway) up Whonix-Gateway &&
-        exec virt-manager -c qemu:///session --show-domain-console Whonix-Gateway ;;
-    stop) $v shutdown Whonix-Workstation 2>/dev/null; $v shutdown Whonix-Gateway 2>/dev/null; true ;;
-    *) echo "usage: whonix [start|gateway|stop]" >&2; exit 2 ;;
-esac
-EOF
-    chmod +x "$BIN/whonix"
 }
 
 # ---- remove ----
@@ -196,10 +179,9 @@ if [ "${1:-}" = --remove ]; then
         "${VIRSH[@]}" pool-refresh default >/dev/null 2>&1 || true
         note "Deleted."
     fi
-    if grep -qs 'written by debsway extras/whonix.sh' "$BIN/whonix"; then rm -f "$BIN/whonix"; fi
-    if ask "Also remove KVM and virt-manager (other VMs would stop working)?" n; then
-        apt_purge "${KVM_PKGS[@]}"
-    fi
+    remove_bin whonix
+    # KVM and virt-manager go too, unless mockvps-kvm or another script needs them
+    apt_purge
     [ ! -d "$SAVED" ] || note "The saved download stays in $SAVED; delete it yourself if you like."
     exit
 fi
@@ -230,7 +212,7 @@ fi
 
 if defined "$GW" && defined "$WS"; then
     note "Whonix is already installed."
-    write_launcher_whonix
+    install_bin whonix
     note "Start it with: whonix   (Tor settings: whonix gateway)"
     exit 0
 fi
@@ -256,18 +238,21 @@ mv "$work"/Whonix-Gateway-*.qcow2 "$work/gw.qcow2"
 mv "$work"/Whonix-Workstation-*.qcow2 "$work/ws.qcow2"
 
 say "Gateway bridges"
-note "Whonix can't use webtunnel bridges. obfs4 bridges hide that you use Tor."
-read_bridges obfs4
-read -r gw_src gw_dest < <(gateway_config "$work")
-image_put "$work/gw.qcow2" "$gw_src" "$gw_dest"
-if [ ${#BRIDGES[@]} -gt 0 ]; then
-    note "The Gateway's first connection goes through your ${#BRIDGES[@]} obfs4 bridge(s)."
+note "Whonix 18 connects to Tor at its first boot, so this is the time to say if it needs a bridge."
+pick_bridges whonix
+gw_src='' gw_dest=''
+read -r gw_src gw_dest < <(gateway_config "$work") || true
+if [ -n "$gw_src" ]; then image_put "$work/gw.qcow2" "$gw_src" "$gw_dest"; fi
+if [ "$BRIDGE_TYPE" != none ]; then
+    note "The Gateway's first connection goes through a bridge: $(bridge_summary)."
+elif $BRIDGE_WANTED; then
+    warn "No bridge chosen: Tor on the Gateway stays off until you turn it on with: whonix gateway"
 else
-    warn "No bridges: Tor on the Gateway stays off until you turn it on with: whonix gateway"
+    note "No bridge: the Gateway connects to Tor directly at its first boot."
 fi
 
 say "Workstation Tor Browser"
-image_put "$work/ws.qcow2" "$DEBSWAY_DIR/config/tor-browser-safest.js" /usr/local/etc/torbrowser.d/user.js
+image_put "$work/ws.qcow2" "$DEBSWAY_DIR/data/tor-browser-safest.js" /usr/local/etc/torbrowser.d/user.js
 note "Its Tor Browser starts at the Safest level with JavaScript off, every time."
 
 say "Setting up the VMs"
@@ -281,7 +266,7 @@ mv "$work/ws.qcow2" "$IMAGES/$WS.qcow2"
 "${VIRSH[@]}" pool-refresh default >/dev/null
 "${VIRSH[@]}" define "$work/$GW.xml" >/dev/null
 "${VIRSH[@]}" define "$work/$WS.xml" >/dev/null
-write_launcher_whonix
+install_bin whonix
 
 note "Installed. Start Whonix with: whonix   (or Super+d, then whonix)"
 note "Change Tor settings with: whonix gateway    Shut down: whonix stop"

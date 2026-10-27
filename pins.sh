@@ -14,12 +14,12 @@
 ANTHROPIC_FPR=31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE
 ANTHROPIC_KEY_URL=https://downloads.claude.ai/keys/claude-code.asc
 
-# Tor Browser (extras/tor-browser.sh, fetch-tor-browser.sh). Tor Browser
+# Tor Browser (extras/tor-browser.sh, prep/fetch-tor-browser.sh). Tor Browser
 # Developers; the same fingerprint torbrowser-launcher pins.
 # checked: 2026-10-26  torbrowser-launcher source; keys.openpgp.org; torproject.org WKD
 TB_FPR=EF6E286DDA85EA2A4BA7DE684E2C6E8793298290
 TB_KEY_URL=https://keys.openpgp.org/vks/v1/by-fingerprint/EF6E286DDA85EA2A4BA7DE684E2C6E8793298290
-# config/tor-browser-safest.js copies the Safest prefs of this Tor
+# data/tor-browser-safest.js copies the Safest prefs of this Tor
 # Browser version (SecurityLevel.sys.mjs). Re-check them when the first
 # number changes.
 # checked: 2026-10-26  Tor Browser 15.0.26 (Whonix's 15.0.25 identical)
@@ -57,6 +57,12 @@ SPARROW_KEY_URL=https://keybase.io/craigraw/pgp_keys.asc
 # checked: 2026-10-26  mullvad.net/en/help/verifying-signatures; the repo's keyring
 MULLVAD_FPR=A1198702FC3E0A09A9AE5B75D5A1D4F266DE8DDF
 MULLVAD_KEY_URL=https://repository.mullvad.net/deb/mullvad-keyring.asc
+
+# Snowflake bridge lines (data/snowflake-bridges.txt): Tor Browser's own, from
+# Browser/chrome/toolkit/content/global/pt_config.json inside its omni.ja,
+# with fronts= changed to front= for Debian's snowflake-client.
+# checked: 2026-10-27  Tor Browser 15.0.26
+SNOWFLAKE_BRIDGES_SOURCE="Tor Browser 15.0.26 pt_config.json"
 
 # The Debian release everything was written and tested on.
 # checked: 2026-10-27

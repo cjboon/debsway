@@ -1,6 +1,7 @@
 #!/bin/bash
 # Command-line clipboard: wl-copy and wl-paste.
 # Usage: bash wl-clipboard.sh [--remove]
+# status: apt:wl-clipboard
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 

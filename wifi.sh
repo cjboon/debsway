@@ -7,9 +7,14 @@
 #
 # Backends, first one usable wins:
 #   NetworkManager -> iwd -> wpa_supplicant (+ ifupdown or systemd-networkd)
-# If none is installed, it installs wpasupplicant from ./debs (made by
-# fetch-offline-debs.sh), or over Ethernet / USB tethering.
+# If none is installed, it installs wpasupplicant from offline/debs (made by
+# prep/fetch-offline-debs.sh), or over Ethernet / USB tethering.
+#
+# Passwords are never put on a command line, where any user on the machine
+# could read them. If your nmcli doesn't take one on its standard input,
+# DEBSWAY_PASSWORD_ON_COMMAND_LINE=1 bash wifi.sh uses the old way.
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
+. "$DEBSWAY_DIR/lib/offline.sh"
 
 if [ "$(id -u)" -ne 0 ]; then
     if command -v sudo >/dev/null; then
@@ -40,14 +45,28 @@ reload_wifi_drivers() {
     sleep 3
 }
 
-# Install Wi-Fi packages from ./debs, a local apt repo made by
-# fetch-offline-debs.sh. apt picks only what this system is missing.
+# Install Wi-Fi packages from offline/debs, a local apt repo made by
+# prep/fetch-offline-debs.sh. apt picks only what this system is missing.
+# These packages arrive on a USB stick and go in as root, so each one is
+# first matched to Debian's signed package lists (lib/offline.sh).
 install_offline_debs() {
     local tmp p want=() rc=0
-    [ -f "$DEBSWAY_DIR/debs/Packages" ] || return 1
+    [ -f "$DEBSWAY_DIR/offline/debs/Packages" ] || return 1
     tmp=$(mktemp -d)
-    cp -r "$DEBSWAY_DIR/debs" "$tmp/repo"
+    # Check and install the same copy
+    cp -r "$DEBSWAY_DIR/offline/debs" "$tmp/repo"
+    if [ ! -d "$tmp/repo/verify" ] ||
+        ! verify_offline_lists "$tmp/repo/verify" "$tmp/sums" ||
+        ! check_offline_debs "$tmp/repo" "$tmp/sums"; then
+        warn "The packages in $DEBSWAY_DIR/offline/debs can't be matched to Debian's signed"
+        warn "lists, so they were not installed. Make them again on a machine you trust:"
+        warn "  bash prep/fetch-offline-debs.sh"
+        rm -rf "$tmp"
+        return 1
+    fi
     mkdir -p "$tmp/lists/partial" "$tmp/parts"
+    # trusted=yes: the index is local and unsigned, but every file in it
+    # was checked against Debian's signed lists above
     echo "deb [trusted=yes] file:$tmp/repo ./" >"$tmp/sources.list"
     local opts=(-o "Dir::Etc::SourceList=$tmp/sources.list" -o "Dir::Etc::SourceParts=$tmp/parts"
         -o "Dir::State::Lists=$tmp/lists")
@@ -58,7 +77,7 @@ install_offline_debs() {
         rm -rf "$tmp"
         return 1
     fi
-    say "Installing from $DEBSWAY_DIR/debs: ${want[*]}"
+    say "Installing from $DEBSWAY_DIR/offline/debs: ${want[*]}"
     apt-get "${opts[@]}" update >/dev/null &&
         apt-get "${opts[@]}" install -y --no-install-recommends "${want[@]}" || rc=$?
     rm -rf "$tmp"
@@ -80,7 +99,7 @@ find_iface() {
         dmesg 2>/dev/null | grep -i 'firmware' | grep -iE 'fail|error' | tail -5 >&2 || true
         die "Still no Wi-Fi device. Check for a hardware Wi-Fi switch, or copy the
    firmware package for your card (e.g. firmware-iwlwifi, firmware-realtek)
-   into $DEBSWAY_DIR/debs and run this again. A reboot may also be needed."
+   into $DEBSWAY_DIR/offline/debs and run this again. A reboot may also be needed."
     fi
     IF=${list[0]}
     if [ ${#list[@]} -gt 1 ]; then
@@ -207,7 +226,7 @@ online_via_wire() {
         echo "  Plug in an Ethernet cable, or connect your phone by USB and turn on"
         echo "  USB tethering (Android: Settings > Network > Hotspot > USB tethering)."
         read -r -p "  Press Enter to try again, or q to quit: " reply </dev/tty || reply=q
-        [ "$reply" != q ] || die "No way to install wpasupplicant. See README.md, 'Offline packages'."
+        [ "$reply" != q ] || die "No way to install wpasupplicant. See README.md, 'Before you reinstall'."
     done
 }
 
@@ -304,20 +323,66 @@ ask_password() {
 
 connect_nm() {
     local args=(device wifi connect "$SSID" ifname "$IF")
-    [ -n "$PASS" ] && args+=(password "$PASS")
     $HIDDEN && args+=(hidden yes)
     nmcli connection delete id "$SSID" >/dev/null 2>&1 || true
-    nmcli --wait 45 "${args[@]}"
+    if [ -z "$PASS" ]; then
+        nmcli --wait 45 "${args[@]}"
+    elif [ -n "${DEBSWAY_PASSWORD_ON_COMMAND_LINE:-}" ]; then
+        nmcli --wait 45 "${args[@]}" password "$PASS"
+    else
+        # --ask takes the password from standard input
+        printf '%s\n' "$PASS" | nmcli --ask --wait 45 "${args[@]}"
+    fi
+}
+
+# iwd reads a known network's password from a file in /var/lib/iwd, so it
+# is written there instead of being given to iwctl on the command line.
+# The old file, if any, is kept until the new password has worked.
+iwd_profile() {
+    local dir=/var/lib/iwd name
+    if [[ $SSID =~ ^[A-Za-z0-9\ _-]+$ ]]; then
+        name=$SSID
+    else
+        name="=$(printf '%s' "$SSID" | od -An -tx1 -v | tr -d ' \n')"
+    fi
+    echo "$dir/$name.psk"
+}
+
+write_iwd_profile() {
+    local file=$1
+    mkdir -p "${file%/*}"
+    (
+        umask 077
+        {
+            echo "[Security]"
+            if [[ $PASS =~ ^[0-9A-Fa-f]{64}$ ]]; then
+                echo "PreSharedKey=$PASS"
+            else
+                echo "Passphrase=$PASS"
+            fi
+            if $HIDDEN; then printf '\n[Settings]\nHidden=true\n'; fi
+        } >"$file"
+    )
 }
 
 connect_iwd() {
-    local cmd=connect i
+    local cmd=connect i file='' old=''
     $HIDDEN && cmd=connect-hidden
     if [ -n "$PASS" ]; then
-        iwctl --passphrase "$PASS" station "$IF" "$cmd" "$SSID" || return 1
-    else
-        iwctl station "$IF" "$cmd" "$SSID" || return 1
+        file=$(iwd_profile)
+        if [ -f "$file" ]; then
+            old=$(mktemp)
+            cp -p "$file" "$old"
+        fi
+        write_iwd_profile "$file"
     fi
+    if ! iwctl station "$IF" "$cmd" "$SSID"; then
+        if [ -n "$file" ]; then
+            if [ -n "$old" ]; then mv "$old" "$file"; else rm -f "$file"; fi
+        fi
+        return 1
+    fi
+    if [ -n "$old" ]; then rm -f "$old"; fi
     for i in $(seq 20); do
         iwctl station "$IF" show 2>/dev/null | grep -q 'State.*connected' && break
         sleep 1
@@ -350,6 +415,12 @@ write_wpa_conf() {
                 echo "    key_mgmt=NONE"
             elif [[ $PASS =~ ^[0-9A-Fa-f]{64}$ ]]; then
                 echo "    psk=$PASS"
+            elif [[ $PASS == *\"* ]]; then
+                # The file can't quote a password that has a " in it, so it
+                # gets the key derived from it (which WPA3 networks can't use)
+                echo "    psk=$(printf '%s\n' "$PASS" | wpa_passphrase "$SSID" | sed -n 's/^[[:space:]]*psk=//p')"
+                echo "    key_mgmt=WPA-PSK WPA-PSK-SHA256"
+                echo "    ieee80211w=1"
             else
                 echo "    psk=\"$PASS\""
                 echo "    key_mgmt=WPA-PSK WPA-PSK-SHA256 SAE"

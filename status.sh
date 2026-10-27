@@ -32,33 +32,45 @@ fi
 echo "Base packages:"
 for p in "${PKGS[@]}"; do show "$p"; done
 
-echo "Parts packages:"
-for p in "${PARTS_PKGS[@]}"; do show "$p"; done
+# status_of SCRIPT: "[x] name (what)" from the script's "# status:" line
+status_of() {
+    local name have=()
+    name=$(basename -- "$1" .sh)
+    mapfile -t have < <(script_found "$1")
+    if [ ${#have[@]} -eq 1 ] && [ "${have[0]}" = "$name" ]; then
+        printf '  [x] %s\n' "$name"
+    elif [ ${#have[@]} -gt 0 ]; then
+        printf '  [x] %s (%s)\n' "$name" "$(IFS=,; echo "${have[*]}" | sed 's/,/, /g')"
+    else
+        printf '  [ ] %s\n' "$name"
+    fi
+}
 
-echo "Extras (optional):"
-for p in git gh keepassxc-minimal claude-code torbrowser-launcher seahorse electrum \
-    sparrowwallet onionshare-cli mullvad-vpn mullvad-browser mat2 restic imv mpv mousepad thunar; do
-    show "$p"
-done
-for app in feather simplex; do
-    v=$(cat "$HOME/.local/opt/$app/.debsway-version" 2>/dev/null || true)
-    if [ -n "$v" ]; then printf '  [x] %s %s\n' "$app" "$v"; else printf '  [ ] %s\n' "$app"; fi
-done
-if [ -L "$HOME/.local/bin/mockvps-kvm" ]; then
-    printf '  [x] mockvps-kvm\n'
-else
-    printf '  [ ] mockvps-kvm\n'
-fi
-if virsh -c qemu:///session dominfo Whonix-Gateway >/dev/null 2>&1; then
-    printf '  [x] whonix\n'
-else
-    printf '  [ ] whonix\n'
-fi
-for f in "$DEBSWAY_DIR"/torbrowser/tor-browser-linux-*.tar.xz "$DEBSWAY_DIR"/whonix/Whonix-*.libvirt.xz; do
+echo "Parts (parts/):"
+for part in "${PARTS[@]}"; do status_of "$DEBSWAY_DIR/parts/$part.sh"; done
+
+echo "Extras (optional, extras/):"
+for f in "$DEBSWAY_DIR"/extras/*.sh; do status_of "$f"; done
+for f in "$DEBSWAY_DIR"/offline/torbrowser/tor-browser-linux-*.tar.xz "$DEBSWAY_DIR"/offline/whonix/Whonix-*.libvirt.xz; do
     [ -f "$f" ] && printf '      saved: %s\n' "${f#"$DEBSWAY_DIR"/}"
 done
 
-echo "Firefox hardening (parts/firefox-hardening.sh):"
+echo "Packages debsway installed (one marker per script; apt purge debsway-NAME removes it):"
+markers=$(dpkg-query -W -f='${db:Status-Abbrev} ${Package}\n' 'debsway-*' 2>/dev/null | awk '$1 == "ii" { print $2 }')
+if [ -n "$markers" ]; then
+    for m in $markers; do
+        printf '  %s: %s\n' "${m#debsway-}" "$(marker_depends "$m" | paste -sd' ')"
+    done
+else
+    echo "  (none recorded yet)"
+fi
+
+echo "Firefox (extras/firefox.sh):"
+if [ -x /usr/local/bin/incognito ]; then
+    echo "  [x] incognito command (throwaway Firefox as the locked-down user)"
+else
+    echo "  [ ] incognito command (throwaway Firefox as the locked-down user)"
+fi
 if [ -f /etc/firefox-esr/debsway-hardening.js ]; then
     echo "  [x] HTTPS-Only Mode, JavaScript JIT off"
 else
@@ -76,10 +88,10 @@ else
     echo "  [ ] notice when Firefox needs a restart after an update"
 fi
 
-echo "Firefox profile commands (firefox-profiles/new-profile.sh):"
+echo "Firefox profile commands (extras/firefox-profiles/new-profile.sh):"
 found=false
 for c in "$HOME"/.local/bin/firefox-*; do
-    if grep -qs 'debsway firefox-profiles/' "$c"; then
+    if grep -qsE 'debsway (extras/)?firefox-profiles/' "$c"; then
         printf '  %s\n' "${c##*/}"
         found=true
     fi
@@ -106,6 +118,11 @@ for ifc in $(wifi_ifaces); do
     fi
     printf '  %s: %s\n' "$ifc" "$how"
 done
+if [ -e /etc/tor/.debsway-apt-tor ]; then
+    echo "  apt downloads through Tor (parts/apt-tor.sh)"
+else
+    echo "  apt downloads directly"
+fi
 if [ -f /etc/NetworkManager/conf.d/90-debsway-random-mac.conf ]; then
     echo "  random Wi-Fi MAC address: on"
 else

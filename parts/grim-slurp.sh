@@ -5,14 +5,13 @@
 #   Ctrl+Print / Super+Shift+x    drag a region to the clipboard
 #                                 (needs parts/wl-clipboard.sh, else saves a file)
 # Usage: bash grim-slurp.sh [--remove]
+# status: apt:grim apt:slurp
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
-HELPER="$HOME/.local/bin/screenshot"
-
 if [ "${1:-}" = --remove ]; then
     remove_snippet screenshots
-    rm -f "$HELPER"
+    remove_bin screenshot
     apt_purge grim slurp
     exit
 fi
@@ -20,31 +19,7 @@ fi
 say "Installing grim and slurp"
 apt_install grim slurp
 
-mkdir -p "${HELPER%/*}"
-cat >"$HELPER" <<'EOF'
-#!/bin/sh
-# screenshot [full|region|clip]: written by debsway parts/grim-slurp.sh
-dir=$HOME/Pictures
-mkdir -p "$dir"
-file=$dir/screenshot-$(date +%F_%H-%M-%S).png
-
-case ${1:-full} in
-    full) grim "$file" ;;
-    region)
-        geo=$(slurp) || exit 0
-        grim -g "$geo" "$file" ;;
-    clip)
-        geo=$(slurp) || exit 0
-        if command -v wl-copy >/dev/null; then
-            grim -g "$geo" - | wl-copy -t image/png
-        else
-            grim -g "$geo" "$file"
-        fi ;;
-    *) echo "usage: screenshot [full|region|clip]" >&2; exit 2 ;;
-esac
-EOF
-chmod +x "$HELPER"
-note "Wrote $HELPER"
+install_bin screenshot
 
 # Keyboards without a Print key (Apple, many laptops) get the Super+Shift ones
 put_snippet screenshots <<'EOF'

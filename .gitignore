@@ -1,7 +1,5 @@
-# Personal setup, never published
+# Personal setup and notes, never published
 ignore/
-# Large downloads: fetch them yourself (fetch-offline-debs.sh,
-# fetch-tor-browser.sh, extras/whonix.sh --fetch)
-debs/
-torbrowser/
-whonix/
+# Large downloads: fetch them yourself (prep/fetch-offline-debs.sh,
+# prep/fetch-tor-browser.sh, extras/whonix.sh --fetch)
+offline/

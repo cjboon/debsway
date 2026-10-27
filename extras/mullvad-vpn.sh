@@ -3,16 +3,16 @@
 # the background service it talks to, and the graphical app. You need a
 # Mullvad account number (mullvad.net, can be paid anonymously).
 # Usage: bash mullvad-vpn.sh [--remove]
+# summary: Mullvad VPN app and command
+# status: apt:mullvad-vpn
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/extras/mullvad-repo.sh"
+. "$DEBSWAY_DIR/lib/mullvad-repo.sh"
 need_user
-
-GUI="$HOME/.local/bin/mullvad-vpn"
 
 if [ "${1:-}" = --remove ]; then
     if command -v mullvad >/dev/null; then mullvad disconnect >/dev/null 2>&1 || true; fi
     apt_purge mullvad-vpn
-    if grep -qs 'written by debsway extras/mullvad-vpn.sh' "$GUI"; then rm -f "$GUI"; fi
+    remove_bin mullvad-vpn
     remove_mullvad_repo_if_unused
     exit
 fi
@@ -23,9 +23,7 @@ add_mullvad_repo
 say "Installing Mullvad VPN"
 apt_install mullvad-vpn
 # The app lives in /opt and isn't on PATH; this makes Super+d find it
-mkdir -p "$(dirname -- "$GUI")"
-printf '#!/bin/sh\n# mullvad-vpn: written by debsway extras/mullvad-vpn.sh\nexec "/opt/Mullvad VPN/mullvad-vpn" "$@"\n' >"$GUI"
-chmod +x "$GUI"
+install_bin mullvad-vpn
 
 cat <<'EOF'
 
