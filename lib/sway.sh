@@ -25,6 +25,9 @@ ensure_sway_config() {
     [ -f /etc/sway/config ] || die "sway isn't installed. Run install-base.sh first."
     mkdir -p "$SWAY_SNIPPETS"
     [ -f "$SWAY_CONFIG" ] || cp /etc/sway/config "$SWAY_CONFIG"
+    # The snippets rebind these keys; sway shows its "errors in your config
+    # file" bar for a key bound twice, so the stock bindings go
+    sed -i -E '/^[[:space:]]*bindsym( --locked)? (XF86(Audio(Mute|LowerVolume|RaiseVolume|MicMute)|MonBrightness(Down|Up))|Print) exec (pactl|brightnessctl|grim)/d' "$SWAY_CONFIG"
     if ! grep -qxF "$SWAY_INCLUDE" "$SWAY_CONFIG"; then
         printf '\n# debsway feature snippets\n%s\n' "$SWAY_INCLUDE" >>"$SWAY_CONFIG"
     fi
@@ -33,7 +36,8 @@ ensure_sway_config() {
 # sway -C exits 0 even on errors, so look for them in its output
 check_sway_config() {
     local out
-    out=$(sway -C -c "$SWAY_CONFIG" 2>&1 || true)
+    # Headless backend: validating needs no seat, so this also works over ssh
+    out=$(WLR_BACKENDS=headless WLR_RENDERER=pixman WLR_LIBINPUT_NO_DEVICES=1 sway -C -c "$SWAY_CONFIG" 2>&1 || true)
     if grep -q '\[ERROR\]' <<<"$out"; then
         grep '\[ERROR\]' <<<"$out" >&2
         return 1

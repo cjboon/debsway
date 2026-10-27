@@ -128,12 +128,14 @@ tor_browser_running() { pgrep -f "^$TBB/Browser/firefox" >/dev/null; }
 
 # Our block's bridge lines, if any, from an earlier run
 current_bridges() {
+    [ -f "$USERJS" ] || return 0 # first run: nothing saved yet
     sed -n "\|^$JS_BEGIN\$|,\|^$JS_END\$|p" "$USERJS" 2>/dev/null |
         sed -n 's/^user_pref("torbrowser\.settings\.bridges\.bridge_strings\.[0-9]*", "\(.*\)");$/\1/p'
 }
 
 # Our block's built-in bridge type (obfs4, snowflake, meek), if any
 current_builtin() {
+    [ -f "$USERJS" ] || return 0
     sed -n "\|^$JS_BEGIN\$|,\|^$JS_END\$|p" "$USERJS" 2>/dev/null |
         sed -n 's/^user_pref("torbrowser\.settings\.bridges\.builtin_type", "\(.*\)");$/\1/p' | head -1
 }

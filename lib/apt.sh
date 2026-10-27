@@ -116,11 +116,29 @@ apt_install() {
 # apt_install, except what other debsway scripts still need. PACKAGEs are
 # used only when this script installed its packages before markers existed.
 apt_purge() {
-    local marker p other pkgs=()
+    local marker p other pkgs=() left=()
     marker=$(apt_marker)
     if is_installed "$marker"; then
+        mapfile -t pkgs < <(marker_depends "$marker")
         $SUDO apt-get purge -y "$marker"
         $SUDO apt-get autoremove --purge -y
+        # autoremove keeps what an installed package only suggests (man-db
+        # suggests a www-browser, so w3m and Firefox stay). Take out what
+        # this script installed, unless it was there before (not marked
+        # automatic), another script wants it, or an installed package depends on it.
+        left=()
+        for p in "${pkgs[@]}"; do
+            is_installed "$p" || continue
+            apt-mark showauto "$p" | grep -qxF -- "$p" || continue
+            [ -z "$(apt_needed_by_marker "$p")" ] || continue
+            [ -z "$(apt-cache rdepends --installed --no-recommends --no-suggests --no-conflicts \
+                --no-breaks --no-replaces --no-enhances "$p" 2>/dev/null | tail -n +3)" ] || continue
+            left+=("$p")
+        done
+        if [ ${#left[@]} -gt 0 ]; then
+            $SUDO apt-get purge -y "${left[@]}"
+            $SUDO apt-get autoremove --purge -y
+        fi
         return 0
     fi
     for p in "$@"; do

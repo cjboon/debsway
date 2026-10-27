@@ -70,7 +70,22 @@ apt-get() {
 apt-mark() {
     echo "apt-mark $*" >>"$LOG"
     local a
+    case $1 in
+        showauto | showmanual)
+            for a in "${@:2}"; do [ "$(cat "$ST/pkg/$a" 2>/dev/null)" = "${1#show}" ] && echo "$a"; done
+            return 0 ;;
+    esac
     for a in "${@:2}"; do [ -f "$ST/pkg/$a" ] && echo "$1" >"$ST/pkg/$a"; done
+    return 0
+}
+# Reverse dependencies: the packages whose .deps name it, in apt-cache's layout
+apt-cache() {
+    local pkg=${*: -1} a
+    echo "$pkg"
+    echo "Reverse Depends:"
+    for a in "$ST"/pkg/*.deps; do
+        tr -d ',' <"$a" | tr ' ' '\n' | grep -qxF -- "$pkg" && echo "  $(basename -- "$a" .deps)"
+    done
     return 0
 }
 # shellcheck disable=SC2016  # the ${...} are dpkg-query field names

@@ -15,6 +15,8 @@ need_user
 # Craig Raw's key: SPARROW_FPR and SPARROW_KEY_URL in pins.sh
 
 if [ "${1:-}" = --remove ]; then
+    # Its pre-removal script needs this folder too (see the install below)
+    sudo mkdir -p /usr/share/desktop-directories
     apt_purge sparrowwallet
     remove_bin sparrow
     note "Your wallets are kept in ~/.sparrow. Back them up before deleting anything."
@@ -24,7 +26,8 @@ fi
 say "Checking the newest Sparrow"
 version=$(latest_github_tag sparrowwallet/sparrow)
 [[ $version =~ ^[0-9]+(\.[0-9]+)+$ ]] || die "Couldn't read the newest version from GitHub."
-installed=$(dpkg-query -W -f='${Version}' sparrowwallet 2>/dev/null || true)
+# Only a fully installed package counts, not one whose setup failed halfway
+installed=$(dpkg-query -W -f='${db:Status-Abbrev}${Version}' sparrowwallet 2>/dev/null | sed -n 's/^ii //p' || true)
 if [ "${installed%-*}" = "$version" ]; then
     note "Sparrow $version is already installed."
 else
@@ -45,6 +48,9 @@ else
     # apt reads the local file as the _apt user, which can't enter mktemp dirs
     chmod 755 "$work"
     chmod 644 "$work/$deb"
+    # Its post-install script runs xdg-desktop-menu, which fails without this
+    # folder (a sway-only system doesn't have it)
+    sudo mkdir -p /usr/share/desktop-directories
     apt_install "$work/$deb"
 fi
 
