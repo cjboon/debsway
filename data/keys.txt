@@ -1,13 +1,23 @@
   KEYS                                   Super = the Windows / Cmd key
   ──────────────────────────────────────────────────────────────────
-  Press q to close this.   Open it again any time with Super+?
+  Press q to close this; arrows and Space scroll.
+  Open it again any time: Super+?   or type  keys  in a terminal.
+  It is also the file ~/KEYS.txt.
 
-  APPS
+  START HERE
     Super+Enter            terminal (foot)
-    Super+d                launcher: type a name (e.g. firefox), Enter
+    Super+d                launcher: type a name, Enter, e.g.
+                           firefox, incognito, keepassxc, sparrow
+    Super+Shift+q          close the window
+    Super+?                this page
+
+  IN THE TERMINAL (foot)
+    Ctrl+Shift+c / v       copy / paste (Ctrl+c stops a program)
+    Shift+PageUp / Down    scroll back / forward
+    Ctrl+plus / minus      bigger / smaller text (Ctrl+0: normal)
+    Ctrl+Shift+n           another terminal, in the same folder
 
   WINDOWS
-    Super+Shift+q          close window
     Super+h j k l          move focus left / down / up / right (or arrows)
     Super+Shift+h j k l    move the window (or Shift+arrows)
     Super+f                fullscreen
@@ -38,9 +48,18 @@
   SESSION
     Super+Shift+c          reload the sway config
     Super+Shift+e          exit sway
-    Super+Shift+Escape     power menu: lock, suspend, log out, reboot, power off
+    Super+Shift+Escape     power menu: lock, suspend, log out, reboot
+
+  IF YOU GET STUCK
+    Ctrl+Alt+F2            a plain text console: log in there and fix things
+    Ctrl+Alt+F1            back to the desktop
+    Super+Shift+Escape     power menu: log out, reboot, power off
 
   FROM A TERMINAL
+    keys                   this page
+    bash ~/debsway/status.sh          what is installed
+    bash ~/debsway/install-extras.sh  add programs (or one: extras/NAME.sh)
+    display-scale          text too small on a sharp screen? makes it bigger
     nmtui                  pick a Wi-Fi network
     powerprofilesctl set power-saver | balanced | performance
     brightness up 10       bigger brightness steps

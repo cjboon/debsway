@@ -1,0 +1,217 @@
+#!/bin/sh
+# display-scale: text too small on a sharp screen? Sets the scale of each
+# screen and remembers it for that particular screen, on whichever port it
+# is plugged in. Written by debsway install-base.sh. Run it inside sway.
+#
+#   display-scale                 asks which screen and which scale
+#   display-scale list            the screens, their sharpness and scale
+#   display-scale set SCREEN N    e.g. display-scale set eDP-1 1.5  (SCREEN
+#                                 can be "all"; N from 0.5 to 4)
+#   display-scale reset           back to 1 for every screen, forgets the settings
+#   display-scale watch           sway starts this: it says so once, in a
+#                                 notification, when a sharp screen is at scale 1
+#
+# Settings are in ~/.config/sway/config.d/display.conf, one line per screen.
+# sway doesn't say how big a screen is, so its size comes from the screen's
+# own data (EDID) in /sys/class/drm; without it the sharpness is unknown.
+
+DRM=${DEBSWAY_DRM_DIR:-/sys/class/drm}
+CONF=$HOME/.config/sway/config.d/display.conf
+SEEN=${XDG_STATE_HOME:-$HOME/.local/state}/debsway/display-seen
+SHARP=150   # pixels per inch from which text at scale 1 looks small
+
+die() { echo "display-scale: $*" >&2; exit 1; }
+
+need_sway() {
+    swaymsg -t get_version >/dev/null 2>&1 ||
+        die "sway isn't running here. Run this inside sway (Super+Enter opens a terminal)."
+}
+
+# edid_mm NAME: "WIDTH HEIGHT" of that screen in millimetres, or nothing
+edid_mm() {
+    for d in "$DRM"/card*-"$1"; do
+        [ -r "$d/edid" ] || continue
+        od -An -v -tu1 -N128 "$d/edid" 2>/dev/null | awk '
+            { for (i = 1; i <= NF; i++) b[n++] = $i }
+            END {
+                if (n < 128 || b[0] != 0 || b[1] != 255 || b[7] != 0) exit
+                # the first detailed timing has the image size in mm
+                w = b[66] + 16 * int(b[68] / 16); h = b[67] + (b[68] % 16) * 256
+                if (b[54] + b[55] == 0 || w == 0 || h == 0) { w = b[21] * 10; h = b[22] * 10 }
+                if (w > 0 && h > 0) print w, h
+            }'
+        return
+    done
+}
+
+# screens: one line per active screen, tab separated:
+#   NAME  ID  WIDTHxHEIGHT  SCALE  MM-WIDTH  MM-HEIGHT  PPI  SUGGESTED-SCALE
+# (a "-" where something isn't known)
+screens() {
+    swaymsg -p -t get_outputs | awk -v q="'" '
+        function emit() { if (name != "" && mode != "") print name "\t" id "\t" mode "\t" scale }
+        /^Output / {
+            emit(); name = $2; mode = ""; scale = "1"
+            i = index($0, q); j = length($0)
+            while (j > i && substr($0, j, 1) != q) j--
+            id = substr($0, i + 1, j - i - 1)
+        }
+        /Current mode:/ { mode = $3 }
+        /Scale factor:/ { scale = $3 + 0 }
+        END { emit() }' |
+    while IFS='	' read -r name id mode scale; do
+        # shellcheck disable=SC2046  # the two numbers are meant to split
+        set -- $(edid_mm "$name")
+        printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$name" "$id" "$mode" "$scale" "${1:--}" "${2:--}"
+    done |
+    awk -F'\t' -v sharp="$SHARP" '{
+        ppi = "-"; sug = "-"
+        split($3, wh, "x")
+        if ($5 + 0 > 0) {
+            p = wh[1] / ($5 / 25.4); ppi = int(p + 0.5)
+            s = (p < sharp) ? 1 : int(p / 110 * 4 + 0.5) / 4
+            if (s < 1) s = 1; if (s > 3) s = 3
+            sug = s
+        }
+        print $0 "\t" ppi "\t" sug
+    }'
+}
+
+# key NAME ID: what the config line uses to name that screen. A screen that
+# gives no make or model shares its id with every other one, so it is named
+# by its port instead
+key() {
+    case $2 in
+        *Unknown*) echo "$1" ;;
+        *) echo "$2" ;;
+    esac
+}
+
+list() {
+    n=0
+    screens | while IFS='	' read -r name id mode scale mmw mmh ppi sug; do
+        n=$((n + 1))
+        if [ "$ppi" = - ]; then
+            sharp="size unknown"
+        else
+            sharp="${mmw}x${mmh} mm, $ppi pixels per inch"
+        fi
+        printf '  %s) %-9s %-10s %s, scale %s' "$n" "$name" "$mode" "$sharp" "$scale"
+        [ "$sug" = - ] || printf ', suggested %s' "$sug"
+        printf '\n       %s\n' "$id"
+    done
+}
+
+# write_conf KEY SCALE: that screen's line in display.conf, checked with sway
+write_conf() {
+    mkdir -p "${CONF%/*}"
+    old=$(mktemp)
+    new=$(mktemp)
+    if [ -f "$CONF" ]; then cp "$CONF" "$old"; else : >"$old"; fi
+    {
+        [ -s "$old" ] || echo "# Screen scales, written by debsway display-scale (display-scale list shows them)"
+        awk -v k="output \"$1\" scale " 'index($0, k) != 1' "$old"
+        echo "output \"$1\" scale $2"
+    } >"$new"
+    cp "$new" "$CONF"
+    out=$(WLR_BACKENDS=headless WLR_RENDERER=pixman WLR_LIBINPUT_NO_DEVICES=1 \
+        sway -C -c "$HOME/.config/sway/config" 2>&1 || true)
+    if printf '%s\n' "$out" | grep -q '\[ERROR\]'; then
+        cp "$old" "$CONF"
+        rm -f "$old" "$new"
+        die "sway rejected the setting, so it was not saved: $(printf '%s\n' "$out" | grep -m1 '\[ERROR\]')"
+    fi
+    rm -f "$old" "$new"
+}
+
+valid_scale() {
+    awk -v s="$1" 'BEGIN { exit !(s ~ /^[0-9]+(\.[0-9]+)?$/ && s + 0 >= 0.5 && s + 0 <= 4) }'
+}
+
+# set_screens SCREEN SCALE
+set_screens() {
+    valid_scale "$2" || die "'$2' isn't a scale between 0.5 and 4 (1 is normal size, 2 is double)."
+    tmp=$(mktemp)
+    screens >"$tmp"
+    found=0
+    while IFS='	' read -r name id mode scale mmw mmh ppi sug; do
+        [ "$1" = all ] || [ "$1" = "$name" ] || continue
+        found=1
+        write_conf "$(key "$name" "$id")" "$2"
+        swaymsg output "$name" scale "$2" >/dev/null
+        echo "$name: scale $2"
+    done <"$tmp"
+    rm -f "$tmp"
+    [ "$found" = 1 ] || die "No screen called '$1'. display-scale list shows the names."
+}
+
+reset() {
+    rm -f "$CONF"
+    for line in $(screens | cut -f1); do swaymsg output "$line" scale 1 >/dev/null; done
+    echo "All screens are back at scale 1."
+}
+
+ask() {
+    need_sway
+    echo "Screens:"
+    list
+    count=$(screens | wc -l)
+    [ "$count" -gt 0 ] || die "No screens found."
+    if [ "$count" -eq 1 ]; then
+        pick=1
+    else
+        printf 'Which one (number, or all)? '
+        read -r pick || exit 1
+    fi
+    if [ "$pick" = all ]; then
+        target=all
+        sug=
+    else
+        row=$(screens | sed -n "${pick}p")
+        [ -n "$row" ] || die "No screen number '$pick'."
+        target=$(printf '%s' "$row" | cut -f1)
+        sug=$(printf '%s' "$row" | cut -f8)
+        [ "$sug" != - ] || sug=
+    fi
+    printf 'Scale (1 normal, 1.5, 2 ... bigger text)%s: ' "${sug:+, Enter for $sug}"
+    read -r scale || exit 1
+    scale=${scale:-$sug}
+    [ -n "$scale" ] || die "No scale given."
+    set_screens "$target" "$scale"
+    echo "Saved in $CONF: it applies whenever that screen is plugged in."
+}
+
+# Says once, per screen, that a sharp screen is at scale 1
+check() {
+    mkdir -p "${SEEN%/*}"
+    touch "$SEEN"
+    screens | while IFS='	' read -r name id mode scale mmw mmh ppi sug; do
+        [ "$ppi" != - ] || continue
+        awk -v p="$ppi" -v s="$scale" -v sharp="$SHARP" 'BEGIN { exit !(p >= sharp && s <= 1.01) }' || continue
+        k=$(key "$name" "$id")
+        grep -qxF "$k" "$SEEN" && continue
+        echo "$k" >>"$SEEN"
+        notify-send -a debsway -t 20000 "Sharp screen: $name" \
+            "$ppi pixels per inch: text may look small. Type display-scale to make it bigger (suggested $sug)."
+    done
+}
+
+watch() {
+    command -v notify-send >/dev/null || exit 0
+    sleep 2
+    check
+    # one event whenever a screen is plugged in, unplugged or changed
+    swaymsg -t subscribe -m '["output"]' | while read -r _; do
+        sleep 1
+        check
+    done
+}
+
+case ${1:-} in
+    "") ask ;;
+    list) need_sway; list ;;
+    set) need_sway; [ $# -eq 3 ] || die "usage: display-scale set SCREEN SCALE"; set_screens "$2" "$3" ;;
+    reset) need_sway; reset ;;
+    watch) need_sway; watch ;;
+    *) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac

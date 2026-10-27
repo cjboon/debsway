@@ -8,7 +8,14 @@
    installs its own packages (see the table below). There is no web
    browser until you pick one: Firefox and w3m are in the extras list.
 2. Sets up sway (a copy of the stock config plus one `include` line for
-   `~/.config/sway/config.d/`), the status bar, and the key cheat sheet.
+   `~/.config/sway/config.d/`), the status bar (see-through black), no window
+   borders (`appearance.conf`), and the key cheat sheet: `Super+?`, the `keys` command, `~/KEYS.txt` (a link
+   to the one copy), a reminder at the left of the bar, and a one-line hint on
+   plain text consoles. `display-scale` sets the text size of each screen,
+   remembered per screen (`display.conf`), and a watcher started by sway says
+   once, in a notification, when a sharp screen is still at scale 1, also when
+   you plug one in later. A screen's size comes from its own data in
+   `/sys/class/drm`; without it the sharpness is unknown and nothing is said.
 3. Offers to start sway when you log in on tty1 (a marked block in
    `~/.profile`).
 4. Runs every script in `parts/`. If one fails, the rest still run and

@@ -57,14 +57,38 @@ say "Key cheat sheet"
 KEYS="$HOME/.local/share/debsway/keys.txt"
 mkdir -p "${KEYS%/*}"
 install -m 0644 "$DEBSWAY_DIR/data/keys.txt" "$KEYS"
+# Easy to find again: ~/KEYS.txt (one copy, this is a link to it) and the keys command
+ln -sfn "$KEYS" "$HOME/KEYS.txt"
+install_bin keys
 install_bin debsway-welcome
+# Shift+slash is ? on a US keyboard; "question" follows the layout on others
 put_snippet help <<'EOF'
 # Key cheat sheet on Super+? (debsway install-base.sh)
-bindsym $mod+Shift+slash exec foot --app-id=debsway-keys less ~/.local/share/debsway/keys.txt
-for_window [app_id="debsway-keys"] floating enable, resize set width 60 ppt height 85 ppt
+bindsym $mod+Shift+slash exec foot --app-id=debsway-keys ~/.local/bin/keys
+bindsym $mod+question exec foot --app-id=debsway-keys ~/.local/bin/keys
+for_window [app_id="debsway-keys"] floating enable, resize set width 72 ppt height 85 ppt
 exec ~/.local/bin/debsway-welcome
 EOF
-note "Super+? shows it. It also opens by itself on your first login."
+note "Super+? shows it (also: type keys, or open ~/KEYS.txt). It opens by itself on your first login."
+
+say "Look"
+put_snippet appearance <<'EOF'
+# No window borders (debsway install-base.sh)
+default_border none
+default_floating_border none
+hide_edge_borders both
+EOF
+note "Windows have no borders."
+
+say "Sharp screens"
+# display-scale sets a screen's scale; its watcher says so, once per screen,
+# when a sharp one is still at scale 1 (also when one is plugged in later)
+install_bin display-scale
+put_snippet display-watch <<'EOF'
+# Notice sharp screens whose text is small (debsway display-scale)
+exec ~/.local/bin/display-scale watch
+EOF
+note "Text too small on a sharp screen? display-scale makes it bigger (sway tells you once)."
 
 say "sway status bar"
 # bin/sway-status shows wifi | volume | brightness | battery | date
@@ -73,6 +97,11 @@ install_bin sway-status
 if grep -q 'status_command while date' "$SWAY_CONFIG"; then
     sed -i 's|^\([[:space:]]*\)status_command while date.*|\1status_command ~/.local/bin/sway-status|' "$SWAY_CONFIG"
     note "Bar now runs sway-status."
+fi
+# See-through black instead of the stock grey
+if grep -q '^[[:space:]]*background #323232$' "$SWAY_CONFIG"; then
+    sed -i 's|^\([[:space:]]*\)background #323232$|\1background #00000080|' "$SWAY_CONFIG"
+    note "Bar background is see-through black."
 fi
 check_sway_config || die "sway reports errors in $SWAY_CONFIG"
 reload_sway
@@ -93,6 +122,17 @@ EOF
     note "Added to $PROFILE. Other ttys (Ctrl+Alt+F2) still give a plain shell."
 else
     note "Start it yourself by typing: sway"
+fi
+# On a plain text console (Ctrl+Alt+F2, or tty1 without autostart) say where the keys are
+if ! grep -q '>>> debsway hint' "$PROFILE" 2>/dev/null; then
+    cat >>"$PROFILE" <<'EOF'
+
+# >>> debsway hint >>>
+case "$(tty 2>/dev/null)" in
+    /dev/tty[0-9]*) [ -n "${WAYLAND_DISPLAY:-}" ] || echo "debsway: type keys for the key cheat sheet" ;;
+esac
+# <<< debsway hint <<<
+EOF
 fi
 
 # Last, because the network-manager part can drop the connection briefly

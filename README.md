@@ -43,7 +43,8 @@ sudo mount -L DEBSWAY /mnt && bash /mnt/debsway/start.sh
    explains what it will do and asks before changing anything. (Without
    the stick, see [After the first boot](#after-the-first-boot).)
 
-3. Log out and log in on tty1: sway starts. Super+? shows every key.
+3. Log out and log in on tty1: sway starts. Super+? shows every key (also
+   `keys` in a terminal, or the file `~/KEYS.txt`).
 4. `install-base.sh` ends with a list of optional programs: arrow keys and
    the space bar check the ones you want. Add more later with
    `bash install-extras.sh`, or one directly: `bash extras/keepassxc.sh`.
@@ -170,7 +171,8 @@ bash install-base.sh
 
 Then log out (`exit`) and log in on tty1: sway starts by itself if you
 said yes to that, otherwise type `sway`. The key cheat sheet opens on
-your first login; Super+? brings it back.
+your first login; Super+? brings it back, and so does typing `keys` or
+opening `~/KEYS.txt`. The status bar says "Super+? keys" at its left.
 
 ## More
 

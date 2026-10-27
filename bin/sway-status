@@ -1,5 +1,5 @@
 #!/bin/sh
-# Status line for swaybar: wifi | volume | brightness | battery | date
+# Status line for swaybar: a reminder where the keys are | wifi | volume | brightness | battery | date
 # Written by debsway install-base.sh. Each part only shows when this
 # system has what it needs, so it copes with anything missing or removed.
 # Redraws every 5 seconds, or right away on SIGUSR1 (the brightness keys
@@ -57,7 +57,7 @@ battery() {
 }
 
 while :; do
-    line=$(wifi)
+    line="Super+? keys | $(wifi)"
     for part in "$(volume)" "$(brightness)" "$(battery)" "$(date +'%a %Y-%m-%d %-I:%M %p')"; do
         [ -n "$part" ] && line="$line | $part"
     done
