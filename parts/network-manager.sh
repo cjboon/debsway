@@ -19,10 +19,12 @@ apt_install network-manager wpasupplicant wireless-regdb polkitd
 
 hex_to_text() { printf '%b' "$(sed 's/../\\x&/g' <<<"$1")"; }
 
-# Prints "ssid<TAB>psk" for IF from wifi.sh's or the installer's config
+# Prints "ssid<TAB>psk<TAB>hidden" (hidden is 1 or 0) for IF from wifi.sh's
+# or the installer's config
 existing_wifi() {
-    local ifc=$1 conf=/etc/wpa_supplicant/wpa_supplicant-$1.conf ssid psk
+    local ifc=$1 conf=/etc/wpa_supplicant/wpa_supplicant-$1.conf ssid psk hidden=0
     if sudo test -f "$conf"; then
+        if sudo grep -qE '^[[:space:]]*scan_ssid=1' "$conf"; then hidden=1; fi
         ssid=$(sudo sed -n 's/^[[:space:]]*ssid=//p' "$conf" | head -1)
         psk=$(sudo sed -n 's/^[[:space:]]*psk=//p' "$conf" | head -1)
         case $ssid in
@@ -35,25 +37,29 @@ existing_wifi() {
             /etc/network/interfaces 2>/dev/null | tr -d '"')
         psk=$(sudo awk '$1 == "wpa-psk" { print $2; exit }' \
             /etc/network/interfaces 2>/dev/null | tr -d '"')
+        if sudo grep -qE '^[[:space:]]*wpa-scan-ssid[[:space:]]+1' /etc/network/interfaces 2>/dev/null; then
+            hidden=1
+        fi
     fi
-    [ -n "$ssid" ] && printf '%s\t%s\n' "$ssid" "$psk"
+    [ -n "$ssid" ] && printf '%s\t%s\t%s\n' "$ssid" "$psk" "$hidden"
 }
 
-moved=()
+moved=() moved_psk=()
 for ifc in $(wifi_ifaces); do
     creds=$(existing_wifi "$ifc" || true)
     [ -n "$creds" ] || continue
     ssid=${creds%%$'\t'*}
-    psk=${creds#*$'\t'}
+    rest=${creds#*$'\t'}
+    psk=${rest%$'\t'*}
+    hidden=${rest##*$'\t'}
 
     say "Moving Wi-Fi \"$ssid\" on $ifc to NetworkManager"
     sudo nmcli connection delete id "$ssid" >/dev/null 2>&1 || true
-    if [ -n "$psk" ]; then
-        sudo nmcli connection add type wifi con-name "$ssid" ifname "$ifc" ssid "$ssid" \
-            wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$psk" >/dev/null
-    else
-        sudo nmcli connection add type wifi con-name "$ssid" ifname "$ifc" ssid "$ssid" >/dev/null
-    fi
+    args=(connection add type wifi con-name "$ssid" ifname "$ifc" ssid "$ssid")
+    if [ "$hidden" = 1 ]; then args+=(802-11-wireless.hidden yes); fi
+    # WPA2 first; a WPA3-only network is retried as SAE below
+    if [ -n "$psk" ]; then args+=(wifi-sec.key-mgmt wpa-psk wifi-sec.psk "$psk"); fi
+    sudo nmcli "${args[@]}" >/dev/null
 
     # Stop the old setup, then remove its config
     sudo ifdown "$ifc" >/dev/null 2>&1 || true
@@ -62,15 +68,25 @@ for ifc in $(wifi_ifaces); do
         "/etc/systemd/network/50-debsway-$ifc.network"
     drop_ifupdown_iface "$ifc"
     moved+=("$ssid")
+    if [ -n "$psk" ]; then moved_psk+=(yes); else moved_psk+=(no); fi
 done
 
 say "Restarting NetworkManager"
 sudo systemctl enable NetworkManager >/dev/null
 sudo systemctl restart NetworkManager
-for ssid in "${moved[@]}"; do
+for i in "${!moved[@]}"; do
+    ssid=${moved[i]}
     if sudo nmcli --wait 30 connection up id "$ssid" >/dev/null 2>&1; then
         note "Connected to \"$ssid\"."
+    elif [ "${moved_psk[i]}" = yes ] &&
+        sudo nmcli connection modify id "$ssid" wifi-sec.key-mgmt sae &&
+        sudo nmcli --wait 30 connection up id "$ssid" >/dev/null 2>&1; then
+        note "Connected to \"$ssid\" (WPA3)."
     else
+        # Back to WPA2, the usual kind, so nmtui shows what you expect
+        if [ "${moved_psk[i]}" = yes ]; then
+            sudo nmcli connection modify id "$ssid" wifi-sec.key-mgmt wpa-psk || true
+        fi
         warn "Couldn't reconnect to \"$ssid\". Run: nmtui"
     fi
 done
