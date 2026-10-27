@@ -1,0 +1,9 @@
+# shellcheck settings for debsway (used by test.sh, hooks/pre-commit and CI)
+# Sourced files are followed:
+external-sources=true
+# Not errors in this code's style:
+#   SC1091  a sourced file that can't be found at check time
+#   SC2015  "a && b || c" used as a short if
+#   SC2001  sed where ${var//} would also work
+#   SC2034  variables used by the scripts that source them
+disable=SC1091,SC2015,SC2001,SC2034

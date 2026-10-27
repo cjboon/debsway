@@ -1,0 +1,102 @@
+#!/bin/bash
+# ublock-allow: sites allowed to load scripts and frames from other sites.
+# Written by debsway parts/firefox-hardening.sh.
+#
+# uBlock Origin runs in "medium mode" for every Firefox profile: scripts
+# and frames from other sites (ad networks, trackers, most malicious ads)
+# are blocked everywhere. When a site breaks because of it, allow that
+# site here. uBlock reads these rules at every start, so clicks in its
+# popup only last until Firefox restarts; this list stays.
+#
+#   ublock-allow example.com          allow example.com (and its subdomains)
+#   ublock-allow --remove example.com
+#   ublock-allow --list
+# Restart Firefox afterwards.
+set -euo pipefail
+
+ETC=${DEBSWAY_FIREFOX_ETC:-/etc/firefox-esr}
+LIST="$ETC/debsway-ublock-allow"
+POLICY="$ETC/policies/policies.json"
+OURS="$ETC/policies/.debsway-written"
+if [ "$(id -u)" -eq 0 ] || [ -n "${DEBSWAY_FIREFOX_ETC:-}" ]; then SUDO=; else SUDO=sudo; fi
+
+die() { printf 'ublock-allow: %s\n' "$*" >&2; exit 1; }
+
+# A bare host name: no scheme, path, port or capitals
+site_of() {
+    local s=${1,,}
+    s=${s#*://}
+    s=${s%%/*}
+    s=${s%%:*}
+    s=${s#www.}
+    [[ $s =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$ ]] ||
+        die "\"$1\" doesn't look like a site name, e.g. example.com"
+    echo "$s"
+}
+
+sites() { [ -f "$LIST" ] && grep -v '^#' "$LIST" | grep . || true; }
+
+# The policy: uBlock's own default rules, block other sites' scripts and
+# frames everywhere, then the allowed sites. uBlock wants it as a JSON
+# string inside the JSON, hence the double escaping.
+write_policy() {
+    local rules=() s inner sum
+    rules=('behind-the-scene * * noop' 'behind-the-scene * image noop'
+        'behind-the-scene * 3p noop' 'behind-the-scene * inline-script noop'
+        'behind-the-scene * 1p-script noop' 'behind-the-scene * 3p-script noop'
+        'behind-the-scene * 3p-frame noop' '* * 3p-script block' '* * 3p-frame block')
+    while read -r s; do
+        [ -n "$s" ] && rules+=("$s * 3p-script noop" "$s * 3p-frame noop")
+    done < <(sites)
+    inner=$(printf '%s\\n' "${rules[@]}")
+    inner="{\"userSettings\":{\"advancedUserEnabled\":true},\"dynamicFilteringString\":\"${inner%\\n}\"}"
+    inner=$(sed 's/\\/\\\\/g; s/"/\\"/g' <<<"$inner")
+    $SUDO mkdir -p "$ETC/policies"
+    printf '{\n  "policies": {\n    "3rdparty": {\n      "Extensions": {\n        "uBlock0@raymondhill.net": {\n          "adminSettings": "%s"\n        }\n      }\n    }\n  }\n}\n' "$inner" |
+        $SUDO tee "$POLICY" >/dev/null
+    sum=$(sha256sum "$POLICY")
+    echo "$sum" | $SUDO tee "$OURS" >/dev/null
+}
+
+# Someone else's policies.json is left alone, before anything changes
+policy_is_ours() {
+    if [ -f "$POLICY" ] && ! { [ -f "$OURS" ] && sha256sum --status -c "$OURS" 2>/dev/null; }; then
+        die "$POLICY exists and wasn't written by debsway. Add uBlock's settings to it by hand."
+    fi
+}
+
+case "${1:-}" in
+    --remove | --refresh) policy_is_ours ;;
+    --list | "" | -*) ;;
+    *) policy_is_ours ;;
+esac
+
+case "${1:-}" in
+    --list | "")
+        if [ -n "$(sites)" ]; then sites; else echo "(no sites allowed yet)"; fi
+        [ -n "${1:-}" ] || echo "Usage: ublock-allow SITE | --remove SITE | --list"
+        ;;
+    --remove)
+        [ $# -eq 2 ] || die "Usage: ublock-allow --remove SITE"
+        site=$(site_of "$2")
+        { echo "# Written by ublock-allow; one site per line"; sites | grep -vxF "$site" || true; } |
+            $SUDO tee "$LIST.new" >/dev/null
+        $SUDO mv "$LIST.new" "$LIST"
+        write_policy
+        echo "Removed $site. Restart Firefox for it to take effect."
+        ;;
+    --refresh)
+        write_policy
+        ;;
+    -*)
+        die "Usage: ublock-allow SITE | --remove SITE | --list"
+        ;;
+    *)
+        site=$(site_of "$1")
+        { echo "# Written by ublock-allow; one site per line"; sites | grep -vxF "$site" || true; echo "$site"; } |
+            $SUDO tee "$LIST.new" >/dev/null
+        $SUDO mv "$LIST.new" "$LIST"
+        write_policy
+        echo "Allowed $site to load scripts and frames from other sites. Restart Firefox for it to take effect."
+        ;;
+esac
