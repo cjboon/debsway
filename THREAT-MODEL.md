@@ -88,6 +88,12 @@ With the extras:
   window is visible to you and to your screenshots, as any window is.
 - **Your Wi-Fi network or ISP seeing where you go**, outside Tor or a
   VPN. They see which sites you visit (not what's on the pages).
+- **A listening service, if you turn on remote access**
+  (`extras/remote-access.sh`). Nothing listens by default. With it on,
+  sshd runs (on 127.0.0.1, keys only) behind a Tor onion service that
+  needs a client key. That is far less exposed than an open port, but a
+  hole in sshd or Tor, or a stolen client key, would be a way in. Turn it
+  off when you don't need it.
 - **Weak or reused passwords, or phishing.** Use a password manager
   (`extras/keepassxc.sh`) and two-factor login, preferably a hardware
   key.

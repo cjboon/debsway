@@ -14,6 +14,7 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `tor-browser.sh` | Tor Browser (Safest, JavaScript off, a bridge before its first connection if you need one: obfs4, webtunnel, Snowflake or meek). See below |
 | `whonix.sh` | Whonix Gateway + Workstation VMs on KVM. See below |
 | `onionshare.sh` | Share files, receive files, host a site or a chat over Tor, with a bridge if you need one (obfs4 or Snowflake). Prints `onionshare-cli` examples |
+| `remote-access.sh` | ssh into this computer from another one over a Tor onion service, with no firewall port opened. sshd listens on 127.0.0.1 only (keys only, your user only) and the onion service needs a client key. Shows the address and the exact setup lines for the other computer. See below |
 | `mullvad-vpn.sh` | Mullvad VPN (app and `mullvad` command), from Mullvad's signed apt repo. Prints `mullvad` examples |
 | `mullvad-browser.sh` | Mullvad Browser: Tor Browser's anti-tracking without Tor, for use with a VPN |
 | `sparrow-wallet.sh` | Sparrow Bitcoin wallet, the signed official .deb. Command: `sparrow` |
@@ -85,6 +86,36 @@ trash, VM disks and big downloads are left out; see
 **Not included: yt-dlp.** It has to run YouTube's own JavaScript, and
 the one runtime that sandboxes that code (deno) isn't in Debian;
 Debian's yt-dlp is also too old to keep working.
+
+## Remote access (`extras/remote-access.sh`)
+
+For logging in to this computer from another one without opening a port:
+the firewall stays closed, and nothing on the local network can reach ssh.
+
+- **What it sets up.** `openssh-server` listening on `127.0.0.1` only (key
+  login only, root login off, only your user), and a Tor onion service
+  that passes port 22 through to it. Tor connects outward, so `ufw` is
+  unchanged. It asks first whether you need a bridge, like apt over Tor.
+- **Who can connect.** Only a computer that has the client key. The onion
+  service uses Tor's client authorization, so without the key it can't even
+  be found. The key is made here and shown once; only its public half is
+  kept on this computer. Your own ssh key still has to be accepted
+  (`~/.ssh/authorized_keys`; it asks you to paste one if there is none).
+- **On the computer you connect from**, install `tor` and `netcat-openbsd`,
+  put the key line in Tor's `ClientOnionAuthDir`, and add a `Host` block
+  with `ProxyCommand nc -X 5 -x 127.0.0.1:9050 %h %p` to `~/.ssh/config`. The
+  script prints all of it, ready to paste.
+- **Run it again** to see the address or to authorize another computer (a new
+  client key). The address stays the same as long as
+  `/var/lib/tor/debsway-ssh` does; back that folder up (as root).
+- **If you're logged in over ssh when you run it**, it warns you: ssh
+  moves to `127.0.0.1`, so that way in closes. Use Tor, or the machine's
+  own screen.
+- `--remove` stops it, deletes the onion address for good (it asks first)
+  and purges what it installed. The ssh server stays if you had it before.
+
+Turn it on only if you need it: it is a service that other computers can
+try to reach, even if only the holder of your keys can get in.
 
 ## extras/firefox-profiles/
 

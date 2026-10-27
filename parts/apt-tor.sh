@@ -49,16 +49,16 @@ restore_sources() {
     done
 }
 
-# Tor writes "Bootstrapped 100%" to the journal when it is connected
-tor_connected() {
-    sudo journalctl _COMM=tor -n 200 --no-pager 2>/dev/null | grep -q 'Bootstrapped 100%'
-}
-
 if [ "${1:-}" = --remove ]; then
     restore_sources
     sudo apt-get update || warn "apt couldn't update with the restored sources; check /etc/apt/sources.list*"
     sudo sed -i "\\|^$BEGIN\$|,\\|^$END\$|d" "$TORRC" 2>/dev/null || true
-    sudo systemctl disable --now tor@default.service >/dev/null 2>&1 || true
+    # extras/remote-access.sh uses the same tor service
+    if [ -f /etc/tor/.debsway-remote-access ]; then
+        sudo systemctl restart tor@default.service >/dev/null 2>&1 || true
+    else
+        sudo systemctl disable --now tor@default.service >/dev/null 2>&1 || true
+    fi
     sudo rm -f "$MARK"
     apt_purge tor obfs4proxy snowflake-client apt-transport-tor
     # OnionShare keeps the system tor service off

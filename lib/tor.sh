@@ -171,3 +171,9 @@ tor_bridge_config() {
             ;;
     esac
 }
+
+# tor_connected [SINCE]: tor writes "Bootstrapped 100%" to the journal when it
+# is connected. SINCE ("YYYY-MM-DD HH:MM:SS") ignores lines from before a restart.
+tor_connected() {
+    sudo journalctl _COMM=tor -n 200 --no-pager ${1:+--since "$1"} 2>/dev/null | grep -q 'Bootstrapped 100%'
+}
