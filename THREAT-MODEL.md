@@ -55,7 +55,13 @@ this page to decide what else you need.
   and can't read your home folder, ssh keys, passwords or browser
   profiles; it works in `~/projects`, which you share with it. A firewall
   rule on that user keeps it off your router, printers and the programs
-  listening on this machine; it reaches the internet only.
+  listening on this machine; it reaches the internet only. For a stronger
+  boundary, `claude-vm` (`extras/claude-vm.sh`) runs the agent inside a
+  disposable Debian VM (QEMU/KVM) with no shared folder: a kernel bug that
+  would let `claude-agent` escape its user boundary reaches only a VM you can
+  throw away, and the agent hands work back only by pushing to a git host you
+  pull from. The same kind of firewall, on its `claude-vm` user, keeps the
+  guest off your network. The two can be installed together.
 - **A stranger's USB stick running something.** Drives mount with
   `nosuid`, `nodev` and `noexec` (`parts/udiskie.sh`), so nothing on a stick
   can run from it by itself. They still mount the moment they're plugged
@@ -103,7 +109,12 @@ With the extras:
   not one racing your keystrokes. Don't switch git's own "dubious
   ownership" warning off with `safe.directory '*'`. mpv in its sandbox can
   use your audio server, which could also record the microphone. `claude-unsandboxed` and
-  starting `/usr/bin/mpv` by full path skip the sandboxes.
+  starting `/usr/bin/mpv` by full path skip the sandboxes. `claude-vm` shares
+  no folder with you, so this whole row is lighter for it — the only way out
+  is a git push you review before merging — but a VM is not a perfect wall:
+  the remaining path is a QEMU or hypervisor escape (a smaller, more
+  scrutinised surface than the shared kernel `claude-agent` runs on), and
+  work you pull in is still untrusted until you have read it.
 - **`incognito` hiding who you are**: it is your network and your IP
   address, it shares the kernel (a kernel bug could get out), and the
   window is visible to you and to your screenshots, as any window is.

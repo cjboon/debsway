@@ -1,0 +1,35 @@
+#!/bin/bash
+# claude-vm [connect|shell|status|stop|pubkey|rebuild]: written by debsway
+# extras/claude-vm.sh
+# Claude Code inside a disposable virtual machine, not on your computer. The
+# VM has its own disk and no shared folder with you: the agent's only way to
+# hand work back is to push to a git host you pull from (claude-pull). It can
+# reach the internet but nothing on your machine or local network.
+#   claude-vm            log in and start Claude Code in the VM
+#   claude-vm shell      a plain shell in the VM
+#   claude-vm status     is the VM running?
+#   claude-vm stop       power the VM off
+#   claude-vm pubkey     the VM's ssh public key (add it on your git host)
+#   claude-vm rebuild    throw the VM away and build a fresh one
+# To run Claude Code directly on your machine as yourself instead, with your
+# files, install it normally (see extras/claude-code.sh).
+set -euo pipefail
+
+AGENT=claude-vm
+SESSION=/usr/local/libexec/claude-vm-session
+
+die() { printf 'claude-vm: %s\n' "$*" >&2; exit 1; }
+
+[ "$(id -u)" -ne 0 ] || die "run it as your normal user, not root."
+sudo -n -u "$AGENT" -l "$SESSION" >/dev/null 2>&1 ||
+    die "the VM sandbox isn't set up. Run: bash ~/debsway/extras/claude-vm.sh"
+
+case "${1:-connect}" in
+    connect | shell | status | stop | pubkey | rebuild) ;;
+    -h | --help)
+        sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+        exit 0 ;;
+    *) die "unknown command '$1'. Try: claude-vm --help" ;;
+esac
+
+exec sudo -n -u "$AGENT" "$SESSION" "${1:-connect}"

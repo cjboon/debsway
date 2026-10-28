@@ -63,6 +63,10 @@ done
 for f in bin/claude bin/claude-session bin/claude-unsandboxed bin/git data/claude-firewall.nft data/claude-agent-CLAUDE.md; do
     [ -f "$f" ] || bad "extras/claude-code.sh needs $f"
 done
+# extras/claude-vm.sh installs these (plus the bundled vendor/mockvps-kvm)
+for f in bin/claude-vm bin/claude-vm-session data/claude-vm-firewall.nft data/claude-vm-provision.sh vendor/mockvps-kvm/mockvps-kvm.sh; do
+    [ -f "$f" ] || bad "extras/claude-vm.sh needs $f"
+done
 for f in bin/incognito bin/incognito-session data/incognito-user.js data/incognito-firewall.nft; do
     [ -f "$f" ] || bad "parts/incognito.sh needs $f"
 done
@@ -112,6 +116,14 @@ if out=$(bash tools/test-claude.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") claude checks"
 else
     bad "claude checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "The claude-vm command (Claude Code in a VM), with a pretend sudo"
+if out=$(bash tools/test-claude-vm.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") claude-vm checks"
+else
+    bad "claude-vm checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
 fi
 
 # --------------------------------------------------------------------

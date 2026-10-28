@@ -1,0 +1,40 @@
+# Keeps the claude-vm user off your computer and your local network
+# (debsway extras/claude-vm.sh). Only that user's traffic is touched.
+#
+# claude-vm runs the disposable VM (one qemu-system-x86_64 process). QEMU's
+# user-mode networking turns the guest's traffic into ordinary host sockets
+# owned by claude-vm, so this rule governs the GUEST's reach as well: it can
+# talk to the internet (Claude's servers, git hosts, package mirrors), but
+# not your router, printers, other machines, or the services listening on
+# this computer.
+#
+# The one exception is loopback TCP to port 2242: that is the guest's own
+# SSH console (QEMU forwards 127.0.0.1:2242 to the guest's port 22), and the
+# host has to reach it to log in, install Claude Code and bring work out.
+# Nothing else on 127.0.0.1 is reachable. If you change SSH_HOST_PORT in
+# extras/claude-vm.sh, change 2242 here too, then:
+#     sudo systemctl restart debsway-claude-vm-firewall
+#
+# DNS stays open (your resolver is usually the router).
+
+table inet debsway_claude_vm
+delete table inet debsway_claude_vm
+
+table inet debsway_claude_vm {
+    chain output {
+        type filter hook output priority 0; policy accept;
+        meta skuid "claude-vm" jump claude_vm
+    }
+
+    chain claude_vm {
+        # Answers to connections that others made to it
+        ct state established,related accept
+        udp dport 53 accept
+        tcp dport 53 accept
+        # The guest's SSH console on the host loopback, and nothing else on it
+        ip daddr 127.0.0.1 tcp dport 2242 accept
+        ip daddr { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8,
+                   169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16 } reject
+        ip6 daddr { ::1, fc00::/7, fe80::/10 } reject
+    }
+}

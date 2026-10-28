@@ -1,0 +1,86 @@
+#!/bin/bash
+# claude-vm-session SUBCOMMAND: written by debsway extras/claude-vm.sh
+# Installed as /usr/local/libexec/claude-vm-session. Your user may run exactly
+# this, as the claude-vm user, and nothing else (a rule in /etc/sudoers.d).
+# The claude-vm command calls it. It drives the disposable VM (one
+# qemu-system-x86_64 process, via the bundled mockvps-kvm) and logs you into
+# the guest. Running as claude-vm is what keeps the guest off your network:
+# QEMU's sockets are claude-vm's, and a firewall rule on that user allows the
+# internet only (data/claude-vm-firewall.nft).
+set -euo pipefail
+
+[ "$(id -un)" = claude-vm ] || { echo "claude-vm-session: only for the claude-vm user." >&2; exit 1; }
+
+# Fixed configuration. The port must match data/claude-vm-firewall.nft.
+export HOME=/home/claude-vm
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export LANG=${LANG:-C.UTF-8}
+# The VM engine reads SUDO_USER to decide whose kvm-group membership to check;
+# we are already claude-vm (in the kvm group), so make it see that and never
+# try to change another user's groups with a sudo it does not have.
+unset SUDO_USER
+export USER=claude-vm LOGNAME=claude-vm
+export VM_NAME=claude-vm
+export VM_USER=agent
+export SSH_HOST_IP=127.0.0.1
+export SSH_HOST_PORT=2242
+export WORKDIR=$HOME/vm
+export WEB_TUNNEL=0
+
+MOCKVPS=/usr/local/libexec/claude-vm-mockvps-kvm
+PROVISION=$HOME/.config/claude-vm/provision.sh
+KEY_FILE=$HOME/.ssh/${VM_NAME}_id
+
+die() { printf 'claude-vm-session: %s\n' "$*" >&2; exit 1; }
+mockvps() { [ -x "$MOCKVPS" ] || die "the VM engine is missing ($MOCKVPS); run extras/claude-vm.sh again."; "$MOCKVPS" "$@"; }
+
+# Non-interactive, key-only ssh into the guest, independent of ~/.ssh/config.
+guest_ssh() {
+    ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new \
+        -o HostKeyAlias="$VM_NAME" -o IdentitiesOnly=yes -o LogLevel=ERROR \
+        -i "$KEY_FILE" -p "$SSH_HOST_PORT" "$VM_USER@$SSH_HOST_IP" "$@"
+}
+
+ensure_up() {
+    is_installed || die "no VM yet. Set it up first: bash ~/debsway/extras/claude-vm.sh"
+    if ! mockvps --status 2>/dev/null | grep -q Running; then
+        mockvps --start >/dev/null || die "could not start the VM (see $WORKDIR/${VM_NAME}-run.log)."
+    fi
+}
+
+is_installed() { [ -s "$WORKDIR/$VM_NAME.qcow2" ]; }
+
+case "${1:-connect}" in
+    connect)
+        ensure_up
+        # -t for a real terminal; run Claude Code in the guest's projects folder
+        exec ssh -t -o StrictHostKeyChecking=accept-new -o HostKeyAlias="$VM_NAME" \
+            -o IdentitiesOnly=yes -i "$KEY_FILE" -p "$SSH_HOST_PORT" "$VM_USER@$SSH_HOST_IP" \
+            'cd ~/projects && exec claude'
+        ;;
+    shell)
+        ensure_up
+        exec ssh -t -o StrictHostKeyChecking=accept-new -o HostKeyAlias="$VM_NAME" \
+            -o IdentitiesOnly=yes -i "$KEY_FILE" -p "$SSH_HOST_PORT" "$VM_USER@$SSH_HOST_IP" \
+            'cd ~/projects 2>/dev/null; exec bash -l'
+        ;;
+    status) exec mockvps --status ;;
+    stop)   exec mockvps --stop ;;
+    pubkey)
+        ensure_up
+        exec guest_ssh 'cat ~/.ssh/id_ed25519.pub'
+        ;;
+    install)
+        # First build (or rebuild): the real user triggers this from
+        # extras/claude-vm.sh. PROVISION installs Claude Code in the guest.
+        [ -f "$PROVISION" ] || die "the provisioning script is missing ($PROVISION); run extras/claude-vm.sh again."
+        PROVISION_FILES="$PROVISION" exec mockvps --yes
+        ;;
+    rebuild)
+        [ -f "$PROVISION" ] || die "the provisioning script is missing ($PROVISION); run extras/claude-vm.sh again."
+        mockvps --uninstall --yes >/dev/null 2>&1 || true
+        PROVISION_FILES="$PROVISION" exec mockvps --yes
+        ;;
+    uninstall) exec mockvps --uninstall --yes ;;
+    *) die "unknown subcommand '$1' (connect, shell, status, stop, pubkey, install, rebuild, uninstall)." ;;
+esac

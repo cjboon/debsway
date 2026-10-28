@@ -185,10 +185,11 @@ a file (`git status` then shows anything that differs from GitHub):
 cd ~/debsway && git init -q -b main && git remote add origin https://github.com/cjboon/debsway.git && git fetch -q && git reset origin/main && git branch -u origin/main && git status
 ```
 
-After that, `claude-pull` (from `extras/claude-code.sh`) shows what's new
-and asks before bringing it in; plain `git pull` works too. If Claude Code
-pushes to the repository, add the ssh key `claude-code.sh` prints as a
-deploy key on GitHub (with write access), replacing the old install's.
+After that, `claude-pull` shows what's new and asks before bringing it in;
+plain `git pull` works too. (`claude-pull` is installed by the Claude Code
+sandboxes, `extras/claude-code.sh` and `extras/claude-vm.sh`.) If Claude Code
+pushes to the repository, add the ssh key its sandbox prints as a deploy key
+on GitHub (with write access), replacing the old install's.
 
 ## More
 
