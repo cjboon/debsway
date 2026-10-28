@@ -1,31 +1,41 @@
 # debsway
 
-Shell scripts that turn a bare Debian 13 (trixie) install into a
-minimal, privacy-minded sway desktop: sound, a launcher, screen lock,
+A minimal, privacy-minded [sway](https://swaywm.org) desktop for Debian 13
+(trixie), installed by plain shell scripts you can read in one sitting.
+Start from a bare Debian install; get sound, a launcher, screen lock,
 brightness, screenshots, notifications, USB automount, a firewall,
-automatic security updates and easy Wi-Fi.
-No desktop environment, no display manager, no tray, no settings app:
-one compositor and plain text configs.
+automatic security updates and easy Wi-Fi. No desktop environment, display
+manager, tray or settings app: one compositor and plain text configs.
 
-Everything else is optional, one script per app in `extras/`: Firefox
-(hardened, with a throwaway `incognito` mode that plays video and sound),
-w3m, Tor Browser with bridges, Whonix, Mullvad VPN and Browser, OnionShare,
-wallets (Electrum, Sparrow, Feather), SimpleX Chat, KeePassXC, encrypted
-backups and more.
+What's different from a dotfiles repo:
 
-- **Every piece can be undone**: `bash parts/NAME.sh --remove`,
-  `bash extras/NAME.sh --remove`. Re-running a script repairs it. Packages
-  that another piece still needs are kept ([Removing things](#removing-things)).
-- **Everything downloaded from outside Debian is signature-checked**
-  against a key pinned by fingerprint in `pins.sh`, and `test.sh` checks
-  that those keys, downloads and packages still work.
-- **Read the scripts before you run them.** They change system files
-  (apt sources, AppArmor, PAM for one extra, Firefox policies) and are
-  written to be readable. `THREAT-MODEL.md` says what this protects
-  against and what it doesn't.
+- **Hardened Firefox by default**: uBlock Origin in medium mode, HTTPS-Only,
+  JIT off, DuckDuckGo. `incognito` opens a throwaway Firefox as a
+  separate locked-down user, in memory, on a restricted Wayland socket,
+  with its own firewall rule and audio, that plays video and sound.
+- **Sandboxes for the risky things**: images and video open in bubblewrap;
+  Claude Code can run as its own user or in a VM; Tor Browser, Whonix,
+  wallets and more are one script each in `extras/`.
+- **Everything undoable and checked**: every part and extra has `--remove`;
+  every download from outside Debian is signature-checked against a key
+  pinned in `pins.sh`; `test.sh` checks that it all still works.
+
+Everything beyond the base is optional, one script per app in `extras/`:
+Firefox profiles, w3m, Tor Browser with bridges, Whonix, Mullvad VPN and
+Browser, OnionShare, wallets (Electrum, Sparrow, Feather), SimpleX Chat,
+KeePassXC, encrypted backups and more.
 
 It's a set of scripts, not a distribution: you install Debian yourself,
-then run them.
+then run them. Read them first. `THREAT-MODEL.md` says plainly what this
+protects against and what it doesn't. It is a personal project tested on
+Debian 13 only.
+
+Good to know before you run anything:
+
+- Re-running a script repairs it, and packages that another piece still
+  needs are kept when you remove one ([Removing things](#removing-things)).
+- The scripts change system files: apt sources, AppArmor, PAM (for one
+  extra), Firefox policies, firewall rules.
 
 ## Quick start
 
