@@ -175,6 +175,21 @@ opening `~/KEYS.txt`. The status bar has a "Help" at its left: click it to open 
 
 Click the time (or press Super+t) for timers and alarms: type `10m` or `7:30` and press Enter. From a terminal: `timer 10m tea`, `timer at 7:30 wake up`, `timer clock` (date in the bar or not). Timers last until you log out; a sleeping laptop does not wake for them.
 
+### Getting updates from GitHub
+
+The copy from the stick has the files but no git history. Once you're
+online, this makes it a git checkout of GitHub's debsway, without changing
+a file (`git status` then shows anything that differs from GitHub):
+
+```bash
+cd ~/debsway && git init -q -b main && git remote add origin https://github.com/cjboon/debsway.git && git fetch -q && git reset origin/main && git branch -u origin/main && git status
+```
+
+After that, `claude-pull` (from `extras/claude-code.sh`) shows what's new
+and asks before bringing it in; plain `git pull` works too. If Claude Code
+pushes to the repository, add the ssh key `claude-code.sh` prints as a
+deploy key on GitHub (with write access), replacing the old install's.
+
 ## More
 
 - [docs/wifi.md](docs/wifi.md): `wifi.sh`, and how the packages on the stick are checked
