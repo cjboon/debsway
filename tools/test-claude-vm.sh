@@ -49,4 +49,9 @@ port_fw=$(grep -oE 'daddr 127\.0\.0\.1 tcp dport [0-9]+' "$HERE/data/claude-vm-f
 port_se=$(sed -n 's/^export SSH_HOST_PORT=//p' "$HERE/bin/claude-vm-session" | head -1)
 check "the firewall's guest-SSH port matches the session's" test -n "$port_fw" -a "$port_fw" = "$port_se"
 
+# mockvps and guest_ssh are shell functions; exec only runs programs, so
+# "exec mockvps" fails with "not found"
+check "the session never execs one of its own functions" \
+    bash -c "! grep -qE 'exec (mockvps|guest_ssh)( |\$)' '$HERE/bin/claude-vm-session'"
+
 [ "$fails" -eq 0 ]

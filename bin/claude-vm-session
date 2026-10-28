@@ -64,23 +64,23 @@ case "${1:-connect}" in
             -o IdentitiesOnly=yes -i "$KEY_FILE" -p "$SSH_HOST_PORT" "$VM_USER@$SSH_HOST_IP" \
             'cd ~/projects 2>/dev/null; exec bash -l'
         ;;
-    status) exec mockvps --status ;;
-    stop)   exec mockvps --stop ;;
+    status) mockvps --status ;;
+    stop)   mockvps --stop ;;
     pubkey)
         ensure_up
-        exec guest_ssh 'cat ~/.ssh/id_ed25519.pub'
+        guest_ssh 'cat ~/.ssh/id_ed25519.pub'
         ;;
     install)
         # First build (or rebuild): the real user triggers this from
         # extras/claude-vm.sh. PROVISION installs Claude Code in the guest.
         [ -f "$PROVISION" ] || die "the provisioning script is missing ($PROVISION); run extras/claude-vm.sh again."
-        PROVISION_FILES="$PROVISION" exec mockvps --yes
+        PROVISION_FILES="$PROVISION" mockvps --yes
         ;;
     rebuild)
         [ -f "$PROVISION" ] || die "the provisioning script is missing ($PROVISION); run extras/claude-vm.sh again."
         mockvps --uninstall --yes >/dev/null 2>&1 || true
-        PROVISION_FILES="$PROVISION" exec mockvps --yes
+        PROVISION_FILES="$PROVISION" mockvps --yes
         ;;
-    uninstall) exec mockvps --uninstall --yes ;;
+    uninstall) mockvps --uninstall --yes ;;
     *) die "unknown subcommand '$1' (connect, shell, status, stop, pubkey, install, rebuild, uninstall)." ;;
 esac
