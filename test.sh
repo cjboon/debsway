@@ -135,6 +135,46 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "Sandbox users and X11's abstract socket (bin/no-abstract-sockets), with Landlock"
+if out=$(bash tools/test-no-abstract.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") no-abstract-sockets checks"
+else
+    bad "no-abstract-sockets checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "Signature checks (lib/appimage.sh), with throwaway keys"
+if out=$(bash tools/test-signatures.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") signature checks"
+else
+    bad "signature checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "The sshd settings check (lib/net.sh), with sample sshd -T output"
+if out=$(bash tools/test-sshd-check.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") sshd settings checks"
+else
+    bad "sshd settings checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "Old package lists are refused (lib/offline.sh), with a pretend clock"
+if out=$(bash tools/test-offline-fresh.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") offline freshness checks"
+else
+    bad "offline freshness checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "The media sandbox (bin/media-sandbox), with a pretend bubblewrap"
+if out=$(bash tools/test-media-sandbox.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") media sandbox checks"
+else
+    bad "media sandbox checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "Pinned keys and versions (pins.sh): checked by hand within a year?"
 now=$(date +%s)
 # Each "# checked: DATE" line belongs to the next VARIABLE= line

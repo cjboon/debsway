@@ -51,10 +51,15 @@ if [ "$(basename -- "$cmd")" = mpv ]; then
     done
 fi
 
-# every file or folder named on the command line, read-only; a URL gives mpv the network
+# every file or folder named on the command line, read-only; a URL (other than
+# file://) gives mpv the network
 newargs=()
 for a in "$@"; do
+    # file:///path is a file, not the network: treat it as the path
+    case $a in file://*) a=${a#file://} ;; esac
     case $a in
+        # an option that points at a file:// address gets no network either
+        -*=file://*) newargs+=("$a") ;;
         *://*) args+=(--share-net --ro-bind-try /etc/ssl /etc/ssl); newargs+=("$a") ;;
         # an option can name a file too (mpv --sub-file=subs.srt)
         -*=*)

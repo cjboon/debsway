@@ -39,7 +39,7 @@ checked with `sway -C` before it's kept.
 
 | Script | Installs | Sets up |
 |---|---|---|
-| `unattended-upgrades.sh` | unattended-upgrades | Debian's security fixes install themselves daily, with Debian's default rules (other repos are left to you). Log: `/var/log/unattended-upgrades/` |
+| `unattended-upgrades.sh` | unattended-upgrades | Debian's security fixes install themselves daily, with Debian's default rules; the Mullvad and Claude Code repositories debsway adds are included, any repository you add yourself is left to you. Log: `/var/log/unattended-upgrades/` |
 | `pipewire-audio.sh` | pipewire-audio | Sound. `volume up\|down\|mute\|micmute [STEP]` (5% steps, never above 100%, unmutes on a change, refreshes the bar); the volume and mute keys use it, and Super+F10 / F11 / F12 (mute / down / up) do for keyboards without them |
 | `wmenu.sh` | wmenu | The launcher on Super+d |
 | `swaylock.sh` | swaylock | Super+Escape locks |

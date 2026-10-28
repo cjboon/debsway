@@ -19,6 +19,11 @@ can change what the scripts rely on.
 - **`bash tools/test-apt-markers.sh`** (run by `test.sh`) checks the
   package bookkeeping behind `--remove` against fakes of apt, so it
   changes nothing.
+- **`tools/test-*.sh`** (run by `test.sh`) cover the parts that guard
+  something: the signature checks (with throwaway expired and revoked
+  keys), the sshd settings check, old package lists, the media sandbox,
+  and `bin/no-abstract-sockets` (needs Linux 6.12; skipped on an older
+  kernel).
 - **shellcheck on every change:** run `bash test.sh` before you commit
   (it runs shellcheck; needs `sudo apt install shellcheck`), and the
   GitHub workflow in `.github/workflows/` runs it and `test.sh --offline`

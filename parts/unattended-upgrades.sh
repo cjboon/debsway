@@ -1,9 +1,11 @@
 #!/bin/bash
 # Automatic security updates: every day apt quietly installs Debian's
 # security fixes (and Debian's own stable fixes) in the background.
-# Debian's default rules are kept, so packages from other repos (Claude
-# Code, Mullvad) are left for you to update. What it did is logged in
-# /var/log/unattended-upgrades/.
+# Debian's default rules are kept. Packages from the other apt repositories
+# debsway adds (Mullvad, Claude Code) are updated too: the script that adds
+# a repository allows it (allow_unattended_updates in lib/apt.sh). Any
+# repository you add yourself is left for you to update. What it did is
+# logged in /var/log/unattended-upgrades/.
 # Usage: bash unattended-upgrades.sh [--remove]
 # status: apt:unattended-upgrades
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
