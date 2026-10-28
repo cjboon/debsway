@@ -54,3 +54,18 @@ nm_write_wifi() {
         printf '[ipv4]\nmethod=auto\n\n[ipv6]\naddr-gen-mode=default\nmethod=auto\n'
     } | $SUDO install -D -m 0600 /dev/stdin "/etc/NetworkManager/system-connections/debsway-$hex.nmconnection"
 }
+
+# sshd_problems USER: reads `sshd -T` (what sshd will really do) on stdin and
+# prints one line for each setting that is not what extras/remote-access.sh
+# wants: key login only, no root, USER only, and listening on 127.0.0.1 only.
+# sshd takes the first value it finds for a setting, so a file read earlier
+# can beat debsway's drop-in; this catches that.
+sshd_problems() {
+    awk -v user="$1" '
+        $1 == "passwordauthentication" && $2 != "no" { print "PasswordAuthentication is " $2 }
+        $1 == "kbdinteractiveauthentication" && $2 != "no" { print "KbdInteractiveAuthentication is " $2 }
+        $1 == "permitrootlogin" && $2 != "no" { print "PermitRootLogin is " $2 }
+        $1 == "listenaddress" && $2 !~ /^127\.0\.0\.1:/ { print "ListenAddress " $2 }
+        $1 == "allowusers" { seen = 1; if ($0 != "allowusers " user) print "AllowUsers includes " $2 }
+        END { if (!seen) print "AllowUsers is not set" }'
+}

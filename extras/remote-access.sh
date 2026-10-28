@@ -18,7 +18,10 @@ MARK=/etc/tor/.debsway-remote-access
 APT_TOR_MARK=/etc/tor/.debsway-apt-tor
 TORRC=/etc/tor/torrc
 SVC_DIR=/var/lib/tor/debsway-ssh
-SSHD_CONF=/etc/ssh/sshd_config.d/60-debsway-remote-access.conf
+# 00-: sshd takes the first value it finds for a setting and reads the files in
+# sshd_config.d in name order, so a drop-in named 60- lost to any earlier one
+SSHD_CONF=/etc/ssh/sshd_config.d/00-debsway-remote-access.conf
+OLD_SSHD_CONF=/etc/ssh/sshd_config.d/60-debsway-remote-access.conf
 BEGIN='# >>> debsway remote-access >>>'
 END='# <<< debsway remote-access <<<'
 BR_BEGIN='# >>> debsway remote-access bridges >>>'
@@ -34,7 +37,7 @@ if [ "${1:-}" = --remove ]; then
         warn "and every computer you set up to connect has to be given the new address and key."
         ask "Remove remote access and delete the onion address?" n || { note "Nothing was changed."; exit 1; }
     fi
-    sudo rm -f "$SSHD_CONF"
+    sudo rm -f "$SSHD_CONF" "$OLD_SSHD_CONF"
     drop_torrc_blocks
     sudo rm -rf "$SVC_DIR"
     sudo rm -f "$MARK"
@@ -103,6 +106,7 @@ fi
 # ---- sshd first, so that it never listens on anything but 127.0.0.1 ----
 say "Setting up ssh"
 sudo mkdir -p "${SSHD_CONF%/*}"
+sudo rm -f "$OLD_SSHD_CONF"
 sudo tee "$SSHD_CONF" >/dev/null <<EOF
 # Written by debsway extras/remote-access.sh
 ListenAddress 127.0.0.1
@@ -130,6 +134,14 @@ if systemctl is-enabled ssh.socket >/dev/null 2>&1; then
     sudo systemctl enable ssh.service >/dev/null 2>&1 || true
 fi
 sudo sshd -t || { sudo rm -f "$SSHD_CONF"; die "sshd didn't accept its settings, so they were removed. Nothing is open."; }
+# Ask sshd what it will really do: another file could still override ours
+problems=$(sudo sshd -T 2>/dev/null | sshd_problems "$USER") || problems="could not read sshd's settings (sshd -T)"
+if [ -n "$problems" ]; then
+    sudo systemctl stop ssh.service ssh.socket >/dev/null 2>&1 || true
+    warn "sshd would not do what this needs:"
+    while IFS= read -r line; do warn "  $line"; done <<<"$problems"
+    die "ssh was stopped. Find what sets these first (grep -ri -e PasswordAuthentication -e ListenAddress -e AllowUsers /etc/ssh/), then run this again."
+fi
 sudo systemctl restart ssh.service
 listening=$(ss -Hltn 'sport = :22' | awk '{ print $4 }' | grep -vE '^(127\.0\.0\.1|\[::1\]):22$' || true)
 if [ -n "$listening" ]; then
