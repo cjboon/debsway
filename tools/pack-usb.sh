@@ -15,6 +15,21 @@
 not_root
 
 dest=${1:-}
+# A device name (/dev/sda) instead of a folder: say where it is mounted, and
+# whether it is a USB drive or a disk of this computer
+if [[ $dest == /dev/* ]]; then
+    [ -b "$dest" ] || die "There is no drive $dest. Plug the stick in, and give the folder where it is mounted."
+    warn "$dest is a drive, not a folder. Give the folder where the stick is mounted."
+    disk=$(lsblk -dn -o PKNAME "$dest" 2>/dev/null || true)
+    [ -n "$disk" ] || disk=${dest#/dev/}
+    lsblk -o NAME,SIZE,TRAN,LABEL,MOUNTPOINT "/dev/$disk" | sed 's/^/    /'
+    if ! lsblk -dn -o RM,TRAN "/dev/$disk" 2>/dev/null | grep -qE '^ *1 |usb *$'; then
+        die "/dev/$disk isn't a USB drive: it is a disk of this computer. Find the stick with: lsblk -o NAME,SIZE,TRAN,LABEL,MOUNTPOINT"
+    fi
+    mnt=$(lsblk -ln -o MOUNTPOINT "$dest" | grep -m1 '^/' || true)
+    [ -n "$mnt" ] || die "The stick isn't mounted: open it in your file manager, then give its folder."
+    die "Its folder is $mnt, so: bash tools/pack-usb.sh \"$mnt\""
+fi
 [ -n "$dest" ] && [ -d "$dest" ] || die "Usage: bash tools/pack-usb.sh /path/to/the/stick"
 command -v git >/dev/null || die "git is missing."
 git -C "$DEBSWAY_DIR" rev-parse --git-dir >/dev/null 2>&1 || die "$DEBSWAY_DIR isn't a git checkout."
