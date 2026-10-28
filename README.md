@@ -290,8 +290,12 @@ Super is the Windows / Cmd key. Super+? shows the full list
   NetworkManager on its standard input. If your `nmcli` doesn't take it
   that way, run `DEBSWAY_PASSWORD_ON_COMMAND_LINE=1 bash wifi.sh`.
 - **`wifi.sh` says the packages can't be matched to Debian's lists**: the
-  stick's `offline/debs` is from an older version of debsway, or a
-  package changed. On a machine you trust: `bash prep/fetch-offline-debs.sh`.
+  stick's `offline/debs` is from an older version of debsway, a
+  package changed, or the saved lists are old (Debian's security and
+  updates lists are good for a week, the stable list for about 4 months;
+  the message names which). On a machine you trust:
+  `bash prep/fetch-offline-debs.sh`. To accept old lists on purpose:
+  `DEBSWAY_OFFLINE_ALLOW_STALE=1 bash wifi.sh`.
 - **A program on a USB stick won't run**: drives mount `noexec`. Run it
   with its interpreter, copy it off, or see [docs/install-base.md](docs/install-base.md).
 - **Something that used to work doesn't**: `bash test.sh` shows what

@@ -57,6 +57,40 @@ fetch_offline_lists() {
     done < <(offline_sources)
 }
 
+# release_fresh FILE NAME: FILE is the signed text of NAME's InRelease. A
+# signature proves who made a list, not when: someone who can write to the
+# USB stick could put back an older, genuine, vulnerable set. Debian's
+# security and updates lists say how long they are good for (Valid-Until,
+# a week); the stable list has none, and keeps the date of the last point
+# release (up to about two months), so that one is only refused when it is
+# older than OFFLINE_MAX_AGE_DAYS. A date in the future is let through: a
+# computer with no network often has a clock that is wrong. Returns 1, with
+# a reason on stderr, for an old list. DEBSWAY_OFFLINE_ALLOW_STALE=1 accepts
+# old lists on purpose; DEBSWAY_NOW (seconds) is for tests.
+OFFLINE_MAX_AGE_DAYS=120
+release_fresh() {
+    local file=$1 name=$2 now date_s until_s date_t until_t
+    [ "${DEBSWAY_OFFLINE_ALLOW_STALE:-}" != 1 ] || return 0
+    now=${DEBSWAY_NOW:-$(date +%s)}
+    date_s=$(sed -n 's/^Date: *//p' "$file" | head -1)
+    until_s=$(sed -n 's/^Valid-Until: *//p' "$file" | head -1)
+    # (date -d "" means today, so an empty Date is checked for first)
+    date_t=
+    if [ -n "$date_s" ]; then date_t=$(date -d "$date_s" +%s 2>/dev/null) || date_t=; fi
+    if [ -z "$date_t" ]; then
+        warn "$name/InRelease has no readable Date, so how old it is can't be checked."
+    elif [ "$now" -gt $((date_t + OFFLINE_MAX_AGE_DAYS * 86400)) ]; then
+        warn "$name/InRelease is from $date_s, more than $OFFLINE_MAX_AGE_DAYS days ago."
+    elif [ -n "$until_s" ] && { until_t=$(date -d "$until_s" +%s 2>/dev/null) || until_t=0; [ "$now" -gt "$until_t" ]; }; then
+        warn "$name/InRelease was only valid until $until_s."
+    else
+        return 0
+    fi
+    warn "Make the packages again on a machine you trust (bash prep/fetch-offline-debs.sh),"
+    warn "or set DEBSWAY_OFFLINE_ALLOW_STALE=1 to accept old lists on purpose."
+    return 1
+}
+
 # verify_offline_lists DIR OUT: checks every DIR/NAME/InRelease against
 # Debian's archive keyring and every Packages file against its InRelease,
 # then writes the SHA-256 of every package they list to OUT. Returns 1, with
@@ -78,6 +112,10 @@ verify_offline_lists() {
         name=$(basename -- "$d")
         if ! gpgv --quiet --homedir "$home" "${keyargs[@]}" --output "$rel" "$d/InRelease" 2>/dev/null; then
             warn "The signature on $name/InRelease isn't Debian's."
+            rc=1
+            break
+        fi
+        if ! release_fresh "$rel" "$name"; then
             rc=1
             break
         fi
