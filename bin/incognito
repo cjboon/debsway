@@ -46,7 +46,7 @@ fi
 # incognito may only reach your Wayland socket (and the sound pipe), and only
 # while it runs. It gets no read access to the runtime folder: it can open
 # what it is given and nothing it isn't told the name of.
-# shellcheck disable=SC2317  # runs from the EXIT trap
+# shellcheck disable=SC2317,SC2329  # runs from the EXIT trap
 cleanup() {
     if [ -n "$player" ]; then kill "$player" 2>/dev/null || true; fi
     rm -f "$fifo"
