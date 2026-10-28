@@ -52,7 +52,13 @@ write_policy() {
     inner="{\"userSettings\":{\"advancedUserEnabled\":true},\"dynamicFilteringString\":\"${inner%\\n}\"}"
     inner=$(sed 's/\\/\\\\/g; s/"/\\"/g' <<<"$inner")
     $SUDO mkdir -p "$ETC/policies"
-    printf '{\n  "policies": {\n    "3rdparty": {\n      "Extensions": {\n        "uBlock0@raymondhill.net": {\n          "adminSettings": "%s"\n        }\n      }\n    }\n  }\n}\n' "$inner" |
+    # Firefox reads one policies.json, so debsway's other Firefox policies live
+    # here too (parts/firefox-hardening.sh has no separate file to put them in):
+    #   SearchEngines.Default  - DuckDuckGo is the default search engine (Firefox
+    #                            locks the default engine to enterprise policy).
+    #   Override*Page          - no Mozilla first-run or what's-new tabs; Firefox
+    #                            opens straight to the (blank, foxy) home page.
+    printf '{\n  "policies": {\n    "SearchEngines": { "Default": "DuckDuckGo" },\n    "OverrideFirstRunPage": "",\n    "OverridePostUpdatePage": "",\n    "3rdparty": {\n      "Extensions": {\n        "uBlock0@raymondhill.net": {\n          "adminSettings": "%s"\n        }\n      }\n    }\n  }\n}\n' "$inner" |
         $SUDO tee "$POLICY" >/dev/null
     sum=$(sha256sum "$POLICY")
     echo "$sum" | $SUDO tee "$OURS" >/dev/null
