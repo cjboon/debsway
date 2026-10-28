@@ -62,9 +62,11 @@ write_policy() {
     #                            locks the default engine to enterprise policy).
     #   SearchEngines.DefaultPrivate - the same for private windows, which have
     #                            their own default (incognito is one all the time).
+    #   ExtensionSettings      - uBlock runs in private windows (off by default
+    #                            for every add-on; incognito is private all the time).
     #   Override*Page          - no Mozilla first-run or what's-new tabs; Firefox
     #                            opens straight to the home page.
-    printf '{\n  "policies": {\n    "SearchEngines": { "Default": "DuckDuckGo", "DefaultPrivate": "DuckDuckGo" },\n    "OverrideFirstRunPage": "",\n    "OverridePostUpdatePage": "",\n    "3rdparty": {\n      "Extensions": {\n        "uBlock0@raymondhill.net": {\n          "adminSettings": "%s"\n        }\n      }\n    }\n  }\n}\n' "$inner" |
+    printf '{\n  "policies": {\n    "SearchEngines": { "Default": "DuckDuckGo", "DefaultPrivate": "DuckDuckGo" },\n    "OverrideFirstRunPage": "",\n    "OverridePostUpdatePage": "",\n    "ExtensionSettings": {\n      "uBlock0@raymondhill.net": { "private_browsing": true }\n    },\n    "3rdparty": {\n      "Extensions": {\n        "uBlock0@raymondhill.net": {\n          "adminSettings": "%s"\n        }\n      }\n    }\n  }\n}\n' "$inner" |
         $SUDO tee "$POLICY" >/dev/null
     sum=$(sha256sum "$POLICY")
     echo "$sum" | $SUDO tee "$OURS" >/dev/null
