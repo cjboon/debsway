@@ -71,6 +71,7 @@
     display-scale          text too small on a sharp screen? makes it bigger
     claude                 Claude Code as its own user, in ~/projects/NAME
                            (claude-unsandboxed: as you, with all your files)
+    claude-pull            see what Claude pushed, bring it in if you say y
     nmtui                  pick a Wi-Fi network (or click its name in the bar)
     powerprofilesctl set power-saver | balanced | performance
     brightness up 10       bigger brightness steps

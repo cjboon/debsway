@@ -33,7 +33,7 @@
 # Treat what it leaves there as untrusted before you run it. See THREAT-MODEL.md.
 # Usage: bash claude-code.sh [--remove]
 # summary: Claude Code, sandboxed in its own user
-# status: apt:claude-code apt:acl apt:nftables bin:claude bin:claude-unsandboxed bin:git file:/usr/local/libexec/claude-session
+# status: apt:claude-code apt:acl apt:nftables bin:claude bin:claude-unsandboxed bin:claude-pull bin:git file:/usr/local/libexec/claude-session
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
@@ -50,6 +50,7 @@ LIST=/etc/apt/sources.list.d/claude-code.list
 if [ "${1:-}" = --remove ]; then
     remove_bin claude
     remove_bin claude-unsandboxed
+    remove_bin claude-pull
     remove_bin git
     sudo systemctl disable --now debsway-claude-firewall.service >/dev/null 2>&1 || true
     sudo nft delete table inet debsway_claude 2>/dev/null || true
@@ -188,6 +189,7 @@ rm -f "$rule"
 note "Wrote $SUDOERS"
 install_bin claude
 install_bin claude-unsandboxed
+install_bin claude-pull
 install_bin git
 
 cat <<EOF
@@ -195,6 +197,8 @@ cat <<EOF
     claude                 Claude Code as $AGENT. Run it from a folder in
                            ~/projects: cd ~/projects/NAME   (mkdir for a new one)
     claude-unsandboxed     Claude Code as you, with all your files
+    claude-pull            in your own copy of a repository: shows what
+                           Claude pushed to GitHub, brings it in if you say y
 
     The first time, claude shows a login link: open it in your browser. Its
     login and settings live in $AGENT_HOME, apart from your own ~/.claude.
