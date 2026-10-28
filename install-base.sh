@@ -156,6 +156,31 @@ if [ ${#failed[@]} -gt 0 ]; then
     warn "These parts failed: ${failed[*]}. Re-run one with: bash parts/NAME.sh"
 fi
 
+# Default apps: Firefox (with its hardening and the throwaway "incognito"),
+# git and GitHub's gh, and KeePassXC with its Firefox browser add-on. These
+# are extras, but the base always installs them; you can still remove any with
+# bash extras/NAME.sh --remove. Firefox and KeePassXC go in unattended. git
+# still asks for your commit name and email (just typing, fine on the console),
+# but not for the GitHub login: that needs a browser, which isn't running yet
+# during this command-line install. Log in later with: gh auth login
+say "Default apps"
+note "Firefox (+ incognito), git and gh, and KeePassXC with the browser add-on."
+defaults_failed=()
+for app in firefox keepassxc; do
+    say "Default app: $app"
+    DEBSWAY_NONINTERACTIVE=1 DEBSWAY_KEEPASSXC_BROWSER=1 \
+        bash "$DEBSWAY_DIR/extras/$app.sh" || defaults_failed+=("$app")
+done
+# git: install gh and ask for your commit name/email, but skip the GitHub
+# login prompt (no browser yet). With --yes, skip its prompts too.
+say "Default app: git"
+gitenv=(DEBSWAY_SETUP_GH=1 DEBSWAY_GH_LOGIN=0)
+if $assume_yes; then gitenv+=(DEBSWAY_NONINTERACTIVE=1); fi
+env "${gitenv[@]}" bash "$DEBSWAY_DIR/extras/git.sh" || defaults_failed+=(git)
+if [ ${#defaults_failed[@]} -gt 0 ]; then
+    warn "These default apps didn't finish: ${defaults_failed[*]}. Re-run with: bash extras/NAME.sh"
+fi
+
 # The optional programs: a list to check boxes in, or none
 bash "$DEBSWAY_DIR/install-extras.sh" ||
     warn "Some extras didn't install; the message above says which."

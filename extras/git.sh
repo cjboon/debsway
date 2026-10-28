@@ -16,7 +16,7 @@ fi
 
 say "Installing git"
 pkgs=(git)
-if ask "Also install gh, GitHub's command line tool?" n; then pkgs+=(gh); fi
+if auto_or_ask DEBSWAY_SETUP_GH "Also install gh, GitHub's command line tool?" n; then pkgs+=(gh); fi
 apt_install "${pkgs[@]}"
 
 if [ -z "$(git config --global user.name || true)" ]; then
@@ -32,7 +32,7 @@ git config --global init.defaultBranch main
 if command -v gh >/dev/null; then
     if gh auth status >/dev/null 2>&1; then
         note "Already logged in to GitHub."
-    elif ask "Log in to GitHub now? (shows a code to enter at github.com/login/device)" n; then
+    elif auto_or_ask DEBSWAY_GH_LOGIN "Log in to GitHub now? (shows a code to enter at github.com/login/device)" n; then
         gh auth login --hostname github.com --git-protocol https
         gh auth setup-git
     else

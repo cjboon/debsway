@@ -24,7 +24,7 @@ say "KeePassXC"
 want_web=false
 if is_installed webext-keepassxc-browser; then
     want_web=true
-elif ask "Do you want the KeePassXC-Browser extension for Firefox (fills in logins from your database)?" n; then
+elif auto_or_ask DEBSWAY_KEEPASSXC_BROWSER "Do you want the KeePassXC-Browser extension for Firefox (fills in logins from your database)?" n; then
     want_web=true
 fi
 

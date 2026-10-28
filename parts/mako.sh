@@ -17,11 +17,9 @@ if [ "${1:-}" = --remove ]; then
     exit
 fi
 
-PKGS=(mako-notifier)
-if ! is_installed libnotify-bin &&
-    ask "Also install notify-send, for testing and for your own scripts?" n; then
-    PKGS+=(libnotify-bin)
-fi
+# notify-send (libnotify-bin) comes too: the status bar uses it for the
+# battery popup, and it's handy for testing and your own scripts.
+PKGS=(mako-notifier libnotify-bin)
 say "Installing ${PKGS[*]}"
 apt_install "${PKGS[@]}"
 

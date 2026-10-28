@@ -15,6 +15,12 @@ die()  { printf '\033[1;31mxx\033[0m %s\n' "$*" >&2; exit 1; }
 # so only the check for a terminal is silenced, never the prompt.
 tty_read() {
     local _line=
+    # An unattended run (install-base.sh installing its default apps) never
+    # prompts: it leaves the answer empty, so ask() falls back to its default.
+    if [ -n "${DEBSWAY_NONINTERACTIVE:-}" ]; then
+        printf -v "$1" '%s' ''
+        return
+    fi
     if [ -n "${DEBSWAY_TEST_ANSWERS:-}" ]; then
         # For tools/test-bridges.sh: answers come from a file, one per line
         [ -e /proc/self/fd/8 ] || exec 8<"$DEBSWAY_TEST_ANSWERS"
@@ -32,6 +38,21 @@ ask() {
     [ "$def" = y ] && hint='[Y/n]'
     tty_read reply "$1 $hint "
     [[ ${reply:-$def} =~ ^[Yy] ]]
+}
+
+# auto_or_ask VARNAME "Question?" [y|n]: for prompts install-base.sh needs to
+# answer for you when it installs its default apps unattended. If VARNAME is
+# set to yes/no (1/y/yes or 0/n/no) that is the answer, with no prompt;
+# otherwise it just asks (and an unattended run with VARNAME unset takes the
+# default, because tty_read returns empty). A person running the script by
+# hand is always asked.
+auto_or_ask() {
+    case ${!1:-} in
+        1 | y | Y | yes | YES) return 0 ;;
+        0 | n | N | no | NO) return 1 ;;
+    esac
+    shift
+    ask "$@"
 }
 
 # For scripts that only touch your home folder
