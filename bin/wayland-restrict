@@ -1,0 +1,149 @@
+#!/bin/bash
+# wayland-restrict SOCKET APP_ID: written by debsway (parts/incognito.sh and
+# extras/media.sh).
+# Makes a second Wayland socket at SOCKET that sway marks as "sandboxed"
+# (the wp_security_context_v1 protocol). A program connected to it can open
+# windows, but sway doesn't offer it the privileged protocols: reading the
+# screen, typing for you, locking or unlocking the session, listing your
+# windows. Your real socket gives all of that to anyone who can open it.
+# Prints "ready" when the socket works, then stays until its standard input
+# closes or it is killed; the socket stops accepting connections then.
+# (The program is Python, kept inside this script so that it installs like the
+# other commands.)
+set -euo pipefail
+code=$(cat <<'PY'
+import os
+import select
+import socket
+import struct
+import sys
+
+MANAGER = "wp_security_context_manager_v1"
+DISPLAY, REGISTRY, CALLBACK1, MGR, CTX, CALLBACK2 = 1, 2, 3, 4, 5, 6
+
+
+def die(msg):
+    print("wayland-restrict: " + msg, file=sys.stderr)
+    sys.exit(1)
+
+
+def string(s):
+    b = s.encode() + b"\0"
+    return struct.pack("I", len(b)) + b + b"\0" * (-len(b) % 4)
+
+
+def message(obj, op, payload=b""):
+    return struct.pack("II", obj, ((8 + len(payload)) << 16) | op) + payload
+
+
+class Conn:
+    def __init__(self, path):
+        self.s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.s.connect(path)
+        self.buf = b""
+
+    def send(self, data, fds=()):
+        self.s.sendmsg(
+            [data],
+            [(socket.SOL_SOCKET, socket.SCM_RIGHTS, struct.pack("%di" % len(fds), *fds))] if fds else [])
+
+    def events(self):
+        """Yields (object, opcode, payload) until the compositor hangs up."""
+        while True:
+            while len(self.buf) >= 8:
+                obj, sizeop = struct.unpack("II", self.buf[:8])
+                size, op = sizeop >> 16, sizeop & 0xFFFF
+                if size < 8:
+                    die("the compositor sent a broken message.")
+                if len(self.buf) < size:
+                    break
+                payload, self.buf = self.buf[8:size], self.buf[size:]
+                yield obj, op, payload
+            data = self.s.recv(4096)
+            if not data:
+                die("the compositor closed the connection.")
+            self.buf += data
+
+    def roundtrip(self, callback_id, on_event=None):
+        self.send(message(DISPLAY, 0, struct.pack("I", callback_id)))
+        for obj, op, payload in self.events():
+            if obj == DISPLAY and op == 0:
+                code = struct.unpack("II", payload[4:12])[1]
+                text = payload[16:].split(b"\0")[0].decode(errors="replace")
+                die("the compositor refused it (error %d): %s" % (code, text))
+            if obj == callback_id and op == 0:
+                return
+            if on_event:
+                on_event(obj, op, payload)
+
+
+def main():
+    if len(sys.argv) != 3:
+        die("usage: wayland-restrict SOCKET APP_ID")
+    path, app_id = sys.argv[1], sys.argv[2]
+    rt, wl = os.environ.get("XDG_RUNTIME_DIR"), os.environ.get("WAYLAND_DISPLAY")
+    if not rt or not wl or "/" in wl:
+        die("needs your sway session (XDG_RUNTIME_DIR and WAYLAND_DISPLAY).")
+
+    found = {}
+
+    def on_global(obj, op, payload):
+        if obj == REGISTRY and op == 0:
+            name, n = struct.unpack("II", payload[:8])
+            iface = payload[8:8 + n].rstrip(b"\0").decode(errors="replace")
+            version = struct.unpack("I", payload[8 + n + (-n % 4):][:4])[0]
+            found[iface] = (name, version)
+
+    conn = Conn(os.path.join(rt, wl))
+    conn.send(message(DISPLAY, 1, struct.pack("I", REGISTRY)))
+    conn.roundtrip(CALLBACK1, on_global)
+    if MANAGER not in found:
+        die("your compositor doesn't offer %s (sway 1.9 or newer does)." % MANAGER)
+
+    os.umask(0o077)
+    try:
+        os.unlink(path)
+    except FileNotFoundError:
+        pass
+    listener = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    listener.bind(path)
+    listener.listen(16)
+    # The compositor stops listening when it sees this pipe's far end close
+    close_r, close_w = os.pipe()
+
+    name = found[MANAGER][0]
+    conn.send(message(REGISTRY, 0, struct.pack("I", name) + string(MANAGER) +
+                      struct.pack("II", 1, MGR)))
+    conn.send(message(MGR, 1, struct.pack("I", CTX)), [listener.fileno(), close_r])
+    conn.send(message(CTX, 1, string("debsway")) +
+              message(CTX, 2, string(app_id)) +
+              message(CTX, 3, string("%s-%d" % (app_id, os.getpid()))) +
+              message(CTX, 4))
+    conn.roundtrip(CALLBACK2)
+    os.close(close_r)
+
+    print("ready", flush=True)
+    try:
+        # Until our parent lets go of stdin, or the compositor goes away
+        while True:
+            r, _, _ = select.select([0, conn.s], [], [])
+            if 0 in r and not os.read(0, 4096):
+                break
+            if conn.s in r and not conn.s.recv(4096):
+                break
+    finally:
+        os.close(close_w)
+        try:
+            os.unlink(path)
+        except FileNotFoundError:
+            pass
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except (ConnectionError, OSError) as e:
+        die(str(e))
+PY
+)
+exec python3 -I -c "$code" "$@"

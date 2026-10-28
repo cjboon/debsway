@@ -67,7 +67,7 @@ done
 for f in bin/claude-vm bin/claude-vm-session data/claude-vm-firewall.nft data/claude-vm-provision.sh vendor/mockvps-kvm/mockvps-kvm.sh; do
     [ -f "$f" ] || bad "extras/claude-vm.sh needs $f"
 done
-for f in bin/incognito bin/incognito-session data/incognito-user.js data/incognito-firewall.nft; do
+for f in bin/incognito bin/incognito-session bin/wayland-restrict data/incognito-user.js data/incognito-firewall.nft; do
     [ -f "$f" ] || bad "parts/incognito.sh needs $f"
 done
 # The hardening parts read these

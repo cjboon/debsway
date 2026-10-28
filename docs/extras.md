@@ -202,8 +202,12 @@ https://example.org/` opens a page. What `parts/incognito.sh` sets up:
 - **A narrow door**: your user may run one thing as `incognito`, the
   wrapper `/usr/local/libexec/incognito-session`, through a rule in
   `/etc/sudoers.d/debsway-incognito` that was checked with `visudo`. The
-  `incognito` command gives that user access to your sway's socket only
-  while the window is open, and takes it away afterwards.
+  `incognito` command gives that user a restricted Wayland socket only
+  while the window is open, and takes it away afterwards. It is made with
+  sway's security-context protocol (`bin/wayland-restrict`): the window
+  works, but sway doesn't offer that user the protocols that read your
+  screen, type for you or lock the session, as your real socket would.
+  `media-sandbox` (imv and mpv) uses the same kind of socket.
 
 What it doesn't do: it uses your network and your IP address (use Tor
 Browser or a VPN for that), and it uses the same kernel, so a kernel bug

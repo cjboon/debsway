@@ -11,6 +11,9 @@
 #    in your sway. cage is a separate window system, so the clipboard is
 #    not shared with your programs, and incognito can't read your files, so
 #    no folder is either (a download stays in memory and vanishes).
+#  - It talks to your sway through a restricted socket (bin/wayland-restrict,
+#    sway's security-context protocol), not your real one, so it can't read
+#    your screen or type for you.
 #  - Its profile, cache and cookies live in memory (/dev/shm) and are
 #    deleted when the window closes. The profile is always in private
 #    browsing, with tracking and fingerprinting protection on.
@@ -48,6 +51,8 @@ UNIT=/etc/systemd/system/debsway-incognito-firewall.service
 if [ "${1:-}" = --remove ]; then
     sudo systemctl disable --now debsway-incognito-firewall.service >/dev/null 2>&1 || true
     sudo nft delete table inet debsway_incognito 2>/dev/null || true
+    # the media sandbox needs it too
+    [ -f "$BIN/media-sandbox" ] || remove_bin wayland-restrict
     sudo rm -f "$SUDOERS" "$LIMITS" "$CMD" "$SESSION" "$PREFS" "$FIREWALL" "$UNIT"
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
     sudo rmdir "$SHARE" /usr/local/libexec /etc/debsway 2>/dev/null || true
@@ -63,12 +68,12 @@ if [ "${1:-}" = --remove ]; then
 fi
 
 say "Installing cage and acl"
-# acl: lets the incognito command give the user access to your sway socket
-# and take it away again
+# acl: lets the incognito command give the user access to its Wayland socket
+# and take it away again; python3: runs wayland-restrict
 # pipewire-bin, wireplumber, pipewire-pulse: incognito's own audio server;
 # pw-cat (in pipewire-bin) is the player that reads its pipe
 # nftables: the rule that keeps the user off your local network
-apt_install cage acl firefox-esr libavcodec61 pipewire-bin pipewire-pulse wireplumber nftables
+apt_install cage acl firefox-esr libavcodec61 pipewire-bin pipewire-pulse wireplumber nftables python3
 
 say "The $NAME user"
 if id "$NAME" >/dev/null 2>&1; then
@@ -89,6 +94,7 @@ note "$NAME: no password, no login, no home folder, no groups but its own and re
 
 say "The incognito command"
 sudo install -d -o root -g root -m 0755 "$SHARE" /usr/local/libexec
+install_bin wayland-restrict
 sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/incognito" "$CMD"
 sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/incognito-session" "$SESSION"
 sudo install -o root -g root -m 0644 "$DEBSWAY_DIR/data/incognito-user.js" "$PREFS"

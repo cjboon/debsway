@@ -85,7 +85,8 @@ context.modules = [
 EOF
 fi
 
-# cage connects to your sway through the absolute WAYLAND_DISPLAY and makes
+# cage connects to your sway (the restricted socket from wayland-restrict,
+# by absolute WAYLAND_DISPLAY) and makes
 # its own socket in XDG_RUNTIME_DIR for Firefox. Software rendering; the
 # render group lets cage open the GPU's render node, which it needs to start. Everything below runs in one
 # session, so closing it all is one signal to the group.
@@ -108,6 +109,7 @@ setsid env -i \
     XDG_DATA_HOME="$base/home/.local/share" \
     WAYLAND_DISPLAY="$host_rt/$host_wl" WLR_BACKENDS=wayland WLR_RENDERER=pixman \
     LIBGL_ALWAYS_SOFTWARE=1 MOZ_ENABLE_WAYLAND=1 MOZ_DBUS_REMOTE=0 GTK_USE_PORTAL=0 \
+    DBUS_SESSION_BUS_ADDRESS=disabled: \
     PULSE_SERVER="unix:$base/run/pulse/native" \
     INCOGNITO_AUDIO="$([ "$audio" != - ] && echo 1)" INCOGNITO_PROFILE="$base/profile" \
     bash -c "$start" incognito-start "$@" &

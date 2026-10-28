@@ -3,6 +3,9 @@
 # Opens Firefox as a different, locked-down user (incognito), inside its own
 # small window system, so it shares no clipboard and no folder with you.
 # Everything it stores is kept in memory and deleted when you close it.
+# It gets a restricted Wayland socket (bin/wayland-restrict), not your real
+# one: it can show a window, but sway doesn't offer it the screen-reading,
+# typing or session-lock protocols.
 # Sound: incognito runs its own audio server with no sound card; all it can
 # do is write sound into one pipe, which a player of yours reads and plays.
 # It never gets to your audio server, so it can't hear your microphone or
@@ -21,8 +24,9 @@ rt=${XDG_RUNTIME_DIR:-}
 case $WAYLAND_DISPLAY in
     */*) die "WAYLAND_DISPLAY should be a plain name like wayland-1." ;;
 esac
-sock=$rt/$WAYLAND_DISPLAY
-[ -S "$sock" ] || die "can't find your Wayland socket ($sock)."
+[ -S "$rt/$WAYLAND_DISPLAY" ] || die "can't find your Wayland socket ($rt/$WAYLAND_DISPLAY)."
+sock=$rt/incognito-wayland
+restrict=$(command -v wayland-restrict) || die "wayland-restrict is missing. Run: bash ~/debsway/parts/incognito.sh"
 command -v setfacl >/dev/null || die "setfacl is missing (package acl)."
 command -v flock >/dev/null || die "flock is missing (package util-linux)."
 # The one command your user may run as incognito (see /etc/sudoers.d)
@@ -43,18 +47,24 @@ else
     audio=false
 fi
 
-# incognito may only reach your Wayland socket (and the sound pipe), and only
-# while it runs. It gets no read access to the runtime folder: it can open
+# incognito may only reach the restricted Wayland socket (and the sound pipe),
+# and only while it runs. It gets no read access to the runtime folder: it can open
 # what it is given and nothing it isn't told the name of.
 # shellcheck disable=SC2317,SC2329  # runs from the EXIT trap
 cleanup() {
     if [ -n "$player" ]; then kill "$player" 2>/dev/null || true; fi
-    rm -f "$fifo"
-    setfacl -x u:incognito "$rt" "$sock" 2>/dev/null || true
+    if [ -n "${WL_PID:-}" ]; then kill "$WL_PID" 2>/dev/null || true; fi
+    rm -f "$fifo" "$sock"
+    setfacl -x u:incognito "$rt" 2>/dev/null || true
 }
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM HUP
+# 9>&-: wayland-restrict must not inherit the lock. It ends when cleanup
+# kills it, or when this script dies (its standard input closes).
+coproc WL { "$restrict" "$sock" incognito 9>&-; }
+IFS= read -r -t 10 line <&"${WL[0]}" && [ "$line" = ready ] ||
+    die "couldn't make a restricted Wayland socket (needs sway 1.9 or newer; see above)."
 setfacl -m u:incognito:--x "$rt"
 setfacl -m u:incognito:rw- "$sock"
 
@@ -74,5 +84,5 @@ else
 fi
 
 rc=0
-sudo -n -u incognito /usr/local/libexec/incognito-session "$rt" "$WAYLAND_DISPLAY" "$audio_arg" "$@" || rc=$?
+sudo -n -u incognito /usr/local/libexec/incognito-session "$rt" "${sock##*/}" "$audio_arg" "$@" || rc=$?
 exit "$rc"

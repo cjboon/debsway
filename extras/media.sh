@@ -14,12 +14,15 @@ if [ "${1:-}" = --remove ]; then
     remove_bin imv
     remove_bin mpv
     remove_bin media-sandbox
+    # incognito needs it too
+    [ -x /usr/local/bin/incognito ] || remove_bin wayland-restrict
     apt_purge imv mpv bubblewrap
     exit
 fi
 
 say "Installing imv and mpv"
-apt_install imv mpv bubblewrap
+apt_install imv mpv bubblewrap python3
+install_bin wayland-restrict
 install_bin media-sandbox
 install_bin imv
 install_bin mpv

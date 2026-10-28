@@ -4,6 +4,8 @@
 # read your files. The program sees only the files and folders you name on
 # its command line (read-only), its own empty home, and your screen. It has
 # no network unless you give mpv a URL, and your sound is available to mpv only.
+# It gets a restricted Wayland socket (bin/wayland-restrict), not your real
+# one: sway doesn't offer it the screen-reading or typing protocols.
 # Set DEBSWAY_NO_SANDBOX=1 to run the program plainly.
 set -euo pipefail
 
@@ -17,6 +19,13 @@ command -v bwrap >/dev/null || die "bubblewrap isn't installed (bash extras/medi
 [ -n "${WAYLAND_DISPLAY:-}" ] && [ -n "${XDG_RUNTIME_DIR:-}" ] || die "needs your sway session (WAYLAND_DISPLAY and XDG_RUNTIME_DIR)."
 case $WAYLAND_DISPLAY in */*) die "WAYLAND_DISPLAY should be a plain name like wayland-1." ;; esac
 rt=$XDG_RUNTIME_DIR
+restrict=$(command -v wayland-restrict) || die "wayland-restrict is missing. Run: bash ~/debsway/extras/media.sh"
+sock=$rt/media-sandbox-wayland.$$
+# Dies with this script (its standard input closes); the trap tidies the socket file
+coproc WL { exec "$restrict" "$sock" media-sandbox; }
+trap 'kill "$WL_PID" 2>/dev/null || true; rm -f "$sock"' EXIT
+IFS= read -r -t 10 line <&"${WL[0]}" && [ "$line" = ready ] ||
+    die "couldn't make a restricted Wayland socket (needs sway 1.9 or newer; see above). DEBSWAY_NO_SANDBOX=1 runs without the sandbox."
 
 args=(--unshare-all --die-with-parent --new-session --clearenv
     --ro-bind /usr /usr --symlink usr/bin /bin --symlink usr/sbin /sbin
@@ -26,7 +35,7 @@ args=(--unshare-all --die-with-parent --new-session --clearenv
     --tmpfs "$HOME" --tmpfs "$rt"
     --setenv PATH /usr/bin:/bin --setenv HOME "$HOME" --setenv XDG_RUNTIME_DIR "$rt"
     --setenv WAYLAND_DISPLAY "$WAYLAND_DISPLAY"
-    --ro-bind "$rt/$WAYLAND_DISPLAY" "$rt/$WAYLAND_DISPLAY")
+    --ro-bind "$sock" "$rt/$WAYLAND_DISPLAY")
 [ -e /dev/dri ] && args+=(--dev-bind /dev/dri /dev/dri)
 for v in LANG LC_ALL TERM XCURSOR_THEME XCURSOR_SIZE XDG_CURRENT_DESKTOP; do
     [ -z "${!v:-}" ] || args+=(--setenv "$v" "${!v}")
@@ -69,4 +78,7 @@ for a in "$@"; do
     esac
 done
 
-exec bwrap "${args[@]}" -- "$cmd" "${newargs[@]}"
+# not exec: the restricted socket has to stay up while the program runs
+rc=0
+bwrap "${args[@]}" -- "$cmd" "${newargs[@]}" || rc=$?
+exit "$rc"

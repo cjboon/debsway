@@ -33,8 +33,13 @@ table inet debsway_claude_vm {
         tcp dport 53 accept
         # The guest's SSH console on the host loopback, and nothing else on it
         ip daddr 127.0.0.1 tcp dport 2242 accept
+        # Anything addressed to this computer itself goes out through "lo",
+        # whichever of its addresses is used (127.0.0.1, its LAN address, its
+        # public IPv4 or IPv6 address), so this catches them all
+        oifname "lo" reject
         ip daddr { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8,
-                   169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16 } reject
-        ip6 daddr { ::1, fc00::/7, fe80::/10 } reject
+                   169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16,
+                   224.0.0.0/4, 255.255.255.255 } reject
+        ip6 daddr { ::1, fc00::/7, fe80::/10, ff00::/8 } reject
     }
 }
