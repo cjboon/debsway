@@ -55,6 +55,7 @@ if [ "${1:-}" = --remove ]; then
     sudo systemctl disable --now debsway-claude-firewall.service >/dev/null 2>&1 || true
     sudo nft delete table inet debsway_claude 2>/dev/null || true
     sudo rm -f "$SUDOERS" "$SESSION" "$FIREWALL" "$UNIT"
+    remove_no_abstract
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
     sudo rmdir /usr/local/libexec /etc/debsway 2>/dev/null || true
     # take back what it was allowed to reach
@@ -179,6 +180,7 @@ note "$PROJECTS is shared with $AGENT."
 say "The claude command"
 sudo install -d -o root -g root -m 0755 /usr/local/libexec
 sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/claude-session" "$SESSION"
+install_no_abstract
 rule=$(mktemp)
 printf '# Written by debsway extras/claude-code.sh. %s may run the claude-session script,\n# and nothing else, as the user %s.\n%s ALL=(%s) NOPASSWD: %s\n' \
     "$(id -un)" "$AGENT" "$(id -un)" "$AGENT" "$SESSION" >"$rule"

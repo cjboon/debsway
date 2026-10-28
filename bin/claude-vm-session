@@ -11,6 +11,15 @@ set -euo pipefail
 
 [ "$(id -un)" = claude-vm ] || { echo "claude-vm-session: only for the claude-vm user." >&2; exit 1; }
 
+# Run again without a way to reach XWayland's abstract socket, which any user
+# can connect to (qemu and ssh below inherit this)
+noabs=/usr/local/libexec/debsway-no-abstract-sockets
+if [ -z "${DEBSWAY_NOABS:-}" ]; then
+    [ -x "$noabs" ] || { echo "claude-vm-session: $noabs is missing. Run: bash extras/claude-vm.sh" >&2; exit 1; }
+    export DEBSWAY_NOABS=1
+    exec "$noabs" "$0" "$@"
+fi
+
 # Fixed configuration. The port must match data/claude-vm-firewall.nft.
 export HOME=/home/claude-vm
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

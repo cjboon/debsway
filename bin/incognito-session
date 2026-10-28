@@ -13,6 +13,10 @@ export PATH=/usr/local/bin:/usr/bin:/bin
 
 die() { printf 'incognito: %s\n' "$*" >&2; exit 1; }
 
+# Keeps it off XWayland's abstract socket, which any user can connect to
+noabs=/usr/local/libexec/debsway-no-abstract-sockets
+[ -x "$noabs" ] || die "$noabs is missing. Run: bash ~/debsway/parts/incognito.sh"
+
 [ "$(id -un)" = incognito ] || die "this runs as the user incognito; use the incognito command."
 [ $# -ge 3 ] || die "usage: incognito-session RUNTIME_DIR WAYLAND_DISPLAY AUDIO [URL...]"
 host_rt=$1 host_wl=$2 audio=$3
@@ -112,6 +116,6 @@ setsid env -i \
     DBUS_SESSION_BUS_ADDRESS=disabled: \
     PULSE_SERVER="unix:$base/run/pulse/native" \
     INCOGNITO_AUDIO="$([ "$audio" != - ] && echo 1)" INCOGNITO_PROFILE="$base/profile" \
-    bash -c "$start" incognito-start "$@" &
+    "$noabs" bash -c "$start" incognito-start "$@" &
 pid=$!
 wait "$pid" || true

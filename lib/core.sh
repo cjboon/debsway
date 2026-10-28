@@ -88,6 +88,22 @@ install_bin() {
     note "Installed $dest"
 }
 
+# The wrapper that keeps a sandbox user off X11's abstract socket (see
+# bin/no-abstract-sockets). One copy, root's, shared by incognito, claude-code
+# and claude-vm; the last one to be removed takes it away.
+NO_ABSTRACT=/usr/local/libexec/debsway-no-abstract-sockets
+install_no_abstract() {
+    sudo install -d -o root -g root -m 0755 /usr/local/libexec
+    sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/no-abstract-sockets" "$NO_ABSTRACT"
+}
+remove_no_abstract() {
+    local s
+    for s in incognito-session claude-session claude-vm-session; do
+        [ ! -e "/usr/local/libexec/$s" ] || return 0
+    done
+    sudo rm -f "$NO_ABSTRACT"
+}
+
 # remove_bin NAME: removes ~/.local/bin/NAME if debsway wrote it
 remove_bin() {
     if grep -qis 'written by debsway' "$BIN/$1"; then rm -f "$BIN/$1"; fi

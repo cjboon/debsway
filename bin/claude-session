@@ -13,4 +13,7 @@ cd -- "$dir" 2>/dev/null || { echo "claude-session: can't enter $dir" >&2; exit 
 
 export HOME=/home/claude-agent PATH=/home/claude-agent/.local/bin:/usr/local/bin:/usr/bin:/bin
 export LANG=${LANG:-C.UTF-8}
-exec /usr/bin/claude "$@"
+# Without a way to reach XWayland's abstract socket, which any user can connect to
+noabs=/usr/local/libexec/debsway-no-abstract-sockets
+[ -x "$noabs" ] || { echo "claude-session: $noabs is missing. Run: bash extras/claude-code.sh" >&2; exit 1; }
+exec "$noabs" /usr/bin/claude "$@"

@@ -208,6 +208,15 @@ https://example.org/` opens a page. What `parts/incognito.sh` sets up:
   works, but sway doesn't offer that user the protocols that read your
   screen, type for you or lock the session, as your real socket would.
   `media-sandbox` (imv and mpv) uses the same kind of socket.
+- **No way into X11**: XWayland (installed for Tor Browser, Feather and
+  other X11-only apps) listens on an "abstract" socket that every user on
+  the computer can connect to, and anyone connected to X11 can read its
+  windows and type into them. `incognito`, `claude` and `claude-vm` start
+  through `/usr/local/libexec/debsway-no-abstract-sockets`, which uses the
+  kernel's Landlock (Linux 6.12 or newer, Debian 13's own) to stop them
+  connecting to abstract sockets made outside them. Files, the network and
+  their own sockets are unaffected. On an older kernel they refuse to start
+  (`DEBSWAY_ALLOW_ABSTRACT_SOCKETS=1` runs one without it).
 
 What it doesn't do: it uses your network and your IP address (use Tor
 Browser or a VPN for that), and it uses the same kernel, so a kernel bug

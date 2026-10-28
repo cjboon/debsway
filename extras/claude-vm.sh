@@ -51,6 +51,7 @@ if [ "${1:-}" = --remove ]; then
     sudo systemctl disable --now debsway-claude-vm-firewall.service >/dev/null 2>&1 || true
     sudo nft delete table inet debsway_claude_vm 2>/dev/null || true
     sudo rm -f "$SUDOERS" "$SESSION" "$MOCKVPS" "$FIREWALL" "$UNIT"
+    remove_no_abstract
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
     sudo rmdir /usr/local/libexec /etc/debsway 2>/dev/null || true
     if id "$AGENT" >/dev/null 2>&1; then
@@ -117,6 +118,7 @@ sudo install -d -o root -g root -m 0755 /usr/local/libexec
 # stays quiet here.
 sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/vendor/mockvps-kvm/mockvps-kvm.sh" "$MOCKVPS"
 sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/claude-vm-session" "$SESSION"
+install_no_abstract
 
 # The provisioning script, with Anthropic's pinned key filled in, where only
 # claude-vm can read it.

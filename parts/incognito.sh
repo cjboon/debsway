@@ -54,6 +54,7 @@ if [ "${1:-}" = --remove ]; then
     # the media sandbox needs it too
     [ -f "$BIN/media-sandbox" ] || remove_bin wayland-restrict
     sudo rm -f "$SUDOERS" "$LIMITS" "$CMD" "$SESSION" "$PREFS" "$FIREWALL" "$UNIT"
+    remove_no_abstract
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
     sudo rmdir "$SHARE" /usr/local/libexec /etc/debsway 2>/dev/null || true
     if id "$NAME" >/dev/null 2>&1; then
@@ -95,6 +96,7 @@ note "$NAME: no password, no login, no home folder, no groups but its own and re
 say "The incognito command"
 sudo install -d -o root -g root -m 0755 "$SHARE" /usr/local/libexec
 install_bin wayland-restrict
+install_no_abstract
 sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/incognito" "$CMD"
 sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/incognito-session" "$SESSION"
 sudo install -o root -g root -m 0644 "$DEBSWAY_DIR/data/incognito-user.js" "$PREFS"
