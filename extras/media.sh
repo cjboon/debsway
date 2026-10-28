@@ -1,26 +1,36 @@
 #!/bin/bash
 # imv (image viewer) and mpv (video and music player), from Debian. Both
-# run natively on Wayland. Debian names the viewer imv-wayland, so an
-# "imv" command is added for it.
+# run natively on Wayland. Images and videos are what attackers hide things
+# in, so imv and mpv start inside bubblewrap (bin/media-sandbox): they see
+# only the files you open, read-only, have no network (except mpv for a
+# URL) and an empty home. DEBSWAY_NO_SANDBOX=1 runs one without it.
 # Usage: bash media.sh [--remove]
-# summary: imv image viewer and mpv video and music player
-# status: apt:imv apt:mpv
+# summary: imv and mpv, each in a sandbox
+# status: apt:imv apt:mpv apt:bubblewrap bin:imv bin:mpv bin:media-sandbox
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
 if [ "${1:-}" = --remove ]; then
     remove_bin imv
-    apt_purge imv mpv
+    remove_bin mpv
+    remove_bin media-sandbox
+    apt_purge imv mpv bubblewrap
     exit
 fi
 
 say "Installing imv and mpv"
-apt_install imv mpv
-if [ ! -e /usr/bin/imv ]; then
-    install_bin imv
-fi
+apt_install imv mpv bubblewrap
+install_bin media-sandbox
+install_bin imv
+install_bin mpv
 
 cat <<'EOF'
+
+    imv and mpv run in a sandbox: they see only the files and folders you
+    name when you start them, read-only. A subtitle file next to a video is
+    not seen unless you name it: mpv --sub-file=subs.srt movie.mp4
+    Starting one by its full path (/usr/bin/mpv), or from a launcher that
+    does, skips the sandbox; so does DEBSWAY_NO_SANDBOX=1.
 
     How to use imv (images):
       imv photo.jpg                  open one image

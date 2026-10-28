@@ -1,0 +1,5 @@
+#!/bin/sh
+# mpv: written by debsway extras/media.sh
+# The video and music player, run in a sandbox that sees only the files you
+# open (and the network only for a URL).
+exec "$HOME/.local/bin/media-sandbox" /usr/bin/mpv "$@"

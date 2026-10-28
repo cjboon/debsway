@@ -1,0 +1,30 @@
+#!/bin/bash
+# claude [ARGS...]: written by debsway extras/claude-code.sh
+# Runs Claude Code as its own user (claude-agent), not as you. It can work in
+# ~/projects and nowhere else of yours: no ssh keys, no passwords, no browser
+# profiles. Run it from a folder inside ~/projects. To run it as yourself,
+# with your files, use: claude-unsandboxed
+set -euo pipefail
+
+AGENT=claude-agent
+SESSION=/usr/local/libexec/claude-session
+PROJECTS=$HOME/projects
+
+die() { printf 'claude: %s\n' "$*" >&2; exit 1; }
+
+[ "$(id -u)" -ne 0 ] || die "run it as your normal user, not root."
+sudo -n -u "$AGENT" -l "$SESSION" >/dev/null 2>&1 ||
+    die "the sandbox isn't set up. Run: bash ~/debsway/extras/claude-code.sh   (claude-unsandboxed runs it as you.)"
+
+here=$(pwd -P)
+case $here in
+    "$PROJECTS" | "$PROJECTS"/*) ;;
+    *)
+        # asking for the version or help needs no project
+        case ${1:-} in
+            -v | --version | -h | --help) here=$PROJECTS ;;
+            *) die "it only works inside ~/projects. Try: cd ~/projects/NAME   (mkdir ~/projects/NAME for a new one), or use claude-unsandboxed." ;;
+        esac ;;
+esac
+
+exec sudo -n -u "$AGENT" "$SESSION" "$here" "$@"

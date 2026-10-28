@@ -47,6 +47,15 @@ this page to decide what else you need.
   you close it. Video and sound work; the sound leaves through a one-way
   pipe, so it can't hear your microphone or your other programs. A hacked
   browser there gets a user that owns nothing.
+- **A booby-trapped image or video, or a coding assistant that goes wrong,
+  reaching your files.** `imv` and `mpv` (`extras/media.sh`) start inside
+  bubblewrap: they see only the files you open, read-only, and have no
+  network unless you give mpv a URL. `claude` (`extras/claude-code.sh`)
+  runs Claude Code as its own user, `claude-agent`, which has no password
+  and can't read your home folder, ssh keys, passwords or browser
+  profiles; it works in `~/projects`, which you share with it. A firewall
+  rule on that user keeps it off your router, printers and the programs
+  listening on this machine; it reaches the internet only.
 - **A stranger's USB stick running something.** Drives mount with
   `nosuid`, `nodev` and `noexec` (`parts/udiskie.sh`), so nothing on a stick
   can run from it by itself. They still mount the moment they're plugged
@@ -83,6 +92,18 @@ With the extras:
   debsway doesn't set up Secure Boot measurement or tamper evidence.
 - **Being identified while logged in.** A VPN, Tor or Mullvad Browser
   hides your IP address, not who you are to a site you've logged into.
+- **What you share with the sandboxes.** `claude-agent` and you both
+  read and write `~/projects`, and it has your network. Anything it leaves
+  there is untrusted: read scripts before you run them, and look at
+  `.git/config` and `.git/hooks` before you tell your own git to trust a
+  repository it made. debsway puts a guard in front of your git inside
+  `~/projects` (`bin/git`): it refuses to run when a repository's
+  `.git/config` or `.git/hooks` could run a program as you. A file could
+  change between that check and the run, so it stops a confused assistant,
+  not one racing your keystrokes. Don't switch git's own "dubious
+  ownership" warning off with `safe.directory '*'`. mpv in its sandbox can
+  use your audio server, which could also record the microphone. `claude-unsandboxed` and
+  starting `/usr/bin/mpv` by full path skip the sandboxes.
 - **`incognito` hiding who you are**: it is your network and your IP
   address, it shares the kernel (a kernel bug could get out), and the
   window is visible to you and to your screenshots, as any window is.

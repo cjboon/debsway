@@ -1,0 +1,5 @@
+#!/bin/sh
+# claude-unsandboxed [ARGS...]: written by debsway extras/claude-code.sh
+# Claude Code as you, with all your files and keys. The plain claude command
+# runs it as its own user, inside ~/projects, instead.
+exec /usr/bin/claude "$@"

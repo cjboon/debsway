@@ -10,12 +10,18 @@
 2. Sets up sway (a copy of the stock config plus one `include` line for
    `~/.config/sway/config.d/`), the status bar (see-through black), no window
    borders (`appearance.conf`), and the key cheat sheet: `Super+?`, the `keys` command, `~/KEYS.txt` (a link
-   to the one copy), a clickable "Help" and Wi-Fi name at the left of the bar, and a one-line hint on
+   to the one copy), a bar with a clickable "Help" and Wi-Fi name, a scrollable volume and brightness, and a battery you can click for the time left, and a one-line hint on
    plain text consoles. `display-scale` sets the text size of each screen,
    remembered per screen (`display.conf`), and a watcher started by sway says
    once, in a notification, when a sharp screen is still at scale 1, also when
    you plug one in later. A screen's size comes from its own data in
    `/sys/class/drm`; without it the sharpness is unknown and nothing is said.
+   `timer` (Super+t, or a click on the time in the bar) sets timers and alarms
+   with systemd user timers and no extra package: `timer 10m tea`,
+   `timer at 7:30`, `timer list`, `timer cancel`. The next one shows in the bar.
+   `timer clock` chooses whether the bar shows the date (the time is always am/pm)
+   (`~/.config/debsway/clock`). Timers last until logout or reboot, and a
+   laptop that is asleep does not wake for them.
 3. Offers to start sway when you log in on tty1 (a marked block in
    `~/.profile`).
 4. Runs every script in `parts/`. If one fails, the rest still run and

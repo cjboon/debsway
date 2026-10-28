@@ -59,7 +59,10 @@ for f in extras/*.sh; do
         meh "$f: the summary is ${#line} characters; over 52 is cut off in the list"
     fi
 done
-# parts/incognito.sh installs these as root
+# extras/claude-code.sh and parts/incognito.sh install these as root
+for f in bin/claude bin/claude-session bin/claude-unsandboxed bin/git data/claude-firewall.nft data/claude-agent-CLAUDE.md; do
+    [ -f "$f" ] || bad "extras/claude-code.sh needs $f"
+done
 for f in bin/incognito bin/incognito-session data/incognito-user.js data/incognito-firewall.nft; do
     [ -f "$f" ] || bad "parts/incognito.sh needs $f"
 done
@@ -93,6 +96,30 @@ if out=$(bash tools/test-bridges.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") bridge checks"
 else
     bad "bridge checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "Timers, alarms and the clock format (bin/timer), with pretend systemd"
+if out=$(bash tools/test-timer.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") timer checks"
+else
+    bad "timer checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "The claude command (sandboxed Claude Code), with a pretend sudo"
+if out=$(bash tools/test-claude.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") claude checks"
+else
+    bad "claude checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "The git guard for ~/projects (bin/git), with real git"
+if out=$(bash tools/test-git-guard.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") git guard checks"
+else
+    bad "git guard checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
 fi
 
 # --------------------------------------------------------------------

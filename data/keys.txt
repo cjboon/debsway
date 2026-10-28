@@ -36,10 +36,19 @@
     Brightness keys        brightness down / up (or Super+F1 / Super+F2)
     Volume keys            volume down / up / mute, mic mute
                            (or Super+F11 / Super+F12 / Super+F10)
+    Bar: vol / bright      scroll over them to change them
+                           (click vol: mute; click bat: time left)
     Super+Escape           lock the screen (type your password to unlock)
     Print                  screenshot of the whole screen to ~/Pictures
     Super+Shift+s          drag a region, saved to ~/Pictures
     Super+Shift+x          drag a region, copied to the clipboard
+
+  TIMERS AND ALARMS
+    Super+t                menu: type 10m, 1h30 or 7:30 and press Enter
+    Click the time         the same menu (or click the timer shown in the bar)
+    timer 10m tea          from a terminal; timer at 7:30 wake up
+    timer list | cancel    what is running | stop one (timer cancel all)
+    timer clock            show or hide the date in the bar
 
   NOTIFICATIONS
     Super+n                dismiss one
@@ -60,6 +69,8 @@
     bash ~/debsway/status.sh          what is installed
     bash ~/debsway/install-extras.sh  add programs (or one: extras/NAME.sh)
     display-scale          text too small on a sharp screen? makes it bigger
+    claude                 Claude Code as its own user, in ~/projects/NAME
+                           (claude-unsandboxed: as you, with all your files)
     nmtui                  pick a Wi-Fi network (or click its name in the bar)
     powerprofilesctl set power-saver | balanced | performance
     brightness up 10       bigger brightness steps

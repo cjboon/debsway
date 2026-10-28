@@ -1,3 +1,6 @@
 #!/bin/sh
 # imv: written by debsway extras/media.sh
-exec imv-wayland "$@"
+# The image viewer, run in a sandbox that sees only the files you open.
+real=/usr/bin/imv-wayland
+[ -x "$real" ] || real=/usr/bin/imv
+exec "$HOME/.local/bin/media-sandbox" "$real" "$@"

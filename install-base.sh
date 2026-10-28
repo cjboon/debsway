@@ -61,6 +61,7 @@ install -m 0644 "$DEBSWAY_DIR/data/keys.txt" "$KEYS"
 ln -sfn "$KEYS" "$HOME/KEYS.txt"
 install_bin keys
 install_bin debsway-welcome
+install_bin timer
 # Shift+slash is ? on a US keyboard; "question" follows the layout on others
 put_snippet help <<'EOF'
 # Key cheat sheet on Super+? (debsway install-base.sh)
@@ -71,6 +72,14 @@ for_window [app_id="debsway-nmtui"] floating enable, resize set width 60 ppt hei
 exec ~/.local/bin/debsway-welcome
 EOF
 note "Super+? shows it (also: type keys, or open ~/KEYS.txt). It opens by itself on your first login."
+
+# Super+t, or a click on the time in the bar (bin/sway-status), opens the timer menu
+put_snippet timer <<'EOF'
+# Timers and alarms on Super+t (debsway install-base.sh)
+bindsym $mod+t exec foot --app-id=debsway-timer ~/.local/bin/timer
+for_window [app_id="debsway-timer"] floating enable, resize set width 60 ppt height 60 ppt
+EOF
+note "Super+t, or a click on the time in the bar: timers and alarms (or type: timer 10m tea)."
 
 say "Look"
 put_snippet appearance <<'EOF'

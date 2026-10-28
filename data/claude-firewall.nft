@@ -1,0 +1,33 @@
+# Keeps the claude-agent user off your computer and your local network
+# (debsway extras/claude-code.sh). Only that user's traffic is touched.
+# It can still reach the internet (Claude's servers, git hosts, package
+# sites), but not:
+#   - programs on this machine that listen on the network, including its
+#     own dev servers on localhost (see the note below)
+#   - your router, printers, other computers, or your phone's hotspot
+# DNS stays open (your resolver is usually the router).
+#
+# To let it use servers on this machine (its own, and also yours: Tor's
+# proxy, a printing service...), add this line below the "established" one,
+# then run: sudo systemctl restart debsway-claude-firewall
+#     oifname "lo" accept
+
+table inet debsway_claude
+delete table inet debsway_claude
+
+table inet debsway_claude {
+    chain output {
+        type filter hook output priority 0; policy accept;
+        meta skuid "claude-agent" jump claude
+    }
+
+    chain claude {
+        # Answers to connections that others made to it
+        ct state established,related accept
+        udp dport 53 accept
+        tcp dport 53 accept
+        ip daddr { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8,
+                   169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16 } reject
+        ip6 daddr { ::1, fc00::/7, fe80::/10 } reject
+    }
+}

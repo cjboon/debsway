@@ -10,7 +10,7 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `w3m.sh` | w3m, a text-mode web browser for the terminal (no JavaScript) |
 | `keepassxc.sh` | KeePassXC password manager. Asks whether you want the Firefox extension (`webext-keepassxc-browser`): yes installs the full build (`keepassxc-full`, which has the browser integration), no installs the minimal one (`keepassxc-minimal`). Run it again to switch |
 | `git.sh` | git, and optionally GitHub's `gh`; sets your commit name and email |
-| `claude-code.sh` | Claude Code, from Anthropic's signed apt repo |
+| `claude-code.sh` | Claude Code, from Anthropic's signed apt repo. `claude` runs it as its own user (`claude-agent`), working in `~/projects` and unable to read the rest of your home; `claude-unsandboxed` runs it as you. Your own `git` gets a guard inside `~/projects` that refuses repositories with hooks or settings that could run a program |
 | `tor-browser.sh` | Tor Browser (Safest, JavaScript off, a bridge before its first connection if you need one: obfs4, webtunnel, Snowflake or meek). See below |
 | `whonix.sh` | Whonix Gateway + Workstation VMs on KVM. See below |
 | `onionshare.sh` | Share files, receive files, host a site or a chat over Tor, with a bridge if you need one (obfs4 or Snowflake). Prints `onionshare-cli` examples |
@@ -24,7 +24,7 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `seahorse.sh` | Seahorse and the GNOME keyring, unlocked by your login password (edits `/etc/pam.d/login`; `--remove` takes the lines out) |
 | `backup.sh` | Encrypted backups of your home folder with restic, and a `backup` command. Prints examples |
 | `metadata-cleaner.sh` | Metadata Cleaner, the graphical program Tails ships, and the `mat2` command: removes hidden metadata from photos, PDFs and documents before you share them. Prints examples |
-| `media.sh` | imv (images) and mpv (video, music). Prints examples and keys |
+| `media.sh` | imv (images) and mpv (video, music), each started in a bubblewrap sandbox that sees only the files you open. Prints examples and keys |
 | `mockvps-kvm.sh` | `mockvps-kvm`: a disposable Debian "VPS" in a local QEMU/KVM VM for trying out server setups, with snapshots and one-command removal. See `vendor/mockvps-kvm/README.md`. Run `bash extras/mockvps-kvm.sh` once, then use the `mockvps-kvm` command; the script in `vendor/` is the program itself and refuses to run directly until that setup is done (`MOCKVPS_FORCE=1` overrides) |
 | `mousepad.sh` | Mousepad, a simple graphical text editor (made the default for text files). The first time it also sets its look: solarized-dark, 16 pt monospace, tabs of 4 spaces, line numbers and a margin at column 80 (`data/mousepad.settings`); later runs leave your changes alone |
 | `file-manager.sh` | Thunar, a light graphical file manager, with Trash and thumbnails (made the default for folders). Prints its keys |

@@ -1,0 +1,315 @@
+#!/bin/bash
+# timer: timers, alarms and the look of the clock in the bar.
+# Written by debsway install-base.sh. Needs nothing but systemd and date.
+#
+#   timer                       a small menu (also: click the time in the bar, or Super+t)
+#   timer 10m [NAME]            a timer: 90s, 10m, 1h30m, 1.5h (a bare number is minutes)
+#   timer at 7:30 [NAME]        an alarm at the next 7:30 (7am, 7:30 pm, tomorrow 8am)
+#   timer list                  what is running
+#   timer cancel [N|all]        cancel one, or all of them
+#   timer clock                 whether the bar shows the date (the time is always am/pm)
+#   timer clock date on|date off
+#
+# A timer or alarm rings with a notification that stays until you dismiss it
+# (and a sound, if the system has one). They last until you log out or reboot,
+# and a laptop that is asleep does not wake up for them.
+
+set -u
+
+STATE=${XDG_RUNTIME_DIR:-/tmp}/debsway-timers   # lives as long as the timers do
+CONF=${XDG_CONFIG_HOME:-$HOME/.config}/debsway/clock
+SELF=$(readlink -f -- "$0")
+MAX=604800                                      # longest timer: a week
+
+err() { printf 'timer: %s\n' "$*" >&2; }
+
+# --- the clock setting, shared with sway-status ---------------------------
+
+conf_get() { sed -n "s/^$1=//p" "$CONF" 2>/dev/null | tail -n 1; }
+
+conf_set() { # KEY VALUE
+    mkdir -p "${CONF%/*}"
+    touch "$CONF"
+    { grep -v "^$1=" "$CONF"; echo "$1=$2"; } >"$CONF.new" && mv "$CONF.new" "$CONF"
+}
+
+# clock_at EPOCH: the time of day (with the weekday if it is not today)
+clock_at() {
+    local f='%-I:%M %p'
+    [ "$(date -d "@$1" +%F)" = "$(date +%F)" ] || f="%a $f"
+    date -d "@$1" +"$f"
+}
+
+# tell sway-status to redraw now (only if that PID really is sway-status)
+refresh_bar() {
+    local pid
+    pid=$(cat "${XDG_RUNTIME_DIR:-/tmp}/sway-status.pid" 2>/dev/null)
+    if [ -n "$pid" ] && tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null | grep -q sway-status; then
+        kill -USR1 "$pid" 2>/dev/null
+    fi
+    return 0
+}
+
+# --- reading what a person types -------------------------------------------
+
+# parse_duration TEXT: the seconds in 90s, 10m, 1h30m, 1h30, 1.5h, 90 (minutes)
+parse_duration() {
+    printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | awk -v max="$MAX" '
+        {
+            s = $0; total = 0; last = ""; n = 0
+            while (s != "") {
+                if (!match(s, /^[0-9]+(\.[0-9]+)?[hms]?/)) exit 1
+                tok = substr(s, 1, RLENGTH); s = substr(s, RLENGTH + 1); n++
+                u = substr(tok, length(tok))
+                if (u ~ /[hms]/) v = substr(tok, 1, length(tok) - 1)
+                else { v = tok; u = (last == "" || last == "h") ? "m" : "s" }   # 1h30 is 1h30m, 5m30 is 5m30s
+                total += v * ((u == "h") ? 3600 : (u == "m") ? 60 : 1)
+                last = u
+            }
+            if (n == 0 || total <= 0 || total > max) exit 1
+            printf "%d\n", total + 0.5
+        }'
+}
+
+# parse_alarm TEXT: the epoch of the next 7:30, 7am, 7:30 pm, tomorrow 8am
+parse_alarm() {
+    local t=$1 now e
+    [[ $t =~ ^(tomorrow\ )?[0-9]{1,2}(:[0-9]{2})?(\ ?[aApP][mM])?$ ]] || return 1
+    now=$(date +%s)
+    e=$(date -d "$t" +%s 2>/dev/null) || return 1
+    if [ "$e" -le "$now" ]; then
+        e=$(date -d "tomorrow $t" +%s 2>/dev/null) || return 1
+    fi
+    echo "$e"
+}
+
+# --- the timers themselves --------------------------------------------------
+# One small file per timer in $STATE, and a transient systemd user timer to ring it
+
+# load [check]: IDS, KINDS, DUES, LABELS of what is running, soonest first
+load() {
+    IDS=(); KINDS=(); DUES=(); LABELS=()
+    [ -d "$STATE" ] || return 0
+    local now due id f
+    now=$(date +%s)
+    while read -r due id; do
+        [ -n "$id" ] || continue
+        f=$STATE/$id
+        # long gone (the system was off, say), or its systemd timer is not there any more
+        if [ "$due" -lt $((now - 120)) ] ||
+            { [ "${1:-}" = check ] && ! systemctl --user is-active --quiet "debsway-timer-$id.timer"; }; then
+            rm -f "$f"
+            continue
+        fi
+        IDS+=("$id"); DUES+=("$due")
+        KINDS+=("$(sed -n 's/^kind=//p' "$f")")
+        LABELS+=("$(sed -n 's/^label=//p' "$f")")
+    done < <(for f in "$STATE"/*; do
+        [ -f "$f" ] && printf '%s %s\n' "$(sed -n 's/^due=//p' "$f")" "${f##*/}"
+    done | sort -n)
+}
+
+# left_text SECONDS: 1 h 05 min, 4 min, 20 sec
+left_text() {
+    if [ "$1" -ge 3600 ]; then printf '%d h %02d min' $(($1 / 3600)) $(($1 % 3600 / 60))
+    elif [ "$1" -ge 60 ]; then printf '%d min' $((($1 + 59) / 60))
+    else printf '%d sec' "$1"; fi
+}
+
+# show_list: the numbered list, one line per timer
+show_list() {
+    local i now left name
+    now=$(date +%s)
+    for i in "${!IDS[@]}"; do
+        left=$((DUES[i] - now)); [ "$left" -ge 0 ] || left=0
+        name=${LABELS[i]:-${KINDS[i]}}
+        if [ "${KINDS[i]}" = alarm ]; then
+            printf '    %d) %-18.18s alarm at %s  (in %s)\n' $((i + 1)) "$name" "$(clock_at "${DUES[i]}")" "$(left_text "$left")"
+        else
+            printf '    %d) %-18.18s %s left  (rings at %s)\n' $((i + 1)) "$name" "$(left_text "$left")" "$(clock_at "${DUES[i]}")"
+        fi
+    done
+}
+
+# add KIND DUE LABEL
+add() {
+    local kind=$1 due=$2 label=$3 id when
+    id=$(date +%s)-$$-$RANDOM
+    mkdir -p "$STATE"
+    printf 'kind=%s\ndue=%s\nlabel=%s\n' "$kind" "$due" "$label" >"$STATE/$id"
+    when=$(date -d "@$due" '+%Y-%m-%d %H:%M:%S')
+    if ! systemd-run --user --quiet --unit="debsway-timer-$id" --on-calendar="$when" \
+        --timer-property=AccuracySec=1s --timer-property=RemainAfterElapse=no \
+        --description="debsway $kind: $label" "$SELF" fire "$id" 2>/dev/null; then
+        rm -f "$STATE/$id"
+        err "systemd could not start it (is this a normal login session?)"
+        return 1
+    fi
+    refresh_bar
+}
+
+# set_cmd WORDS...: "10m tea", "at 7:30 wake up", "7am", "tomorrow 8am dentist"
+set_cmd() {
+    local first=${1:-} secs due t label kind
+    [ $# -gt 0 ] || return 1
+    if secs=$(parse_duration "$first") && [ -n "$secs" ]; then
+        shift
+        label=$(printf '%s' "$*" | tr -d '\r\n' | cut -c1-40)
+        add timer $(($(date +%s) + secs)) "$label" || return 1
+        printf 'Timer set%s: rings in %s, at %s.\n' "${label:+ ($label)}" "$(left_text "$secs")" "$(clock_at $(($(date +%s) + secs)))"
+        return 0
+    fi
+    case $first in at | alarm) shift ;; esac
+    [ $# -gt 0 ] || { err "at what time? For example: timer at 7:30"; return 1; }
+    t=$1; shift
+    case $t in tomorrow) t="$t ${1:-}"; shift ;; esac
+    case ${1:-} in [aApP][mM]) t="$t $1"; shift ;; esac
+    if ! due=$(parse_alarm "$t"); then
+        err "I could not read '$t'. Try 10m for a timer, or 7:30, 7am, 7:30 pm, tomorrow 8am for an alarm."
+        return 1
+    fi
+    kind=alarm
+    label=$(printf '%s' "$*" | tr -d '\r\n' | cut -c1-40)
+    add $kind "$due" "$label" || return 1
+    printf 'Alarm set%s: %s.\n' "${label:+ ($label)}" "$(clock_at "$due")"
+}
+
+# cancel_cmd WHICH: a number from the list, or all
+cancel_cmd() {
+    local i n=0
+    load check
+    [ ${#IDS[@]} -gt 0 ] || { echo "Nothing is running."; return 0; }
+    for i in "${!IDS[@]}"; do
+        if [ "$1" = all ] || [ "$1" = $((i + 1)) ]; then
+            systemctl --user stop "debsway-timer-${IDS[i]}.timer" 2>/dev/null
+            rm -f "$STATE/${IDS[i]}"
+            n=$((n + 1))
+        fi
+    done
+    refresh_bar
+    if [ "$n" -eq 0 ]; then err "no timer number '$1' (timer list shows them)"; return 1; fi
+    echo "Cancelled $n."
+}
+
+# fire ID: what systemd runs when the time comes
+fire() {
+    local f=$STATE/$1 kind label title snd i
+    [ -f "$f" ] || exit 0
+    kind=$(sed -n 's/^kind=//p' "$f"); label=$(sed -n 's/^label=//p' "$f")
+    rm -f "$f"
+    refresh_bar
+    if [ "$kind" = alarm ]; then title="Alarm"; else title="Timer done"; fi
+    command -v notify-send >/dev/null &&
+        notify-send -u critical -t 0 -a debsway "$title" "${label:-$(date +'%-I:%M %p')}"
+    for snd in /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga \
+        /usr/share/sounds/freedesktop/stereo/complete.oga; do
+        if [ -r "$snd" ] && command -v pw-play >/dev/null; then
+            for i in 1 2 3; do pw-play "$snd" 2>/dev/null; sleep 1; done
+            break
+        fi
+    done
+    exit 0
+}
+
+# next: the short text sway-status puts in the bar ("tea 4m", "alarm 7:30 AM"), or nothing
+next() {
+    load
+    [ ${#IDS[@]} -gt 0 ] || return 0
+    local left=$((DUES[0] - $(date +%s))) name=${LABELS[0]} text more=
+    [ "$left" -ge 0 ] || left=0
+    if [ "${KINDS[0]}" = alarm ]; then
+        text="${name:-alarm} $(clock_at "${DUES[0]}")"
+    else
+        if [ "$left" -ge 3600 ]; then text=$(printf '%dh%02d' $((left / 3600)) $((left % 3600 / 60)))
+        elif [ "$left" -ge 60 ]; then text="$(((left + 59) / 60))m"
+        else text="<1m"; fi
+        text="${name:-timer} $text"
+    fi
+    [ ${#IDS[@]} -gt 1 ] && more=" +$((${#IDS[@]} - 1))"
+    printf '%s%s\n' "$text" "$more"
+}
+
+# --- how the clock looks in the bar ---------------------------------------
+
+clock_cmd() {
+    local d
+    case ${1:-}${2:+ $2} in
+        "date on") conf_set date yes ;;
+        "date off") conf_set date no ;;
+        "")
+            echo "The bar shows: $(date +"$(bar_format)")"
+            read -r -p "Show the date? [y/n, Enter keeps $([ "$(conf_get date)" = no ] && echo n || echo y)] " d || return 0
+            case $d in y* | Y*) conf_set date yes ;; n* | N*) conf_set date no ;; esac
+            ;;
+        *) err "usage: timer clock [date on|date off]"; return 1 ;;
+    esac
+    refresh_bar
+    echo "The bar shows: $(date +"$(bar_format)")"
+}
+
+# bar_format: the date(1) format for the setting (sway-status does the same)
+bar_format() {
+    if [ "$(conf_get date)" = no ]; then echo '%a %-I:%M %p'; else echo '%a %Y-%m-%d %-I:%M %p'; fi
+}
+
+# --- the menu ---------------------------------------------------------------
+
+menu() {
+    local input n
+    while :; do
+        load check
+        printf '\033[H\033[2J'
+        printf '\n  TIMER AND ALARM%*s\n\n' 30 "$(date +"$(bar_format)")"
+        if [ ${#IDS[@]} -gt 0 ]; then
+            echo "  Running"
+            show_list
+            echo
+        fi
+        cat <<'EOF'
+  Type a time and press Enter:
+      10m  or  1h30  or  45s         a timer ("10m tea" gives it a name)
+      7:30  or  7am  or  7:30pm      an alarm at the next 7:30
+  Or a letter:
+      c   cancel one         f   show or hide the date in the bar         q   quit
+
+EOF
+        read -r -e -p "  > " input || return 0
+        # shellcheck disable=SC2086  # the words are meant to split
+        set -- $input
+        case ${1:-} in
+            "" | q | quit | exit) return 0 ;;
+            c | cancel)
+                if [ ${#IDS[@]} -eq 0 ]; then echo "  Nothing to cancel."
+                else
+                    n=${2:-}
+                    [ ${#IDS[@]} -gt 1 ] || n=1
+                    [ -n "$n" ] || read -r -p "  Which number (or all)? " n || continue
+                    cancel_cmd "$n"
+                fi ;;
+            f | format | clock) echo; clock_cmd ;;
+            *) set_cmd "$@" ;;
+        esac
+        sleep 1.6
+    done
+}
+
+usage() { sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; }
+
+case ${1:-} in
+    "") menu ;;
+    -h | --help | help) usage ;;
+    list | ls) load check; if [ ${#IDS[@]} -gt 0 ]; then show_list; else echo "Nothing is running."; fi ;;
+    cancel | stop)
+        if [ -n "${2:-}" ]; then cancel_cmd "$2"
+        else
+            load check
+            if [ ${#IDS[@]} -eq 1 ]; then cancel_cmd 1
+            elif [ ${#IDS[@]} -eq 0 ]; then echo "Nothing is running."
+            else show_list; err "which one? timer cancel N, or timer cancel all"; exit 1; fi
+        fi ;;
+    clock) shift; clock_cmd "$@" ;;
+    fire) fire "${2:-}" ;;
+    next) next ;;
+    seconds) parse_duration "${2:-}" ;;   # (used by the tests)
+    *) set_cmd "$@" ;;
+esac
