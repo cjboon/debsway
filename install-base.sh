@@ -67,6 +67,7 @@ put_snippet help <<'EOF'
 bindsym $mod+Shift+slash exec foot --app-id=debsway-keys ~/.local/bin/keys
 bindsym $mod+question exec foot --app-id=debsway-keys ~/.local/bin/keys
 for_window [app_id="debsway-keys"] floating enable, resize set width 72 ppt height 85 ppt
+for_window [app_id="debsway-nmtui"] floating enable, resize set width 60 ppt height 70 ppt
 exec ~/.local/bin/debsway-welcome
 EOF
 note "Super+? shows it (also: type keys, or open ~/KEYS.txt). It opens by itself on your first login."
@@ -91,7 +92,7 @@ EOF
 note "Text too small on a sharp screen? display-scale makes it bigger (sway tells you once)."
 
 say "sway status bar"
-# bin/sway-status shows wifi | volume | brightness | battery | date
+# bin/sway-status shows Help (clickable) | wifi | volume | brightness | battery | date
 install_bin sway-status
 # Edit the stock bar in place; a second bar block would add a second bar
 if grep -q 'status_command while date' "$SWAY_CONFIG"; then

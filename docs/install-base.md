@@ -10,7 +10,7 @@
 2. Sets up sway (a copy of the stock config plus one `include` line for
    `~/.config/sway/config.d/`), the status bar (see-through black), no window
    borders (`appearance.conf`), and the key cheat sheet: `Super+?`, the `keys` command, `~/KEYS.txt` (a link
-   to the one copy), a reminder at the left of the bar, and a one-line hint on
+   to the one copy), a clickable "Help" and Wi-Fi name at the left of the bar, and a one-line hint on
    plain text consoles. `display-scale` sets the text size of each screen,
    remembered per screen (`display.conf`), and a watcher started by sway says
    once, in a notification, when a sharp screen is still at scale 1, also when

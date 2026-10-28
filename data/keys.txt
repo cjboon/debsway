@@ -1,7 +1,7 @@
   KEYS                                   Super = the Windows / Cmd key
   ──────────────────────────────────────────────────────────────────
   Press q to close this; arrows and Space scroll.
-  Open it again any time: Super+?   or type  keys  in a terminal.
+  Open it again any time: Super+?, click Help in the bar, or type  keys.
   It is also the file ~/KEYS.txt.
 
   START HERE
@@ -60,7 +60,7 @@
     bash ~/debsway/status.sh          what is installed
     bash ~/debsway/install-extras.sh  add programs (or one: extras/NAME.sh)
     display-scale          text too small on a sharp screen? makes it bigger
-    nmtui                  pick a Wi-Fi network
+    nmtui                  pick a Wi-Fi network (or click its name in the bar)
     powerprofilesctl set power-saver | balanced | performance
     brightness up 10       bigger brightness steps
     udiskie-umount -a      unmount all USB drives before unplugging

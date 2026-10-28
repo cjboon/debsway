@@ -172,7 +172,7 @@ bash install-base.sh
 Then log out (`exit`) and log in on tty1: sway starts by itself if you
 said yes to that, otherwise type `sway`. The key cheat sheet opens on
 your first login; Super+? brings it back, and so does typing `keys` or
-opening `~/KEYS.txt`. The status bar says "Super+? keys" at its left.
+opening `~/KEYS.txt`. The status bar has a "Help" at its left: click it to open the sheet, and the Wi-Fi name next to it opens nmtui.
 
 ## More
 

@@ -1,9 +1,10 @@
 #!/bin/sh
-# Status line for swaybar: a reminder where the keys are | wifi | volume | brightness | battery | date
+# Status line for swaybar: Help (click: key cheat sheet) | wifi (click: nmtui) | volume | brightness | battery | date
 # Written by debsway install-base.sh. Each part only shows when this
 # system has what it needs, so it copes with anything missing or removed.
 # Redraws every 5 seconds, or right away on SIGUSR1 (the brightness keys
 # send it; the PID is in $XDG_RUNTIME_DIR/sway-status.pid).
+# Speaks swaybar's JSON protocol so that a click on Help can be heard.
 
 PIDFILE=${XDG_RUNTIME_DIR:-/tmp}/sway-status.pid
 echo $$ >"$PIDFILE"
@@ -56,12 +57,33 @@ battery() {
     done
 }
 
+# a click on "Help" or the wifi name arrives on stdin as a line of JSON (sway puts spaces in it)
+exec 3<&0
+while read -r event <&3; do
+    case $(printf '%s' "$event" | tr -d ' ') in
+        *'"name":"help"'*'"button":1,'*)
+            foot --app-id=debsway-keys "$HOME/.local/bin/keys" >/dev/null 2>&1 & ;;
+        *'"name":"wifi"'*'"button":1,'*)
+            # nmtui measures its window once at the start, so wait for sway to size it
+            command -v nmtui >/dev/null &&
+                foot --app-id=debsway-nmtui sh -c 'sleep 0.5; exec nmtui' >/dev/null 2>&1 & ;;
+    esac
+done &
+reader=$!
+trap 'kill $reader 2>/dev/null; rm -f "$PIDFILE"' EXIT
+
+echo '{"version":1,"click_events":true}'
+echo '['
+# json TEXT: TEXT made safe to put inside a JSON string (a network name can hold quotes)
+json() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+
 while :; do
-    line="Super+? keys | $(wifi)"
+    line=
     for part in "$(volume)" "$(brightness)" "$(battery)" "$(date +'%a %Y-%m-%d %-I:%M %p')"; do
         [ -n "$part" ] && line="$line | $part"
     done
-    echo "$line"
+    printf '[{"name":"help","full_text":"Help","separator":false,"separator_block_width":0},{"name":"wifi","full_text":" | %s","separator":false,"separator_block_width":0},{"name":"status","full_text":"%s"}],\n' \
+        "$(json "$(wifi)")" "$(json "$line")"
     # wait returns early when SIGUSR1 arrives; the sleep ends by itself
     sleep 5 &
     wait $!
