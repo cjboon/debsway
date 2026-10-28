@@ -127,7 +127,10 @@ printf '%s\n' '# Written by debsway parts/incognito.sh' '[Unit]' \
     'ExecStop=/usr/sbin/nft delete table inet debsway_incognito' '' '[Install]' \
     'WantedBy=multi-user.target' | sudo tee "$UNIT" >/dev/null
 sudo systemctl daemon-reload
-sudo systemctl enable --now debsway-incognito-firewall.service >/dev/null ||
+# Restart, not just enable --now: the unit stays "active" after it first ran,
+# so a rule file changed by an update would otherwise not be loaded
+sudo systemctl enable debsway-incognito-firewall.service >/dev/null &&
+    sudo systemctl restart debsway-incognito-firewall.service ||
     warn "Couldn't load the firewall rule; check: systemctl status debsway-incognito-firewall"
 note "$NAME can reach the internet, not your router, printers or your own local services."
 note "(Wi-Fi login pages at cafes are on the local network: sign in with your own Firefox first.)"

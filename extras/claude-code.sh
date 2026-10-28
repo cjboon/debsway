@@ -158,7 +158,10 @@ printf '%s\n' '# Written by debsway extras/claude-code.sh' '[Unit]' \
     'ExecStop=/usr/sbin/nft delete table inet debsway_claude' '' '[Install]' \
     'WantedBy=multi-user.target' | sudo tee "$UNIT" >/dev/null
 sudo systemctl daemon-reload
-sudo systemctl enable --now debsway-claude-firewall.service >/dev/null ||
+# Restart, not just enable --now: the unit stays "active" after it first ran,
+# so a rule file changed by an update would otherwise not be loaded
+sudo systemctl enable debsway-claude-firewall.service >/dev/null &&
+    sudo systemctl restart debsway-claude-firewall.service ||
     warn "Couldn't load the firewall rule; check: systemctl status debsway-claude-firewall"
 note "$AGENT can reach the internet, not your router, printers or your own local services."
 

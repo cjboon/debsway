@@ -103,7 +103,10 @@ printf '%s\n' '# Written by debsway extras/claude-vm.sh' '[Unit]' \
     'ExecStop=/usr/sbin/nft delete table inet debsway_claude_vm' '' '[Install]' \
     'WantedBy=multi-user.target' | sudo tee "$UNIT" >/dev/null
 sudo systemctl daemon-reload
-sudo systemctl enable --now debsway-claude-vm-firewall.service >/dev/null ||
+# Restart, not just enable --now: the unit stays "active" after it first ran,
+# so a rule file changed by an update would otherwise not be loaded
+sudo systemctl enable debsway-claude-vm-firewall.service >/dev/null &&
+    sudo systemctl restart debsway-claude-vm-firewall.service ||
     warn "Couldn't load the firewall rule; check: systemctl status debsway-claude-vm-firewall"
 note "$AGENT can reach the internet and the guest's console, nothing else."
 
