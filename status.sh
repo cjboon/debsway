@@ -76,7 +76,7 @@ if [ -f /etc/firefox-esr/debsway-hardening.js ]; then
 else
     echo "  [ ] HTTPS-Only Mode, JavaScript JIT off"
 fi
-if [ -f /etc/firefox-esr/policies/.debsway-written ]; then
+if [ -f /usr/share/firefox-esr/distribution/.debsway-written ]; then
     n=$(grep -cv '^#' /etc/firefox-esr/debsway-ublock-allow 2>/dev/null || true)
     echo "  [x] uBlock Origin medium mode (${n:-0} sites allowed: ublock-allow --list)"
 else

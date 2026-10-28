@@ -16,8 +16,12 @@ set -euo pipefail
 
 ETC=${DEBSWAY_FIREFOX_ETC:-/etc/firefox-esr}
 LIST="$ETC/debsway-ublock-allow"
-POLICY="$ETC/policies/policies.json"
-OURS="$ETC/policies/.debsway-written"
+# Debian's Firefox only finds policies.json in its install folder (it looks
+# in /etc/firefox-esr/policies too, but the Debian build never reads it)
+DIST=${DEBSWAY_FIREFOX_DIST:-/usr/share/firefox-esr/distribution}
+POLICY="$DIST/policies.json"
+OURS="$DIST/.debsway-written"
+OLD="$ETC/policies"  # where an earlier debsway put it, which Firefox ignored
 if [ "$(id -u)" -eq 0 ] || [ -n "${DEBSWAY_FIREFOX_ETC:-}" ]; then SUDO=; else SUDO=sudo; fi
 
 die() { printf 'ublock-allow: %s\n' "$*" >&2; exit 1; }
@@ -51,7 +55,7 @@ write_policy() {
     inner=$(printf '%s\\n' "${rules[@]}")
     inner="{\"userSettings\":{\"advancedUserEnabled\":true},\"dynamicFilteringString\":\"${inner%\\n}\"}"
     inner=$(sed 's/\\/\\\\/g; s/"/\\"/g' <<<"$inner")
-    $SUDO mkdir -p "$ETC/policies"
+    $SUDO mkdir -p "$DIST"
     # Firefox reads one policies.json, so debsway's other Firefox policies live
     # here too (parts/firefox-hardening.sh has no separate file to put them in):
     #   SearchEngines.Default  - DuckDuckGo is the default search engine (Firefox
@@ -59,11 +63,16 @@ write_policy() {
     #   SearchEngines.DefaultPrivate - the same for private windows, which have
     #                            their own default (incognito is one all the time).
     #   Override*Page          - no Mozilla first-run or what's-new tabs; Firefox
-    #                            opens straight to the (blank, foxy) home page.
+    #                            opens straight to the home page.
     printf '{\n  "policies": {\n    "SearchEngines": { "Default": "DuckDuckGo", "DefaultPrivate": "DuckDuckGo" },\n    "OverrideFirstRunPage": "",\n    "OverridePostUpdatePage": "",\n    "3rdparty": {\n      "Extensions": {\n        "uBlock0@raymondhill.net": {\n          "adminSettings": "%s"\n        }\n      }\n    }\n  }\n}\n' "$inner" |
         $SUDO tee "$POLICY" >/dev/null
     sum=$(sha256sum "$POLICY")
     echo "$sum" | $SUDO tee "$OURS" >/dev/null
+    # The earlier, unread copy, if it is still ours
+    if [ -f "$OLD/.debsway-written" ] && sha256sum --status -c "$OLD/.debsway-written" 2>/dev/null; then
+        $SUDO rm -f "$OLD/policies.json" "$OLD/.debsway-written"
+        $SUDO rmdir "$OLD" 2>/dev/null || true
+    fi
 }
 
 # Someone else's policies.json is left alone, before anything changes

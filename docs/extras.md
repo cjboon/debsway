@@ -156,7 +156,7 @@ takes all of it out again (your profiles stay).
 
 How: default prefs in `/etc/firefox-esr/debsway-hardening.js` (any
 profile can change them at `about:config`), a uBlock policy in
-`/etc/firefox-esr/policies/policies.json` (only written if no other
+`/usr/share/firefox-esr/distribution/policies.json` (only written if no other
 policies file exists), and a systemd user timer.
 `bash parts/firefox-hardening.sh --remove` undoes all of it.
 

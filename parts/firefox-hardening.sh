@@ -18,8 +18,9 @@
 need_user
 
 # Debian's Firefox reads default prefs from /etc/firefox-esr/*.js and
-# policies from /etc/firefox-esr/policies/policies.json
+# policies from /usr/share/firefox-esr/distribution/policies.json
 ETC=/etc/firefox-esr
+DIST=/usr/share/firefox-esr/distribution
 PREFS="$ETC/debsway-hardening.js"
 ALLOW=/usr/local/bin/ublock-allow
 UNITS="$HOME/.config/systemd/user"
@@ -28,10 +29,13 @@ if [ "${1:-}" = --remove ]; then
     systemctl --user disable --now firefox-restart-check.timer >/dev/null 2>&1 || true
     rm -f "$UNITS/firefox-restart-check.service" "$UNITS/firefox-restart-check.timer"
     remove_bin firefox-restart-check
-    if [ -f "$ETC/policies/.debsway-written" ] && sha256sum --status -c "$ETC/policies/.debsway-written"; then
-        sudo rm -f "$ETC/policies/policies.json" "$ETC/policies/.debsway-written"
-        sudo rmdir "$ETC/policies" 2>/dev/null || true
-    fi
+    # DIST is where it is now; ETC/policies is where an earlier version put it
+    for d in "$DIST" "$ETC/policies"; do
+        if [ -f "$d/.debsway-written" ] && sha256sum --status -c "$d/.debsway-written"; then
+            sudo rm -f "$d/policies.json" "$d/.debsway-written"
+            sudo rmdir "$d" 2>/dev/null || true
+        fi
+    done
     sudo rm -f "$PREFS" "$ETC/debsway-ublock-allow" "$ALLOW"
     # Firefox and uBlock Origin are part of the core (install-base.sh), so they stay
     apt_purge

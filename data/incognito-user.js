@@ -46,9 +46,11 @@ user_pref("datareporting.healthreport.uploadEnabled", false);
 user_pref("datareporting.policy.dataSubmissionEnabled", false);
 user_pref("browser.ping-centre.telemetry", false);
 
-// A clean start page and no first-run pages
-user_pref("browser.startup.page", 0);
-user_pref("browser.startup.homepage", "about:blank");
+// The first window opens on Firefox's own home page (the same one as a new
+// tab), without the Firefox logo in the middle of it, and no first-run pages
+user_pref("browser.startup.page", 1);
+user_pref("browser.startup.homepage", "about:home");
+user_pref("browser.newtabpage.activity-stream.hideLogo", true);
 user_pref("browser.shell.checkDefaultBrowser", false);
 user_pref("browser.aboutwelcome.enabled", false);
 user_pref("browser.startup.homepage_override.mstone", "ignore");
