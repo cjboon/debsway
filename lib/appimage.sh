@@ -51,8 +51,14 @@ _keyring_done() {
 }
 
 # A good signature whose primary key is FPR, in gpg's --status-fd output.
+# VALIDSIG alone is not enough: gpg prints it for a signature that is
+# cryptographically right even when the key has expired or been revoked (it
+# then prints EXPKEYSIG or REVKEYSIG instead of GOODSIG). Only the pinned key
+# is in the keyring, so a GOODSIG can only be that key's.
 # -a: notations (e.g. Sequoia's salt) can put raw bytes in that output
-_good_sig() { grep -aq "^\[GNUPG:\] VALIDSIG .* $1\$" "$2"; }
+_good_sig() {
+    grep -aq "^\[GNUPG:\] VALIDSIG .* $1\$" "$2" && grep -aq '^\[GNUPG:\] GOODSIG ' "$2"
+}
 
 # verify_detached FPR KEY_URL SIG DATA
 verify_detached() {
