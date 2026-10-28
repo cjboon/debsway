@@ -3,9 +3,10 @@
 # tied to you. It adds a user called incognito and a command, incognito,
 # that opens Firefox as that user:
 #  - incognito has no password, no login, no home folder on disk and no
-#    group but its own (no sound card, no microphone, no graphics card, no
-#    USB); a limit on processes keeps a runaway page from filling the
-#    machine.
+#    group but render (no sound card, no microphone, no USB; render lets cage
+#    open the graphics card's render node, which wlroots' Wayland backend
+#    needs, but not take over the screen); a limit on processes keeps a
+#    runaway page from filling the machine.
 #  - Firefox runs inside cage, a tiny Wayland compositor shown as one window
 #    in your sway. cage is a separate window system, so the clipboard is
 #    not shared with your programs, and incognito can't read your files, so
@@ -17,7 +18,7 @@
 #    no sound card; its only output is a pipe into a player running as you,
 #    which plays it through your speakers like any other program. It never
 #    reaches your audio server, so it can't hear your microphone or your
-#    other programs. Video is decoded by the CPU (it has no graphics card),
+#    other programs. Video is decoded by the CPU (software rendering),
 #    so 720p is comfortable and 1080p may stutter. incognito --no-audio
 #    leaves the pipe out.
 #  - A firewall rule that matches only that user keeps it off your computer
@@ -79,7 +80,12 @@ else
 fi
 # No password to guess, and no shell to log in with
 sudo usermod --lock --shell /usr/sbin/nologin "$NAME"
-note "$NAME: no password, no login, no home folder, no groups but its own."
+# cage's Wayland backend (wlroots 0.18) opens the GPU's render node even with the
+# software renderer, and fails to start without it. render, not video: no modesetting.
+if getent group render >/dev/null; then
+    sudo usermod -aG render "$NAME"
+fi
+note "$NAME: no password, no login, no home folder, no groups but its own and render (cage needs the GPU's render node)."
 
 say "The incognito command"
 sudo install -d -o root -g root -m 0755 "$SHARE" /usr/local/libexec

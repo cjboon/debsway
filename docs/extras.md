@@ -167,8 +167,9 @@ don't trust or don't want tied to the rest of your browsing. `incognito
 https://example.org/` opens a page. What `parts/incognito.sh` sets up:
 
 - **A user with nothing**: no password, no login, no home folder on disk,
-  no group but its own (so no sound card, no graphics card, no USB), and a
-  limit on how many processes it may start. It can't read your files.
+  no group but its own and `render` (so no sound card, no USB; `render` lets
+  cage open the graphics card's render node, which it needs to start, but
+  not take over the screen), and a limit on how many processes it may start. It can't read your files.
 - **Its own window system**: Firefox runs inside `cage`, a tiny Wayland
   compositor that appears as one window in sway. The clipboard belongs to
   the window system, so what you copy in your programs can't be pasted
@@ -186,7 +187,7 @@ https://example.org/` opens a page. What `parts/incognito.sh` sets up:
   volume control as a normal stream) reads that pipe and plays it through
   your speakers. The pipe carries sound in one direction only, so the
   window can't hear your microphone or your other programs, and your audio
-  server is never reachable from it. There is no graphics card either, so
+  server is never reachable from it. Rendering is in software, so
   the CPU decodes the video: 720p is comfortable, 1080p may stutter, and
   sound can drift a fraction of a second behind the picture. Protected
   (DRM) video doesn't play. `incognito --no-audio` leaves the pipe out.

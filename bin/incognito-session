@@ -86,8 +86,8 @@ EOF
 fi
 
 # cage connects to your sway through the absolute WAYLAND_DISPLAY and makes
-# its own socket in XDG_RUNTIME_DIR for Firefox. Software rendering: no
-# access to the graphics card is given. Everything below runs in one
+# its own socket in XDG_RUNTIME_DIR for Firefox. Software rendering; the
+# render group lets cage open the GPU's render node, which it needs to start. Everything below runs in one
 # session, so closing it all is one signal to the group.
 # shellcheck disable=SC2016  # expanded by the inner bash, on purpose
 start='

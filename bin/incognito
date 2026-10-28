@@ -65,7 +65,8 @@ if $audio; then
     # Opening the pipe waits until incognito's sound server opens its end.
     # This is the only thing of yours it can send sound to, and it is a
     # normal stream in your volume control.
-    ( exec pw-cat -p -a --format s16 --rate 48000 --channels 2 --media-role Movie - <"$fifo" ) &
+    # 9>&-: the player must not inherit the lock, or it outlives us holding it
+    ( exec pw-cat -p -a --format s16 --rate 48000 --channels 2 --media-role Movie - <"$fifo" 9>&- ) &
     player=$!
     audio_arg=incognito-audio.fifo
 else
