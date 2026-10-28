@@ -76,7 +76,6 @@ debsway/
 ├── tools/                   for working on debsway: pack-usb.sh, tests
 ├── vendor/mockvps-kvm/      the mockvps-kvm project, with its own README and license
 ├── docs/                    the longer guides
-├── hooks/pre-commit         shellcheck before every commit
 ├── .github/workflows/       shellcheck and test.sh --offline on every push
 ├── offline/                 saved downloads, not published (in .gitignore)
 └── ignore/                  your own setup, never published (in .gitignore)

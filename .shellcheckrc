@@ -1,4 +1,4 @@
-# shellcheck settings for debsway (used by test.sh, hooks/pre-commit and CI)
+# shellcheck settings for debsway (used by test.sh and CI)
 # Sourced files are followed:
 external-sources=true
 # Not errors in this code's style:

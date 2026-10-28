@@ -19,11 +19,12 @@ can change what the scripts rely on.
 - **`bash tools/test-apt-markers.sh`** (run by `test.sh`) checks the
   package bookkeeping behind `--remove` against fakes of apt, so it
   changes nothing.
-- **shellcheck on every change:** `git config core.hooksPath hooks` runs
-  it before each commit (`hooks/pre-commit`; needs
-  `sudo apt install shellcheck`), and the GitHub workflow in
-  `.github/workflows/` runs it and `test.sh --offline` on every push.
-  Settings are in `.shellcheckrc`.
+- **shellcheck on every change:** run `bash test.sh` before you commit
+  (it runs shellcheck; needs `sudo apt install shellcheck`), and the
+  GitHub workflow in `.github/workflows/` runs it and `test.sh --offline`
+  on every push. Settings are in `.shellcheckrc`. There is deliberately
+  no git hook for it: a hook is a file in the project that runs as you on
+  every commit, and the project's files can come from someone else.
 
 ## Other scripts
 
