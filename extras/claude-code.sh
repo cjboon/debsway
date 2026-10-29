@@ -54,7 +54,9 @@ LIST=/etc/apt/sources.list.d/claude-code.list
 if [ "${1:-}" = --remove ]; then
     remove_bin claude
     remove_bin claude-unsandboxed
-    remove_bin claude-pull
+    # claude-pull is shared with extras/claude-vm.sh; keep it if that sandbox
+    # is still set up (its session wrapper is the tell)
+    [ -e /usr/local/libexec/claude-vm-session ] || remove_bin claude-pull
     remove_bin git
     sudo systemctl disable --now debsway-claude-firewall.service >/dev/null 2>&1 || true
     sudo nft delete table inet debsway_claude 2>/dev/null || true
