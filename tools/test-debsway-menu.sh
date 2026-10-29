@@ -31,10 +31,10 @@ mkdir -p "$T/fake" "$T/home/.local/bin" "$T/debsway"
 chmod +x "$T/fake/"* "$T/home/.local/bin/keys"
 : >"$T/debsway/update.sh"
 
-# 1. The window: fullscreen, in grays, running the menu
+# 1. The window: in grays, running the menu, and not fullscreen (the bar stays visible)
 PATH="$T/fake:$PATH" HOME="$T/home" /bin/bash "$HERE/bin/debsway-menu"
 check "a click opens a window named debsway-run" grep -qx -e --app-id=debsway-run "$T/foot"
-check "...fullscreen" grep -qx -e --fullscreen "$T/foot"
+check "...not fullscreen, so the bar stays visible" not grep -qx -e --fullscreen "$T/foot"
 check "...with a black background" grep -qx 'colors.background=000000' "$T/foot"
 check "...and the menu as its program" test "$(tail -1 "$T/foot")" = --tui
 # every color is a gray: red = green = blue in each
@@ -73,6 +73,10 @@ def run(script, env, keys, rows=24, cols=80):
                 drawn += data
     pump(0.6)
     for k in keys:
+        if isinstance(k, tuple):      # ("resize", rows, cols): the window is stretched
+            fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", k[1], k[2], 0, 0))
+            pump(1.0)
+            continue
         os.write(fd, (k(drawn) if callable(k) else k).encode())
         pump(0.5)
     status = None
@@ -109,11 +113,14 @@ if __name__ == "__main__":
         "click-update": [click_on("Update")],
         "click-outside": ["\x1b[<0;1;1M\x1b[<0;1;1m", "q"],
         "esc": ["\x1b"],
+        "resize": [("resize", 40, 120), "q"],
         "q": ["q"],
     }
     drawn, status = run(script, env, scenarios[scenario])
     print("STATUS", status)
     print("DREW", "|".join(re.findall(r"(Help|Install apps|Update|Status)", drawn)[:4]))
+    # where the title "debsway" was drawn each time: row;column
+    print("TITLES", " ".join("%s;%s" % m for m in re.findall(r"\x1b\[(\d+);(\d+)H\x1b\[1mdebsway", drawn)))
 PY
 menu() { # SCENARIO [FOLDER]: runs it, leaves the output in $out and what ran in $T/ran
     : >"$T/ran"
@@ -145,6 +152,11 @@ check "...and runs nothing" test ! -s "$T/ran"
 
 menu q
 check "q closes the menu" grep -q 'STATUS 0' <<<"$out"
+
+menu resize
+check "the menu starts centered for the window's first size (24x80)" grep -q 'TITLES 9;28' <<<"$out"
+check "and centers itself again, with no key pressed, when sway stretches the window" grep -q 'TITLES 9;28 17;48' <<<"$out"
+check "...without leaving the menu" grep -q 'STATUS 0' <<<"$out"
 
 menu enter "$T/nowhere"
 check "without the debsway folder only Help is drawn" grep -q 'DREW Help$' <<<"$out"

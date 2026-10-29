@@ -1,7 +1,7 @@
 #!/bin/bash
 # debsway-menu: written by debsway parts/debsway-menu.sh
-# The menu behind the "debsway" item in the bar. A click opens a fullscreen,
-# black-and-gray terminal with the choices: Help, Install apps, Update,
+# The menu behind the "debsway" item in the bar. A click opens a black-and-gray
+# terminal that fills the space under the bar with the choices: Help, Install apps, Update,
 # Status. Arrow keys (or j/k) and Enter choose; so does a click. Esc or q
 # closes it. What you choose runs in that same window, and the window closes
 # when it ends (the install and update screens wait for Enter first, if they
@@ -31,7 +31,7 @@ gray_options() {
 
 if [ "${1:-}" != --tui ]; then
     mapfile -t gray < <(gray_options)
-    exec foot --app-id=debsway-run --fullscreen "${gray[@]}" "$(readlink -f -- "$0")" --tui
+    exec foot --app-id=debsway-run "${gray[@]}" "$(readlink -f -- "$0")" --tui
 fi
 
 # ---- the menu, in this terminal ----
@@ -52,7 +52,8 @@ trap 'exit 130' INT TERM HUP
 # draw: the title, the choices (the chosen one reversed), and a hint, centered
 draw() {
     local rows cols top left i y
-    read -r rows cols < <(stty size 2>/dev/null || echo "24 80")
+    size=$(stty size 2>/dev/null || echo "24 80")
+    read -r rows cols <<<"$size"
     top=$(((rows - n - 4) / 2 + 1))
     [ "$top" -ge 1 ] || top=1
     left=$(((cols - width) / 2 + 1))
@@ -88,7 +89,16 @@ stty -echo 2>/dev/null
 first_row=1 first_col=1
 while :; do
     draw
-    IFS= read -rsn1 key || exit 0
+    # A new window starts small and sway stretches it a moment later, so the
+    # size is looked at while waiting, and the menu redrawn (centered) when it
+    # changes. read returns above 128 when nothing was typed in that time.
+    while :; do
+        IFS= read -rsn1 -t 0.25 key
+        rc=$?
+        [ "$rc" -ne 0 ] || break
+        [ "$rc" -gt 128 ] || exit 0
+        [ "$(stty size 2>/dev/null || echo "24 80")" = "$size" ] || draw
+    done
     case $key in
         '') run_choice ;;                                  # Enter
         j) sel=$(((sel + 1) % n)) ;;

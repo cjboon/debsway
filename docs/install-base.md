@@ -10,7 +10,7 @@
 2. Sets up sway (a copy of the stock config plus one `include` line for
    `~/.config/sway/config.d/`), the status bar (see-through black), no window
    borders (`appearance.conf`), and the key cheat sheet: `Super+?`, the `keys` command, `~/KEYS.txt` (a link
-   to the one copy), a bar with a clickable "debsway" menu (a fullscreen gray menu: Help, Install apps, Update, Status) and Wi-Fi name, a scrollable volume and brightness, and a battery you can click for the time left, and a one-line hint on
+   to the one copy), a bar with a clickable "debsway" menu (a gray menu: Help, Install apps, Update, Status) and Wi-Fi name, a scrollable volume and brightness, and a battery you can click for the time left, and a one-line hint on
    plain text consoles. `display-scale` sets the text size of each screen,
    remembered per screen (`display.conf`), and a watcher started by sway says
    once, in a notification, when a sharp screen is still at scale 1, also when
@@ -51,7 +51,7 @@ checked with `sway -C` before it's kept.
 | `udiskie.sh` | udiskie, udisks2, cryptsetup, polkitd | USB drives mount under `/media/$USER/` with `nosuid,nodev,noexec`; encrypted (LUKS) sticks ask for their passphrase |
 | `emoji-font.sh` | fonts-noto-color-emoji | Color emoji |
 | `foot-config.sh` | fonts-dejavu-mono | The terminal's look (`data/foot.ini`): DejaVu Sans Mono at size 14 instead of foot's small default, black background, readable colors. Written to `~/.config/foot/foot.ini`; one you wrote yourself is kept as `foot.ini.bak` |
-| `debsway-menu.sh` | wmenu | `debsway-menu`: click "debsway" at the left of the bar for a fullscreen black-and-gray menu (arrows and Enter, or click; Esc closes) with Help (the key cheat sheet), Install apps (`install-extras.sh`, its list in grays too), Update (`update.sh`) and Status (`status.sh`). What you pick runs in that window, which closes when it ends; the install and update screens wait for Enter first if they did something |
+| `debsway-menu.sh` | wmenu | `debsway-menu`: click "debsway" at the left of the bar for a black-and-gray menu that fills the area under the bar (arrows and Enter, or click; Esc closes) with Help (the key cheat sheet), Install apps (`install-extras.sh`, its list in grays too), Update (`update.sh`) and Status (`status.sh`). What you pick runs in that window, which closes when it ends; the install and update screens wait for Enter first if they did something |
 | `power-menu.sh` | wmenu | `powermenu`: lock, suspend, log out, reboot or power off from a small menu on Super+Shift+Escape |
 | `needrestart.sh` | needrestart, libnotify-bin | After every update, lists the running programs that still use outdated libraries (list only: it never restarts anything). Check any time: `sudo needrestart` |
 | `sysctl-hardening.sh` | (none) | Kernel and network settings in the spirit of Kicksecure (`data/sysctl-hardening.conf`): kernel addresses hidden, only your own child programs can be traced, no kexec, SysRq limited, stricter file and network defaults. Applies now and at every boot. See [Kernel hardening](#kernel-hardening) |
