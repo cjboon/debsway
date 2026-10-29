@@ -9,6 +9,9 @@ OPT="$HOME/.local/opt"
 # latest_github_tag OWNER/REPO: the newest release's tag. It follows the
 # redirect of github.com/OWNER/REPO/releases/latest, which has no rate
 # limit; the API (60 requests an hour without a login) is the fallback.
+# The tag goes into download addresses and file names, so anything but
+# letters, digits, dots, dashes and underscores (and a leading dash or "..")
+# gives nothing at all; each script checks the shape of its own versions too.
 latest_github_tag() {
     local tag
     tag=$(wget -q --max-redirect=0 --server-response -O /dev/null \
@@ -18,7 +21,11 @@ latest_github_tag() {
         tag=$(wget -qO- "https://api.github.com/repos/$1/releases/latest" |
             sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1) || true
     fi
-    printf '%s\n' "$tag"
+    if [[ $tag =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ && $tag != *..* ]]; then
+        printf '%s\n' "$tag"
+    else
+        echo
+    fi
 }
 
 installed_version() { cat "$OPT/$1/.debsway-version" 2>/dev/null || true; }

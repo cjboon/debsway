@@ -27,7 +27,8 @@ command -v gpg >/dev/null || apt_install gpg
 
 say "Checking for the latest Feather"
 version=$(latest_github_tag feather-wallet/feather)
-[ -n "$version" ] || die "Couldn't find the latest Feather version on GitHub."
+# Feather's releases are plain numbers (2.8.1); anything else is refused
+[[ $version =~ ^[0-9]+(\.[0-9]+)+$ ]] || die "Couldn't find the latest Feather version on GitHub (or it didn't look like one)."
 if [ "$(installed_version "$NAME")" = "$version" ]; then
     note "Feather $version is already installed."
 else

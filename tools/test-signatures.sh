@@ -18,6 +18,25 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 }
 warn() { :; }  # the functions complain on failure; the checks only want the result
 
+# latest_github_tag: the tag from GitHub's redirect goes into download addresses
+# and file names, so only a plain one comes out (a pretend wget answers here)
+mkdir -p "$T/fake"
+cat >"$T/fake/wget" <<'EOF'
+#!/bin/sh
+printf '  Location: https://github.com/o/r/releases/tag/%s\n' "$(cat "$TAG_FILE")" >&2
+EOF
+chmod +x "$T/fake/wget"
+tag_of() { printf '%s' "$1" >"$T/tag"; TAG_FILE=$T/tag PATH="$T/fake:$PATH" latest_github_tag o/r; }
+check "a plain tag comes through" test "$(tag_of 2.8.1)" = 2.8.1
+check "...and one with a v and a dash" test "$(tag_of v6.4.0-beta.1)" = v6.4.0-beta.1
+# shellcheck disable=SC2016  # the $(id) is meant literally, as a hostile tag
+for bad in '../../etc' '-O' '1.0;rm' '1.0$(id)' '1.0|x'; do
+    check "a tag like '$bad' gives nothing" test -z "$(tag_of "$bad")"
+done
+check "feather-wallet.sh refuses a tag that isn't a version number" \
+    grep -q 'version =~ ^\[0-9\]+(\\.\[0-9\]+)+\$' "$(dirname -- "${BASH_SOURCE[0]}")/../extras/feather-wallet.sh"
+
+
 mkdir -m 700 "$T/gh"
 # for a machine where gpg-agent isn't in the usual place
 [ -z "${GPG_AGENT_PROGRAM:-}" ] || echo "agent-program $GPG_AGENT_PROGRAM" >"$T/gh/gpg.conf"
@@ -32,7 +51,7 @@ fpr_of() { "${G[@]}" --list-keys --with-colons "$1" 2>/dev/null | awk -F: '$1 ==
 FOLD=$(fpr_of old@test)
 FGOOD=$(fpr_of good@test)
 FREV=$(fpr_of revoked@test)
-[ -n "$FOLD" ] && [ -n "$FGOOD" ] && [ -n "$FREV" ] || { echo "  ok    skipped: gpg couldn't make test keys here (is gpg-agent installed?)"; exit 0; }
+[ -n "$FOLD" ] && [ -n "$FGOOD" ] && [ -n "$FREV" ] || { echo "  ok    skipped: gpg couldn't make test keys here (is gpg-agent installed?)"; [ "$fails" -eq 0 ]; exit; }
 "${G[@]}" --export --armor good@test >"$T/good.pub"
 "${G[@]}" --export --armor old@test >"$T/old.pub"
 
