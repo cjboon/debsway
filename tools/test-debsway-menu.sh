@@ -24,7 +24,7 @@ mkdir -p "$T/fake" "$T/home/.local/bin" "$T/debsway"
     printf '#!/bin/sh\nprintf "%%s\\n" "$@" >"%s/foot"\n' "$T" >"$T/fake/foot"
     # bash (what the menu runs the debsway scripts with): write down the folder, the
     # arguments and whether it was asked to wait at the end
-    printf '#!/bin/sh\necho "$PWD|$*|pause=$DEBSWAY_PAUSE" >>"%s/ran"\n' "$T" >"$T/fake/bash"
+    printf '#!/bin/sh\necho "$PWD|$*|pause=$DEBSWAY_PAUSE" >>"%s/ran"\necho "printed by $*"\n' "$T" >"$T/fake/bash"
     printf '#!/bin/sh\ncat >/dev/null\n' >"$T/fake/less"
     # (keys --text prints the cheat sheet, as the real one does after filtering it)
     printf '#!/bin/sh\n[ "$1" = --text ] && exec cat "%s/home/.local/share/debsway/keys.txt"\necho "keys" >>"%s/ran"\n' "$T" "$T" >"$T/home/.local/bin/keys"
@@ -190,6 +190,7 @@ check "Down then Enter runs install-extras.sh in the debsway folder" grep -qxF "
 
 menu j-enter
 check "j moves down too (Update)" grep -qxF "$T/debsway|update.sh|pause=1" "$T/ran"
+check "what Update prints is also kept in a log" grep -qx 'printed by update.sh' "$T/home/.local/state/debsway/menu-update.log"
 
 menu up-wraps
 check "Up from the first entry goes to the last (Status)" grep -qxF "$T/debsway|status.sh|pause=" "$T/ran"
@@ -317,5 +318,12 @@ check "the Wi-Fi name in the bar opens the wrapper" grep -q 'exec "\$HOME/.local
 check "the bar shows debsway" grep -q '"full_text":"debsway"' "$HERE/bin/sway-status"
 check "the bar has no separate Help any more" not grep -q '"name":"help"' "$HERE/bin/sway-status"
 check "a click on debsway starts the menu" grep -q 'debsway-menu' "$HERE/bin/sway-status"
+
+# shellcheck disable=SC2016  # the inner bash, and the menu's own text
+# A script that waits at its end marks it, so the menu doesn't ask a second time;
+# one that stops on an error before that leaves no mark, and the menu waits
+check "pause_if_asked marks that the window waited" bash -c '. "$1/lib.sh"; DEBSWAY_PAUSE=1 DEBSWAY_PAUSED_FILE="$2/paused" pause_if_asked </dev/null >/dev/null 2>&1; [ -e "$2/paused" ]' _ "$HERE" "$T"
+# shellcheck disable=SC2016  # the menu's own text, $ included
+check "the menu waits after an error only without that mark" grep -q '"$rc" -ne 0 \] && \[ ! -e "$DEBSWAY_PAUSED_FILE" \]' "$HERE/bin/debsway-menu"
 
 [ "$fails" -eq 0 ]

@@ -39,6 +39,8 @@ tty_read() {
 # nothing was done. Does nothing in a terminal of your own.
 pause_if_asked() {
     [ -n "${DEBSWAY_PAUSE:-}" ] && [ -z "${DEBSWAY_NONINTERACTIVE:-}" ] || return 0
+    # (the debsway menu then knows the window already waited)
+    [ -z "${DEBSWAY_PAUSED_FILE:-}" ] || : >"$DEBSWAY_PAUSED_FILE" 2>/dev/null || true
     { : </dev/tty; } 2>/dev/null || return 0
     local k more
     printf '\nPress Esc to close. ' >&2

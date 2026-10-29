@@ -278,8 +278,29 @@ run_choice() {
             screen_off
             cd "$DIR" || exit 1
             export DEBSWAY_PAUSE=1
-            if [ "${ids[sel]}" = update ]; then exec bash update.sh; fi
-            exec bash install-extras.sh ;;
+            # The scripts wait for a key at their end (pause_if_asked), which
+            # marks this file; one that stops on an error before that would
+            # close the window at once, so this waits instead
+            DEBSWAY_PAUSED_FILE=$(mktemp -u "${TMPDIR:-/tmp}/debsway-paused.XXXXXX")
+            export DEBSWAY_PAUSED_FILE
+            local rc log=
+            if [ "${ids[sel]}" = update ]; then
+                # What Update prints is also kept, for a look afterwards
+                log=${XDG_STATE_HOME:-$HOME/.local/state}/debsway/menu-update.log
+                mkdir -p "${log%/*}"
+                bash update.sh 2>&1 | tee "$log"
+                rc=${PIPESTATUS[0]}
+            else
+                bash install-extras.sh
+                rc=$?
+            fi
+            if [ "$rc" -ne 0 ] && [ ! -e "$DEBSWAY_PAUSED_FILE" ]; then
+                printf '\nIt stopped with an error (status %s).%s\nPress Enter to close. ' \
+                    "$rc" "${log:+ What it printed is in $log}" >&2
+                IFS= read -r _ </dev/tty || true
+            fi
+            rm -f "$DEBSWAY_PAUSED_FILE"
+            exit "$rc" ;;
     esac
 }
 
