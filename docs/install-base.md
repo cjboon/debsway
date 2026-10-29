@@ -2,7 +2,9 @@
 
 0. Starts with `prep/intro.sh`: it explains what is about to happen, shows
    a disclaimer, and asks whether to go on. `bash install-base.sh --yes`
-   skips it.
+   skips it. Right after you agree, it shows the list of optional extras
+   (`install-extras.sh --choose`) so you answer everything up front; nothing
+   is checked for you. What you pick is installed once the base is done.
 1. Installs the core packages, all with `--no-install-recommends`:
    `sway foot libgl1-mesa-dri gpg` (`gpg` checks downloads). Every part
    installs its own packages (see the table below). There is no web
@@ -24,12 +26,16 @@
    laptop that is asleep does not wake for them.
 3. Offers to start sway when you log in on tty1 (a marked block in
    `~/.profile`).
-4. Runs every script in `parts/`. If one fails, the rest still run and
-   it tells you which to re-run.
-5. Ends with `install-extras.sh`: a list of every optional program, where
-   arrow keys move, the space bar checks a box, and Tab reaches **Install**
-   or **No extras**. Run `bash install-extras.sh` again whenever you like;
-   `bash install-extras.sh --list` only prints the list.
+4. Runs every script in the base list (`PARTS` in `packages.sh`). If one
+   fails, the rest still run and it tells you which to re-run. A few only
+   run where the computer has the hardware: `brightnessctl` needs a screen
+   backlight, `power-profiles-daemon` a battery or power profiles,
+   `network-manager` and `random-mac` a Wi-Fi adapter. Otherwise they say
+   so and are skipped (run by hand, a part always installs).
+5. Installs the extras you picked at the start (`install-extras.sh --install`).
+   The list is the one from step 0: arrow keys move, the space bar checks a
+   box, Tab reaches **Install** or **No extras**. `debsway --apps` shows it
+   again whenever you like; `debsway --apps --list` only prints it.
 
 An existing sway config is kept; only the include line is added, and the
 bar is only changed if it's still the stock one. Every snippet is
@@ -40,16 +46,12 @@ checked with `sway -C` before it's kept.
 | Script | Installs | Sets up |
 |---|---|---|
 | `unattended-upgrades.sh` | unattended-upgrades | Debian's security fixes install themselves daily, with Debian's default rules; the Mullvad and Claude Code repositories debsway adds are included, any repository you add yourself is left to you. Log: `/var/log/unattended-upgrades/` |
-| `pipewire-audio.sh` | pipewire-audio | Sound. `volume up\|down\|mute\|micmute [STEP]` (5% steps, never above 100%, unmutes on a change, refreshes the bar); the volume and mute keys use it, and Super+F10 / F11 / F12 (mute / down / up) do for keyboards without them |
 | `wmenu.sh` | wmenu | The launcher on Super+d, in the bar's black and white, opaque (the bar is see-through) and with a font a little bigger than the bar's so it covers the bar. If a strip of the bar still shows, raise the `12` in the `set $menu` line of `~/.config/sway/config` |
 | `swaylock.sh` | swaylock | Super+Escape locks |
-| `swayidle.sh` | swayidle, swaylock | Lock after 5 min, screen off after 10, lock before sleep |
+| `swayidle.sh` | swayidle, swaylock | Lock after 5 min, screen off after 10, lock before sleep. The screen fades down slowly for the 30 seconds before the lock, with a "Locking soon" notification; any key or mouse movement puts it back (`dim-warning`; a monitor with no backlight gets only the notification) |
 | `brightnessctl.sh` | brightnessctl | `brightness up\|down [STEP]`, never below 5%; brightness keys and Super+F1/F2 |
-| `grim-slurp.sh` | grim, slurp | `screenshot` and its keys |
 | `wl-clipboard.sh` | wl-clipboard | `wl-copy` / `wl-paste` |
 | `mako.sh` | mako-notifier | Notifications close after 5 seconds; Super+n / Super+Shift+n dismiss |
-| `udiskie.sh` | udiskie, udisks2, cryptsetup, polkitd | USB drives mount under `/media/$USER/` with `nosuid,nodev,noexec`; encrypted (LUKS) sticks ask for their passphrase |
-| `emoji-font.sh` | fonts-noto-color-emoji | Color emoji |
 | `foot-config.sh` | fonts-dejavu-mono | The terminal's look (`data/foot.ini`): DejaVu Sans Mono at size 14 instead of foot's small default, black background, readable colors. Written to `~/.config/foot/foot.ini`; one you wrote yourself is kept as `foot.ini.bak` |
 | `debsway-menu.sh` | wmenu | `debsway-menu`: click "debsway" at the left of the bar for a black-and-gray menu that fills the area under the bar (arrows and Enter, or click; Esc closes every screen, the install list and the help page included) with Help (the key cheat sheet, in the menu's own pager, which also opens on Super+?), Install apps (`install-extras.sh`, its list in grays too), Update (`update.sh`) and Status (`status.sh`). What you pick runs in that window, which closes when it ends; the install and update screens wait for Enter first if they did something |
 | `power-menu.sh` | wmenu | `powermenu`: lock, suspend, log out, reboot or power off from a small menu on Super+Shift+Escape |

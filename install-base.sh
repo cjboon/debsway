@@ -1,11 +1,12 @@
 #!/bin/bash
 # The core desktop: sway and foot, a status bar, a key cheat sheet, and
-# every part in parts/: automatic security updates, sound, launcher, lock
-# and idle, brightness, screenshots, clipboard, notifications, USB
-# automount, emoji, firewall, power profiles, NetworkManager and a random
-# Wi-Fi MAC address. Everything else is in extras/, Firefox included (with
-# its hardening and the throwaway "incognito" Firefox); a list at the end
-# lets you pick some.
+# every part in parts/: automatic security updates, launcher, lock and idle,
+# clipboard, notifications, firewall, kernel hardening, and (only where the hardware is)
+# brightness keys, power profiles, NetworkManager and a random Wi-Fi MAC
+# address. Everything else is in extras/: Firefox (with its hardening and the
+# throwaway "incognito" Firefox), sound, screenshots, USB automount, emoji
+# and more. A list right after you agree lets you pick some
+# (nothing is checked for you), and they install after the base.
 # It starts by explaining what it will do and asking whether to go on.
 # Run as your normal user after you're online:
 #   bash install-base.sh          explains, asks, installs
@@ -32,6 +33,12 @@ fi
 [ "${VERSION_CODENAME:-}" = "$DEBIAN_RELEASE" ] ||
     warn "Written for Debian 13 ($DEBIAN_RELEASE); this is ${PRETTY_NAME:-unknown}."
 
+# The optional programs are chosen now, right after you agreed to the base
+# install, and installed once the base is done. Nothing is checked for you.
+picked=$(mktemp)
+trap 'rm -f "$picked"' EXIT
+bash "$DEBSWAY_DIR/install-extras.sh" --choose "$picked" || : >"$picked"
+
 # Before anything is downloaded, so all of it can go through Tor
 if ! $assume_yes; then
     say "Packages through Tor?"
@@ -57,8 +64,10 @@ say "Key cheat sheet"
 KEYS="$HOME/.local/share/debsway/keys.txt"
 mkdir -p "${KEYS%/*}"
 install -m 0644 "$DEBSWAY_DIR/data/keys.txt" "$KEYS"
-# Easy to find again: ~/KEYS.txt (one copy, this is a link to it) and the keys command
+# Easy to find again: ~/KEYS.txt and the keys command. Both show only the lines
+# for what is installed; keys rewrites ~/KEYS.txt each time it runs.
 ln -sfn "$KEYS" "$HOME/KEYS.txt"
+# (parts/core-commands.sh puts these in place again, so debsway --update can refresh them)
 install_bin keys
 install_bin debsway-welcome
 install_bin timer
@@ -149,47 +158,31 @@ fi
 failed=()
 for part in "${PARTS[@]}"; do
     say "Part: $part"
-    bash "$DEBSWAY_DIR/parts/$part.sh" || failed+=("$part")
+    DEBSWAY_FROM_BASE=1 bash "$DEBSWAY_DIR/parts/$part.sh" || failed+=("$part")
 done
 
 if [ ${#failed[@]} -gt 0 ]; then
     warn "These parts failed: ${failed[*]}. Re-run one with: bash parts/NAME.sh"
 fi
 
-# Default apps: Firefox (with its hardening and the throwaway "incognito"),
-# git and GitHub's gh, and KeePassXC with its Firefox browser add-on. These
-# are extras, but the base always installs them; you can still remove any with
-# bash extras/NAME.sh --remove. Firefox and KeePassXC go in unattended. git
-# still asks for your commit name and email (just typing, fine on the console),
-# but not for the GitHub login: that needs a browser, which isn't running yet
-# during this command-line install. Log in later with: gh auth login
-say "Default apps"
-note "Firefox (+ incognito), git and gh, and KeePassXC with the browser add-on."
-defaults_failed=()
-for app in firefox keepassxc; do
-    say "Default app: $app"
-    DEBSWAY_NONINTERACTIVE=1 DEBSWAY_KEEPASSXC_BROWSER=1 \
-        bash "$DEBSWAY_DIR/extras/$app.sh" || defaults_failed+=("$app")
-done
-# git: install gh and ask for your commit name/email, but skip the GitHub
-# login prompt (no browser yet). With --yes, skip its prompts too.
-say "Default app: git"
-gitenv=(DEBSWAY_SETUP_GH=1 DEBSWAY_GH_LOGIN=0)
-if $assume_yes; then gitenv+=(DEBSWAY_NONINTERACTIVE=1); fi
-env "${gitenv[@]}" bash "$DEBSWAY_DIR/extras/git.sh" || defaults_failed+=(git)
-if [ ${#defaults_failed[@]} -gt 0 ]; then
-    warn "These default apps didn't finish: ${defaults_failed[*]}. Re-run with: bash extras/NAME.sh"
+# The extras picked at the start (nothing was checked for you). They go in
+# after the base: they need sway's config and the parts to be in place.
+# git still asks for your commit name and email (just typing, fine on the
+# console) but not for the GitHub login, which needs a browser that isn't
+# running yet: log in later with  gh auth login
+if [ -s "$picked" ]; then
+    DEBSWAY_SETUP_GH=1 DEBSWAY_GH_LOGIN=0 bash "$DEBSWAY_DIR/install-extras.sh" --install "$picked" ||
+        warn "Some extras didn't install; the message above says which."
+else
+    note "No extras chosen. Pick some any time with: debsway --apps"
 fi
-
-# The optional programs: a list to check boxes in, or none
-bash "$DEBSWAY_DIR/install-extras.sh" ||
-    warn "Some extras didn't install; the message above says which."
 
 say "Done"
 cat <<'EOF'
     Log out (exit) and log in on tty1. Super+? lists every key; it also
-    opens by itself the first time. bash status.sh shows what's installed;
-    bash install-extras.sh picks more extras any time. incognito opens a
-    throwaway Firefox. Reboot once: the boot hardening applies after it
+    opens by itself the first time. debsway --status shows what's installed;
+    debsway --apps picks more extras any time (sound, a browser, screenshots,
+    USB automount... are there if you didn't pick them now).
+    Reboot once: the boot hardening applies after it
     (check with: cat /proc/cmdline).
 EOF

@@ -11,6 +11,7 @@ if [ "${1:-}" = --remove ]; then
     exit
 fi
 
+skip_unless has_power_profiles "no battery or power profiles found (a desktop)."
 # tlp does the same job; running both makes them fight
 # Warn and skip rather than fail, so install-base.sh carries on
 if is_installed tlp; then

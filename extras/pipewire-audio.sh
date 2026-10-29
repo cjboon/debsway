@@ -4,6 +4,7 @@
 # bar right away. Keys: the volume and mute keys, or Super+F10 (mute), Super+F11
 # (down) and Super+F12 (up) for keyboards without them.
 # Usage: bash pipewire-audio.sh [--remove]
+# summary: Sound: PipeWire, volume keys, microphone mute
 # status: apt:pipewire-audio
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
@@ -26,7 +27,7 @@ install_bin volume
 
 # The stock config binds the media keys to pactl, which isn't installed
 put_snippet audio <<'EOF'
-# Volume (debsway parts/pipewire-audio.sh)
+# Volume (debsway extras/pipewire-audio.sh)
 bindsym --locked XF86AudioRaiseVolume exec ~/.local/bin/volume up
 bindsym --locked XF86AudioLowerVolume exec ~/.local/bin/volume down
 bindsym --locked XF86AudioMute exec ~/.local/bin/volume mute

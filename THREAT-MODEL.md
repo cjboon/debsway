@@ -65,7 +65,7 @@ this page to decide what else you need.
   your computer has KVM (`docs/extras.md` says how to check); `claude` is
   the weaker, lighter choice for computers that can't run it.
 - **A stranger's USB stick running something.** Drives mount with
-  `nosuid`, `nodev` and `noexec` (`parts/udiskie.sh`), so nothing on a stick
+  `nosuid`, `nodev` and `noexec` (`extras/udiskie.sh`), so nothing on a stick
   can run from it by itself. They still mount the moment they're plugged
   in, so the kernel's filesystem code reads whatever a stick contains:
   don't plug in sticks you don't trust.

@@ -79,6 +79,26 @@ auto_or_ask() {
     ask "$@"
 }
 
+# What this computer has. A part that only makes sense with some hardware asks
+# first (skip_unless), so a desktop does not get laptop software. DEBSWAY_SYS
+# is where /sys is, for tests.
+SYS=${DEBSWAY_SYS:-/sys}
+has_backlight() { compgen -G "$SYS/class/backlight/*" >/dev/null; }
+has_battery() { compgen -G "$SYS/class/power_supply/BAT*" >/dev/null; }
+has_power_profiles() { has_battery || [ -e "$SYS/firmware/acpi/platform_profile" ]; }
+has_wifi() { compgen -G "$SYS/class/net/*/wireless" >/dev/null || compgen -G "$SYS/class/ieee80211/*" >/dev/null; }
+has_bluetooth() { compgen -G "$SYS/class/bluetooth/*" >/dev/null; }
+
+# skip_unless CHECK "what is missing": when install-base.sh runs a part
+# (DEBSWAY_FROM_BASE=1) and CHECK finds no such hardware, say so and stop with
+# success. Run by hand, a part always installs: you have said what you want.
+skip_unless() {
+    [ -n "${DEBSWAY_FROM_BASE:-}" ] || return 0
+    if "$1"; then return 0; fi
+    note "Skipped: $2 Install it later with: bash $(basename -- "$(dirname -- "$0")")/$(basename -- "$0")"
+    exit 0
+}
+
 # For scripts that only touch your home folder
 not_root() {
     [ "$(id -u)" -ne 0 ] || die "Run this as your normal user, not root."

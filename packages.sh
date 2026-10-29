@@ -10,7 +10,7 @@ PKGS=(sway foot libgl1-mesa-dri gpg)
 # the order install-base.sh runs them in. network-manager goes near the
 # end: moving Wi-Fi over to it briefly drops the connection. random-mac
 # needs it.
-PARTS=(unattended-upgrades pipewire-audio wmenu swaylock swayidle brightnessctl grim-slurp
-    wl-clipboard mako udiskie emoji-font foot-config ufw power-profiles-daemon
+PARTS=(core-commands unattended-upgrades wmenu swaylock swayidle brightnessctl
+    wl-clipboard mako foot-config ufw power-profiles-daemon
     power-menu debsway-menu needrestart sysctl-hardening module-blacklist boot-hardening
     network-manager random-mac)

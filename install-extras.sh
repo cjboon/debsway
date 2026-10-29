@@ -1,10 +1,13 @@
 #!/bin/bash
 # Pick optional programs from a list and install them: arrow keys to move,
 # space bar to check a box, Tab to the Install or No extras button. Every
-# program is a script in extras/; install-base.sh runs this at the end, and
-# you can run it again whenever you like.
-#   bash install-extras.sh          the list
-#   bash install-extras.sh --list   only print what is available
+# program is a script in extras/. install-base.sh asks right after you agree to
+# the base install and installs what you picked once the base is done; you can
+# run this again whenever you like. Nothing is checked to begin with.
+#   bash install-extras.sh               the list, then installs what you check
+#   bash install-extras.sh --list        only print what is available
+#   bash install-extras.sh --choose F    the list only; writes the names you checked to file F
+#   bash install-extras.sh --install F   installs the names in file F (no list)
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
 
 # One line per extra: NAME<TAB>SUMMARY<TAB>installed(1|0)
@@ -26,12 +29,18 @@ if [ "${1:-}" = --list ]; then
     exit 0
 fi
 
-if ! { : </dev/tty; } 2>/dev/null; then
-    note "There is no terminal to ask on. Pick extras later with: bash install-extras.sh"
-    exit 0
-fi
+mode=both file=
+case "${1:-}" in
+    --choose) mode=choose file=${2:?"usage: install-extras.sh --choose FILE"} ;;
+    --install) mode=install file=${2:?"usage: install-extras.sh --install FILE"} ;;
+esac
 
 chosen=()
+if [ "$mode" != install ] && ! { : </dev/tty; } 2>/dev/null; then
+    note "There is no terminal to ask on. Pick extras later with: bash install-extras.sh"
+    [ "$mode" != choose ] || : >"$file"
+    exit 0
+fi
 
 # The checklist in white on black, to match the terminal it opens in (whiptail
 # is blue and red by default). Your own NEWT_COLORS wins if you set one. The same
@@ -81,15 +90,31 @@ pick_with_numbers() {
     done
 }
 
-say "Optional extras"
-if command -v whiptail >/dev/null && [ -n "${TERM:-}" ] && [ "$TERM" != dumb ]; then
-    pick_with_whiptail
+if [ "$mode" = install ]; then
+    # the names were picked earlier (--choose): one per line
+    mapfile -t chosen < <(grep . "$file" 2>/dev/null || true)
 else
-    pick_with_numbers
+    say "Optional extras"
+    if command -v whiptail >/dev/null && [ -n "${TERM:-}" ] && [ "$TERM" != dumb ]; then
+        pick_with_whiptail
+    else
+        pick_with_numbers
+    fi
+fi
+
+if [ "$mode" = choose ]; then
+    : >"$file"
+    if [ ${#chosen[@]} -gt 0 ]; then printf '%s\n' "${chosen[@]}" >"$file"; fi
+    if [ ${#chosen[@]} -eq 0 ]; then
+        note "No extras chosen. Add some later with: debsway --apps"
+    else
+        note "To install after the base: ${chosen[*]}"
+    fi
+    exit 0
 fi
 
 if [ ${#chosen[@]} -eq 0 ]; then
-    note "No extras chosen. Add some later with: bash install-extras.sh"
+    note "No extras chosen. Add some later with: debsway --apps"
     exit 0
 fi
 

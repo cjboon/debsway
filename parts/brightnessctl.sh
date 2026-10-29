@@ -25,6 +25,7 @@ if [ "${1:-}" = --remove ]; then
     exit
 fi
 
+skip_unless has_backlight "no screen backlight found, so there are no brightness keys to set up (a desktop monitor has none)."
 say "Installing brightnessctl"
 apt_install brightnessctl
 

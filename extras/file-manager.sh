@@ -2,7 +2,7 @@
 # Thunar, a light graphical file manager from Xfce (GTK, so it runs
 # natively on Wayland), from Debian. gvfs gives it the Trash, tumbler
 # draws thumbnails. USB drives are already mounted by udiskie
-# (parts/udiskie.sh), so Thunar's own volume manager isn't needed.
+# (extras/udiskie.sh), so Thunar's own volume manager isn't needed.
 # Made the default for folders, e.g. "open containing folder" in Firefox.
 # Usage: bash file-manager.sh [--remove]
 # summary: Thunar file manager with Trash and thumbnails

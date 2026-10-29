@@ -17,6 +17,7 @@ if [ "${1:-}" = --remove ]; then
     exit
 fi
 
+skip_unless has_wifi "no Wi-Fi adapter found, so NetworkManager is not needed (the wired connection stays as it is)."
 # polkitd lets your user (not just root) control connections
 say "Installing network-manager"
 apt_install network-manager wpasupplicant wireless-regdb polkitd

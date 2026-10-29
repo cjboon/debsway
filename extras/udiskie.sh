@@ -3,6 +3,7 @@
 # password prompt needs GTK, so this installs a small one of its own:
 # wmenu in password mode if wmenu is installed, else a floating foot window.
 # Usage: bash udiskie.sh [--remove]
+# summary: USB drives mount by themselves (noexec), LUKS too
 # status: apt:udiskie
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
@@ -48,7 +49,7 @@ EOF2
 fi
 
 put_snippet automount <<EOF
-# USB automount (debsway parts/udiskie.sh)
+# USB automount (debsway extras/udiskie.sh)
 exec $UDISKIE_CMD
 for_window [app_id="luks-askpass"] floating enable
 EOF

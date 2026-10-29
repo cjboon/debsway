@@ -27,6 +27,7 @@ if [ "${1:-}" = --remove ]; then
     exit
 fi
 
+skip_unless has_wifi "no Wi-Fi adapter found, so there is no Wi-Fi address to randomize."
 is_installed network-manager ||
     die "NetworkManager isn't installed. Run parts/network-manager.sh first."
 

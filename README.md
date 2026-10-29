@@ -2,14 +2,17 @@
 
 A minimal, privacy-minded [sway](https://swaywm.org) desktop for Debian 13
 (trixie), installed by plain shell scripts you can read in one sitting.
-Start from a bare Debian install; get sound, a launcher, screen lock,
-brightness, screenshots, notifications, USB automount, a firewall,
-automatic security updates and easy Wi-Fi. No desktop environment, display
-manager, tray or settings app: one compositor and plain text configs.
+Start from a bare Debian install; get a launcher, screen lock (with a slow
+dimming warning first), notifications, a firewall, kernel hardening and
+automatic security updates, plus, where the computer has the hardware,
+brightness keys and easy Wi-Fi. Sound, a browser, screenshots and USB
+automount are optional extras you pick right after you agree to the install
+(nothing is checked for you). No desktop environment, display manager, tray
+or settings app: one compositor and plain text configs.
 
 What's different from a dotfiles repo:
 
-- **Hardened Firefox by default**: uBlock Origin in medium mode, HTTPS-Only,
+- **Hardened Firefox** (an extra you pick): uBlock Origin in medium mode, HTTPS-Only,
   JIT off, DuckDuckGo. `incognito` opens a throwaway Firefox as a
   separate locked-down user, in memory, on a restricted Wayland socket,
   with its own firewall rule and audio, that plays video and sound.
@@ -318,7 +321,7 @@ Super is the Windows / Cmd key. Super+? shows the full list
 - **You want a plain shell on tty1**: use Ctrl+Alt+F2. To stop the
   autostart, delete the `debsway autostart` block in `~/.profile`.
 - **A part failed during install-base.sh**: re-run just that one, e.g.
-  `bash parts/pipewire-audio.sh`.
+  `bash parts/NAME.sh` (or `bash extras/NAME.sh`).
 - **Wi-Fi gone after install-base.sh**: NetworkManager took it over. Run
   `nmtui` to pick the network, or `bash wifi.sh` to rescue it.
 - **A Wi-Fi login page keeps asking again**: that's the random MAC; see
