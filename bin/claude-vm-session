@@ -53,7 +53,11 @@ guest_ssh() {
 ensure_up() {
     is_installed || die "no VM yet. Set it up first: bash ~/debsway/extras/claude-vm.sh"
     if ! mockvps --status 2>/dev/null | grep -q Running; then
-        mockvps --start >/dev/null || die "could not start the VM (see $WORKDIR/${VM_NAME}-run.log)."
+        # Say why the window is quiet: mockvps's own steps ("==> Waiting for
+        # SSH"...) and errors, but not the summary it ends with
+        echo "Starting the VM; this takes about a minute."
+        mockvps --start 2>&1 | sed -un 's/^==> /  /p; /^\(ERROR\|WARNING\):/p' ||
+            die "could not start the VM (see $WORKDIR/${VM_NAME}-run.log)."
     fi
 }
 

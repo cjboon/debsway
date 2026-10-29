@@ -63,6 +63,7 @@ sed -e "s|/home/claude-vm|$S/home|g" \
     -e "s|/usr/local/libexec/claude-vm-mockvps-kvm|$S/bin/mockvps|" \
     -e "s|^export PATH=.*|export PATH=$S/bin:\$PATH|" \
     "$HERE/bin/claude-vm-session" >"$S/claude-vm-session"
+# shellcheck disable=SC2016  # expanded by the pretend id, not here
 printf '#!/bin/sh\n[ "$1" = -un ] && echo claude-vm || exec /usr/bin/id "$@"\n' >"$S/bin/id"
 cat >"$S/bin/mockvps" <<MOCK
 #!/bin/sh
@@ -88,5 +89,29 @@ check "a built VM's disk is still there after install" test -s "$S/home/vm/claud
 : >"$S/calls"
 session rebuild >/dev/null 2>&1
 check "rebuild still replaces it on purpose" grep -qx -- "mockvps --uninstall --yes" "$S/calls"
+
+# Starting a stopped VM takes a minute; the window must say so, not sit blank
+cat >>"$S/bin/mockvps" <<MOCK
+[ "\$1" = --start ] && printf '\n==> Waiting for SSH on 127.0.0.1:2242\n\nVM is ready.\n'
+[ "\$1" = --start ] && [ -e "$S/start-fails" ] && { echo 'ERROR: SSH never came up' >&2; exit 1; }
+exit 0
+MOCK
+: >"$S/calls"
+out=$(session connect 2>&1)
+check "connect starts a stopped VM" grep -qx -- "mockvps --start" "$S/calls"
+check "it says the VM is starting and how long that takes" grep -q 'Starting the VM.*a minute' <<<"$out"
+check "it shows mockvps's steps while it waits" grep -qx '  Waiting for SSH on 127.0.0.1:2242' <<<"$out"
+check "but not mockvps's closing summary" bash -c "! grep -q 'VM is ready' <<<'$out'"
+check "then it logs in and starts Claude Code" grep -q "^ssh .*cd ~/projects && exec claude" "$S/calls"
+touch "$S/start-fails"
+: >"$S/calls"
+out=$(session connect 2>&1)
+check "a failed start shows mockvps's error" grep -q 'ERROR: SSH never came up' <<<"$out"
+check "and doesn't try to log in" bash -c "! grep -q '^ssh' '$S/calls'"
+rm "$S/start-fails"
+touch "$S/vm-running"
+: >"$S/calls"
+out=$(session connect 2>&1)
+check "a running VM is not started again, nor announced" bash -c "! grep -q -- --start '$S/calls' && [ -z '$out' ]"
 
 [ "$fails" -eq 0 ]
