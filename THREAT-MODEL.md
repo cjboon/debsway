@@ -97,6 +97,12 @@ With the extras:
 - **Losing everything to a dead or stolen disk**: encrypted backups
   (`extras/backup.sh`).
 - **Hidden data in files you share**: Metadata Cleaner and mat2 (`extras/metadata-cleaner.sh`).
+- **Your network reading or forging the names you look up**: with
+  `extras/secure-dns.sh`, Unbound checks every answer with DNSSEC and asks
+  one resolver you pick over DNS over TLS; a firewall rule lets only Unbound
+  send DNS out, so nothing goes around it unencrypted (DNS over HTTPS can't
+  be stopped that way). If the resolver can't be reached, names stop
+  resolving instead of falling back, and Wi-Fi sign-in pages don't work.
 
 ## What it doesn't protect against
 
@@ -150,6 +156,10 @@ With the extras:
   off (`parts/firefox-hardening.sh`), so the browser doesn't send your
   lookups to a provider it picked. Tor Browser, Whonix and apt over Tor
   look names up through Tor, and a connected VPN through its tunnel.
+  `extras/secure-dns.sh` encrypts the rest (see above); the resolver you
+  pick still sees every name, and the name of each site also travels
+  unencrypted at the start of most HTTPS connections, so it hides where
+  you go from your network less than a VPN or Tor does.
 - **A listening service, if you turn on remote access**
   (`extras/remote-access.sh`). Nothing listens by default. With it on,
   sshd runs (on 127.0.0.1, keys only) behind a Tor onion service that

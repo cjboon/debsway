@@ -24,6 +24,7 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `onionshare.sh` | Share files, receive files, host a site or a chat over Tor, with a bridge if you need one (obfs4 or Snowflake). Prints `onionshare-cli` examples |
 | `remote-access.sh` | ssh into this computer from another one over a Tor onion service, with no firewall port opened. sshd listens on 127.0.0.1 only (keys only, your user only) and the onion service needs a client key. Shows the address and the exact setup lines for the other computer. See below |
 | `mullvad-vpn.sh` | Mullvad VPN (app and `mullvad` command), from Mullvad's signed apt repo. Prints `mullvad` examples |
+| `secure-dns.sh` | Encrypted, checked DNS: Unbound on this computer checks every answer with DNSSEC and asks one resolver you pick (Quad9, Digitale Gesellschaft or Applied Privacy) over DNS over TLS; only Unbound may send DNS out, and nothing falls back to unencrypted DNS. Wi-Fi sign-in pages don't work while it's on. See below |
 | `mullvad-browser.sh` | Mullvad Browser: Tor Browser's anti-tracking without Tor, for use with a VPN |
 | `sparrow-wallet.sh` | Sparrow Bitcoin wallet, the signed official .deb. Command: `sparrow` |
 | `electrum.sh` | Electrum Bitcoin wallet, from Debian |
@@ -155,6 +156,50 @@ sandbox is ever in the way; it stays installed, and starting it by name still wo
 Profiles made with `firefox-profiles/new-profile.sh` each get a user of their own like
 this one (`fx-NAME`), so a hacked page in one reaches neither your files nor the other
 profiles; they share the one firewall rule through the group `debsway-fx`.
+
+## Encrypted DNS (`extras/secure-dns.sh`)
+
+Without it, every name the computer looks up goes unencrypted to the DNS server
+the network hands out (usually the router): the network and your ISP see each
+one and anyone on the way can answer falsely. With it:
+
+- **Unbound** runs on this computer, answering only `127.0.0.1`, and
+  `/etc/resolv.conf` points at it. It checks every answer with **DNSSEC**
+  (Debian's own root key, `dns-root-data`): an answer proven false is refused.
+- It asks **one resolver you choose**, over **DNS over TLS** (port 853), and
+  only if that resolver's certificate is for its name. The choices are in
+  `pins.sh` (`DOT_*`), each checked against its own site:
+
+  | Resolver | Where, who | Notes |
+  |---|---|---|
+  | `dns.quad9.net` | Switzerland, the Quad9 Foundation | also blocks known malware sites |
+  | `dns.digitale-gesellschaft.ch` | Switzerland, an association | no filtering; says it logs no queries |
+  | `dot1.applied-privacy.net` | Austria, the Foundation for Applied Privacy | no filtering; one server |
+
+  The resolver sees the names you look up; your network and ISP no longer
+  do. Nothing is picked for you. (Mullvad's public DNS isn't offered: it
+  shuts down on 2 November 2026. Mullvad VPN's own DNS, inside the tunnel,
+  is a different thing and keeps working.)
+- **It fails closed.** A firewall rule (`data/secure-dns-firewall.nft`) lets
+  only Unbound send DNS out (ports 53 and 853), so a program that asks another
+  DNS server itself is refused, and if the resolver can't be reached names stop
+  resolving rather than going out unencrypted.
+- NetworkManager (`dns=none`), dhclient, dhcpcd and `wifi.sh` stop rewriting
+  `/etc/resolv.conf`. The old one is kept as `/etc/resolv.conf.debsway-secure-dns.bak`.
+- **A VPN:** Mullvad VPN points `/etc/resolv.conf` at its own DNS server inside
+  its tunnel while connected, and the firewall rule lets tunnels (`wg*`,
+  `tun*`) through; when it disconnects, Unbound takes over again.
+- **Wi-Fi sign-in pages** (cafés, hotels, trains) don't work while it's on:
+  they need the network's own DNS. `bash extras/secure-dns.sh --remove`
+  switches back.
+- **DNS over HTTPS** looks like any web traffic, so no firewall can stop it.
+  Firefox's own is switched off (`parts/firefox-hardening.sh`); Mullvad
+  Browser keeps its own.
+
+Before anything is switched over, it checks that names resolve through the
+resolver you picked; if they don't (port 853 blocked, a sign-in page), it puts
+DNS back as it was. Run it again to pick another resolver. `bash status.sh`
+shows which one is in use.
 
 ## Remote access (`extras/remote-access.sh`)
 
