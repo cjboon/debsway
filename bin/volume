@@ -1,5 +1,5 @@
 #!/bin/sh
-# volume up|down|mute|micmute [STEP]: written by debsway parts/pipewire-audio.sh
+# volume up|down|mute|micmute [STEP]: written by debsway extras/pipewire-audio.sh
 # Changes the sound volume by STEP percent (default 5), never above 100%,
 # turns the sound back on if it was muted, then tells sway-status to redraw
 # the bar.

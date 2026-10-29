@@ -1,5 +1,5 @@
 #!/bin/sh
-# screenshot [full|region|clip]: written by debsway parts/grim-slurp.sh
+# screenshot [full|region|clip]: written by debsway extras/grim-slurp.sh
 dir=$HOME/Pictures
 mkdir -p "$dir"
 file=$dir/screenshot-$(date +%F_%H-%M-%S).png

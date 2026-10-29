@@ -1,6 +1,6 @@
 #!/bin/sh
 # luks-askpass DEVICE: asks for a LUKS password and prints it for udiskie.
-# Written by debsway parts/udiskie.sh
+# written by debsway extras/udiskie.sh
 prompt="Password for $1:"
 if command -v wmenu >/dev/null; then
     exec wmenu -P -p "$prompt" </dev/null

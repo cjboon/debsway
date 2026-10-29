@@ -10,7 +10,9 @@ need_user
 
 ASKPASS="$BIN/luks-askpass"
 UCONF="$HOME/.config/udiskie/config.yml"
-UMARK="# Written by debsway parts/udiskie.sh"
+UMARK="# Written by debsway extras/udiskie.sh"
+# what earlier versions wrote, still recognised as debsway's
+OLD_UMARK="# Written by debsway parts/udiskie.sh"
 # udiskie runs the prompt without a shell, so the path must be absolute
 UDISKIE_CMD="udiskie --no-tray --no-file-manager --password-prompt '$ASKPASS {device_presentation}'"
 
@@ -18,7 +20,7 @@ if [ "${1:-}" = --remove ]; then
     remove_snippet automount
     pkill -x udiskie || true
     remove_bin luks-askpass
-    if grep -qxF "$UMARK" "$UCONF" 2>/dev/null; then rm -f "$UCONF"; fi
+    if grep -qxF -e "$UMARK" -e "$OLD_UMARK" "$UCONF" 2>/dev/null; then rm -f "$UCONF"; fi
     # cryptsetup stays: an encrypted system disk needs it to boot
     sudo apt-mark manual cryptsetup >/dev/null
     apt_purge udiskie udisks2 gir1.2-notify-0.7

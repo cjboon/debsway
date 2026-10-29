@@ -50,6 +50,13 @@ for f in parts/*.sh extras/*.sh; do
     grep -q -- '--remove' "$f" || meh "$f has no --remove"
     grep -q '^# status: ' "$f" || meh "$f has no '# status:' line (status.sh can't show it)"
 done
+# "Written by debsway parts/X.sh" (a header, a marker in a file it writes) names
+# a script that is there
+while IFS=: read -r f m; do
+    s=$(sed -E 's/.*[Ww]ritten by debsway //' <<<"$m")
+    [ -f "$s" ] || bad "$f says it was written by $s, which doesn't exist"
+done < <(grep -rHiE 'written by debsway (parts|extras)/[a-z-]+\.sh' bin data extras parts lib | grep -v OLD_UMARK |
+    sed -E 's/^([^:]*):.*([Ww]ritten by debsway (parts|extras)\/[a-z-]+\.sh).*/\1:\2/')
 # Every extra has its article in docs/extras/, which explains it from the ground up
 for f in extras/*.sh extras/firefox-profiles/new-profile.sh; do
     case $f in extras/firefox-profiles/*) name=firefox-profiles ;; *) name=$(basename "$f" .sh) ;; esac
