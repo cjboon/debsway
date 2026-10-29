@@ -166,6 +166,12 @@ gateway_config() {
 # ---- remove ----
 
 if [ "${1:-}" = --remove ]; then
+    # Asked first, before anything is changed
+    delete_disks=false
+    if ls "$IMAGES"/Whonix-*.qcow2 >/dev/null 2>&1 &&
+        ask "Also delete the Whonix disks, and everything saved inside the VMs ($IMAGES/Whonix-*.qcow2)?" n; then
+        delete_disks=true
+    fi
     for vm in "$WS" "$GW"; do
         if defined "$vm"; then
             "${VIRSH[@]}" destroy "$vm" >/dev/null 2>&1 || true
@@ -173,11 +179,12 @@ if [ "${1:-}" = --remove ]; then
             note "Removed the $vm VM."
         fi
     done
-    if ls "$IMAGES"/Whonix-*.qcow2 >/dev/null 2>&1 &&
-        ask "Also delete the Whonix disks, and everything saved inside the VMs ($IMAGES/Whonix-*.qcow2)?" n; then
+    if $delete_disks; then
         rm -f "$IMAGES"/Whonix-Gateway.qcow2 "$IMAGES"/Whonix-Workstation.qcow2
         "${VIRSH[@]}" pool-refresh default >/dev/null 2>&1 || true
         note "Deleted."
+    elif ls "$IMAGES"/Whonix-*.qcow2 >/dev/null 2>&1; then
+        note "Kept the disks in $IMAGES. Installing again asks before replacing them."
     fi
     remove_bin whonix
     # KVM and virt-manager go too, unless mockvps-kvm or another script needs them
@@ -215,6 +222,14 @@ if defined "$GW" && defined "$WS"; then
     install_bin whonix
     note "Start it with: whonix   (Tor settings: whonix gateway)"
     exit 0
+fi
+
+# Disks kept by an earlier --remove hold whatever was saved inside the VMs:
+# a fresh install would put new ones in their place
+if [ -e "$IMAGES/$GW.qcow2" ] || [ -e "$IMAGES/$WS.qcow2" ]; then
+    warn "Whonix disks from before are in $IMAGES, with whatever was saved inside the VMs."
+    ask "Replace them with fresh ones (what is inside them is lost)?" n ||
+        die "Kept them; nothing was installed. Move them out of $IMAGES to install a fresh Whonix next to them."
 fi
 
 archive=$(saved_archive)

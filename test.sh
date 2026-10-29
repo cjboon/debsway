@@ -74,6 +74,14 @@ done
 for f in bin/claude-vm bin/claude-vm-session data/claude-vm-firewall.nft data/claude-vm-provision.sh vendor/mockvps-kvm/mockvps-kvm.sh; do
     [ -f "$f" ] || bad "extras/claude-vm.sh needs $f"
 done
+# Whonix: --remove asks about the disks before it removes the VMs, and an install
+# asks before it puts fresh disks over kept ones
+w=$(sed -n '/--remove ]; then/,/^fi/p' extras/whonix.sh)
+[ "$(grep -n 'ask "Also delete the Whonix disks' <<<"$w" | cut -d: -f1)" -lt "$(grep -n 'undefine' <<<"$w" | cut -d: -f1)" ] ||
+    bad "extras/whonix.sh --remove removes the VMs before asking about their disks"
+# shellcheck disable=SC2016  # the pattern is the script's own text, $ included
+[ "$(grep -n 'Replace them with fresh ones' extras/whonix.sh | cut -d: -f1)" -lt "$(grep -n 'mv "$work/gw.qcow2" "$IMAGES/$GW.qcow2"' extras/whonix.sh | cut -d: -f1)" ] ||
+    bad "extras/whonix.sh can put fresh disks over kept ones without asking"
 for f in bin/onion-site bin/onion-site-session lib/onion-site.sh data/onion-site-firewall.nft data/onion-site-provision.sh; do
     [ -f "$f" ] || bad "extras/onion-site.sh needs $f"
 done
