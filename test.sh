@@ -210,6 +210,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "The Super+d launcher line (lib/sway.sh), on pretend sway configs"
+if out=$(bash tools/test-launcher.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") launcher checks"
+else
+    bad "launcher checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "Pinned keys and versions (pins.sh): checked by hand within a year?"
 now=$(date +%s)
 # Each "# checked: DATE" line belongs to the next VARIABLE= line

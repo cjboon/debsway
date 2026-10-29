@@ -8,6 +8,38 @@ SWAY_INCLUDE="include $SWAY_SNIPPETS/*.conf"
 # The one definition of how debsway locks the screen
 LOCK_CMD='swaylock -f -c 000000'
 
+# The launcher on Super+d (parts/wmenu.sh) is wmenu-run. wmenu has no height
+# setting: its height follows its font. So the launcher gets a font a little
+# larger than the bar's, to cover the bar completely instead of leaving a strip of
+# it showing, and opaque colors in the bar's own black and white (the bar is
+# see-through, so a see-through launcher would show it underneath). If a strip
+# of the bar still shows, make the 12 bigger; if the launcher is too tall,
+# smaller (the line is in ~/.config/sway/config, or here and run parts/wmenu.sh).
+# shellcheck disable=SC2016  # $menu is sway's variable, not the shell's
+LAUNCHER_STOCK='set $menu wmenu-run'
+# shellcheck disable=SC2016
+LAUNCHER_STYLED='set $menu wmenu-run -f '"'monospace 12'"' -N 000000 -n ffffff -M 000000 -m ffffff -S ffffff -s 000000'
+
+# replace_line FILE OLD NEW: the line OLD in FILE becomes NEW; nothing else changes
+replace_line() {
+    local tmp
+    tmp=$(mktemp)
+    awk -v old="$2" -v new="$3" '$0 == old { print new; next } { print }' "$1" >"$tmp"
+    cat "$tmp" >"$1"
+    rm -f "$tmp"
+}
+
+# style_launcher FILE: the stock launcher line becomes debsway's. A line you
+# changed yourself is left alone (the return status says whether it was ours).
+style_launcher() {
+    if grep -qxF "$LAUNCHER_STYLED" "$1"; then return 0; fi
+    grep -qxF "$LAUNCHER_STOCK" "$1" || return 1
+    replace_line "$1" "$LAUNCHER_STOCK" "$LAUNCHER_STYLED"
+}
+
+# unstyle_launcher FILE: back to the stock line
+unstyle_launcher() { replace_line "$1" "$LAUNCHER_STYLED" "$LAUNCHER_STOCK"; }
+
 # Some apps only speak X11. sway runs them through XWayland, but only
 # finds XWayland when sway starts, so a fresh install needs a re-login.
 need_xwayland() {

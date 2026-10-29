@@ -41,7 +41,7 @@ checked with `sway -C` before it's kept.
 |---|---|---|
 | `unattended-upgrades.sh` | unattended-upgrades | Debian's security fixes install themselves daily, with Debian's default rules; the Mullvad and Claude Code repositories debsway adds are included, any repository you add yourself is left to you. Log: `/var/log/unattended-upgrades/` |
 | `pipewire-audio.sh` | pipewire-audio | Sound. `volume up\|down\|mute\|micmute [STEP]` (5% steps, never above 100%, unmutes on a change, refreshes the bar); the volume and mute keys use it, and Super+F10 / F11 / F12 (mute / down / up) do for keyboards without them |
-| `wmenu.sh` | wmenu | The launcher on Super+d |
+| `wmenu.sh` | wmenu | The launcher on Super+d, in the bar's black and white, opaque (the bar is see-through) and with a font a little bigger than the bar's so it covers the bar. If a strip of the bar still shows, raise the `12` in the `set $menu` line of `~/.config/sway/config` |
 | `swaylock.sh` | swaylock | Super+Escape locks |
 | `swayidle.sh` | swayidle, swaylock | Lock after 5 min, screen off after 10, lock before sleep |
 | `brightnessctl.sh` | brightnessctl | `brightness up\|down [STEP]`, never below 5%; brightness keys and Super+F1/F2 |
@@ -59,7 +59,7 @@ checked with `sway -C` before it's kept.
 | `boot-hardening.sh` | (none) | Adds Kicksecure's boot parameters to GRUB (`slab_nomerge init_on_alloc=1 init_on_free=1 page_alloc.shuffle=1 randomize_kstack_offset=on vsyscall=none debugfs=off`); applies after a reboot |
 | `ufw.sh` | ufw | Firewall: blocks everything incoming, allows outgoing |
 | `power-profiles-daemon.sh` | power-profiles-daemon | `powerprofilesctl set power-saver \| balanced \| performance` (skips itself if tlp is installed) |
-| `network-manager.sh` | network-manager, wpasupplicant, wireless-regdb, polkitd | Moves the Wi-Fi from the installer or wifi.sh into NetworkManager; `nmtui` to switch networks |
+| `network-manager.sh` | network-manager, wpasupplicant, wireless-regdb, polkitd | Moves the Wi-Fi from the installer or wifi.sh into NetworkManager; `nmtui` (in debsway's white-on-black colors, like the install list; your own `NEWT_COLORS` wins) to switch networks |
 | `random-mac.sh` | (NetworkManager) | A made-up Wi-Fi MAC address on every connection and while scanning, no computer name sent to the network, temporary IPv6 addresses: networks can't recognise the laptop from place to place |
 
 **USB drives and `noexec`:** a drive can't run programs from itself
