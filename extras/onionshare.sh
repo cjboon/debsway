@@ -46,9 +46,9 @@ else
 fi
 
 say "Blocking the system tor service"
-if [ -e /etc/tor/.debsway-apt-tor ]; then
-    # parts/apt-tor.sh runs it, with your bridge, to download packages
-    note "The system tor service stays on: it downloads packages (parts/apt-tor.sh)."
+if system_tor_wanted; then
+    # parts/apt-tor.sh or extras/remote-access.sh runs it, with your bridge
+    note "The system tor service stays on: apt over Tor or remote access uses it."
 else
     sudo systemctl mask tor.service tor@default.service >/dev/null
     note "Masked tor.service and tor@default.service: installing tor won't start it."
@@ -63,7 +63,7 @@ if ask "Also install the graphical OnionShare app?" y; then
     pkgs+=(onionshare qt6-wayland)
 fi
 apt_install "${pkgs[@]}"
-if [ ! -e /etc/tor/.debsway-apt-tor ] && systemctl is-active --quiet tor.service tor@default.service; then
+if ! system_tor_wanted && systemctl is-active --quiet tor.service tor@default.service; then
     warn "The system tor service is running anyway. Stop it: sudo systemctl stop tor@default.service"
 fi
 

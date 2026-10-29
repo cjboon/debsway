@@ -156,6 +156,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "Who keeps the system tor service on (lib/tor.sh), on a pretend /etc"
+if out=$(bash tools/test-tor-service.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") tor service checks"
+else
+    bad "tor service checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "The sshd settings check (lib/net.sh), with sample sshd -T output"
 if out=$(bash tools/test-sshd-check.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") sshd settings checks"

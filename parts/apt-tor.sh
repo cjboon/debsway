@@ -53,16 +53,18 @@ if [ "${1:-}" = --remove ]; then
     restore_sources
     sudo apt-get update || warn "apt couldn't update with the restored sources; check /etc/apt/sources.list*"
     sudo sed -i "\\|^$BEGIN\$|,\\|^$END\$|d" "$TORRC" 2>/dev/null || true
-    # extras/remote-access.sh uses the same tor service
-    if [ -f /etc/tor/.debsway-remote-access ]; then
+    # another script (remote access) may still use the same tor service
+    if system_tor_wanted .debsway-apt-tor; then
         sudo systemctl restart tor@default.service >/dev/null 2>&1 || true
     else
         sudo systemctl disable --now tor@default.service >/dev/null 2>&1 || true
     fi
     sudo rm -f "$MARK"
     apt_purge tor obfs4proxy snowflake-client apt-transport-tor
-    # OnionShare keeps the system tor service off
-    if is_installed onionshare-cli; then sudo systemctl mask tor.service tor@default.service >/dev/null; fi
+    # OnionShare keeps the system tor service off, unless something still needs it
+    if is_installed onionshare-cli && ! system_tor_wanted .debsway-apt-tor; then
+        sudo systemctl mask tor.service tor@default.service >/dev/null
+    fi
     note "apt downloads directly again."
     exit
 fi

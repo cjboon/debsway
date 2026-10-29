@@ -15,7 +15,6 @@
 need_user
 
 MARK=/etc/tor/.debsway-remote-access
-APT_TOR_MARK=/etc/tor/.debsway-apt-tor
 TORRC=/etc/tor/torrc
 SVC_DIR=/var/lib/tor/debsway-ssh
 # 00-: sshd takes the first value it finds for a setting and reads the files in
@@ -41,7 +40,7 @@ if [ "${1:-}" = --remove ]; then
     drop_torrc_blocks
     sudo rm -rf "$SVC_DIR"
     sudo rm -f "$MARK"
-    if [ -f "$APT_TOR_MARK" ]; then
+    if system_tor_wanted .debsway-remote-access; then
         sudo systemctl restart tor@default.service >/dev/null 2>&1 || true
     else
         sudo systemctl disable --now tor@default.service >/dev/null 2>&1 || true
@@ -50,7 +49,7 @@ if [ "${1:-}" = --remove ]; then
     if is_installed openssh-server; then sudo systemctl restart ssh.service >/dev/null 2>&1 || true; fi
     apt_purge openssh-server tor openssl obfs4proxy snowflake-client
     # OnionShare keeps the system tor service off
-    if [ ! -f "$APT_TOR_MARK" ] && is_installed onionshare-cli; then
+    if ! system_tor_wanted .debsway-remote-access && is_installed onionshare-cli; then
         sudo systemctl mask tor.service tor@default.service >/dev/null
     fi
     note "Remote access is off and its onion address is gone."
@@ -92,7 +91,8 @@ fi
 new_install=false
 [ -f "$MARK" ] || new_install=true
 bridge_block=false
-if $new_install && [ ! -f "$APT_TOR_MARK" ] && ! is_installed tor; then
+# (a tor that another script set up already has its bridges)
+if $new_install && ! system_tor_wanted .debsway-remote-access && ! is_installed tor; then
     say "Bridges"
     pick_bridges system-tor
     if $BRIDGE_WANTED && [ "$BRIDGE_TYPE" = none ]; then

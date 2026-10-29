@@ -81,7 +81,8 @@ Gateway's Tor settings, `whonix stop` shuts both down.
 
 **OnionShare.** Debian's package pulls in the system tor service, which
 would connect to Tor directly the moment it's installed, so the script
-masks it first; OnionShare starts its own private tor, with your bridges.
+masks it first (unless apt over Tor or remote access already uses it, with
+its bridge); OnionShare starts its own private tor, with your bridges.
 
 **Backups.** `backup.sh` asks where backups go (a folder on a USB drive
 is best) and creates an encrypted restic repository there. The password
