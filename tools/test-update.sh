@@ -49,6 +49,11 @@ SECOND=$(git -C "$T/W" rev-parse HEAD)
 printf '#!/bin/bash\necho "$1" >>"%s/ran"\n[ "$1" != "$FAIL_ON" ]\n' "$T" >"$T/runner"
 chmod +x "$T/runner"
 export DEBSWAY_UPDATE_RUNNER="$T/runner"
+# A pretend sudo: -v succeeds (or fails with FAKE_SUDO_RC); every call is written down
+# shellcheck disable=SC2016  # written into the pretend program, expanded when it runs
+printf '#!/bin/bash\necho "sudo $*" >>"%s/sudolog"\n[ "$1" = -v ] && exit "${FAKE_SUDO_RC:-0}"\nexit 0\n' "$T" >"$T/sudo"
+chmod +x "$T/sudo"
+export DEBSWAY_SUDO="$T/sudo"
 # What is "set up here": incognito, claude-code (not claude-vm), media (not changed),
 # and two that use the changed library or pin
 export DEBSWAY_UPDATE_ASSUME_INSTALLED="parts/incognito.sh extras/claude-code.sh extras/media.sh extras/feather-wallet.sh extras/sparrow-wallet.sh"
@@ -78,6 +83,10 @@ check "a changed script that isn't set up here is left alone" not ran extras/cla
 check "a changed core library is reported, not counted against every script" grep -q 'lib/core.sh' <<<"$out"
 check "the commit it brought you to is remembered" test "$(cat "$T/state/debsway/updated-to")" = "$SECOND"
 
+# 2b. the sudo password is asked once, before the first script, not by each script
+check "sudo is asked for once, before any script runs" test "$(grep -c '^sudo -v' "$T/sudolog")" -eq 1
+check "...and kept fresh in the background while they run" grep -q '^sudo -n true' "$T/sudolog"
+
 # 3. nothing new: nothing to run
 : >"$T/ran"
 ARGS='' out=$(upd)
@@ -103,6 +112,17 @@ check "a failing script is reported" grep -q 'did not finish' <<<"$out"
 check "the other scripts still run" ran extras/claude-code.sh
 check "a failed run is not remembered as done" test ! -e "$T/state/debsway/updated-to"
 unset FAIL_ON
+
+# 6b. a wrong sudo password stops everything: no script runs, the next one is not tried
+rm -f "$T/state/debsway/updated-to"
+: >"$T/ran"; : >"$T/sudolog"
+printf 'y\n' >"$T/answers"
+bad=$(FAKE_SUDO_RC=1 DEBSWAY_TEST_ANSWERS="$T/answers" bash "$T/L/update.sh" --since "$FIRST" 2>&1; echo "rc=$?")
+check "a refused sudo password runs no script at all" test ! -s "$T/ran"
+check "...says so, in plain words" grep -q "sudo didn't accept the password, so nothing was run" <<<"$bad"
+check "...fails, so it is not mistaken for success" not grep -qx 'rc=0' <<<"$bad"
+check "...asks only once (it does not go on to the next script and ask again)" test "$(grep -c '^sudo -v' "$T/sudolog")" -eq 1
+check "...and does not record the update as done" test ! -e "$T/state/debsway/updated-to"
 
 # 7. a plain-git problem: your own commit on top
 echo mine >"$T/L/mine.txt"

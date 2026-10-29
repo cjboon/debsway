@@ -110,6 +110,14 @@ main() {
         note "Left for next time: run  bash update.sh  again (or run them yourself: bash <script>)."
         return 0
     }
+    # The password once, here: a wrong one stops everything before any script
+    # runs (and does not move on to ask again for the next), and the permission
+    # is kept fresh while they run so there is no second question part way.
+    if ! sudo_keepalive; then
+        warn "sudo didn't accept the password, so nothing was run."
+        warn "Run  bash update.sh  again when you are ready; the new files are already in place."
+        return 1
+    fi
 
     local failed=()
     for script in "${offered[@]}"; do

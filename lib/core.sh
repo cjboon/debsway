@@ -3,7 +3,8 @@
 
 BIN="$HOME/.local/bin"
 
-if [ "$(id -u)" -eq 0 ]; then SUDO=; else SUDO=sudo; fi
+# (DEBSWAY_SUDO: a test points this at a pretend sudo)
+if [ "$(id -u)" -eq 0 ]; then SUDO=; else SUDO=${DEBSWAY_SUDO:-sudo}; fi
 
 say()  { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
 note() { printf '    %s\n' "$*"; }
@@ -110,8 +111,32 @@ need_user() {
         die "Run this as your normal user, not root. It uses sudo when it needs to."
     command -v sudo >/dev/null ||
         die "sudo isn't installed. Log in as root and run: bash $DEBSWAY_DIR/prep/setup-sudo.sh $(id -un)"
-    sudo -v ||
+    # Two different failures: a user who is not allowed to use sudo at all, and one
+    # who is but typed the password wrong
+    if ! $SUDO -v; then
+        if id -nG | tr ' ' '\n' | grep -qxE 'sudo|wheel|admin'; then
+            die "sudo didn't accept the password (after three tries). Run this again and type your own password."
+        fi
         die "Your user can't use sudo. Log in as root and run: bash $DEBSWAY_DIR/prep/setup-sudo.sh $(id -un)"
+    fi
+}
+
+# sudo_keepalive: asks for the sudo password once, now, and keeps the permission
+# fresh in the background until the script ends, so a long run is not stopped
+# part way by a second password question. Returns 1 if the password was not
+# accepted (after sudo's own three tries); the caller should then stop.
+sudo_keepalive() {
+    [ -z "$SUDO" ] || $SUDO -v || return 1
+    [ -n "$SUDO" ] || return 0
+    (
+        # ends by itself when the script that started it is gone
+        while kill -0 "$$" 2>/dev/null; do
+            $SUDO -n true 2>/dev/null || exit 0
+            sleep 50
+        done
+    ) &
+    SUDO_KEEPALIVE_PID=$!
+    trap '[ -z "${SUDO_KEEPALIVE_PID:-}" ] || { pkill -P "$SUDO_KEEPALIVE_PID" 2>/dev/null; kill "$SUDO_KEEPALIVE_PID" 2>/dev/null; }' EXIT
 }
 
 is_installed() {
