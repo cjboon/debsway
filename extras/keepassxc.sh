@@ -1,14 +1,14 @@
 #!/bin/bash
 # KeePassXC, a password manager that keeps everything in one encrypted
-# file you control. It asks first whether you want the KeePassXC-Browser
-# extension for Firefox (webext-keepassxc-browser). Only the full build
-# (keepassxc-full) has the browser integration the extension talks to, so:
-#   yes -> keepassxc-full and the extension
-#   no  -> keepassxc-minimal, the smaller build without it
-# qtwayland5 lets it run on Wayland without XWayland. Run it again to
-# switch between the two.
+# file you control. It is the minimal build (keepassxc-minimal): no browser
+# integration, no KeePassXC-Browser add-on for Firefox. Copy and paste a
+# password or use auto-type instead; that keeps a web page, and the sandboxed
+# Firefox, from having any way to talk to the password manager.
+# qtwayland5 lets it run on Wayland without XWayland. Running this on a
+# computer that has the full build (keepassxc-full, with webext-keepassxc-browser)
+# switches it to the minimal one.
 # Usage: bash keepassxc.sh [--remove]
-# summary: KeePassXC password manager (Firefox add-on optional)
+# summary: KeePassXC password manager (no browser add-on)
 # status: apt:keepassxc-full apt:keepassxc-minimal apt:keepassxc
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
@@ -20,28 +20,12 @@ if [ "${1:-}" = --remove ]; then
 fi
 
 say "KeePassXC"
-# Already there counts as a yes, so running this again doesn't take it away
-want_web=false
-if is_installed webext-keepassxc-browser; then
-    want_web=true
-elif auto_or_ask DEBSWAY_KEEPASSXC_BROWSER "Do you want the KeePassXC-Browser extension for Firefox (fills in logins from your database)?" n; then
-    want_web=true
+# The builds conflict: apt swaps one for the other. The add-on goes with the full build.
+apt_drop keepassxc-full keepassxc webext-keepassxc-browser
+if is_installed keepassxc-full || is_installed webext-keepassxc-browser; then
+    note "Replacing keepassxc-full and the Firefox add-on with keepassxc-minimal (no browser integration)."
 fi
-
-# The two builds conflict: apt swaps one for the other
-if $want_web; then
-    pkgs=(keepassxc-full qtwayland5 webext-keepassxc-browser)
-    apt_drop keepassxc-minimal keepassxc
-    if is_installed keepassxc-minimal; then note "Replacing keepassxc-minimal with keepassxc-full, which the extension needs."; fi
-else
-    pkgs=(keepassxc-minimal qtwayland5)
-    apt_drop keepassxc-full keepassxc webext-keepassxc-browser
-    if is_installed keepassxc-full; then note "Replacing keepassxc-full with keepassxc-minimal (no browser integration)."; fi
-fi
-apt_install "${pkgs[@]}"
+apt_install keepassxc-minimal qtwayland5
 note "Run it with: keepassxc   (or Super+d)"
 note "It can also generate two-factor login codes (TOTP) for your accounts."
-if $want_web; then
-    note "To fill in logins in Firefox: in KeePassXC, Tools > Settings > Browser Integration,"
-    note "turn it on and tick Firefox; then restart Firefox and click the extension's icon."
-fi
+note "To use a password on a web page: copy it from KeePassXC (Ctrl+C) and paste it."

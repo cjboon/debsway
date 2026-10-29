@@ -16,8 +16,8 @@
 #    while is in that file. DNS stays open.
 #  - Your user may run exactly one thing as firefox (a rule in /etc/sudoers.d).
 #  - firefox-esr is the same Firefox run as you, with everything you can reach.
-# Not carried over: the KeePassXC browser add-on cannot reach KeePassXC from
-# another user (copy and paste a password instead; the clipboard is shared).
+# There is no KeePassXC browser add-on (debsway's KeePassXC is the minimal
+# build without it): copy and paste a password; the clipboard is shared.
 # Usage: bash firefox-sandbox.sh [--remove]
 # summary: Firefox as its own locked-down user
 # status: file:/usr/local/bin/firefox

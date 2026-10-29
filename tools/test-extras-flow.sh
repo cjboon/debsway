@@ -86,4 +86,12 @@ assert s.index("prep/intro.sh") < s.index("need_user") < s.index("--choose")
 ' "$HERE/install-base.sh"
 check "install-base.sh no longer installs Firefox, git or KeePassXC by itself" not grep -q 'for app in firefox keepassxc' "$HERE/install-base.sh"
 
+# KeePassXC: the minimal build, never the full build or the Firefox add-on
+k=$HERE/extras/keepassxc.sh
+check "keepassxc installs the minimal build" grep -q '^apt_install keepassxc-minimal' "$k"
+check "...and no apt_install line names the full build or the add-on" not grep -E '^[[:space:]]*(apt_install|pkgs=)' "$k" | grep -qE 'keepassxc-full|webext-keepassxc-browser'
+check "...it takes the full build and the add-on out of its marker" grep -q '^apt_drop keepassxc-full keepassxc webext-keepassxc-browser' "$k"
+check "...and no longer asks about the add-on" not grep -q 'auto_or_ask' "$k"
+check "nothing else installs the add-on" not grep -rq 'apt_install.*webext-keepassxc-browser' "$HERE/extras" "$HERE/parts" "$HERE/install-base.sh"
+
 [ "$fails" -eq 0 ]
