@@ -140,6 +140,16 @@ With the extras:
   window is visible to you and to your screenshots, as any window is.
 - **Your Wi-Fi network or ISP seeing where you go**, outside Tor or a
   VPN. They see which sites you visit (not what's on the pages).
+- **Your network reading or forging the names you look up (DNS).** Every
+  name the computer looks up goes, unencrypted, to the DNS server the
+  network hands out (usually the router, and from there your ISP). They see
+  each name, and anyone on the way can answer with a false address. HTTPS
+  and apt's signatures catch a false answer for the browser and for
+  packages (a certificate or a signature that doesn't match is refused);
+  other programs may not check. Firefox's own DNS-over-HTTPS is switched
+  off (`parts/firefox-hardening.sh`), so the browser doesn't send your
+  lookups to a provider it picked. Tor Browser, Whonix and apt over Tor
+  look names up through Tor, and a connected VPN through its tunnel.
 - **A listening service, if you turn on remote access**
   (`extras/remote-access.sh`). Nothing listens by default. With it on,
   sshd runs (on 127.0.0.1, keys only) behind a Tor onion service that
