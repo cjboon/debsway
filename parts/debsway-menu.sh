@@ -21,6 +21,8 @@ if [ "${1:-}" = --remove ]; then
     remove_bin radios
     remove_bin debsway
     rm -f "$MAN"
+    # rfkill goes too, unless the Bluetooth extra still needs it
+    apt_purge
     # The bar keeps its "debsway" label; a click then opens the key cheat sheet
     # directly.
     exit
@@ -28,7 +30,11 @@ fi
 
 say "Installing the debsway menu"
 install_bin debsway-menu
-# Wi-Fi, Bluetooth and microphone switches (the menu lists the ones this computer has)
+# Wi-Fi, Bluetooth and microphone switches (the menu lists the ones this computer has).
+# Wi-Fi and Bluetooth are switched with rfkill, which Debian doesn't install by
+# itself; without it the menu has no Wi-Fi or Bluetooth line. It needs no sudo:
+# udev gives the user at the screen /dev/rfkill.
+apt_install rfkill
 install_bin radios
 # the debsway command and man debsway (man-db finds ~/.local/share/man from ~/.local/bin)
 install_bin debsway

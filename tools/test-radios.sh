@@ -102,6 +102,13 @@ r mic off --wait
 check "mic off --wait waits for the microphone, then mutes it" test "$(cat "$T/mic")" = muted
 wait
 
+# radios switches Wi-Fi and Bluetooth with rfkill, which Debian doesn't install by
+# itself: the scripts that put radios in place for those must install it
+for f in parts/debsway-menu.sh extras/bluetooth.sh; do
+    check "$f installs rfkill (without it the menu has no Wi-Fi or Bluetooth)" \
+        grep -qE '^[[:space:]]*apt_install .*\<rfkill\>' "$HERE/$f"
+done
+
 check "a wrong word is refused with status 2" bash -c 'env PATH="$1/fake:/usr/bin:/bin" bash "$2" nonsense; [ $? -eq 2 ]' _ "$T" "$R"
 check "so is a wrong action" bash -c 'echo open >"$1/mic"; env PATH="$1/fake:/usr/bin:/bin" DEBSWAY_SYS="$1/sys" bash "$2" mic sideways; [ $? -eq 2 ]' _ "$T" "$R"
 

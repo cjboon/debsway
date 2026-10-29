@@ -31,7 +31,8 @@ fi
 
 has_bluetooth || warn "No Bluetooth adapter found on this computer; installing it anyway (a USB adapter works once plugged in)."
 say "Installing bluez"
-apt_install bluez
+# rfkill: what switches the radio on and off (bin/radios, the debsway menu)
+apt_install bluez rfkill
 # Sound over Bluetooth needs PipeWire's Bluetooth module; only if sound is set up
 if is_installed pipewire-audio; then apt_install libspa-0.2-bluetooth; fi
 install_bin radios
