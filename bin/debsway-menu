@@ -58,6 +58,26 @@ screen_off() {
 trap screen_off EXIT
 trap 'exit 130' INT TERM HUP
 
+# settle: a new window starts at a small default size and sway stretches it a
+# moment later. Drawing at once would show the menu off to one side and then
+# jump, so wait (at most about half a second) until the size has stopped
+# changing for a fraction of a second.
+settle() {
+    local prev cur same=0 i
+    prev=$(stty size 2>/dev/null)
+    for ((i = 0; i < 20; i++)); do
+        sleep 0.03
+        cur=$(stty size 2>/dev/null)
+        if [ "$cur" = "$prev" ]; then
+            same=$((same + 1))
+            [ "$same" -lt 4 ] || return 0
+        else
+            same=0
+            prev=$cur
+        fi
+    done
+}
+
 # on_idle: the window is a different size from when it was drawn (a new window
 # starts small and sway stretches it a moment later): draw it again
 on_idle() {
@@ -70,7 +90,7 @@ on_idle() {
 read_key() {
     local c rc k2 k3 k4 report btn
     while :; do
-        IFS= read -rsn1 -t 0.25 c
+        IFS= read -rsn1 -t 0.1 c
         rc=$?
         [ "$rc" -ne 0 ] || break
         [ "$rc" -gt 128 ] || exit 0   # nothing more to read: the window is gone
@@ -168,6 +188,7 @@ if [ "$1" = --pager ]; then
     [ -r "${2:-}" ] || { echo "debsway-menu: can't read ${2:-a file}" >&2; exit 1; }
     mapfile -t lines <"$2"
     screen_on
+    settle
     pager
 fi
 [ "$1" = --tui ] || { echo "usage: debsway-menu [--tui | --pager FILE]" >&2; exit 2; }
@@ -227,6 +248,7 @@ run_choice() {
 }
 
 screen_on
+settle
 REDRAW=draw
 while :; do
     draw

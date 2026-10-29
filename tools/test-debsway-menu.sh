@@ -61,6 +61,11 @@ def run(script, env, keys, rows=24, cols=80):
         fcntl.ioctl(0, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
         os.execvpe("/bin/bash", ["bash", script, "--tui"], env)
     drawn = b""
+    if keys and isinstance(keys[0], tuple) and keys[0][0] == "early":
+        # the window is stretched just after the menu starts, before it has drawn anything
+        time.sleep(0.08)
+        fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", keys[0][1], keys[0][2], 0, 0))
+        keys = keys[1:]
     def pump(wait=0.4):
         nonlocal drawn
         end = time.time() + wait
@@ -127,6 +132,7 @@ if __name__ == "__main__":
         "help-wheel": ["\r", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b"],
         "status-esc": ["\x1b[A", "\r", "\x1b"],
         "resize": [("resize", 40, 120), "q"],
+        "early-resize": [("early", 40, 120), "q"],
         "q": ["q"],
     }
     drawn, status = run(script, env, scenarios[scenario])
@@ -190,6 +196,9 @@ menu resize
 check "the menu starts centered for the window's first size (24x80)" grep -q 'TITLES 9;28' <<<"$out"
 check "and centers itself again, with no key pressed, when sway stretches the window" grep -q 'TITLES 9;28 17;48' <<<"$out"
 check "...without leaving the menu" grep -q 'STATUS 0' <<<"$out"
+
+menu early-resize
+check "a window stretched before the first draw is drawn centered at once, with no jump" grep -qx 'TITLES 17;48' <<<"$(grep TITLES <<<"$out")"
 
 menu enter "$T/nowhere"
 check "without the debsway folder only Help is drawn" grep -q 'DREW Help$' <<<"$out"
