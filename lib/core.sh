@@ -32,6 +32,16 @@ tty_read() {
     printf -v "$1" '%s' "$_line"
 }
 
+# pause_if_asked: when a script was started from the debsway menu
+# (DEBSWAY_PAUSE=1), its window closes the moment the script ends, so wait for
+# Enter first. Called at the end of what the user may want to read, not when
+# nothing was done. Does nothing in a terminal of your own.
+pause_if_asked() {
+    [ -n "${DEBSWAY_PAUSE:-}" ] || return 0
+    local _
+    tty_read _ $'\nPress Enter to close. '
+}
+
 # ask "Question?" [y|n]: default answer is the second argument
 ask() {
     local reply def=${2:-n} hint='[y/N]'

@@ -135,4 +135,6 @@ save_state() {
 
 # Everything runs inside main: git may replace this very file while it runs
 main "$@"
-exit $?
+rc=$?
+pause_if_asked
+exit $rc

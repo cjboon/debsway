@@ -1,9 +1,9 @@
 #!/bin/bash
-# The "debsway" item at the left of the status bar: click it for a small menu
-# with Help (the key cheat sheet), Install apps (install-extras.sh), Update
-# (update.sh) and Status (status.sh). Super+? still opens the cheat sheet
-# straight away. The windows the last three open are floating terminals
-# that stay open until you press Enter.
+# The "debsway" item at the left of the status bar: click it for a fullscreen,
+# black-and-gray menu (bin/debsway-menu) with Help (the key cheat sheet),
+# Install apps (install-extras.sh), Update (update.sh) and Status (status.sh).
+# Arrow keys and Enter choose, or click; Esc closes. What you choose runs in
+# that same window. Super+? still opens the cheat sheet straight away.
 # Usage: bash debsway-menu.sh [--remove]
 # status: bin:debsway-menu
 # files: bin/sway-status data/keys.txt
@@ -16,21 +16,16 @@ if [ "${1:-}" = --remove ]; then
     remove_snippet debsway-menu
     remove_bin debsway-menu
     # The bar keeps its "debsway" label; a click then opens the key cheat sheet
-    # directly. wmenu is shared with the power menu and the launcher.
-    apt_purge wmenu
+    # directly.
     exit
 fi
 
 say "Installing the debsway menu"
-apt_install wmenu
 install_bin debsway-menu
 # The bar (the "debsway" item) and the cheat sheet that mentions it
 install_bin sway-status
 mkdir -p "${KEYS%/*}"
 install -m 0644 "$DEBSWAY_DIR/data/keys.txt" "$KEYS"
-
-put_snippet debsway-menu <<'SNIP'
-# The windows the debsway menu opens (debsway parts/debsway-menu.sh)
-for_window [app_id="debsway-run"] floating enable, resize set width 80 ppt height 80 ppt
-SNIP
+# An earlier version put a window rule here; the window is now fullscreen by itself
+remove_snippet debsway-menu
 note "Click \"debsway\" in the bar: Help, Install apps, Update, Status."

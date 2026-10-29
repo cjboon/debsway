@@ -33,6 +33,34 @@ fi
 
 chosen=()
 
+# The checklist in grays on black, to match the terminal it opens in (whiptail
+# is blue and red by default). Your own NEWT_COLORS wins if you set one.
+export NEWT_COLORS=${NEWT_COLORS:-'
+root=lightgray,black
+roottext=lightgray,black
+window=lightgray,black
+border=gray,black
+shadow=black,black
+title=white,black
+button=black,lightgray
+actbutton=black,white
+compactbutton=lightgray,black
+checkbox=lightgray,black
+actcheckbox=black,lightgray
+listbox=lightgray,black
+actlistbox=lightgray,black
+sellistbox=white,black
+actsellistbox=black,lightgray
+textbox=lightgray,black
+acttextbox=black,lightgray
+entry=lightgray,black
+disentry=gray,black
+label=lightgray,black
+helpline=gray,black
+emptyscale=gray,black
+fullscale=lightgray,black
+'}
+
 # whiptail comes with Debian's standard system: a list of check boxes
 pick_with_whiptail() {
     local items=() line name summary installed rows cols out
@@ -98,5 +126,7 @@ done
 say "Extras done"
 if [ ${#failed[@]} -gt 0 ]; then
     warn "These failed: ${failed[*]}. Run one again with: bash extras/NAME.sh"
+    pause_if_asked
     exit 1
 fi
+pause_if_asked
