@@ -90,6 +90,21 @@ update_affected() {
     done < <(update_scripts)
 }
 
+# update_new_parts OLD NEW: parts of the base desktop (the PARTS list in
+# packages.sh) that are new between OLD and NEW. They aren't set up yet, so
+# the "is it installed" test can't find them, but a base part is meant to be
+# there.
+update_new_parts() {
+    local f p
+    # shellcheck disable=SC1091  # PARTS is the list in packages.sh
+    . "$DEBSWAY_DIR/packages.sh"
+    while IFS= read -r f; do
+        p=${f#parts/}
+        p=${p%.sh}
+        case " ${PARTS[*]} " in *" $p "*) echo "$f" ;; esac
+    done < <(git -C "$DEBSWAY_DIR" diff --name-only --diff-filter=A "$1" "$2" -- 'parts/*.sh')
+}
+
 # update_core_changes OLD NEW: the shared files (lib/, install-base.sh...)
 # that changed, one per line
 update_core_changes() {

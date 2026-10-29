@@ -87,6 +87,10 @@ main() {
         while IFS= read -r script; do
             if update_installed "$script"; then offered+=("$script"); fi
         done < <(update_affected "$old" "$now")
+        # a base part that is new in this update (it can't be "set up" yet)
+        while IFS= read -r script; do
+            case " ${offered[*]} " in *" $script "*) ;; *) offered+=("$script") ;; esac
+        done < <(update_new_parts "$old" "$now")
         core=$(update_core_changes "$old" "$now" | paste -sd' ')
         if [ -n "$core" ]; then
             note "Shared files changed too ($core). They aren't counted against any one script;"

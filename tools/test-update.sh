@@ -36,6 +36,11 @@ echo '# changed' >>"$T/W/data/claude-vm-firewall.nft"
 echo '# changed' >>"$T/W/lib/appimage.sh"
 echo '# changed' >>"$T/W/lib/core.sh"
 sed -i 's/^\(SPARROW_FPR=.\)./\1X/' "$T/W/pins.sh"
+# a new base part (in the PARTS list) and a new part that isn't one
+printf '#!/bin/bash\n# status: bin:newpart\n' >"$T/W/parts/newpart.sh"
+printf '#!/bin/bash\n# status: bin:otherpart\n' >"$T/W/parts/otherpart.sh"
+sed -i 's/^PARTS=(/PARTS=(newpart /' "$T/W/packages.sh"
+git -C "$T/W" add -A
 git -C "$T/W" commit -q -am second && git -C "$T/W" push -q origin main
 SECOND=$(git -C "$T/W" rev-parse HEAD)
 
@@ -66,6 +71,8 @@ check "a changed bin/ file reruns the script that installs it" ran parts/incogni
 check "a changed data/ file reruns the script that uses it" ran extras/claude-code.sh
 check "a changed library reruns the scripts that source it" ran extras/feather-wallet.sh
 check "a changed pin reruns the script that uses it" ran extras/sparrow-wallet.sh
+check "a base part that is new is offered although it isn't set up yet" ran parts/newpart.sh
+check "a new part outside the base list is not" not ran parts/otherpart.sh
 check "an installed script whose files didn't change is left alone" not ran extras/media.sh
 check "a changed script that isn't set up here is left alone" not ran extras/claude-vm.sh
 check "a changed core library is reported, not counted against every script" grep -q 'lib/core.sh' <<<"$out"
