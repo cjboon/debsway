@@ -3,7 +3,10 @@
 # install upward. Asks for the network and password, connects, and sets
 # it up to reconnect at boot.
 #
-#   bash wifi.sh        (uses sudo, or run it as root after: su -)
+#   bash wifi.sh            (uses sudo, or run it as root after: su -)
+#   bash wifi.sh --remove   undo it: remove the Wi-Fi settings wifi.sh wrote, and
+#                           offer to remove NetworkManager and the random Wi-Fi
+#                           address too, for a computer that doesn't need Wi-Fi
 #
 # Backends, first one usable wins:
 #   NetworkManager -> iwd -> wpa_supplicant (+ ifupdown or systemd-networkd)
@@ -21,6 +24,28 @@ if [ "$(id -u)" -ne 0 ]; then
         exec sudo bash "$DEBSWAY_DIR/wifi.sh" "$@"
     fi
     die "Needs root. Run: su -   then: bash $DEBSWAY_DIR/wifi.sh"
+fi
+
+# ------------------------------------------------------------------ --remove
+
+if [ "${1:-}" = --remove ]; then
+    say "Removing the Wi-Fi setup"
+    remove_wifi_config
+    # NetworkManager and the random address are parts, run as your own user
+    pieces=()
+    is_installed network-manager && pieces+=(network-manager)
+    [ -e /etc/NetworkManager/conf.d/90-debsway-random-mac.conf ] && pieces+=(random-mac)
+    if [ ${#pieces[@]} -gt 0 ]; then
+        note "Also set up by debsway for Wi-Fi: ${pieces[*]}"
+        if [ -n "${SUDO_USER:-}" ] && ask "Remove those too? (This computer will then have only its wired connection.)" n; then
+            for p in random-mac network-manager; do
+                case " ${pieces[*]} " in *" $p "*) sudo -u "$SUDO_USER" bash "$DEBSWAY_DIR/parts/$p.sh" --remove ;; esac
+            done
+        else
+            note "To remove them later, as your own user: bash parts/random-mac.sh --remove, then bash parts/network-manager.sh --remove"
+        fi
+    fi
+    exit 0
 fi
 
 IF=

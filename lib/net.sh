@@ -69,3 +69,39 @@ sshd_problems() {
         $1 == "allowusers" { seen = 1; if ($0 != "allowusers " user) print "AllowUsers includes " $2 }
         END { if (!seen) print "AllowUsers is not set" }'
 }
+
+# remove_wifi_config: undoes what wifi.sh wrote for a Wi-Fi it set up by hand
+# (run as root): the wpa_supplicant files it marked as its own and their
+# per-interface services, its ifupdown stanzas, its systemd-networkd files, and
+# the DNS file it saved. It leaves alone what NetworkManager has (that is
+# parts/network-manager.sh) and every package. Prints what it removed.
+# DEBSWAY_ETC is where /etc is, for tests.
+remove_wifi_config() {
+    local etc=${DEBSWAY_ETC:-/etc} f ifc networkd=false
+    for f in "$etc"/wpa_supplicant/wpa_supplicant-*.conf; do
+        [ -f "$f" ] && [ "$(head -1 "$f")" = "# Written by debsway wifi.sh" ] || continue
+        ifc=${f##*/wpa_supplicant-}
+        ifc=${ifc%.conf}
+        systemctl disable --now "wpa_supplicant@$ifc.service" >/dev/null 2>&1 || true
+        rm -f "$f"
+        note "Removed $f"
+    done
+    for f in "$etc"/network/interfaces.d/debsway-wifi-*; do
+        [ -f "$f" ] || continue
+        ifc=${f##*/debsway-wifi-}
+        ifdown "$ifc" >/dev/null 2>&1 || true
+        rm -f "$f"
+        note "Removed $f"
+    done
+    for f in "$etc"/systemd/network/50-debsway-*.network; do
+        [ -f "$f" ] || continue
+        rm -f "$f"
+        networkd=true
+        note "Removed $f"
+    done
+    if $networkd; then systemctl restart systemd-networkd >/dev/null 2>&1 || true; fi
+    if [ -e "$etc/resolv.conf.debsway.bak" ] && [ ! -L "$etc/resolv.conf" ]; then
+        cp -a "$etc/resolv.conf.debsway.bak" "$etc/resolv.conf" && rm -f "$etc/resolv.conf.debsway.bak"
+        note "Put back $etc/resolv.conf"
+    fi
+}

@@ -45,3 +45,16 @@ its standard input, iwd from a file only root can read, and wpa_supplicant
 from a config file only root can read. If your `nmcli` doesn't accept the
 password that way, `DEBSWAY_PASSWORD_ON_COMMAND_LINE=1 bash wifi.sh` uses
 the old way.
+
+## Removing it: `wifi.sh --remove`
+
+For a computer that doesn't need Wi-Fi (or no longer does), `bash wifi.sh --remove`
+undoes what `wifi.sh` set up by hand: the `wpa_supplicant` files it marked as its
+own and their services, its `ifupdown` stanzas, its `systemd-networkd` files and
+the DNS file it saved (which it puts back). Files of yours with similar names are
+left alone, and no package is removed.
+
+It then offers to remove the other Wi-Fi pieces debsway installs, NetworkManager
+and the random Wi-Fi address, leaving only the wired connection. Say no and it
+prints the two commands for later. `install-base.sh` skips both on a computer
+with no Wi-Fi adapter to begin with.
