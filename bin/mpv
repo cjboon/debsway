@@ -2,4 +2,16 @@
 # mpv: written by debsway extras/media.sh
 # The video and music player, run in a sandbox that sees only the files you
 # open (and the network only for a URL).
+# The first time it is started with no sound set up, it says so once (sound is
+# the pipewire-audio extra); it does not offer to install anything.
+rt=${XDG_RUNTIME_DIR:-/nonexistent}
+if [ ! -S "$rt/pipewire-0" ] && [ ! -S "$rt/pulse/native" ]; then
+    told=${XDG_STATE_HOME:-$HOME/.local/state}/debsway/mpv-no-sound
+    if [ ! -e "$told" ]; then
+        msg="No sound package is installed, so mpv will play without sound. To add it: debsway --apps, then check pipewire-audio."
+        echo "mpv: $msg" >&2
+        if command -v notify-send >/dev/null; then notify-send -a debsway "mpv has no sound" "$msg" 2>/dev/null; fi
+        mkdir -p "${told%/*}" && : >"$told"
+    fi
+fi
 exec "$HOME/.local/bin/media-sandbox" /usr/bin/mpv "$@"
