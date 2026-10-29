@@ -335,7 +335,7 @@ while read -r day what; do
     else
         ok "$what checked $day"
     fi
-done < <(awk '/^# checked: / { day = $3 } /^[A-Z_]+=/ && day { sub(/=.*/, ""); print day, $0; day = "" }' pins.sh)
+done < <(awk '/^# checked: / { day = $3 } /^[A-Z][A-Z0-9_]*=/ && day { sub(/=.*/, ""); print day, $0; day = "" }' pins.sh)
 
 # --------------------------------------------------------------------
 section "Debian and Firefox features debsway relies on"
