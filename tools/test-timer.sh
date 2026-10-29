@@ -89,9 +89,19 @@ id=$(find "$T/run/debsway-timers" -type f -printf '%f')
 : >"$T/calls"
 t fire "$id"
 check "ringing sends a notification with the name" grep -q 'notify-send -u critical -t 0 -a debsway Timer done pasta' <<<"$(calls)"
-check "ringing plays a sound when the system has one" bash -c "[ ! -r /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga ] || grep -q pw-play '$T/calls'"
+check "with no sound theme the notification says there is no sound" grep -q 'Timer done pasta (no sound: debsway --apps' <<<"$(calls)"
+check "...and nothing is played" bash -c "! grep -q '^pw-play' '$T/calls'"
 check "ringing removes the timer" test "$(files)" = 0
 check "ringing twice does nothing" t fire "$id"
+mkdir -p "$T/sounds" && : >"$T/sounds/alarm-clock-elapsed.oga"
+export DEBSWAY_SOUND_DIR="$T/sounds"
+t 1m "tea" >/dev/null
+id=$(find "$T/run/debsway-timers" -type f -printf '%f')
+: >"$T/calls"
+t fire "$id"
+check "with the sound theme, ringing plays the alarm sound three times" test "$(grep -c "^pw-play $T/sounds/alarm-clock-elapsed.oga" "$T/calls")" -eq 3
+check "...and the notification has no apology" bash -c "! grep -q '(no sound' '$T/calls'"
+unset DEBSWAY_SOUND_DIR
 
 # 8. the clock setting
 t clock date off >/dev/null
@@ -143,6 +153,8 @@ print("q", run(["q\r"])[0])
 status, out = run(["\x1b[A", "\x1b"])
 print("arrow-then-esc", status)
 print("hint", b"Esc or q" in out)
+import re, datetime
+print("date", bool(re.search(rb"\d{4}-\d{2}-\d{2}", out)))
 PY
 esc=$(python3 -I "$T/esc.py" "$TIMER" 2>&1)
 check "Esc closes the timer menu" grep -qx 'esc 0' <<<"$esc"
@@ -150,5 +162,11 @@ check "an arrow key does not close it (it is history, not Esc)" grep -qx 'arrow 
 check "q and Enter still close it" grep -qx 'q 0' <<<"$esc"
 check "Esc closes it after an arrow key too" grep -qx 'arrow-then-esc 0' <<<"$esc"
 check "the menu says Esc closes it" grep -qx 'hint True' <<<"$esc"
+check "the menu shows today's date" grep -qx 'date True' <<<"$esc"
+# ...also when the bar has the date turned off
+bash "$TIMER" clock date off >/dev/null
+esc=$(python3 -I "$T/esc.py" "$TIMER" 2>&1)
+check "...even with the date turned off in the bar" grep -qx 'date True' <<<"$esc"
+bash "$TIMER" clock date on >/dev/null
 
 [ "$fails" -eq 0 ]
