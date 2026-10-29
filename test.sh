@@ -92,6 +92,9 @@ w=$(sed -n '/--remove ]; then/,/^fi/p' extras/whonix.sh)
 for f in bin/onion-site bin/onion-site-session lib/onion-site.sh data/onion-site-firewall.nft data/onion-site-provision.sh; do
     [ -f "$f" ] || bad "extras/onion-site.sh needs $f"
 done
+for f in lib/tails.sh bin/tails-usb; do
+    [ -f "$f" ] || bad "extras/tails-usb.sh needs $f"
+done
 for f in lib/secure-dns.sh data/secure-dns-firewall.nft; do
     [ -f "$f" ] || bad "extras/secure-dns.sh needs $f"
 done
@@ -186,6 +189,14 @@ if out=$(bash tools/test-onion-site.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") onion site checks"
 else
     bad "onion site checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "Tails on a USB stick (lib/tails.sh): release file, which disks, writing"
+if out=$(bash tools/test-tails-usb.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") Tails stick checks"
+else
+    bad "Tails stick checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
 fi
 
 # --------------------------------------------------------------------
@@ -482,6 +493,7 @@ if online; then
     check_key "SimpleX" "$SIMPLEX_FPR" "$SIMPLEX_KEY_URL"
     check_key "Sparrow" "$SPARROW_FPR" "$SPARROW_KEY_URL"
     check_key "Mullvad" "$MULLVAD_FPR" "$MULLVAD_KEY_URL"
+    check_key "Tails" "$TAILS_FPR" "$TAILS_KEY_URL"
 
     # ----------------------------------------------------------------
     section "Newest releases: found, and signed by the pinned key"
@@ -591,6 +603,17 @@ LIST
         done
         ok "$name apt repository: signed, has $*"
     }
+    # Tails: the release file still reads as tails-usb expects, and its image's
+    # signature is there (the image itself is too big to fetch here)
+    . lib/tails.sh
+    if wget -qO "$TMP/tails.json" "$TAILS_LATEST_URL" && line=$(tails_latest "$TMP/tails.json"); then
+        read -r v _ <<<"$line"
+        exists "$TAILS_SIG_BASE/tails-amd64-$v.img.sig" && ok "Tails $v: release file and signature (extras/tails-usb.sh)" ||
+            bad "Tails $v: no signature at $TAILS_SIG_BASE/tails-amd64-$v.img.sig"
+    else
+        bad "Tails: the release file at $TAILS_LATEST_URL isn't as tails-usb expects"
+    fi
+
     # The resolvers extras/secure-dns.sh offers: each IPv4 address answers on port
     # 853 with a certificate for its pinned name (IPv6 is often not reachable)
     . lib/secure-dns.sh

@@ -23,6 +23,7 @@ doesn't, and how to remove it. The short list of all of them is in
 - [Share files over Tor with OnionShare](onionshare.md)
 - [Your own onion site](onion-site.md)
 - [Remote access over Tor](remote-access.md)
+- [Tails on a USB stick](tails-usb.md)
 
 ## Sandboxes and test machines
 

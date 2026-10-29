@@ -35,6 +35,12 @@ WHONIX_KEY_URL=https://keys.openpgp.org/vks/v1/by-fingerprint/916B8D99C38EAF5E8A
 # checked: 2026-10-26  Whonix 18.2.4.2 LXQt
 WHONIX_TESTED_VERSION=18
 
+# Tails (extras/tails-usb.sh). The Tails signing key, which signs every Tails
+# image (expires 2028-10-22; Tails says it extends it as needed).
+# checked: 2026-10-29  tails.net/doc/about/openpgp_keys; tails.net/install/expert; keys.openpgp.org
+TAILS_FPR=A490D0F4D311A4153E2BB7CADBB802B258ACD84F
+TAILS_KEY_URL=https://tails.net/tails-signing.key
+
 # Feather Wallet (extras/feather-wallet.sh). FeatherWallet <dev@featherwallet.org>.
 # checked: 2026-10-26  featherwallet.org/download; docs.featherwallet.org
 FEATHER_FPR=8185E158A33330C7FD61BC0D1F76E155CEFBA71C
