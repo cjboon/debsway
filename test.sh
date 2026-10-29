@@ -555,6 +555,16 @@ if online; then
 feather feather-wallet/feather feather-wallet.sh
 simplex simplex-chat/simplex-chat simplex-chat.sh
 LIST
+    # Sparrow comes as a .deb straight from its makers, not from an apt
+    # repository, so nothing updates it by itself either
+    if is_installed sparrowwallet; then
+        have=$(dpkg-query -W -f='${Version}' sparrowwallet 2>/dev/null)
+        have=${have%-*}
+        v=$(latest_github_tag sparrowwallet/sparrow)
+        if [ -n "$v" ] && [ "$v" != "$have" ]; then
+            meh "sparrow $have is installed, $v is out: bash extras/sparrow-wallet.sh"
+        fi
+    fi
     # Apps from other apt repositories only update by themselves if allowed
     while read -r pkg conf; do
         is_installed "$pkg" || continue

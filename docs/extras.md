@@ -43,9 +43,10 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `file-manager.sh` | Thunar, a light graphical file manager, with Trash and thumbnails (made the default for folders). Prints its keys |
 
 Programs from Mullvad's and Anthropic's apt repositories are updated by
-unattended-upgrades along with Debian's; the AppImages (Feather, SimpleX)
-are updated by running their script again, and `bash test.sh` tells you
-when a newer release is out.
+unattended-upgrades along with Debian's; the apps downloaded straight from
+their makers (the Feather and SimpleX AppImages, Sparrow's .deb) are updated
+by running their script again, and `bash test.sh` tells you when a newer
+release is out.
 
 Downloads from outside Debian are checked against the keys in
 `pins.sh`: the key is fetched into a throwaway keyring and refused
