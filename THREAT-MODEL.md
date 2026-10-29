@@ -162,6 +162,12 @@ With the extras:
   pick still sees every name, and the name of each site also travels
   unencrypted at the start of most HTTPS connections, so it hides where
   you go from your network less than a VPN or Tor does.
+- **Being found through your onion site**, if you run one
+  (`extras/onion-site.sh`). Its VM has no network, so the site's own software
+  can't give away your address, but the site is only up while your computer is
+  on: when it is up can link it to you. A hole in the app gets the VM and the
+  site's data (not your computer), and anything you put in the site itself
+  (names, metadata in files, writing style) is yours to watch.
 - **A listening service, if you turn on remote access**
   (`extras/remote-access.sh`). Nothing listens by default. With it on,
   sshd runs (on 127.0.0.1, keys only) behind a Tor onion service that

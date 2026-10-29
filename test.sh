@@ -67,6 +67,9 @@ done
 for f in bin/claude-vm bin/claude-vm-session data/claude-vm-firewall.nft data/claude-vm-provision.sh vendor/mockvps-kvm/mockvps-kvm.sh; do
     [ -f "$f" ] || bad "extras/claude-vm.sh needs $f"
 done
+for f in bin/onion-site bin/onion-site-session lib/onion-site.sh data/onion-site-firewall.nft data/onion-site-provision.sh; do
+    [ -f "$f" ] || bad "extras/onion-site.sh needs $f"
+done
 for f in lib/secure-dns.sh data/secure-dns-firewall.nft; do
     [ -f "$f" ] || bad "extras/secure-dns.sh needs $f"
 done
@@ -153,6 +156,14 @@ if out=$(bash tools/test-signatures.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") signature checks"
 else
     bad "signature checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "Your onion site (extras/onion-site.sh): command, session, offline VM settings, Tor"
+if out=$(bash tools/test-onion-site.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") onion site checks"
+else
+    bad "onion site checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
 fi
 
 # --------------------------------------------------------------------

@@ -175,7 +175,7 @@ tor_bridge_config() {
 # The debsway scripts that use the system tor service (tor@default), each
 # marked by a file in /etc/tor. OnionShare runs its own tor and masks the system
 # one, but only while none of these needs it.
-TOR_SERVICE_MARKS=".debsway-apt-tor .debsway-remote-access"
+TOR_SERVICE_MARKS=".debsway-apt-tor .debsway-remote-access .debsway-onion-site"
 
 # system_tor_wanted [MARK]: one of them, other than MARK (the script asking,
 # while it removes itself), is set up. DEBSWAY_ETC is where /etc is, for tests.

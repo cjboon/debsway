@@ -26,7 +26,8 @@ What's different from a dotfiles repo:
 
 Everything beyond the base is optional, one script per app in `extras/`:
 Firefox profiles, w3m, Tor Browser with bridges, Whonix, Mullvad VPN and
-Browser, encrypted DNS (Unbound, DNSSEC, DNS over TLS), OnionShare, wallets (Electrum, Sparrow, Feather), SimpleX Chat,
+Browser, encrypted DNS (Unbound, DNSSEC, DNS over TLS), OnionShare, your
+own onion site in an offline VM, wallets (Electrum, Sparrow, Feather), SimpleX Chat,
 KeePassXC, encrypted backups and more.
 
 It's a set of scripts, not a distribution: you install Debian yourself,

@@ -150,7 +150,8 @@ Every option has an environment-variable equivalent (VM_NAME, VM_USER,
 SSH_HOST_PORT, VM_VCPUS, VM_MEMORY, VM_DISK_SIZE_MB, WORKDIR, DEBIAN_SUITE,
 SSH_HOST_IP, WEB_TUNNEL=0|1, UNINSTALL=1, DRY_RUN=1,
 PURGE_SOFTWARE=1, START=1, STOP=1, STATUS=1,
-FORWARDS="8443:443,3000:3000", USER_DATA=FILE, PACKAGES="git,curl",
+FORWARDS="8443:443,3000:3000", USER_DATA=FILE, NET_RESTRICT=0|1,
+HOST_FORWARDS="127.0.0.1:18080:80", GUEST_SOCKS="10.0.2.100:9050", PACKAGES="git,curl",
 PROVISION_FILES="a.sh:b.sh", PROVISION_ONLY=1, DEBIAN_MIRROR_PROTO=https,
 REQUIRE_SIGNATURE=1); flags win.
 
@@ -214,6 +215,15 @@ init_defaults() {
   SSH_HOST_IP="${SSH_HOST_IP:-127.0.0.1}"
   DEBIAN_SUITE="${DEBIAN_SUITE:-stable}"
   WEB_TUNNEL="${WEB_TUNNEL:-1}"
+  # (debsway) For a VM that must not reach any network: NET_RESTRICT=1 runs it
+  # with QEMU's restrict=on (the guest can't send a packet out; only the
+  # forwards below get through), HOST_FORWARDS="127.0.0.1:18080:80 ..." adds
+  # host-loopback ports that lead into the guest, and GUEST_SOCKS="10.0.2.100:9050"
+  # gives the guest that one address, relayed per connection to the host's
+  # 127.0.0.1:9050 (Tor's SOCKS port) with socat. Run phase only.
+  NET_RESTRICT="${NET_RESTRICT:-0}"
+  HOST_FORWARDS="${HOST_FORWARDS:-}"
+  GUEST_SOCKS="${GUEST_SOCKS:-}"
   UNINSTALL="${UNINSTALL:-0}"
   DRY_RUN="${DRY_RUN:-0}"
   PURGE_SOFTWARE="${PURGE_SOFTWARE:-0}"
@@ -377,6 +387,18 @@ check_snapshot_name() {
 }
 
 validate_config() {
+  local hf
+  [[ "$NET_RESTRICT" == 0 || "$NET_RESTRICT" == 1 ]] || die "NET_RESTRICT must be 0 or 1 (got '$NET_RESTRICT')"
+  for hf in $HOST_FORWARDS; do
+    [[ "$hf" =~ ^127\.0\.0\.1:([0-9]{4,5}):([0-9]{1,5})$ ]] && is_uint "${BASH_REMATCH[1]}" 1024 65535 &&
+      is_uint "${hf##*:}" 1 65535 ||
+      die "HOST_FORWARDS entries must look like 127.0.0.1:18080:80 (got '$hf')"
+  done
+  if [[ -n "$GUEST_SOCKS" ]]; then
+    [[ "$GUEST_SOCKS" =~ ^10\.0\.2\.([0-9]{1,3}):([0-9]{1,5})$ ]] ||
+      die "GUEST_SOCKS must look like 10.0.2.100:9050 (got '$GUEST_SOCKS')"
+    command -v socat >/dev/null 2>&1 || die "GUEST_SOCKS needs socat: sudo apt-get install socat"
+  fi
   [[ "$VM_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$ ]] \
     || die "VM_NAME must be 1-64 chars [A-Za-z0-9_.-], not starting with - or . (got '$VM_NAME')"
   [[ "$VM_USER" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] \
@@ -840,6 +862,14 @@ define_cmd() {
     # SSH LocalForwards written to the ssh config block, so they exist only
     # while an 'ssh <name>' session is open (and never clash with QEMU).
     iface+=",hostfwd=tcp:$SSH_HOST_IP:$SSH_HOST_PORT-:22"
+    # (debsway) see NET_RESTRICT, HOST_FORWARDS and GUEST_SOCKS in init_defaults
+    if [[ "$NET_RESTRICT" == 1 ]]; then iface+=",restrict=on"; fi
+    for f in $HOST_FORWARDS; do
+      iface+=",hostfwd=tcp:127.0.0.1:$(cut -d: -f2 <<<"$f")-:${f##*:}"
+    done
+    if [[ -n "$GUEST_SOCKS" ]]; then
+      iface+=",guestfwd=tcp:$GUEST_SOCKS-cmd:socat - TCP:127.0.0.1:9050"
+    fi
     QQA+=(-nic "$iface")
   fi
   QQA+=(-boot order=c)
@@ -865,9 +895,15 @@ port_in_use() {
 }
 
 check_port_free() {
+  local hf
   if port_in_use "$SSH_HOST_PORT"; then
     die "Host port $SSH_HOST_PORT is already in use (checked with a plain TCP bind probe). Pick another with -p/--port."
   fi
+  for hf in $HOST_FORWARDS; do
+    if port_in_use "$(cut -d: -f2 <<<"$hf")"; then
+      die "Host port $(cut -d: -f2 <<<"$hf") (HOST_FORWARDS) is already in use."
+    fi
+  done
 }
 
 process_is_qemu() {

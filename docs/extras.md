@@ -23,6 +23,7 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `tor-browser.sh` | Tor Browser (Safest, JavaScript off, a bridge before its first connection if you need one: obfs4, webtunnel, Snowflake or meek). See below |
 | `whonix.sh` | Whonix Gateway + Workstation VMs on KVM. See below |
 | `onionshare.sh` | Share files, receive files, host a site or a chat over Tor, with a bridge if you need one (obfs4 or Snowflake). Prints `onionshare-cli` examples |
+| `onion-site.sh` | Your own onion site, able to run more than static files: nginx in front and your own app server, or a Python (Flask) app run by gunicorn. It runs in a VM with **no network at all**, so nothing the site does can give away your address; only Tor on this computer reaches it. Public, or private with client keys. Needs KVM. See below |
 | `remote-access.sh` | ssh into this computer from another one over a Tor onion service, with no firewall port opened. sshd listens on 127.0.0.1 only (keys only, your user only) and the onion service needs a client key. Shows the address and the exact setup lines for the other computer. See below |
 | `mullvad-vpn.sh` | Mullvad VPN (app and `mullvad` command), from Mullvad's signed apt repo. Prints `mullvad` examples |
 | `secure-dns.sh` | Encrypted, checked DNS: Unbound on this computer checks every answer with DNSSEC and asks one resolver you pick (Quad9, Digitale Gesellschaft or Applied Privacy) over DNS over TLS; only Unbound may send DNS out, and nothing falls back to unencrypted DNS. Wi-Fi sign-in pages don't work while it's on. See below |
@@ -202,6 +203,52 @@ Before anything is switched over, it checks that names resolve through the
 resolver you picked; if they don't (port 853 blocked, a sign-in page), it puts
 DNS back as it was. Run it again to pick another resolver. `bash status.sh`
 shows which one is in use.
+
+## Your onion site (`extras/onion-site.sh`)
+
+A website at a `.onion` address, served from this computer, for sites that
+need more than static files. The most common way an onion site gives away
+where it runs is its own software reaching out to the internet (an image, a
+font, an update check, an email, a DNS lookup), so here the site runs in a VM
+that **can't reach any network at all**:
+
+```
+Tor Browser → Tor network → Tor on this computer → 127.0.0.1:18080 → the VM: nginx → your app
+```
+
+- **The VM** is built with the bundled `mockvps-kvm` and run by a locked user,
+  `onion-site`, like `claude-vm`. After its first setup QEMU runs it with
+  `restrict=on`: the guest can't send a single packet out. Two ports on this
+  computer's loopback lead in: its SSH console (2243) and its nginx (18080).
+  A firewall rule on the `onion-site` user keeps even the QEMU process off
+  your network.
+- **Inside**, nginx serves `/srv/site/static` and passes everything else to
+  the app on `127.0.0.1:8000`. It shows no version and keeps no access log;
+  the time zone is UTC. You pick the app when you set it up:
+  - **any**: you run your own app server on `127.0.0.1:8000` (`onion-site shell`);
+  - **python**: gunicorn runs a Flask app (`app.py` with `app = Flask(...)`)
+    as a locked-down service; a small one is there to start from. Anything the
+    app keeps goes in `/srv/site/data`.
+- **Public or private**, also chosen at setup. Private: only visitors you give
+  a client key can find the site; Tor Browser asks for the key the first time.
+- **Tor** is the system tor service on this computer (shared with apt over Tor
+  and remote access, with your bridge if you need one), with Tor's defences
+  against floods of visits. Its config is checked before Tor restarts.
+- **No shared folder.** `onion-site upload static FOLDER` and
+  `onion-site upload app FOLDER` send a folder in; it replaces what was there.
+- **Updates.** `onion-site update` restarts the VM with one more way out, a
+  relay to this computer's Tor for apt only, upgrades it, and restarts it
+  without that.
+
+The app can't fetch anything from the internet, ever: no packages from pip or
+npm at run time, no outside images or fonts, no email. What it needs goes in
+with `upload`, or comes from Debian during `onion-site update`.
+
+What it can't hide: the site is only up while this computer is on and the VM
+runs (`onion-site start`), and that timing can link it to you; a dedicated
+machine is the right host for anything serious. A hole in your app gets the
+VM and the site's data, not this computer. Back up `/var/lib/tor/debsway-onion-site`
+(as root) to keep the address; `--remove` asks before deleting it.
 
 ## Remote access (`extras/remote-access.sh`)
 
