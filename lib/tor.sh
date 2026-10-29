@@ -188,6 +188,25 @@ system_tor_wanted() {
     return 1
 }
 
+# onion_add_client SVC_DIR: a client key for the onion service in SVC_DIR
+# (Tor's client authorization). Its public half goes to Tor here, as
+# SVC_DIR/authorized_clients/client-DATE.auth; the private half is left in
+# CLIENT_PRIV, to be shown once for the computer or Tor Browser that will
+# connect (the x25519 keys Tor wants, as base32 without padding).
+onion_add_client() {
+    local dir=$1 tmp pub priv name
+    tmp=$(mktemp)
+    openssl genpkey -algorithm x25519 -outform DER -out "$tmp"
+    priv=$(tail -c 32 "$tmp" | base32 | tr -d =)
+    pub=$(openssl pkey -inform DER -in "$tmp" -pubout -outform DER | tail -c 32 | base32 | tr -d =)
+    rm -f "$tmp"
+    name=client-$(date +%Y%m%d-%H%M%S)
+    printf 'descriptor:x25519:%s\n' "$pub" | sudo tee "$dir/authorized_clients/$name.auth" >/dev/null
+    sudo chown debian-tor:debian-tor "$dir/authorized_clients/$name.auth"
+    sudo chmod 600 "$dir/authorized_clients/$name.auth"
+    CLIENT_PRIV=$priv
+}
+
 # tor_connected [SINCE]: tor writes "Bootstrapped 100%" to the journal when it
 # is connected. SINCE ("YYYY-MM-DD HH:MM:SS") ignores lines from before a restart.
 tor_connected() {

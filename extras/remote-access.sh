@@ -171,28 +171,12 @@ sudo sed -i "\\|^$BEGIN\$|,\\|^$END\$|d" "$TORRC"
 sudo install -d -m 0700 -o debian-tor -g debian-tor "$SVC_DIR" "$SVC_DIR/authorized_clients"
 printf '%s\n' 'Written by debsway extras/remote-access.sh: ssh over a Tor onion service.' | sudo tee "$MARK" >/dev/null
 
-# A client key: its public half goes to Tor here, the private half is
-# shown once for the computer that will connect (the x25519 keys Tor wants,
-# as base32 without padding)
-add_client() {
-    local tmp pub priv name
-    tmp=$(mktemp)
-    openssl genpkey -algorithm x25519 -outform DER -out "$tmp"
-    priv=$(tail -c 32 "$tmp" | base32 | tr -d =)
-    pub=$(openssl pkey -inform DER -in "$tmp" -pubout -outform DER | tail -c 32 | base32 | tr -d =)
-    rm -f "$tmp"
-    name=client-$(date +%Y%m%d-%H%M%S)
-    printf 'descriptor:x25519:%s\n' "$pub" | sudo tee "$SVC_DIR/authorized_clients/$name.auth" >/dev/null
-    sudo chown debian-tor:debian-tor "$SVC_DIR/authorized_clients/$name.auth"
-    sudo chmod 600 "$SVC_DIR/authorized_clients/$name.auth"
-    CLIENT_PRIV=$priv
-}
 
 if ! sudo ls "$SVC_DIR/authorized_clients" 2>/dev/null | grep -q '\.auth$'; then
-    add_client
+    onion_add_client "$SVC_DIR"
     show_client=true
 elif ask "Authorize another computer (makes a new client key)?" n; then
-    add_client
+    onion_add_client "$SVC_DIR"
     show_client=true
 else
     show_client=false
