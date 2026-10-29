@@ -191,26 +191,28 @@ cancel_cmd() {
     echo "Cancelled $n."
 }
 
-# (DEBSWAY_SOUND_DIR: a test points this at pretend sounds)
-SOUND_DIR=${DEBSWAY_SOUND_DIR:-/usr/share/sounds/freedesktop/stereo}
+# The alarm sound is debsway's own three short beeps (data/alarm.wav), put here
+# by parts/core-commands.sh; no sound theme package is needed.
+# (DEBSWAY_SOUND_DIR: a test points this at a pretend one)
+SOUND_DIR=${DEBSWAY_SOUND_DIR:-$HOME/.local/share/debsway}
 
 # fire ID: what systemd runs when the time comes
 fire() {
-    local f=$STATE/$1 kind label title snd sound='' hint='' i
+    local f=$STATE/$1 kind label title sound='' hint='' i
     [ -f "$f" ] || exit 0
     kind=$(sed -n 's/^kind=//p' "$f"); label=$(sed -n 's/^label=//p' "$f")
     rm -f "$f"
     refresh_bar
     if [ "$kind" = alarm ]; then title="Alarm"; else title="Timer done"; fi
-    # The sound is in the freedesktop sound theme and is played with pw-play
-    # (the sound extra installs both). Without them there is only the
-    # notification, so it says why instead of leaving you wondering.
-    for snd in "$SOUND_DIR/alarm-clock-elapsed.oga" "$SOUND_DIR/complete.oga"; do
-        if [ -r "$snd" ]; then sound=$snd; break; fi
-    done
-    if [ -z "$sound" ] || ! command -v pw-play >/dev/null; then
+    # It is played with pw-play, which comes with PipeWire (the sound extra).
+    # Without that there is only the notification, so it says why instead of
+    # leaving you wondering.
+    if ! command -v pw-play >/dev/null; then
         hint=" (no sound: debsway --apps, then check pipewire-audio)"
-        sound=
+    elif [ ! -r "$SOUND_DIR/alarm.wav" ]; then
+        hint=" (no sound: the alarm sound is missing; run debsway --update)"
+    else
+        sound=$SOUND_DIR/alarm.wav
     fi
     command -v notify-send >/dev/null &&
         notify-send -u critical -t 0 -a debsway "$title" "${label:-$(date +'%-I:%M %p')}$hint"

@@ -6,7 +6,7 @@
 # parts and extras, can bring them up to date when they change.
 # Usage: bash core-commands.sh [--remove]
 # status: bin:timer
-# files: data/keys.txt
+# files: data/keys.txt data/alarm.wav
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
@@ -16,7 +16,7 @@ COMMANDS=(keys debsway-welcome timer display-scale sway-status)
 if [ "${1:-}" = --remove ]; then
     warn "These are what the desktop's keys, bar and first-login screen run."
     for c in "${COMMANDS[@]}"; do remove_bin "$c"; done
-    rm -f "$KEYS"
+    rm -f "$KEYS" "${KEYS%/*}/alarm.wav"
     exit
 fi
 
@@ -25,3 +25,5 @@ for c in "${COMMANDS[@]}"; do install_bin "$c"; done
 mkdir -p "${KEYS%/*}"
 install -m 0644 "$DEBSWAY_DIR/data/keys.txt" "$KEYS"
 note "Cheat sheet: $KEYS"
+# The sound timer and alarm clock ring with: three short beeps (tools/make-alarm-sound.py)
+install -m 0644 "$DEBSWAY_DIR/data/alarm.wav" "${KEYS%/*}/alarm.wav"

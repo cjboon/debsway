@@ -20,9 +20,9 @@ if [ "${1:-}" = --remove ]; then
 fi
 
 say "Installing pipewire-audio"
-# pipewire-bin: pw-play, which the alarm and timer use; sound-theme-freedesktop: the
-# alarm sound itself (Debian's pipewire-audio brings neither)
-apt_install pipewire-audio pipewire-bin sound-theme-freedesktop
+# (PipeWire brings pw-play, which the timer and alarm clock ring with; the sound
+# they play is debsway's own, data/alarm.wav)
+apt_install pipewire-audio
 
 say "Starting the user audio services"
 systemctl --user enable --now pipewire.socket pipewire-pulse.socket wireplumber.service ||

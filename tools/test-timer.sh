@@ -89,17 +89,17 @@ id=$(find "$T/run/debsway-timers" -type f -printf '%f')
 : >"$T/calls"
 t fire "$id"
 check "ringing sends a notification with the name" grep -q 'notify-send -u critical -t 0 -a debsway Timer done pasta' <<<"$(calls)"
-check "with no sound theme the notification says there is no sound" grep -q 'Timer done pasta (no sound: debsway --apps' <<<"$(calls)"
+check "with the alarm sound missing the notification says so" grep -q 'Timer done pasta (no sound: the alarm sound is missing' <<<"$(calls)"
 check "...and nothing is played" bash -c "! grep -q '^pw-play' '$T/calls'"
 check "ringing removes the timer" test "$(files)" = 0
 check "ringing twice does nothing" t fire "$id"
-mkdir -p "$T/sounds" && : >"$T/sounds/alarm-clock-elapsed.oga"
+mkdir -p "$T/sounds" && : >"$T/sounds/alarm.wav"
 export DEBSWAY_SOUND_DIR="$T/sounds"
 t 1m "tea" >/dev/null
 id=$(find "$T/run/debsway-timers" -type f -printf '%f')
 : >"$T/calls"
 t fire "$id"
-check "with the sound theme, ringing plays the alarm sound three times" test "$(grep -c "^pw-play $T/sounds/alarm-clock-elapsed.oga" "$T/calls")" -eq 3
+check "with the sound present, ringing plays the alarm sound three times" test "$(grep -c "^pw-play $T/sounds/alarm.wav" "$T/calls")" -eq 3
 check "...and the notification has no apology" bash -c "! grep -q '(no sound' '$T/calls'"
 unset DEBSWAY_SOUND_DIR
 
@@ -168,5 +168,18 @@ bash "$TIMER" clock date off >/dev/null
 esc=$(python3 -I "$T/esc.py" "$TIMER" 2>&1)
 check "...even with the date turned off in the bar" grep -qx 'date True' <<<"$esc"
 bash "$TIMER" clock date on >/dev/null
+
+# the sound debsway ships: a short, small, valid mono WAV, made by tools/make-alarm-sound.py
+check "data/alarm.wav is a valid short mono 16-bit sound under 40 KB" python3 -I -c '
+import os, sys, wave
+f = sys.argv[1]
+w = wave.open(f)
+secs = w.getnframes() / w.getframerate()
+assert w.getnchannels() == 1 and w.getsampwidth() == 2, "not mono 16-bit"
+assert 0.4 < secs < 2.0, secs
+assert os.path.getsize(f) < 40000
+' "$HERE/data/alarm.wav"
+check "the base part installs it" grep -q 'data/alarm.wav' "$HERE/parts/core-commands.sh"
+check "the sound extra no longer needs a sound theme package" bash -c "! grep -q 'sound-theme' '$HERE/extras/pipewire-audio.sh'"
 
 [ "$fails" -eq 0 ]
