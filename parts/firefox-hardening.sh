@@ -39,9 +39,10 @@ if [ "${1:-}" = --remove ]; then
         fi
     done
     sudo rm -f "$PREFS" "$ETC/debsway-ublock-allow" "$ALLOW"
-    # Firefox and uBlock Origin are part of the core (install-base.sh), so they stay
+    # Firefox and uBlock Origin stay while the Firefox extra is installed (its own
+    # marker package keeps them); extras/firefox.sh --remove takes them out
     apt_purge
-    note "Firefox is back to its own defaults after a restart. uBlock Origin stays installed."
+    note "Firefox is back to its own defaults after a restart."
     exit
 fi
 
