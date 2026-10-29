@@ -274,6 +274,22 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "Wi-Fi, Bluetooth and microphone switches (bin/radios), with pretend rfkill and wpctl"
+if out=$(bash tools/test-radios.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") radio switch checks"
+else
+    bad "radio switch checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "Bluetooth's start-off setting and the new extras"
+if out=$(bash tools/test-bluetooth-conf.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") bluetooth setup checks"
+else
+    bad "bluetooth setup checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "Pinned keys and versions (pins.sh): checked by hand within a year?"
 now=$(date +%s)
 # Each "# checked: DATE" line belongs to the next VARIABLE= line

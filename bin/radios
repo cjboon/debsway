@@ -1,0 +1,93 @@
+#!/bin/bash
+# radios: written by debsway parts/debsway-menu.sh
+# Switch Wi-Fi, Bluetooth and the microphone on and off, for the debsway menu
+# and the command line. Only what this computer has is listed.
+#   radios list                          what there is and whether it is on
+#   radios NAME [status|on|off|toggle]   NAME is wifi, bluetooth or mic
+#   radios mic off --wait                waits for the microphone to appear first
+#                                        (used at login, when sound is still starting)
+# Wi-Fi and Bluetooth go through rfkill (the kernel's radio switch, which
+# NetworkManager and bluez both respect), so "off" is the radio itself being
+# off, not just a program being told not to use it. The microphone is muted in
+# PipeWire: that is software, and a program that runs as you can unmute it
+# again; a hardware switch or a disabled device is the stronger kind.
+# Exit status: 0 done, 1 not available on this computer, 2 bad use.
+export PATH="$PATH:/usr/sbin:/sbin"
+SYS=${DEBSWAY_SYS:-/sys}
+SOURCE=@DEFAULT_AUDIO_SOURCE@
+
+usage() { echo "usage: radios list | radios wifi|bluetooth|mic [status|on|off|toggle]" >&2; exit 2; }
+
+exists() {
+    case $1 in
+        wifi) command -v rfkill >/dev/null && { compgen -G "$SYS/class/net/*/wireless" || compgen -G "$SYS/class/ieee80211/*"; } >/dev/null ;;
+        bluetooth) command -v rfkill >/dev/null && compgen -G "$SYS/class/bluetooth/*" >/dev/null ;;
+        mic) command -v wpctl >/dev/null && wpctl get-volume "$SOURCE" >/dev/null 2>&1 ;;
+        *) return 1 ;;
+    esac
+}
+
+# state NAME: on, off, or blocked (a hardware switch holds it off)
+state() {
+    local out
+    case $1 in
+        wifi | bluetooth)
+            out=$(rfkill -n -o SOFT,HARD list "$1" 2>/dev/null)
+            if grep -q ' blocked' <<<"$out"; then echo blocked
+            elif grep -q '^blocked' <<<"$out"; then echo off
+            elif [ "$1" = bluetooth ] && command -v bluetoothctl >/dev/null \
+                && ! bluetoothctl show 2>/dev/null | grep -q 'Powered: yes'; then
+                # the radio is free but the adapter is powered down (bluez starts it off)
+                echo off
+            else echo on; fi ;;
+        mic)
+            if wpctl get-volume "$SOURCE" 2>/dev/null | grep -q MUTED; then echo off; else echo on; fi ;;
+    esac
+}
+
+set_state() { # NAME on|off
+    case $1 in
+        wifi) if [ "$2" = on ]; then rfkill unblock wifi; else rfkill block wifi; fi ;;
+        bluetooth)
+            if [ "$2" = on ]; then
+                rfkill unblock bluetooth
+                if command -v bluetoothctl >/dev/null; then
+                    # right after unblocking, bluez can take a moment to see the adapter
+                    bluetoothctl power on >/dev/null 2>&1 || { sleep 1; bluetoothctl power on >/dev/null 2>&1; }
+                fi
+            else
+                command -v bluetoothctl >/dev/null && bluetoothctl power off >/dev/null 2>&1
+                rfkill block bluetooth
+            fi ;;
+        mic) wpctl set-mute "$SOURCE" "$([ "$2" = on ] && echo 0 || echo 1)" ;;
+    esac
+    # the bar shows the Wi-Fi name: have it look again (only if that pid really is sway-status)
+    local pid
+    pid=$(cat "${XDG_RUNTIME_DIR:-/tmp}/sway-status.pid" 2>/dev/null)
+    if [ -n "$pid" ] && { tr '\0' ' ' <"/proc/$pid/cmdline"; } 2>/dev/null | grep -q sway-status; then
+        kill -USR1 "$pid" 2>/dev/null
+    fi
+    return 0
+}
+
+cmd=${1:-}
+case $cmd in
+    list)
+        for r in wifi bluetooth mic; do
+            if exists "$r"; then echo "$r $(state "$r")"; fi
+        done ;;
+    wifi | bluetooth | mic)
+        action=${2:-status}
+        if [ "${3:-}" = --wait ] || [ "$action" = --wait ] || [ "${4:-}" = --wait ]; then
+            for _ in $(seq 20); do exists "$cmd" && break; sleep 1; done
+            [ "$action" != --wait ] || action=status
+        fi
+        exists "$cmd" || { echo "radios: no $cmd on this computer." >&2; exit 1; }
+        case $action in
+            status) state "$cmd" ;;
+            on | off) set_state "$cmd" "$action" ;;
+            toggle) if [ "$(state "$cmd")" = on ]; then set_state "$cmd" off; else set_state "$cmd" on; fi ;;
+            *) usage ;;
+        esac ;;
+    *) usage ;;
+esac

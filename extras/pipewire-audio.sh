@@ -3,6 +3,9 @@
 # volume by 5%, never above 100%, unmutes on a change and refreshes the status
 # bar right away. Keys: the volume and mute keys, or Super+F10 (mute), Super+F11
 # (down) and Super+F12 (up) for keyboards without them.
+# The microphone is muted at every login (bin/radios), so it is off until you
+# switch it on: debsway menu > Microphone, debsway --mic on, or the mic key.
+# That is muting in software; see man debsway.
 # Usage: bash pipewire-audio.sh [--remove]
 # summary: Sound: PipeWire, volume keys, microphone mute
 # status: apt:pipewire-audio
@@ -24,6 +27,8 @@ systemctl --user enable --now pipewire.socket pipewire-pulse.socket wireplumber.
     warn "Couldn't start them now; they start at your next login."
 
 install_bin volume
+# the microphone switch (the debsway menu uses it too)
+install_bin radios
 
 # The stock config binds the media keys to pactl, which isn't installed
 put_snippet audio <<'EOF'
@@ -35,5 +40,10 @@ bindsym --locked XF86AudioMicMute exec ~/.local/bin/volume micmute
 bindsym $mod+F10 exec ~/.local/bin/volume mute
 bindsym $mod+F11 exec ~/.local/bin/volume down
 bindsym $mod+F12 exec ~/.local/bin/volume up
+# The microphone starts muted. Sound is still starting at login, so it waits for it.
+exec ~/.local/bin/radios mic off --wait
 EOF
-note "Check it with: wpctl status"
+# Muted now too, not only at the next login
+~/.local/bin/radios mic off >/dev/null 2>&1 || true
+note "The microphone is off until you switch it on (debsway --mic on, or the debsway menu)."
+note "Check the sound with: wpctl status"

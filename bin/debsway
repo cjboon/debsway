@@ -16,6 +16,9 @@ usage: debsway [OPTION]
   --apps       pick optional programs to install (--apps --list lists them)
   --status     show what debsway has set up on this computer
   --test       check that the scripts, packages, downloads and keys still work
+  --wifi [on|off]       switch Wi-Fi on or off (no word: say whether it is on)
+  --bluetooth [on|off]  the same for Bluetooth
+  --mic [on|off]        the same for the microphone (muted at every login)
   --welcome    show the key cheat sheet again (the first-login screen)
   --version    which version of debsway this is
   --dir        where the debsway folder is
@@ -50,6 +53,9 @@ case $cmd in
     --apps | apps) need_dir; exec bash "$DIR/install-extras.sh" "$@" ;;
     --status | status) need_dir; exec bash "$DIR/status.sh" "$@" ;;
     --test | test) need_dir; cd "$DIR" && exec bash test.sh "$@" ;;
+    --wifi | --bluetooth | --mic)
+        [ -x "$HOME/.local/bin/radios" ] || die "the radio switch isn't installed (bash $DIR/parts/debsway-menu.sh)."
+        exec "$HOME/.local/bin/radios" "${cmd#--}" "$@" ;;
     --welcome | welcome)
         # the same cheat sheet the first login opens, in this terminal
         if [ -x "$HOME/.local/bin/keys" ]; then exec "$HOME/.local/bin/keys"; fi

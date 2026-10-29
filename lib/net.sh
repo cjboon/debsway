@@ -105,3 +105,26 @@ remove_wifi_config() {
         note "Put back $etc/resolv.conf"
     fi
 }
+
+# set_bluetooth_autoenable FILE false|true: bluez's main.conf decides whether
+# the adapter powers up by itself at start. "false" keeps it off until you
+# switch it on (the debsway menu or debsway --bluetooth on); "true" puts bluez's
+# own default back. Lines this wrote end in "# debsway" so they can be undone.
+set_bluetooth_autoenable() {
+    local f=$1 want=$2 tmp
+    if [ "$want" = false ]; then
+        if grep -qE '^[#[:space:]]*AutoEnable=' "$f" 2>/dev/null; then
+            tmp=$(mktemp)
+            sed -E 's/^[#[:space:]]*AutoEnable=.*/AutoEnable=false # debsway/' "$f" >"$tmp"
+            cat "$tmp" >"$f"
+            rm -f "$tmp"
+        else
+            printf '\n[Policy]\nAutoEnable=false # debsway\n' >>"$f"
+        fi
+    else
+        tmp=$(mktemp)
+        sed -E 's/^AutoEnable=false # debsway$/#AutoEnable=true/' "$f" >"$tmp"
+        cat "$tmp" >"$f"
+        rm -f "$tmp"
+    fi
+}

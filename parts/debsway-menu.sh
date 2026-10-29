@@ -18,6 +18,7 @@ MAN="$HOME/.local/share/man/man1/debsway.1"
 if [ "${1:-}" = --remove ]; then
     remove_snippet debsway-menu
     remove_bin debsway-menu
+    remove_bin radios
     remove_bin debsway
     rm -f "$MAN"
     # The bar keeps its "debsway" label; a click then opens the key cheat sheet
@@ -27,6 +28,8 @@ fi
 
 say "Installing the debsway menu"
 install_bin debsway-menu
+# Wi-Fi, Bluetooth and microphone switches (the menu lists the ones this computer has)
+install_bin radios
 # the debsway command and man debsway (man-db finds ~/.local/share/man from ~/.local/bin)
 install_bin debsway
 install -D -m 0644 "$DEBSWAY_DIR/data/debsway.1" "$MAN"

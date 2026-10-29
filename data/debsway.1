@@ -18,7 +18,8 @@ console, ssh) it shows the help.
 .TP
 .B \-\-menu
 Open the menu: a black-and-gray window under the status bar with Help, Install
-apps, Update and Status.
+apps, Update and Status, and, on computers that have them, Wi-Fi, Bluetooth
+and Microphone with their state (choosing one flips it).
 Arrow keys and Enter choose, or click; Esc closes every screen of it.
 It needs a sway session.
 Clicking
@@ -54,6 +55,25 @@ and the extras.
 .B \-\-test
 Check that the scripts, packages, downloads and signing keys still work
 .RB ( "bash test.sh" ).
+.TP
+.B \-\-wifi
+.RB [ on | off ]
+Switch Wi-Fi on or off; with no word, say whether it is on.
+This is the radio itself, through
+.BR rfkill (8),
+so NetworkManager sees it as switched off.
+Only computers with a Wi-Fi adapter have it, and the menu lists it only then.
+.TP
+.B \-\-bluetooth
+.RB [ on | off ]
+The same for Bluetooth.
+.TP
+.B \-\-mic
+.RB [ on | off ]
+The same for the microphone.
+It is muted in PipeWire at every login, so it is off until you switch it on.
+This is software muting: a program that runs as you can unmute it again; a
+hardware switch is the stronger kind.
 .TP
 .B \-\-welcome
 Show the key cheat sheet again, the screen that opens at the first login.

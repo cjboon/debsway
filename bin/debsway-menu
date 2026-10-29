@@ -194,11 +194,42 @@ fi
 [ "$1" = --tui ] || { echo "usage: debsway-menu [--tui | --pager FILE]" >&2; exit 2; }
 
 # ---- the menu ----
+# ids say what an entry does; items are what it shows. Wi-Fi, Bluetooth and
+# the microphone are listed only when this computer has them (bin/radios), with
+# their state; choosing one flips it and the menu stays open.
+RADIOS=$HOME/.local/bin/radios
+ids=(help)
 items=(Help)
-if [ -f "$DIR/update.sh" ]; then items+=("Install apps" Update Status); fi
-n=${#items[@]}
+if [ -f "$DIR/update.sh" ]; then
+    ids+=(apps update status)
+    items+=("Install apps" Update Status)
+fi
+radio_ids=()
+if [ -x "$RADIOS" ]; then
+    mapfile -t radio_ids < <("$RADIOS" list 2>/dev/null | awk '{ print $1 }')
+fi
+fixed=${#ids[@]}
+for r in "${radio_ids[@]}"; do ids+=("$r"); items+=(""); done
+n=${#ids[@]}
+
+# radio_label NAME: what the entry shows, e.g. "Wi-Fi: on"
+radio_label() {
+    local name state
+    case $1 in wifi) name=Wi-Fi ;; bluetooth) name=Bluetooth ;; mic) name=Microphone ;; esac
+    state=$("$RADIOS" "$1" status 2>/dev/null)
+    case $state in
+        blocked) state="off (hardware switch)" ;;
+        "") state="unknown" ;;
+    esac
+    printf '%s: %s' "$name" "$state"
+}
+refresh_items() {
+    local i
+    for ((i = fixed; i < n; i++)); do items[i]=$(radio_label "${ids[i]}"); done
+}
+refresh_items
 sel=0
-width=26
+width=38
 first_row=1 first_col=1
 
 # draw: the title, the choices (the chosen one reversed), and a hint, centered
@@ -227,23 +258,27 @@ draw() {
 # run_choice: runs the chosen entry in this window
 run_choice() {
     local out
-    case ${items[sel]} in
-        Help)
+    case ${ids[sel]} in
+        wifi | bluetooth | mic)
+            "$RADIOS" "${ids[sel]}" toggle >/dev/null 2>&1
+            refresh_items
+            return 0 ;;
+        help)
             # the sheet without the lines for things that are not installed
             mapfile -t lines < <("$HOME/.local/bin/keys" --text 2>/dev/null || cat "$KEYS_FILE")
             pager ;;
-        Status)
+        status)
             REDRAW=
             printf '\e[2J\e[1;1HLooking at what is set up...'
             out=$(cd "$DIR" && bash status.sh 2>&1)
             mapfile -t lines <<<"$out"
             pager ;;
-        "Install apps" | Update)
+        apps | update)
             trap - EXIT
             screen_off
             cd "$DIR" || exit 1
             export DEBSWAY_PAUSE=1
-            if [ "${items[sel]}" = Update ]; then exec bash update.sh; fi
+            if [ "${ids[sel]}" = update ]; then exec bash update.sh; fi
             exec bash install-extras.sh ;;
     esac
 }

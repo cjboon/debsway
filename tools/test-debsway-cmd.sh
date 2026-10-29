@@ -25,6 +25,8 @@ done
 printf '#!/bin/sh\necho "menu" >>"%s/ran"\n' "$T" >"$T/home/.local/bin/debsway-menu"
 # shellcheck disable=SC2016
 printf '#!/bin/sh\necho "keys" >>"%s/ran"\n' "$T" >"$T/home/.local/bin/keys"
+# shellcheck disable=SC2016
+printf '#!/bin/sh\necho "radios $*" >>"%s/ran"\n' "$T" >"$T/home/.local/bin/radios"
 chmod +x "$T/dir/"*.sh "$T/home/.local/bin/"*
 
 d() { : >"$T/ran"; env -u WAYLAND_DISPLAY HOME="$T/home" DEBSWAY_DIR="$T/dir" bash "$CMD" "$@"; }
@@ -41,6 +43,12 @@ d --test --offline
 check "--test runs test.sh" grep -qx 'test --offline' "$T/ran"
 d --welcome
 check "--welcome shows the key cheat sheet" grep -qx 'keys' "$T/ran"
+d --mic off
+check "--mic off goes to the radio switch" grep -qx 'radios mic off' "$T/ran"
+d --wifi
+check "--wifi alone asks for its state" grep -qx 'radios wifi' "$T/ran"
+d --bluetooth toggle
+check "--bluetooth takes its word on" grep -qx 'radios bluetooth toggle' "$T/ran"
 d update
 check "a bare word works too (debsway update)" grep -qx 'update *' "$T/ran"
 check "--dir says where the folder is" test "$(d --dir)" = "$T/dir"

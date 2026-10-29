@@ -30,6 +30,18 @@ mkdir -p "$T/fake" "$T/home/.local/bin" "$T/debsway"
     printf '#!/bin/sh\n[ "$1" = --text ] && exec cat "%s/home/.local/share/debsway/keys.txt"\necho "keys" >>"%s/ran"\n' "$T" "$T" >"$T/home/.local/bin/keys"
 }
 chmod +x "$T/fake/"* "$T/home/.local/bin/keys"
+# radios: what it lists comes from $T/radios-list; state per name in $T/radio-NAME
+# shellcheck disable=SC2016  # written into the pretend program, expanded when it runs
+cat >"$T/radios.sh" <<FAKE
+#!/bin/bash
+case \$1 in
+    list) [ -f "$T/radios-list" ] && cat "$T/radios-list" ;;
+    *) case \${2:-status} in
+        status) cat "$T/radio-\$1" ;;
+        toggle) echo "radios \$1 toggle" >>"$T/ran"; if [ "\$(cat "$T/radio-\$1")" = on ]; then echo off >"$T/radio-\$1"; else echo on >"$T/radio-\$1"; fi ;;
+       esac ;;
+esac
+FAKE
 : >"$T/debsway/update.sh"
 mkdir -p "$T/home/.local/share/debsway"
 for i in $(seq 100); do echo "line $i"; done >"$T/home/.local/share/debsway/keys.txt"
@@ -133,6 +145,8 @@ if __name__ == "__main__":
         "help-wheel": ["\r", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b"],
         "status-esc": ["\x1b[A", "\r", "\x1b"],
         "resize": [("resize", 40, 120), "q"],
+        "toggle-wifi": ["j", "j", "j", "j", "\r", "\x1b"],
+        "click-mic": [click_on("Microphone"), "\x1b"],
         "early-resize": [("early", 40, 120), "q"],
         "q": ["q"],
     }
@@ -194,12 +208,32 @@ menu q
 check "q closes the menu" grep -q 'STATUS 0' <<<"$out"
 
 menu resize
-check "the menu starts centered for the window's first size (24x80)" grep -q 'TITLES 9;28' <<<"$out"
-check "and centers itself again, with no key pressed, when sway stretches the window" grep -q 'TITLES 9;28 17;48' <<<"$out"
+check "the menu starts centered for the window's first size (24x80)" grep -q 'TITLES 9;22' <<<"$out"
+check "and centers itself again, with no key pressed, when sway stretches the window" grep -q 'TITLES 9;22 17;42' <<<"$out"
 check "...without leaving the menu" grep -q 'STATUS 0' <<<"$out"
 
 menu early-resize
-check "a window stretched before the first draw is drawn centered at once, with no jump" grep -qx 'TITLES 17;48' <<<"$(grep TITLES <<<"$out")"
+check "a window stretched before the first draw is drawn centered at once, with no jump" grep -qx 'TITLES 17;42' <<<"$(grep TITLES <<<"$out")"
+
+# Wi-Fi, Bluetooth and the microphone: listed only when the computer has them
+printf 'wifi on\nmic off\n' >"$T/radios-list"; echo on >"$T/radio-wifi"; echo off >"$T/radio-mic"
+cp "$T/radios.sh" "$T/home/.local/bin/radios"; chmod +x "$T/home/.local/bin/radios"
+menu toggle-wifi
+check "Wi-Fi and the microphone are listed, with their state" grep -q 'Wi-Fi: on' "$T/screen" && grep -q 'Microphone: off' "$T/screen"
+check "choosing Wi-Fi flips it" grep -qx 'radios wifi toggle' "$T/ran"
+check "...the entry shows the new state" grep -q 'Wi-Fi: off' "$T/screen"
+check "...and the menu stays open until Esc" grep -q 'STATUS 0' <<<"$out"
+check "Bluetooth is not listed when the computer has none" not grep -q 'Bluetooth' "$T/screen"
+echo off >"$T/radio-mic"
+menu click-mic
+check "a click on Microphone flips it too" grep -qx 'radios mic toggle' "$T/ran"
+printf 'bluetooth blocked\n' >"$T/radios-list"; echo blocked >"$T/radio-bluetooth"
+menu enter
+check "a Bluetooth held off by a hardware switch says so" grep -q 'Bluetooth: off (hardware switch)' "$T/screen"
+: >"$T/radios-list"
+menu enter
+check "with nothing to switch only the usual entries show" test "$(grep -c -E 'Wi-Fi|Bluetooth|Microphone' "$T/screen")" -eq 0
+rm -f "$T/home/.local/bin/radios"
 
 menu enter "$T/nowhere"
 check "without the debsway folder only Help is drawn" grep -q 'DREW Help$' <<<"$out"

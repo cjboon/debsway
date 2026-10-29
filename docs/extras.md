@@ -7,10 +7,12 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | Script | What you get |
 |---|---|
 | `firefox.sh` | Firefox ESR with uBlock Origin in medium mode, HTTPS-Only Mode, the JavaScript JIT off, a restart notice, and (if you want it) `incognito`, a throwaway Firefox as a locked-down user. See below |
-| `pipewire-audio.sh` | Sound. `volume up\|down\|mute\|micmute [STEP]` (5% steps, never above 100%, unmutes on a change, refreshes the bar); the volume and mute keys use it, and Super+F10 / F11 / F12 (mute / down / up) do for keyboards without them (packages: pipewire-audio) |
+| `pipewire-audio.sh` | Sound. The microphone is muted at every login and stays off until you switch it on (debsway menu > Microphone, or `debsway --mic on`); that is software muting, so a program running as you could unmute it, and a hardware switch is stronger. `volume up\|down\|mute\|micmute [STEP]` (5% steps, never above 100%, unmutes on a change, refreshes the bar); the volume and mute keys use it, and Super+F10 / F11 / F12 (mute / down / up) do for keyboards without them (packages: pipewire-audio) |
 | `grim-slurp.sh` | `screenshot` and its keys (packages: grim, slurp) |
 | `udiskie.sh` | USB drives mount under `/media/$USER/` with `nosuid,nodev,noexec`; encrypted (LUKS) sticks ask for their passphrase (packages: udiskie, udisks2, cryptsetup, polkitd) |
 | `emoji-font.sh` | Color emoji (packages: fonts-noto-color-emoji) |
+| `bluetooth.sh` | Bluetooth for headphones, keyboards and mice (bluez; `bluetoothctl` pairs). The adapter starts **off** at every boot; switch it from the debsway menu or `debsway --bluetooth on`. With sound set up, also installs PipeWire's Bluetooth audio |
+| `phone-tethering.sh` | Use a phone's mobile data over the USB cable (usbmuxd and the iPhone pairing tools; Android needs nothing but its own "USB tethering" switch). Switch Wi-Fi off from the menu to use only the phone |
 | `w3m.sh` | w3m, a text-mode web browser for the terminal (no JavaScript) |
 | `keepassxc.sh` | KeePassXC password manager. Asks whether you want the Firefox extension (`webext-keepassxc-browser`): yes installs the full build (`keepassxc-full`, which has the browser integration), no installs the minimal one (`keepassxc-minimal`). Run it again to switch |
 | `git.sh` | git, and optionally GitHub's `gh`; sets your commit name and email |

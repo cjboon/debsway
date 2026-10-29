@@ -12,7 +12,7 @@
 2. Sets up sway (a copy of the stock config plus one `include` line for
    `~/.config/sway/config.d/`), the status bar (see-through black), no window
    borders (`appearance.conf`), and the key cheat sheet: `Super+?`, the `keys` command, `~/KEYS.txt` (a link
-   to the one copy), a bar with a clickable "debsway" menu (a gray menu: Help, Install apps, Update, Status) and Wi-Fi name, a scrollable volume and brightness, and a battery you can click for the time left, and a one-line hint on
+   to the one copy), a bar with a clickable "debsway" menu (a gray menu: Help, Install apps, Update, Status, and Wi-Fi, Bluetooth and Microphone switches on computers that have them) and Wi-Fi name, a scrollable volume and brightness, and a battery you can click for the time left, and a one-line hint on
    plain text consoles. `display-scale` sets the text size of each screen,
    remembered per screen (`display.conf`), and a watcher started by sway says
    once, in a notification, when a sharp screen is still at scale 1, also when

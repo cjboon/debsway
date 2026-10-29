@@ -98,6 +98,13 @@ With the extras:
 - **Physical tampering.** Someone with the laptop alone for a while
   could install a hardware keylogger or tamper with the boot process.
   debsway doesn't set up Secure Boot measurement or tamper evidence.
+- **A program listening through the microphone.** With the sound extra, the
+  microphone is muted at every login and stays off until you switch it on
+  (`debsway --mic on`, or the debsway menu). Wi-Fi and Bluetooth have the same
+  switches, on the radio itself (rfkill), and the Bluetooth extra starts its
+  adapter off. The microphone mute is software: a program running as you can
+  unmute it, so against that a hardware switch or unplugging is the stronger
+  kind. `incognito` never gets your audio server.
 - **Being identified while logged in.** A VPN, Tor or Mullvad Browser
   hides your IP address, not who you are to a site you've logged into.
 - **What you share with the sandboxes.** `claude-agent` and you both
