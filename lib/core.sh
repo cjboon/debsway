@@ -142,7 +142,7 @@ install_no_abstract() {
 }
 remove_no_abstract() {
     local s
-    for s in incognito-session claude-session claude-vm-session; do
+    for s in incognito-session claude-session claude-vm-session firefox-session; do
         [ ! -e "/usr/local/libexec/$s" ] || return 0
     done
     sudo rm -f "$NO_ABSTRACT"

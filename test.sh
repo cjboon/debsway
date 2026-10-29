@@ -290,6 +290,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "The sandboxed Firefox (bin/firefox), with pretend sudo and setfacl"
+if out=$(bash tools/test-firefox-sandbox.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") sandboxed Firefox checks"
+else
+    bad "sandboxed Firefox checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "Pinned keys and versions (pins.sh): checked by hand within a year?"
 now=$(date +%s)
 # Each "# checked: DATE" line belongs to the next VARIABLE= line

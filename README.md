@@ -13,7 +13,8 @@ or settings app: one compositor and plain text configs.
 What's different from a dotfiles repo:
 
 - **Hardened Firefox** (an extra you pick): uBlock Origin in medium mode, HTTPS-Only,
-  JIT off, DuckDuckGo. `incognito` opens a throwaway Firefox as a
+  JIT off, DuckDuckGo, and `firefox` runs it as its own locked-down user (shared
+  clipboard and `~/Downloads`, nothing else of yours). `incognito` opens a throwaway Firefox as a
   separate locked-down user, in memory, on a restricted Wayland socket,
   with its own firewall rule and audio, that plays video and sound.
 - **Sandboxes for the risky things**: images and video open in bubblewrap;

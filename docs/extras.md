@@ -13,6 +13,7 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `emoji-font.sh` | Color emoji (packages: fonts-noto-color-emoji) |
 | `bluetooth.sh` | Bluetooth for headphones, keyboards and mice (bluez; `bluetoothctl` pairs). The adapter starts **off** at every boot; switch it from the debsway menu or `debsway --bluetooth on`. With sound set up, also installs PipeWire's Bluetooth audio |
 | `phone-tethering.sh` | Use a phone's mobile data over the USB cable (usbmuxd and the iPhone pairing tools; Android needs nothing but its own "USB tethering" switch). Switch Wi-Fi off from the menu to use only the phone |
+| `firefox-sandbox.sh` | `firefox`: Firefox as its own locked-down user (`firefox`), as a normal window. Your logins and history are kept in that user's home, not yours; a hacked page reaches only that, not your files. Clipboard shared while it has focus; `~/Downloads` shared both ways; sound through a pipe (it cannot hear your microphone); firewalled off your router and local services; links from other programs open in the running window. `firefox-esr` still runs Firefox as you. See the section below |
 | `w3m.sh` | w3m, a text-mode web browser for the terminal (no JavaScript) |
 | `keepassxc.sh` | KeePassXC password manager. Asks whether you want the Firefox extension (`webext-keepassxc-browser`): yes installs the full build (`keepassxc-full`, which has the browser integration), no installs the minimal one (`keepassxc-minimal`). Run it again to switch |
 | `git.sh` | git, and optionally GitHub's `gh`; sets your commit name and email |
@@ -126,6 +127,28 @@ fixable in the BIOS; the others mean `claude-code.sh` is your option.
 What neither one protects: the internet (the agent can still send anything
 it can read to anywhere), and what you pull from it. Read what it leaves
 before you run it. See `THREAT-MODEL.md`.
+
+## The sandboxed Firefox (`extras/firefox-sandbox.sh`)
+
+`firefox` opens Firefox as a different Linux user, so a browser exploit lands in a
+user with no password, no login and none of your files. It looks like any other
+window. What is shared with you, and what is not:
+
+| | |
+|---|---|
+| Your files, ssh keys, passwords | **not** reachable (only `~/Downloads`) |
+| Logins, history, bookmarks | kept, in `/var/lib/debsway-firefox` (that user's home) |
+| Clipboard | shared while its window has focus |
+| `~/Downloads` | shared both ways; treat what lands there as untrusted |
+| Screen and keyboard | **no** screen reading, typing for you or session locking: it gets a restricted Wayland socket (`wayland-restrict`) |
+| Microphone and your audio server | **no**: sound goes through one pipe into a player of yours |
+| Your local network and this computer's services | **blocked** by a firewall rule; `sudo systemctl stop debsway-firefox-firewall` lifts it for a while |
+| Other programs' links | open in the running Firefox (a private message bus carries them) |
+| KeePassXC's browser add-on | **not supported** (it cannot reach KeePassXC from another user); copy and paste instead |
+
+`firefox-esr` runs the same Firefox as you, with everything you can reach, if the
+sandbox is ever in the way. Profiles made with `firefox-profiles/new-profile.sh`
+still run as you; moving them into the sandbox is a later step.
 
 ## Remote access (`extras/remote-access.sh`)
 

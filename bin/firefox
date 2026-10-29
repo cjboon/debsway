@@ -1,0 +1,102 @@
+#!/bin/bash
+# firefox [URL...]: written by debsway extras/firefox-sandbox.sh
+# Opens Firefox as a different, locked-down user (firefox), as a normal window
+# on your sway. Your logins and history are kept (in that user's own home), but
+# a hacked page reaches only that user: not your files, ssh keys or passwords.
+# - Clipboard: shared with your programs while the Firefox window has focus.
+# - Downloads: ~/Downloads is shared both ways. Treat what lands there as
+#   untrusted, and do not run it without looking.
+# - Screen: it gets a restricted Wayland socket (bin/wayland-restrict), not your
+#   real one, so it cannot read the screen, type for you or lock the session.
+# - Sound: its own audio server whose only output is one pipe, which a player of
+#   yours plays (as in incognito). It cannot hear your microphone.
+# - Network: the firewall keeps it off your router, printers and this computer's
+#   own services (data/firefox-firewall.nft). To use one for a while:
+#   sudo systemctl stop debsway-firefox-firewall
+# - Links from other programs open in the Firefox that is already running.
+# firefox-esr runs Firefox as you, with all your files and no such rules.
+#   firefox [--no-audio] [URL...]
+set -euo pipefail
+
+die() { printf 'firefox: %s\n' "$*" >&2; exit 1; }
+
+audio=true
+if [ "${1:-}" = --no-audio ]; then audio=false; shift; fi
+
+[ "$(id -u)" -ne 0 ] || die "run it as your normal user, not root."
+[ -n "${WAYLAND_DISPLAY:-}" ] || die "it needs your sway session; start sway first."
+rt=${XDG_RUNTIME_DIR:-}
+[ -n "$rt" ] && [ -d "$rt" ] || die "XDG_RUNTIME_DIR isn't set."
+case $WAYLAND_DISPLAY in
+    */*) die "WAYLAND_DISPLAY should be a plain name like wayland-1." ;;
+esac
+[ -S "$rt/$WAYLAND_DISPLAY" ] || die "can't find your Wayland socket ($rt/$WAYLAND_DISPLAY)."
+for a in "$@"; do
+    [[ $a =~ ^https?://[^[:space:]]+$ ]] || die "only http:// and https:// addresses can be opened."
+done
+SESSION=/usr/local/libexec/firefox-session
+# The one command your user may run as firefox (see /etc/sudoers.d)
+sudo -n -u firefox -l "$SESSION" >/dev/null 2>&1 ||
+    die "your user isn't set up to start it. Run: bash ~/debsway/extras/firefox-sandbox.sh  (firefox-esr runs Firefox as you.)"
+command -v flock >/dev/null || die "flock is missing (package util-linux)."
+
+# Already open? Then the link (or a new window) goes to that Firefox.
+exec 9>"$rt/firefox.lock"
+if ! flock -n 9; then
+    exec 9>&-
+    exec sudo -n -u firefox "$SESSION" open "$@"
+fi
+
+sock=$rt/firefox-wayland
+restrict=$(command -v wayland-restrict) || die "wayland-restrict is missing. Run: bash ~/debsway/extras/firefox-sandbox.sh"
+command -v setfacl >/dev/null || die "setfacl is missing (package acl)."
+downloads=$HOME/Downloads   # (firefox-session accepts only /home/NAME/Downloads)
+
+fifo=$rt/firefox-audio.fifo
+player=
+if $audio && command -v pw-cat >/dev/null && [ -S "$rt/pipewire-0" ]; then
+    :
+else
+    audio=false
+fi
+
+# firefox may only reach the restricted Wayland socket, the sound pipe and the
+# downloads folder, and only while it runs.
+# shellcheck disable=SC2317,SC2329  # runs from the EXIT trap
+cleanup() {
+    if [ -n "$player" ]; then kill "$player" 2>/dev/null || true; fi
+    if [ -n "${WL_PID:-}" ]; then kill "$WL_PID" 2>/dev/null || true; fi
+    rm -f "$fifo" "$sock"
+    setfacl -x u:firefox "$rt" "$HOME" 2>/dev/null || true
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM HUP
+# 9>&-: wayland-restrict must not inherit the lock.
+coproc WL { "$restrict" "$sock" firefox 9>&-; }
+IFS= read -r -t 10 line <&"${WL[0]}" && [ "$line" = ready ] ||
+    die "couldn't make a restricted Wayland socket (needs sway 1.9 or newer; see above)."
+# To reach the socket, and to pass through your home folder to ~/Downloads
+# (traverse only: it cannot list or read anything there)
+setfacl -m u:firefox:--x "$rt" "$HOME"
+setfacl -m u:firefox:rw- "$sock"
+mkdir -p "$downloads"
+# Read, write and enter ~/Downloads, for both of you, also for files made later
+setfacl -m u:firefox:rwx "$downloads"
+setfacl -d -m "u:firefox:rwx,u:$(id -un):rwx" "$downloads"
+
+if $audio; then
+    rm -f "$fifo"
+    mkfifo -m 600 "$fifo"
+    setfacl -m u:firefox:rw- "$fifo"
+    # 9>&-: the player must not inherit the lock, or it outlives us holding it
+    ( exec pw-cat -p -a --format s16 --rate 48000 --channels 2 --media-role Movie - <"$fifo" 9>&- ) &
+    player=$!
+    audio_arg=firefox-audio.fifo
+else
+    audio_arg=-
+fi
+
+rc=0
+sudo -n -u firefox "$SESSION" start "$rt" "${sock##*/}" "$audio_arg" "$downloads" "$@" || rc=$?
+exit "$rc"

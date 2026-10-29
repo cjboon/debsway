@@ -47,6 +47,15 @@ this page to decide what else you need.
   you close it. Video and sound work; the sound leaves through a one-way
   pipe, so it can't hear your microphone or your other programs. A hacked
   browser there gets a user that owns nothing.
+- **A browser exploit reaching your files.** `firefox` (`extras/firefox-sandbox.sh`)
+  runs Firefox as its own user with no password, login or access to your
+  files; only `~/Downloads` and the clipboard (while its window has focus) are
+  shared, it gets no screen-reading or typing protocols from sway, no audio
+  server or microphone, and a firewall rule keeps it off your local network.
+  `incognito` is the same idea with nothing kept and no shared clipboard. They
+  share your kernel: a kernel bug could still get out, and an exploit that
+  stays in the browser still has that profile's logins. `firefox-esr` runs as
+  you and has none of this.
 - **A booby-trapped image or video, or a coding assistant that goes wrong,
   reaching your files.** `imv` and `mpv` (`extras/media.sh`) start inside
   bubblewrap: they see only the files you open, read-only, and have no
@@ -104,7 +113,7 @@ With the extras:
   switches, on the radio itself (rfkill), and the Bluetooth extra starts its
   adapter off. The microphone mute is software: a program running as you can
   unmute it, so against that a hardware switch or unplugging is the stronger
-  kind. `incognito` never gets your audio server.
+  kind. `incognito` and the sandboxed `firefox` never get your audio server.
 - **Being identified while logged in.** A VPN, Tor or Mullvad Browser
   hides your IP address, not who you are to a site you've logged into.
 - **What you share with the sandboxes.** `claude-agent` and you both
