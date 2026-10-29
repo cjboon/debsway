@@ -8,7 +8,9 @@ this page to decide what else you need.
 
 - **Known bugs being used against you.** Debian's security fixes install
   themselves every day (`parts/unattended-upgrades.sh`), and you're told
-  when Firefox needs a restart to use its fixed version. Packages from
+  when the Firefox you run as yourself (`firefox-esr`) needs a restart to use
+  its fixed version (not the sandboxed `firefox`, its profiles or
+  `incognito`, which run as other users: reopen those after an update). Packages from
   Mullvad's and Anthropic's apt repositories are updated the same way. The
   AppImages (Feather, SimpleX) are not: run their script again, or let
   `test.sh` tell you when a newer release is out.
