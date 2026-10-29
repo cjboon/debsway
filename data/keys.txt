@@ -46,7 +46,7 @@
 
   TIMERS AND ALARMS
     Super+t                menu: type 10m, 1h30 or 7:30 and press Enter
-    Click the time         the same menu (or click the timer shown in the bar)
+    Click the time         the same menu (or click the timer shown in the bar); Esc closes it
     timer 10m tea          from a terminal; timer at 7:30 wake up
     timer list | cancel    what is running | stop one (timer cancel all)
     timer clock            show or hide the date in the bar

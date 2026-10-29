@@ -184,7 +184,7 @@ said yes to that, otherwise type `sway`. The key cheat sheet opens on
 your first login; Super+? brings it back, and so does typing `keys` or
 opening `~/KEYS.txt`. The status bar has a "debsway" at its left: click it for a black-and-gray menu that fills the window area under the bar (arrow keys and Enter, or click; Esc closes every screen) with Help (the sheet), Install apps, Update and Status, and the Wi-Fi name next to it opens nmtui. Scrolling over "vol" or "bright" changes them; clicking "vol" mutes, and clicking "bat" says how long the battery will last.
 
-Click the time (or press Super+t) for timers and alarms: type `10m` or `7:30` and press Enter. From a terminal: `timer 10m tea`, `timer at 7:30 wake up`, `timer clock` (date in the bar or not). Timers last until you log out; a sleeping laptop does not wake for them.
+Click the time (or press Super+t) for timers and alarms: type `10m` or `7:30` and press Enter; Esc closes it. From a terminal: `timer 10m tea`, `timer at 7:30 wake up`, `timer clock` (date in the bar or not). Timers last until you log out; a sleeping laptop does not wake for them.
 
 ### Getting updates from GitHub
 

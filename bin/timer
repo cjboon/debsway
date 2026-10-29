@@ -255,7 +255,20 @@ bar_format() {
 # --- the menu ---------------------------------------------------------------
 
 menu() {
-    local input n
+    local input n inputrc
+    # Esc closes the menu, like every debsway screen. readline reads its keys from
+    # this file: your usual ones, then a lone Esc (told apart from an arrow key
+    # after a tenth of a second) types q and Enter.
+    inputrc=$(mktemp)
+    trap 'rm -f "$inputrc"; trap - RETURN' RETURN
+    # shellcheck disable=SC2016  # $include is readline's own directive
+    {
+        echo '$include /etc/inputrc'
+        [ ! -f "$HOME/.inputrc" ] || echo "\$include $HOME/.inputrc"
+        echo 'set keyseq-timeout 100'
+        printf '%s\n' '"\e": "\C-a\C-kq\C-m"'
+    } >"$inputrc"
+    export INPUTRC=$inputrc
     while :; do
         load check
         printf '\033[H\033[2J'
@@ -270,7 +283,7 @@ menu() {
       10m  or  1h30  or  45s         a timer ("10m tea" gives it a name)
       7:30  or  7am  or  7:30pm      an alarm at the next 7:30
   Or a letter:
-      c   cancel one         f   show or hide the date in the bar         q   quit
+      c   cancel one         f   show or hide the date in the bar         Esc or q   quit
 
 EOF
         read -r -e -p "  > " input || return 0

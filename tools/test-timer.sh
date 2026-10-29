@@ -109,4 +109,46 @@ printf 'kind=timer\ndue=%s\nlabel=old\n' $(($(date +%s) - 1000)) >"$T/run/debswa
 t list >/dev/null
 check "a timer long past is forgotten" test "$(files)" = 0
 
+# 10. Esc closes the menu (it runs in a window of its own, from the bar or Super+t)
+cat >"$T/esc.py" <<'PY'
+import os, pty, select, sys, time
+def run(keys, wait=0.5):
+    pid, fd = pty.fork()
+    if pid == 0:
+        os.execvpe("/bin/bash", ["bash", sys.argv[1]], dict(os.environ, TERM="xterm"))
+    out = b""
+    def pump(w):
+        nonlocal out
+        end = time.time() + w
+        while time.time() < end:
+            r, _, _ = select.select([fd], [], [], 0.05)
+            if r:
+                try: d = os.read(fd, 65536)
+                except OSError: return
+                if not d: return
+                out += d
+    pump(0.8)
+    for k in keys:
+        os.write(fd, k.encode()); pump(wait)
+    for _ in range(40):
+        done, st = os.waitpid(pid, os.WNOHANG)
+        if done:
+            return os.waitstatus_to_exitcode(st), out
+        time.sleep(0.05)
+    os.kill(pid, 9); os.waitpid(pid, 0)
+    return None, out
+print("esc", run(["\x1b"])[0])
+print("arrow", run(["\x1b[A"])[0])
+print("q", run(["q\r"])[0])
+status, out = run(["\x1b[A", "\x1b"])
+print("arrow-then-esc", status)
+print("hint", b"Esc or q" in out)
+PY
+esc=$(python3 -I "$T/esc.py" "$TIMER" 2>&1)
+check "Esc closes the timer menu" grep -qx 'esc 0' <<<"$esc"
+check "an arrow key does not close it (it is history, not Esc)" grep -qx 'arrow None' <<<"$esc"
+check "q and Enter still close it" grep -qx 'q 0' <<<"$esc"
+check "Esc closes it after an arrow key too" grep -qx 'arrow-then-esc 0' <<<"$esc"
+check "the menu says Esc closes it" grep -qx 'hint True' <<<"$esc"
+
 [ "$fails" -eq 0 ]
