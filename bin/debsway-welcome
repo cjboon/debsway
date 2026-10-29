@@ -1,7 +1,8 @@
 #!/bin/sh
-# Shows the key cheat sheet on the first sway login only.
+# The first sway login only: asks whether sway's shortcuts use Super or Alt,
+# then shows the key cheat sheet (keys --welcome).
 # Written by debsway install-base.sh
 marker=${XDG_STATE_HOME:-$HOME/.local/state}/debsway/welcome-seen
 [ -e "$marker" ] && exit 0
 mkdir -p "${marker%/*}" && touch "$marker"
-exec foot --app-id=debsway-keys less "$HOME/.local/share/debsway/keys.txt"
+exec foot --app-id=debsway-keys "$HOME/.local/bin/keys" --welcome

@@ -3,6 +3,7 @@
 # of data/keys.txt): a block shows only if its command is installed. Uses pretend
 # commands in a PATH of their own. Changes nothing. Run by test.sh, or:
 #   bash tools/test-keys.sh
+# shellcheck disable=SC2016  # sway's $mod is not a shell variable
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 
 T=$(mktemp -d)
@@ -63,5 +64,40 @@ rm -f "$T/home/KEYS.txt"
 env -i HOME="$T/home" PATH="$T/bin" sh "$HERE/bin/keys" </dev/null >/dev/null 2>&1
 check "a missing KEYS.txt is written as a plain file" test -f "$T/home/KEYS.txt" -a ! -L "$T/home/KEYS.txt"
 check "...without the lines for what is not installed" not grep -q 'nmtui' "$T/home/KEYS.txt"
+
+# Alt or Super: the sheet follows the set $mod line of your sway config
+CONF=$T/home/.config/sway/config
+mkdir -p "${CONF%/*}"
+printf '%s\n' '# sway config' 'set $mod Mod4' 'bindsym $mod+Return exec foot' >"$CONF"
+out=$(keys --text)
+check "with Super as sway's key the sheet says Super+d" grep -q 'Super+d ' <<<"$out"
+check "program shortcuts are on it: Ctrl+w closes a tab" grep -q 'Ctrl+w .*close the tab' <<<"$out"
+check "...and Ctrl+q quits the program" grep -q 'Ctrl+q .*quit the program' <<<"$out"
+check "how to switch the key is on it" grep -q 'keys --mod alt' <<<"$out"
+keys --mod alt >/dev/null
+check "keys --mod alt sets Mod1 in the sway config" grep -qx 'set $mod Mod1' "$CONF"
+check "...and leaves the rest of it alone" grep -qx 'bindsym $mod+Return exec foot' "$CONF"
+out=$(keys --text)
+check "then the sheet says Alt+d" grep -q 'Alt+d ' <<<"$out"
+check "...and no Super anywhere" not grep -q 'Super' <<<"$out"
+check "...and its first line says Alt is sway's key" grep -q "Alt = sway's key" <<<"$(head -1 <<<"$out")"
+check "Ctrl+Alt+F2 is still Ctrl+Alt+F2" grep -q 'Ctrl+Alt+F2' <<<"$out"
+keys --mod super >/dev/null
+check "keys --mod super puts Mod4 back" grep -qx 'set $mod Mod4' "$CONF"
+check "a wrong word for --mod is refused" not keys --mod hyper
+printf '%s\n' 'set $mod Mod3' >"$CONF"
+check "a config with some other mod key is refused" not keys --mod alt
+check "...and not changed" grep -qx 'set $mod Mod3' "$CONF"
+
+# The first login asks which key, then shows the sheet (less is a pretend one here)
+ln -s "$(command -v cat)" "$T/bin/less"
+printf '%s\n' '# sway config' 'set $mod Mod4' >"$CONF"
+out=$(printf '2\n\n' | keys --welcome 2>&1)
+check "the first login asks Super or Alt" grep -q '2) Alt' <<<"$out"
+check "answering 2 sets Alt" grep -qx 'set $mod Mod1' "$CONF"
+check "...and then shows the sheet with Alt" grep -q 'Alt+Enter' <<<"$out"
+printf '%s\n' '# sway config' 'set $mod Mod4' >"$CONF"
+printf '\n\n' | keys --welcome >/dev/null 2>&1
+check "pressing Enter keeps Super" grep -qx 'set $mod Mod4' "$CONF"
 
 [ "$fails" -eq 0 ]

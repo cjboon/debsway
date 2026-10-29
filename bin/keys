@@ -1,26 +1,105 @@
 #!/bin/sh
 # Shows the key cheat sheet (Esc closes it). Written by debsway install-base.sh
 # data/keys.txt has blocks "@if COMMAND" ... "@end": a block is shown only if
-# COMMAND is installed, so the sheet lists just what this computer has.
-#   keys          the pager of the debsway menu when that is installed; less otherwise
-#   keys --text   the sheet as plain text on standard output
+# COMMAND is installed, so the sheet lists just what this computer has. It is
+# written with Super as sway's key; when your sway config uses Alt instead
+# (set $mod Mod1), every Super shows as Alt.
+#   keys                the pager of the debsway menu when that is installed; less otherwise
+#   keys --text         the sheet as plain text on standard output
+#   keys --mod alt      sway's shortcuts use Alt (keys --mod super: the Windows key)
+#   keys --welcome      the first login: asks which key, then shows the sheet
 SHEET=$HOME/.local/share/debsway/keys.txt
+SWAY_CONFIG=$HOME/.config/sway/config
 
-# text: the sheet without the blocks of commands that are not installed
-text() {
-    awk '
-        /^@if / { skip = (system("command -v " $2 " >/dev/null 2>&1") != 0); next }
-        /^@end/ { skip = 0; next }
-        !skip'  "$SHEET"
+# mod: Alt or Super, from the set $mod line of your sway config
+mod() {
+    # shellcheck disable=SC2016  # $mod is sway's variable, not the shell's
+    if grep -qE '^[[:space:]]*set[[:space:]]+\$mod[[:space:]]+Mod1[[:space:]]*$' "$SWAY_CONFIG" 2>/dev/null; then
+        echo Alt
+    else
+        echo Super
+    fi
 }
 
-if [ "$1" = --text ]; then text; exit; fi
+# text: the sheet without the blocks of commands that are not installed, with
+# sway's key as it is set
+text() {
+    awk -v mod="$(mod)" '
+        /^@if / { skip = (system("command -v " $2 " >/dev/null 2>&1") != 0); next }
+        /^@end/ { skip = 0; next }
+        skip { next }
+        mod == "Alt" {
+            sub(/Super = the Windows \/ Cmd key/, "Alt = sway'"'"'s key (keys --mod super: the Windows key)")
+            gsub(/Super/, "Alt")
+        }
+        { print }'  "$SHEET"
+}
+
+# set_mod super|alt: the set $mod line of your sway config, checked by sway first
+set_mod() {
+    case $1 in
+        super) want=Mod4 name=Super ;;
+        alt) want=Mod1 name=Alt ;;
+        *) echo "usage: keys --mod super|alt" >&2; return 2 ;;
+    esac
+    # shellcheck disable=SC2016  # $mod is sway's variable, not the shell's
+    if ! grep -qE '^[[:space:]]*set[[:space:]]+\$mod[[:space:]]+Mod[14][[:space:]]*$' "$SWAY_CONFIG" 2>/dev/null; then
+        echo "keys: $SWAY_CONFIG has no 'set \$mod Mod4' (or Mod1) line, so it was left alone." >&2
+        return 1
+    fi
+    new=$(mktemp) || return 1
+    sed -E "s/^([[:space:]]*set[[:space:]]+\\\$mod[[:space:]]+)Mod[14]([[:space:]]*)\$/\\1$want\\2/" "$SWAY_CONFIG" >"$new"
+    if command -v sway >/dev/null; then
+        out=$(WLR_BACKENDS=headless WLR_RENDERER=pixman WLR_LIBINPUT_NO_DEVICES=1 sway -C -c "$new" 2>&1 || true)
+        if printf '%s\n' "$out" | grep -q '\[ERROR\]'; then
+            rm -f "$new"
+            echo "keys: sway rejected the change, so nothing was changed: $(printf '%s\n' "$out" | grep -m1 '\[ERROR\]')" >&2
+            return 1
+        fi
+    fi
+    cat "$new" >"$SWAY_CONFIG"
+    rm -f "$new"
+    if [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null; then swaymsg reload >/dev/null 2>&1; fi
+    echo "sway's shortcuts now start with $name ($name+d opens the launcher, $name+Enter a terminal); keys shows them that way."
+}
+
+# welcome: which key, the first time sway starts (bin/debsway-welcome)
+welcome() {
+    cat <<'EOF'
+
+  Welcome to debsway.
+
+  sway's shortcuts all start with one key. Which one do you want?
+
+    1) Super, the Windows / Cmd key (the usual one)
+    2) Alt (handy on a keyboard without a Windows key; programs then don't get
+       their own Alt shortcuts that sway uses, such as Alt+d or Alt+1 in Firefox)
+
+  Change it any time: keys --mod alt   or   keys --mod super
+
+EOF
+    printf '  1 or 2 (Enter for Super): '
+    read -r answer || answer=
+    case $answer in
+        2 | [aA]*) set_mod alt ;;
+        *) [ "$(mod)" = Super ] || set_mod super ;;
+    esac
+    printf '  Press Enter for the list of keys. '
+    read -r _ || true
+}
+
+case ${1:-} in
+    --text) text; exit ;;
+    --mod) set_mod "${2:-}"; exit ;;
+    --welcome) welcome ;;
+esac
 
 shown=$(mktemp) || exit 1
 trap 'rm -f "$shown"' EXIT
 text >"$shown"
 # ~/KEYS.txt follows along (only if it is the link or copy debsway made)
-if [ ! -e "$HOME/KEYS.txt" ] || [ -L "$HOME/KEYS.txt" ] || grep -q 'Super = the Windows' "$HOME/KEYS.txt" 2>/dev/null; then
+if [ ! -e "$HOME/KEYS.txt" ] || [ -L "$HOME/KEYS.txt" ] || grep -q 'Super = the Windows' "$HOME/KEYS.txt" 2>/dev/null ||
+    grep -q "Alt = sway's key" "$HOME/KEYS.txt" 2>/dev/null; then
     rm -f "$HOME/KEYS.txt"
     cp "$shown" "$HOME/KEYS.txt" 2>/dev/null
 fi

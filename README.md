@@ -287,8 +287,11 @@ with `sway -C` and reloads sway.
 
 ## Keys
 
-Super is the Windows / Cmd key. Super+? shows the full list
-(`data/keys.txt`); the main ones:
+Super is the Windows / Cmd key. The first time sway starts, it asks whether
+its shortcuts should use Super or Alt (for a keyboard without a Windows key);
+`keys --mod alt` or `keys --mod super` switches later, and the cheat sheet
+shows whichever you use. Super+? shows the full list (`data/keys.txt`); the
+main ones:
 
 | Key | Action |
 |---|---|

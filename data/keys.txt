@@ -5,6 +5,7 @@
   (The debsway menu: arrows and Enter, or click. Esc closes every screen of it.)
   Lines for things you have not installed are left out; add them with debsway --apps.
   It is also the file ~/KEYS.txt.
+  The key every sway shortcut starts with: keys --mod alt, or keys --mod super.
 
   START HERE
     Super+Enter            terminal (foot)
@@ -18,6 +19,12 @@
     Shift+PageUp / Down    scroll back / forward
     Ctrl+plus / minus      bigger / smaller text (Ctrl+0: normal)
     Ctrl+Shift+n           another terminal, in the same folder
+
+  IN PROGRAMS (Firefox, Mousepad, Thunar, ...)
+    Ctrl+w                 close the tab (or the window, if it has no tabs)
+    Ctrl+q                 quit the program, all its windows
+                           (in the terminal Ctrl+w deletes a word instead:
+                           close it with Super+Shift+q or by typing exit)
 
   WINDOWS
     Super+h j k l          move focus left / down / up / right (or arrows)
