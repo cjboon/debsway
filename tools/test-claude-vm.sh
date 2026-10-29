@@ -114,4 +114,26 @@ touch "$S/vm-running"
 out=$(session connect 2>&1)
 check "a running VM is not started again, nor announced" bash -c "! grep -q -- --start '$S/calls' && [ -z '$out' ]"
 
+# mockvps-kvm's wait for the guest's SSH, on its own: the guest answers on
+# the 3rd check and takes the key on the 2nd try. Polling every 10 s cost up
+# to 10 s of a start that is about a minute; every 2 s it's at most 2.
+# shellcheck disable=SC2016  # run by the inner bash
+waited=$(bash -c '
+    eval "$(sed -n "/^wait_for_ssh_key_login() {/,/^}/p" "$1")"
+    log() { :; }; die() { echo died; exit 1; }
+    n=0; ssh_banner_ready() { n=$((n + 1)); [ "$n" -ge 3 ]; }
+    k=0; probe_key_login() { k=$((k + 1)); [ "$k" -ge 2 ]; }
+    t=0; sleep() { t=$((t + $1)); }
+    wait_for_ssh_key_login && echo "$t"' _ "$HERE/vendor/mockvps-kvm/mockvps-kvm.sh")
+check "mockvps notices the guest's SSH within 2 s of it coming up (waited ${waited:-?} s)" \
+    test "${waited:-99}" -le 6
+# shellcheck disable=SC2016  # run by the inner bash
+gaveup=$(bash -c '
+    eval "$(sed -n "/^wait_for_ssh_key_login() {/,/^}/p" "$1")"
+    log() { :; }; die() { echo died; exit 1; }
+    ssh_banner_ready() { false; }
+    sleep() { SECONDS=$((SECONDS + $1)); }
+    wait_for_ssh_key_login' _ "$HERE/vendor/mockvps-kvm/mockvps-kvm.sh")
+check "and still gives up when the guest never answers" test "$gaveup" = died
+
 [ "$fails" -eq 0 ]

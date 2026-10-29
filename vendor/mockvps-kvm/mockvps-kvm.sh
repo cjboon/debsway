@@ -1134,23 +1134,22 @@ probe_key_login() {
       -p "$SSH_HOST_PORT" "$VM_USER@$SSH_HOST_IP" true 2>/dev/null
 }
 
+# Checks every 2 s (a check is one local connection), so a booted guest is
+# noticed at once rather than up to 10 s later; gives up after 30 min.
 wait_for_ssh_key_login() {
-  local i
+  local i end=$((SECONDS + 1800))
   log "Waiting for SSH on $SSH_HOST_IP:$SSH_HOST_PORT"
-  for i in $(seq 1 180); do
-    if ssh_banner_ready; then break; fi
-    sleep 10
+  until ssh_banner_ready; do
+    (( SECONDS < end )) || die "SSH never came up on $SSH_HOST_IP:$SSH_HOST_PORT (30 min). Inspect $RUN_LOG;"
+    sleep 2
   done
-  if ! ssh_banner_ready; then
-    die "SSH never came up on $SSH_HOST_IP:$SSH_HOST_PORT (30 min). Inspect $RUN_LOG;"
-  fi
   log "SSH is up; checking the key-only login"
-  for i in 1 2 3 4 5 6; do
+  for i in $(seq 1 15); do
     if probe_key_login; then
       log "Key-based SSH works; password authentication is disabled in the guest."
       return 0
     fi
-    sleep 5
+    sleep 2
   done
   printf 'ERROR: SSH answers, but the key-only login was refused.\n' >&2
   printf '  Log in once with the stored password (see %s) and add\n' "$CRED_FILE" >&2
