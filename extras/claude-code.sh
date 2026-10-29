@@ -37,7 +37,7 @@
 # Treat what it leaves there as untrusted before you run it. See THREAT-MODEL.md.
 # Usage: bash claude-code.sh [--remove]
 # summary: Claude Code, sandboxed in its own user
-# status: apt:claude-code apt:acl apt:nftables bin:claude bin:claude-unsandboxed bin:claude-pull bin:git file:/usr/local/libexec/claude-session
+# status: apt:claude-code bin:claude bin:claude-unsandboxed bin:git file:/usr/local/libexec/claude-session
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 

@@ -30,7 +30,7 @@
 # See THREAT-MODEL.md.
 # Usage: bash claude-vm.sh [--remove]
 # summary: Claude Code in a disposable VM (no shared folder)
-# status: apt:qemu-system-x86 bin:claude-vm file:/usr/local/libexec/claude-vm-session
+# status: bin:claude-vm file:/usr/local/libexec/claude-vm-session
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
