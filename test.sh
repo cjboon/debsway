@@ -50,6 +50,13 @@ for f in parts/*.sh extras/*.sh; do
     grep -q -- '--remove' "$f" || meh "$f has no --remove"
     grep -q '^# status: ' "$f" || meh "$f has no '# status:' line (status.sh can't show it)"
 done
+# Every extra has its article in docs/extras/, which explains it from the ground up
+for f in extras/*.sh extras/firefox-profiles/new-profile.sh; do
+    case $f in extras/firefox-profiles/*) name=firefox-profiles ;; *) name=$(basename "$f" .sh) ;; esac
+    [ -s "docs/extras/$name.md" ] || bad "$f has no article: docs/extras/$name.md"
+    grep -qF "]($name.md)" docs/extras/README.md 2>/dev/null ||
+        bad "docs/extras/README.md doesn't link to $name.md"
+done
 # install-extras.sh lists the extras with these one-line summaries
 for f in extras/*.sh; do
     line=$(sed -n 's/^# summary: //p' "$f" | head -1)

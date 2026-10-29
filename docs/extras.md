@@ -2,6 +2,8 @@
 
 Run one with `bash extras/NAME.sh`; run it again to repair it or, for
 downloaded apps, update to the newest release; undo it with `--remove`.
+Each one has an article in [extras/](extras/README.md) that explains how it
+works from the ground up, and what it does and doesn't protect against.
 Removing an app never deletes its data: wallets, chats and keyrings stay.
 
 | Script | What you get |
