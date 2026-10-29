@@ -226,6 +226,54 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "The fade before the screen locks (bin/dim-warning), with a pretend brightnessctl"
+if out=$(bash tools/test-dim.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") dim checks"
+else
+    bad "dim checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "Hardware-only parts (lib/core.sh), on a pretend /sys"
+if out=$(bash tools/test-hardware.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") hardware checks"
+else
+    bad "hardware checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "Choosing extras first and installing them after the base"
+if out=$(bash tools/test-extras-flow.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") extras flow checks"
+else
+    bad "extras flow checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "mpv's one-time note when there is no sound"
+if out=$(bash tools/test-mpv-notice.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") mpv notice checks"
+else
+    bad "mpv notice checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "The key cheat sheet shows only what is installed (bin/keys)"
+if out=$(bash tools/test-keys.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") cheat sheet checks"
+else
+    bad "cheat sheet checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "wifi.sh --remove (lib/net.sh), on a pretend /etc"
+if out=$(bash tools/test-wifi-remove.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") wifi remove checks"
+else
+    bad "wifi remove checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "Pinned keys and versions (pins.sh): checked by hand within a year?"
 now=$(date +%s)
 # Each "# checked: DATE" line belongs to the next VARIABLE= line
