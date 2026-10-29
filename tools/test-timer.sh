@@ -99,8 +99,62 @@ t 1m "tea" >/dev/null
 id=$(find "$T/run/debsway-timers" -type f -printf '%f')
 : >"$T/calls"
 t fire "$id"
-check "with the sound present, ringing plays the alarm sound three times" test "$(grep -c "^pw-play $T/sounds/alarm.wav" "$T/calls")" -eq 3
+check "a timer rings the sound twice (about 20 seconds)" test "$(grep -c "^pw-play $T/sounds/alarm.wav" "$T/calls")" -eq 2
 check "...and the notification has no apology" bash -c "! grep -q '(no sound' '$T/calls'"
+
+# (the real /bin/sleep below: the pretend sleep above does not wait)
+# 7b. an alarm rings long, and there are three ways to stop it. These use a player that
+# really takes time and a notification program that supports --wait and --action.
+mkdir -p "$T/ring"
+# shellcheck disable=SC2016  # written into the pretend program, expanded when it runs
+printf '#!/bin/sh\necho "pw-play $*" >>"%s/calls"\n/bin/sleep "${FAKE_PLAY:-0}"\n' "$T" >"$T/ring/pw-play"
+cat >"$T/ring/notify-send" <<FAKE
+#!/bin/bash
+echo "notify-send \$*" >>"$T/calls"
+case " \$* " in
+    *" --help "*) echo "  -A, --action   --wait"; exit 0 ;;
+    *" --wait "*) /bin/sleep "\${FAKE_NOTIFY_WAIT:-100}" ;;
+esac
+FAKE
+chmod +x "$T/ring/"*
+ringing() { local saved=$PATH rc; PATH="$T/ring:$PATH"; "$@"; rc=$?; PATH=$saved; return $rc; }
+alarm_id() { t at 7:30 wake >/dev/null; find "$T/run/debsway-timers" -type f -name '[0-9]*' -printf '%f\n' | head -1; }
+
+# how long: an alarm 30 plays by default (5 minutes), a timer 2 (about 20 seconds)
+check "an alarm rings for 300 seconds, a timer for 20, unless told otherwise" bash -c "grep -q 'RING_ALARM=\${DEBSWAY_RING_ALARM:-300}' '$TIMER' && grep -q 'RING_TIMER=\${DEBSWAY_RING_TIMER:-20}' '$TIMER'"
+id=$(alarm_id)
+: >"$T/calls"
+DEBSWAY_RING_ALARM=300 FAKE_PLAY=1 FAKE_NOTIFY_WAIT=4 ringing t fire "$id" &
+fire_pid=$!
+/bin/sleep 2.5
+check "an alarm repeats the sound (30 times in all) until it is stopped" test "$(grep -c '^pw-play' "$T/calls")" -ge 2
+check "the notification offers a Stop action and says how to stop it" grep -q 'notify-send --wait -A default=Stop -u critical -t 0 -a debsway Alarm wake. Click or dismiss this to stop the sound.' "$T/calls"
+t stop >"$T/out" 2>&1
+wait "$fire_pid"
+check "timer stop ends the ringing" grep -q 'Stopped the sound' "$T/out"
+check "...and the alarm stops repeating" test "$(grep -c '^pw-play' "$T/calls")" -lt 30
+check "...and leaves no ring behind" test ! -e "$T/run/debsway-timers/ringing"
+check "timer stop with nothing ringing and nothing pending says so" grep -q 'Nothing is running' <(t stop 2>&1)
+
+# clicking or dismissing the notification ends it (the notify-send --wait returns)
+id=$(alarm_id)
+: >"$T/calls"
+start=$SECONDS
+DEBSWAY_RING_ALARM=300 FAKE_PLAY=3 FAKE_NOTIFY_WAIT=0.7 ringing t fire "$id"
+took=$((SECONDS - start))
+check "dismissing the notification stops the sound at once, not after the whole alarm" test "$took" -lt 6
+check "...after one play" test "$(grep -c '^pw-play' "$T/calls")" -eq 1
+
+# without --wait support the notification is plain and the sound plays through
+id=$(alarm_id)
+: >"$T/calls"
+DEBSWAY_RING_ALARM=30 env PATH="$T/fake:$PATH" bash "$TIMER" fire "$id"
+check "a notify-send without --wait gets a plain notification" bash -c "grep -q '^notify-send -u critical -t 0 -a debsway Alarm' '$T/calls' && ! grep -q -e '--wait' '$T/calls'"
+check "...and the alarm still rings its full length (3 plays for 30 seconds here)" test "$(grep -c '^pw-play' "$T/calls")" -eq 3
+
+# with a pending timer, stop still cancels it as before
+t 5m soon >/dev/null
+check "timer stop with nothing ringing cancels a pending timer, as before" bash -c "bash '$TIMER' stop | grep -q -i 'cancel'"
 unset DEBSWAY_SOUND_DIR
 
 # 8. the clock setting
@@ -170,14 +224,14 @@ check "...even with the date turned off in the bar" grep -qx 'date True' <<<"$es
 bash "$TIMER" clock date on >/dev/null
 
 # the sound debsway ships: a short, small, valid mono WAV, made by tools/make-alarm-sound.py
-check "data/alarm.wav is a valid short mono 16-bit sound under 40 KB" python3 -I -c '
+check "data/alarm.wav is a valid mono 16-bit sound of a few seconds, under 600 KB" python3 -I -c '
 import os, sys, wave
 f = sys.argv[1]
 w = wave.open(f)
 secs = w.getnframes() / w.getframerate()
 assert w.getnchannels() == 1 and w.getsampwidth() == 2, "not mono 16-bit"
-assert 0.4 < secs < 2.0, secs
-assert os.path.getsize(f) < 40000
+assert 3 < secs < 20, secs
+assert os.path.getsize(f) < 600000
 ' "$HERE/data/alarm.wav"
 check "the base part installs it" grep -q 'data/alarm.wav' "$HERE/parts/core-commands.sh"
 check "the sound extra no longer needs a sound theme package" bash -c "! grep -q 'sound-theme' '$HERE/extras/pipewire-audio.sh'"

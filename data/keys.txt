@@ -58,6 +58,7 @@
                            hides it); Esc closes it
     timer 10m tea          from a terminal; timer at 7:30 wake up
     timer list | cancel    what is running | stop one (timer cancel all)
+    timer stop             end the sound of a ringing alarm (or click/dismiss its notice)
     timer clock            show or hide the date in the bar
 
   NOTIFICATIONS

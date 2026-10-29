@@ -21,7 +21,7 @@
    `timer` (Super+t, or a click on the time in the bar) sets timers and alarms
    with systemd user timers and no extra package: `timer 10m tea`,
    `timer at 7:30`, `timer list`, `timer cancel`. The next one shows in the bar.
-   `timer clock` chooses whether the bar shows the date (the time is always am/pm)
+   `timer stop`, clicking the notification or dismissing it ends the ringing (an alarm repeats a gentle bell phrase for up to 5 minutes, to wake you; a timer rings about 20 seconds). `timer clock` chooses whether the bar shows the date (the time is always am/pm)
    (`~/.config/debsway/clock`). Timers last until logout or reboot, and a
    laptop that is asleep does not wake for them.
 3. Offers to start sway when you log in on tty1 (a marked block in

@@ -7,11 +7,14 @@
 #   timer at 7:30 [NAME]        an alarm at the next 7:30 (7am, 7:30 pm, tomorrow 8am)
 #   timer list                  what is running
 #   timer cancel [N|all]        cancel one, or all of them
+#   timer stop                  stop the sound of an alarm that is ringing (else: cancel)
 #   timer clock                 whether the bar shows the date (the time is always am/pm)
 #   timer clock date on|date off
 #
 # A timer or alarm rings with a notification that stays until you dismiss it
-# (and a sound, if the system has one). They last until you log out or reboot,
+# and a sound: an alarm repeats it for up to 5 minutes (to wake you), a timer for
+# about 20 seconds. Click the notification, dismiss it (Super+n) or run
+# timer stop to end the sound sooner. They last until you log out or reboot,
 # and a laptop that is asleep does not wake up for them.
 
 set -u
@@ -191,14 +194,33 @@ cancel_cmd() {
     echo "Cancelled $n."
 }
 
-# The alarm sound is debsway's own three short beeps (data/alarm.wav), put here
-# by parts/core-commands.sh; no sound theme package is needed.
-# (DEBSWAY_SOUND_DIR: a test points this at a pretend one)
+# The alarm sound is debsway's own bell phrase (data/alarm.wav, 8 seconds), put
+# here by parts/core-commands.sh; no sound theme package is needed. An alarm
+# plays it over and over for about RING_ALARM seconds, a timer for RING_TIMER.
+# (The DEBSWAY_ ones: a test points these at pretend values)
 SOUND_DIR=${DEBSWAY_SOUND_DIR:-$HOME/.local/share/debsway}
+RING_ALARM=${DEBSWAY_RING_ALARM:-300}
+RING_TIMER=${DEBSWAY_RING_TIMER:-20}
+
+# kill_ring PID: ends a ringing sound (the player first, then the loop around it)
+kill_ring() { pkill -P "$1" 2>/dev/null; kill "$1" 2>/dev/null; }
+
+# stop_ringing: ends the sound of whatever is ringing now; fails if nothing is
+stop_ringing() {
+    local pid
+    pid=$(cat "$STATE/ringing" 2>/dev/null) || return 1
+    rm -f "$STATE/ringing"
+    # (only a process that really is a ring of this script, not a stale number)
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && { tr '\0' ' ' <"/proc/$pid/cmdline"; } 2>/dev/null | grep -q timer; then
+        kill_ring "$pid"
+        return 0
+    fi
+    return 1
+}
 
 # fire ID: what systemd runs when the time comes
 fire() {
-    local f=$STATE/$1 kind label title sound='' hint='' i
+    local f=$STATE/$1 kind label title sound='' hint='' body total plays ringpid=
     [ -f "$f" ] || exit 0
     kind=$(sed -n 's/^kind=//p' "$f"); label=$(sed -n 's/^label=//p' "$f")
     rm -f "$f"
@@ -214,10 +236,38 @@ fire() {
     else
         sound=$SOUND_DIR/alarm.wav
     fi
-    command -v notify-send >/dev/null &&
-        notify-send -u critical -t 0 -a debsway "$title" "${label:-$(date +'%-I:%M %p')}$hint"
+    body="${label:-$(date +'%-I:%M %p')}$hint"
     if [ -n "$sound" ]; then
-        for i in 1 2 3; do pw-play "$sound" 2>/dev/null; sleep 1; done
+        # An alarm rings long, to wake you; a timer a little. Each play is 8 s plus a pause.
+        if [ "$kind" = alarm ]; then total=$RING_ALARM; else total=$RING_TIMER; fi
+        plays=$((total / 10))
+        [ "$plays" -ge 1 ] || plays=1
+        body="$body. Click or dismiss this to stop the sound."
+        mkdir -p "$STATE"
+        (
+            for ((i = 0; i < plays; i++)); do
+                pw-play "$sound" 2>/dev/null
+                sleep 2
+            done
+        ) &
+        ringpid=$!
+        echo "$ringpid" >"$STATE/ringing"
+    fi
+    if command -v notify-send >/dev/null; then
+        if [ -n "$ringpid" ] && notify-send --help 2>&1 | grep -q -e '--wait'; then
+            # Clicking the notification or dismissing it ends the notify-send, and the sound with it
+            (
+                notify-send --wait -A default=Stop -u critical -t 0 -a debsway "$title" "$body" >/dev/null 2>&1
+                kill_ring "$ringpid"
+            ) &
+        else
+            notify-send -u critical -t 0 -a debsway "$title" "$body"
+        fi
+    fi
+    if [ -n "$ringpid" ]; then
+        wait "$ringpid" 2>/dev/null
+        rm -f "$STATE/ringing"
+        # the notification stays until dismissed, but the sound is over
     fi
     exit 0
 }
@@ -296,7 +346,7 @@ menu() {
       10m  or  1h30  or  45s         a timer ("10m tea" gives it a name)
       7:30  or  7am  or  7:30pm      an alarm at the next 7:30
   Or a letter:
-      c   cancel one         f   show or hide the date in the bar         Esc or q   quit
+      c   cancel one    s   stop a ringing alarm    f   date in the bar    Esc or q   quit
 
 EOF
         read -r -e -p "  > " input || return 0
@@ -304,6 +354,7 @@ EOF
         set -- $input
         case ${1:-} in
             "" | q | quit | exit) return 0 ;;
+            s | stop) if stop_ringing; then echo "  Stopped the sound."; else echo "  Nothing is ringing."; fi ;;
             c | cancel)
                 if [ ${#IDS[@]} -eq 0 ]; then echo "  Nothing to cancel."
                 else
@@ -319,13 +370,15 @@ EOF
     done
 }
 
-usage() { sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; }
 
 case ${1:-} in
     "") menu ;;
     -h | --help | help) usage ;;
     list | ls) load check; if [ ${#IDS[@]} -gt 0 ]; then show_list; else echo "Nothing is running."; fi ;;
     cancel | stop)
+        # "stop" ends a ringing sound first; with nothing ringing it cancels, like "cancel"
+        if [ "$1" = stop ] && stop_ringing; then echo "Stopped the sound."; exit 0; fi
         if [ -n "${2:-}" ]; then cancel_cmd "$2"
         else
             load check
