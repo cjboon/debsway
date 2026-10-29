@@ -68,6 +68,9 @@ check "a profile starts as its own user, next to the other Firefox" grep -qF "su
 check "...with its own downloads folder, so profiles cannot read each other's files" test -d "$T/home/Downloads/bank"
 check "...and rights only for its own user on it" grep -q "setfacl -m u:fx-bank:rwx $T/home/Downloads/bank" "$T/calls"
 check "...and not the other user's" not grep -q "u:firefox:rwx $T/home/Downloads/bank" "$T/calls"
+# closing the profile takes back only its own user's rights: the Firefox still
+# open next to it keeps its way through your home folder to ~/Downloads
+check "closing the profile takes back only its own user's access" grep -q "setfacl -x u:fx-bank $T/run $T/home $T/home/Downloads" "$T/calls"
 wait
 : >"$T/calls"
 FAKE_UP=2 fx --profile bank https://bank.example/ >/dev/null 2>&1 &
