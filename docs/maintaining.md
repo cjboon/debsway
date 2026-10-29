@@ -19,6 +19,15 @@ can change what the scripts rely on.
 - **`bash tools/test-apt-markers.sh`** (run by `test.sh`) checks the
   package bookkeeping behind `--remove` against fakes of apt, so it
   changes nothing.
+- **`update.sh`** decides which scripts to rerun from the files each one
+  uses: the script itself, every `"$DEBSWAY_DIR/bin|data|vendor|lib/..."` it
+  names, every `install_bin NAME`, any pinned name from `pins.sh` it (or a
+  library it sources) uses, and the files on a `# files: bin/x data/y`
+  header line. Put a `# files:` line in a script that gets a file installed
+  by a library function, where the script's own text doesn't show it (the
+  Landlock wrapper, `bin/no-abstract-sockets`, is the example). The shared
+  libraries `lib.sh` loads for everyone are only reported, never counted.
+  `tools/test-update.sh` checks this against a pretend server.
 - **`tools/test-*.sh`** (run by `test.sh`) cover the parts that guard
   something: the signature checks (with throwaway expired and revoked
   keys), the sshd settings check, old package lists, the media sandbox,

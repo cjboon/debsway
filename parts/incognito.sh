@@ -35,6 +35,7 @@
 # for that. See THREAT-MODEL.md.
 # Usage: bash incognito.sh [--remove]
 # status: file:/usr/local/bin/incognito
+# files: bin/no-abstract-sockets
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 

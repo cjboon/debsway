@@ -72,6 +72,7 @@ debsway/
 ├── install-extras.sh        pick optional programs from a list (install-base.sh ends with it)
 ├── wifi.sh                  get online over Wi-Fi, whatever is installed
 ├── status.sh                what's installed; warns if the disk isn't encrypted
+├── update.sh                bring debsway up to date and rerun the scripts whose files changed
 ├── test.sh                  checks scripts, packages, downloads and keys still work
 ├── packages.sh              the core's package list and the order of the parts
 ├── pins.sh                  every signing key debsway trusts, with the date it was checked
@@ -200,6 +201,25 @@ plain `git pull` works too. (`claude-pull` is installed by the Claude Code
 sandboxes, `extras/claude-code.sh` and `extras/claude-vm.sh`.) If Claude Code
 pushes to the repository, add the ssh key its sandbox prints as a deploy key
 on GitHub (with write access), replacing the old install's.
+
+## Updating
+
+```bash
+bash ~/debsway/update.sh
+```
+
+It fetches what's new, shows you every change, and asks before bringing it
+in (only a plain fast-forward, so your own edits are never overwritten).
+Then it lists the parts and extras you have set up whose files changed and
+offers to run them again, one after the other: running a script again is
+how a change reaches `/usr/local`, the firewall or Firefox's policy. It
+never runs `--remove`. If a script fails it says so and offers it again
+next time.
+
+The first run takes what you have now as already applied. If you updated by
+hand earlier, `bash update.sh --since COMMIT` offers what changed after that
+commit (`git log` shows it), and `bash update.sh --all` offers everything
+that is set up.
 
 ## More
 

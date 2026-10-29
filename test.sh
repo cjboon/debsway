@@ -194,6 +194,14 @@ done
 [ "$shared" = 0 ] && ok "no extra's status line lists a package another script installs"
 
 # --------------------------------------------------------------------
+section "update.sh: which scripts to rerun, with a pretend server"
+if out=$(bash tools/test-update.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") update checks"
+else
+    bad "update checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "Pinned keys and versions (pins.sh): checked by hand within a year?"
 now=$(date +%s)
 # Each "# checked: DATE" line belongs to the next VARIABLE= line
