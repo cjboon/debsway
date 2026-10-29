@@ -216,7 +216,8 @@ Then it lists the parts and extras you have set up whose files changed and
 offers to run them again, one after the other: running a script again is
 how a change reaches `/usr/local`, the firewall or Firefox's policy. It
 never runs `--remove`. If a script fails it says so and offers it again
-next time.
+next time. A part of the base desktop that is new in an update is offered
+too, even though it isn't set up yet.
 
 The first run takes what you have now as already applied. If you updated by
 hand earlier, `bash update.sh --since COMMIT` offers what changed after that
