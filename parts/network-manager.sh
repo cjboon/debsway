@@ -12,6 +12,7 @@ if [ "${1:-}" = --remove ]; then
     ask "Continue?" n || exit 0
     # wifi.sh needs these to get you back online
     sudo apt-mark manual wpasupplicant wireless-regdb >/dev/null
+    remove_bin nmtui
     apt_purge network-manager
     exit
 fi
@@ -19,6 +20,8 @@ fi
 # polkitd lets your user (not just root) control connections
 say "Installing network-manager"
 apt_install network-manager wpasupplicant wireless-regdb polkitd
+# nmtui in debsway's colors (the Wi-Fi name in the bar opens it)
+install_bin nmtui
 
 hex_to_text() { printf '%b' "$(sed 's/../\\x&/g' <<<"$1")"; }
 

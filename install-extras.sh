@@ -33,33 +33,10 @@ fi
 
 chosen=()
 
-# The checklist in grays on black, to match the terminal it opens in (whiptail
-# is blue and red by default). Your own NEWT_COLORS wins if you set one.
-export NEWT_COLORS=${NEWT_COLORS:-'
-root=lightgray,black
-roottext=lightgray,black
-window=lightgray,black
-border=gray,black
-shadow=black,black
-title=white,black
-button=black,lightgray
-actbutton=black,white
-compactbutton=lightgray,black
-checkbox=lightgray,black
-actcheckbox=black,lightgray
-listbox=lightgray,black
-actlistbox=lightgray,black
-sellistbox=white,black
-actsellistbox=black,lightgray
-textbox=lightgray,black
-acttextbox=black,lightgray
-entry=lightgray,black
-disentry=gray,black
-label=lightgray,black
-helpline=gray,black
-emptyscale=gray,black
-fullscale=lightgray,black
-'}
+# The checklist in white on black, to match the terminal it opens in (whiptail
+# is blue and red by default). Your own NEWT_COLORS wins if you set one. The same
+# colors as bin/nmtui.
+export NEWT_COLORS=${NEWT_COLORS:-'root=#ffffff,#000000 border=#ffffff,#000000 window=#ffffff,#000000 shadow=#000000,#000000 title=#ffffff,#000000 button=#ffffff,#000000 button_active=#000000,#ffffff actbutton=#000000,#ffffff compactbutton=#ffffff,#000000 checkbox=#ffffff,#000000 entry=#ffffff,#000000 disentry=#aaaaaa,#000000 textbox=#ffffff,#000000 acttextbox=#000000,#ffffff label=#ffffff,#000000 listbox=#ffffff,#000000 actlistbox=#000000,#ffffff sellistbox=#ffffff,#000000 actsellistbox=#000000,#ffffff'}
 
 # whiptail comes with Debian's standard system: a list of check boxes
 pick_with_whiptail() {

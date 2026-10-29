@@ -247,12 +247,27 @@ assert none < wait and "exit 0" in s[none:wait], "the no-choice exit must come f
 check "the checklist colors are all grays" python3 -I -c '
 import re, sys
 s = open(sys.argv[1]).read()
-block = s[s.index("NEWT_COLORS"):]
-block = block[:block.index("}\n")]
-cols = set(re.findall(r"=(\w+),(\w+)", block))
-names = {c for pair in cols for c in pair}
-assert names <= {"black", "lightgray", "gray", "white"}, names
+palette = re.search(r"NEWT_COLORS:-.([^\x27]+)", s).group(1)
+colors = set(re.findall(r"#[0-9a-f]{6}", palette))
+assert colors and all(c[1:3] == c[3:5] == c[5:7] for c in colors), colors
 ' "$HERE/install-extras.sh"
+check "nmtui and the install list use the same colors" python3 -I -c '
+import re, sys
+pal = lambda f: re.search(r"NEWT_COLORS:-.([^\x27]+)", open(f).read()).group(1)
+assert pal(sys.argv[1]) == pal(sys.argv[2])
+' "$HERE/install-extras.sh" "$HERE/bin/nmtui"
+
+# the nmtui wrapper: runs the real program with debsway's colors, unless you set your own
+# shellcheck disable=SC2016  # written into the pretend program, expanded when it runs
+printf '#!/bin/sh\necho "colors=$NEWT_COLORS"\necho "args=$*"\n' >"$T/fake/nmtui"
+chmod +x "$T/fake/nmtui"
+nm=$(env -u NEWT_COLORS DEBSWAY_NMTUI="$T/fake/nmtui" bash "$HERE/bin/nmtui" connect X)
+check "the nmtui wrapper sets debsway's colors" grep -q 'colors=root=#ffffff,#000000' <<<"$nm"
+check "...and passes its arguments on" grep -qx 'args=connect X' <<<"$nm"
+nm=$(NEWT_COLORS='root=red,blue' DEBSWAY_NMTUI="$T/fake/nmtui" bash "$HERE/bin/nmtui")
+check "colors you set yourself win" grep -qx 'colors=root=red,blue' <<<"$nm"
+# shellcheck disable=SC2016  # a literal $HOME in the bar's script
+check "the Wi-Fi name in the bar opens the wrapper" grep -q 'exec "\$HOME/.local/bin/nmtui"' "$HERE/bin/sway-status"
 
 # the bar
 check "the bar shows debsway" grep -q '"full_text":"debsway"' "$HERE/bin/sway-status"

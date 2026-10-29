@@ -102,8 +102,13 @@ while read -r event <&3; do
             fi ;;
         *'"name":"wifi"'*'"button":1,'*)
             # nmtui measures its window once at the start, so wait for sway to size it
-            command -v nmtui >/dev/null &&
-                foot --app-id=debsway-nmtui sh -c 'sleep 0.5; exec nmtui' >/dev/null 2>&1 & ;;
+            # (the debsway wrapper if there is one: nmtui in the debsway colors)
+            # shellcheck disable=SC2016  # expanded by the inner sh, on purpose
+            if [ -x "$HOME/.local/bin/nmtui" ]; then
+                foot --app-id=debsway-nmtui sh -c 'sleep 0.5; exec "$HOME/.local/bin/nmtui"' >/dev/null 2>&1 &
+            elif command -v nmtui >/dev/null; then
+                foot --app-id=debsway-nmtui sh -c 'sleep 0.5; exec nmtui' >/dev/null 2>&1 &
+            fi ;;
         # the scroll wheel is button 4 (up) and 5 (down); the volume and brightness
         # commands also tell this script to redraw
         *'"name":"vol"'*'"button":1,'*) "$HOME/.local/bin/volume" mute ;;

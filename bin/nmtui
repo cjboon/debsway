@@ -1,0 +1,8 @@
+#!/bin/bash
+# nmtui: written by debsway parts/network-manager.sh
+# NetworkManager's text interface in debsway's colors: white on black, the
+# chosen line reversed. The same colors as the install list (install-extras.sh).
+# Colors you set yourself in NEWT_COLORS win. The real program is
+# /usr/bin/nmtui (DEBSWAY_NMTUI points somewhere else, for tests).
+export NEWT_COLORS=${NEWT_COLORS:-'root=#ffffff,#000000 border=#ffffff,#000000 window=#ffffff,#000000 shadow=#000000,#000000 title=#ffffff,#000000 button=#ffffff,#000000 button_active=#000000,#ffffff actbutton=#000000,#ffffff compactbutton=#ffffff,#000000 checkbox=#ffffff,#000000 entry=#ffffff,#000000 disentry=#aaaaaa,#000000 textbox=#ffffff,#000000 acttextbox=#000000,#ffffff label=#ffffff,#000000 listbox=#ffffff,#000000 actlistbox=#000000,#ffffff sellistbox=#ffffff,#000000 actsellistbox=#000000,#ffffff'}
+exec "${DEBSWAY_NMTUI:-/usr/bin/nmtui}" "$@"
