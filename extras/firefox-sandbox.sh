@@ -15,14 +15,19 @@
 #    computer's own services (data/firefox-firewall.nft); how to lift it for a
 #    while is in that file. DNS stays open.
 #  - Your user may run exactly one thing as firefox (a rule in /etc/sudoers.d).
-#  - firefox-esr is the same Firefox run as you, with everything you can reach.
+#  - It becomes your default browser, so links from other programs (a terminal,
+#    a file manager...) open in it, not in firefox-esr. firefox-esr is the same
+#    Firefox run as you, with everything you can reach, and stays installed.
+#  - Firefox profiles made with firefox-profiles/new-profile.sh each get a user
+#    of their own like this one (fx-NAME).
 # There is no KeePassXC browser add-on (debsway's KeePassXC is the minimal
 # build without it): copy and paste a password; the clipboard is shared.
 # Usage: bash firefox-sandbox.sh [--remove]
 # summary: Firefox as its own locked-down user
 # status: file:/usr/local/bin/firefox
-# files: bin/no-abstract-sockets bin/wayland-restrict data/firefox-firewall.nft data/firefox-user.js
+# files: bin/no-abstract-sockets bin/wayland-restrict data/firefox-firewall.nft data/firefox-user.js data/debsway-firefox.desktop lib/firefox-sandbox.sh
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+. "$DEBSWAY_DIR/lib/firefox-sandbox.sh"
 need_user
 
 NAME=firefox
@@ -31,20 +36,29 @@ CMD=/usr/local/bin/firefox
 SESSION=/usr/local/libexec/firefox-session
 SHARE=/usr/local/share/debsway
 PREFS=$SHARE/firefox-user.js
-SUDOERS=/etc/sudoers.d/debsway-firefox
 LIMITS=/etc/security/limits.d/50-debsway-firefox.conf
 FIREWALL=/etc/debsway/firefox.nft
 UNIT=/etc/systemd/system/debsway-firefox-firewall.service
+DESKTOP="$HOME/.local/share/applications/debsway-firefox.desktop"
 
 if [ "${1:-}" = --remove ]; then
     sudo systemctl disable --now debsway-firefox-firewall.service >/dev/null 2>&1 || true
     sudo nft delete table inet debsway_firefox 2>/dev/null || true
     [ -f "$BIN/media-sandbox" ] || [ -x /usr/local/bin/incognito ] || remove_bin wayland-restrict
-    sudo rm -f "$SUDOERS" "$LIMITS" "$CMD" "$SESSION" "$PREFS" "$FIREWALL" "$UNIT"
+    fx_disallow_session "$NAME"
+    sudo rm -f "$LIMITS" "$CMD" "$SESSION" "$PREFS" "$FIREWALL" "$UNIT"
     remove_no_abstract
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
     sudo rmdir "$SHARE" /usr/local/libexec /etc/debsway 2>/dev/null || true
     sudo rm -rf /dev/shm/firefox-run
+    # links open in firefox-esr again
+    unset_default_app debsway-firefox.desktop
+    rm -f "$DESKTOP"
+    mapfile -t profiles < <(fx_profile_names)
+    if [ ${#profiles[@]} -gt 0 ]; then
+        warn "These Firefox profiles still have users of their own: ${profiles[*]}"
+        warn "Remove each with: bash extras/firefox-profiles/new-profile.sh --remove NAME"
+    fi
     if id "$NAME" >/dev/null 2>&1; then
         sudo pkill -KILL -u "$NAME" 2>/dev/null || true
         sudo userdel "$NAME"
@@ -68,22 +82,10 @@ apt_install firefox-esr libavcodec61 webext-ublock-origin-firefox acl nftables p
 bash "$DEBSWAY_DIR/parts/firefox-hardening.sh"
 
 say "The $NAME user"
-if id "$NAME" >/dev/null 2>&1; then
-    [ "$(id -u "$NAME")" -lt 1000 ] ||
-        die "A regular user account called $NAME already exists; this needs a system user. Rename or remove it first."
-else
-    sudo useradd --system --user-group --create-home --home-dir "$HOME_DIR" \
-        --shell /usr/sbin/nologin --comment "debsway sandboxed Firefox" "$NAME"
-fi
-# No password to guess, and no shell to log in with; its home is for it alone
-sudo usermod --lock --shell /usr/sbin/nologin "$NAME"
-sudo chmod 0700 "$HOME_DIR"
-# Firefox opens the GPU's render node (software rendering is forced; this is
-# only so it can start). render, not video: no modesetting.
-if getent group render >/dev/null; then
-    sudo usermod -aG render "$NAME"
-fi
-note "$NAME: no password, no login, no groups but its own and render; home $HOME_DIR."
+# No password to guess, no login shell, a home only it can enter; in the group
+# debsway-fx that the firewall rule matches (profiles with a user of their own are too)
+fx_create_user "$NAME" "$HOME_DIR" "debsway sandboxed Firefox"
+note "$NAME: no password, no login, group $FX_GROUP (and render); home $HOME_DIR."
 
 say "The firefox command"
 sudo install -d -o root -g root -m 0755 "$SHARE" /usr/local/libexec
@@ -94,19 +96,12 @@ sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/firefox-session" "$SESSIO
 sudo install -o root -g root -m 0644 "$DEBSWAY_DIR/data/firefox-user.js" "$PREFS"
 
 say "What your user may run as $NAME"
-rule=$(mktemp)
-printf '# Written by debsway extras/firefox-sandbox.sh. %s may run the firefox wrapper,\n# and nothing else, as the user firefox.\n%s ALL=(%s) NOPASSWD: %s\n' \
-    "$(id -un)" "$(id -un)" "$NAME" "$SESSION" >"$rule"
-# A broken sudoers file locks you out of sudo, so it is checked first
-if ! sudo visudo -cf "$rule" >/dev/null; then
-    rm -f "$rule"
-    die "The sudoers rule didn't pass visudo's check, so it wasn't installed."
-fi
-sudo install -o root -g root -m 0440 "$rule" "$SUDOERS"
-rm -f "$rule"
-note "Wrote $SUDOERS"
+fx_allow_session "$NAME"
+note "Wrote /etc/sudoers.d/debsway-$NAME"
 
-printf '# Written by debsway extras/firefox-sandbox.sh\n%s hard nproc 4096\n%s hard core 0\n' "$NAME" "$NAME" |
+# A limit on processes keeps a runaway page from filling the machine; for every
+# user in the group (a profile with a user of its own too)
+printf '# Written by debsway extras/firefox-sandbox.sh\n@%s hard nproc 4096\n@%s hard core 0\n' "$FX_GROUP" "$FX_GROUP" |
     sudo tee "$LIMITS" >/dev/null
 
 say "Keeping $NAME off your network"
@@ -125,6 +120,13 @@ sudo systemctl daemon-reload
 sudo systemctl enable debsway-firefox-firewall.service >/dev/null &&
     sudo systemctl restart debsway-firefox-firewall.service ||
     warn "Couldn't load the firewall rule; check: systemctl status debsway-firefox-firewall"
+
+say "Default browser"
+# Links from other programs go to xdg-open, which asks this list. Only your user's
+# settings change; firefox-esr stays installed and can still be started by name.
+install -D -m 0644 "$DEBSWAY_DIR/data/debsway-firefox.desktop" "$DESKTOP"
+set_default_app debsway-firefox.desktop x-scheme-handler/http x-scheme-handler/https
+note "Links from other programs now open in the sandboxed Firefox."
 
 note "Run it with: firefox   (or Super+d). firefox-esr runs Firefox as you instead."
 note "It cannot reach your router or local services; to allow that for a while:"

@@ -1,7 +1,8 @@
 #!/bin/bash
 # firefox-session: written by debsway extras/firefox-sandbox.sh
-# Runs as the user "firefox" (the firefox command starts it through sudo; it is
-# the only thing your user may run as firefox). Opens Firefox as a normal
+# Runs as the user "firefox", or as "fx-NAME" for a Firefox profile with its own
+# user (the firefox command starts it through sudo; it is the only thing your
+# user may run as those users). Opens Firefox as a normal
 # window on your sway, through the restricted Wayland socket the firefox
 # command made: it can show windows and use the clipboard while it has focus,
 # but sway does not give it the screen-reading, typing or session-lock
@@ -20,14 +21,23 @@ die() { printf 'firefox: %s\n' "$*" >&2; exit 1; }
 noabs=/usr/local/libexec/debsway-no-abstract-sockets
 need_noabs() { [ -x "$noabs" ] || die "$noabs is missing. Run: bash ~/debsway/extras/firefox-sandbox.sh"; }
 
-[ "$(id -un)" = firefox ] || die "this runs as the user firefox; use the firefox command."
-home=$(getent passwd firefox | cut -d: -f6)
-[ -d "$home" ] || die "the firefox user's home folder is missing."
+# Who this is: "firefox" (tag empty), or "fx-NAME" for the profile NAME
+user=$(id -un)
+case $user in
+    firefox) tag= ;;
+    fx-*)
+        tag=${user#fx-}
+        [[ $tag =~ ^[a-z][a-z0-9-]{0,27}$ ]] || die "unexpected user name."
+        ;;
+    *) die "this runs as the user firefox (or fx-NAME); use the firefox command." ;;
+esac
+home=$(getent passwd "$user" | cut -d: -f6)
+[ -d "$home" ] || die "$user's home folder is missing."
 profile=$home/profile
 # One fixed place in memory for what only lives while it runs: the private
 # message bus (how links from other programs reach the running Firefox), the
 # runtime folder and the temporary files
-run=/dev/shm/firefox-run
+run=/dev/shm/$user-run
 bus="unix:path=$run/run/bus"
 
 # Only plain web addresses are accepted from the caller
@@ -67,8 +77,13 @@ shift 4
 [[ $host_rt =~ ^/run/user/[0-9]+$ ]] || die "unexpected runtime folder."
 [[ $host_wl =~ ^[A-Za-z0-9._-]+$ ]] || die "unexpected Wayland display name."
 [ -S "$host_rt/$host_wl" ] || die "can't reach the Wayland socket."
-[[ $audio == - || $audio == firefox-audio.fifo ]] || die "unexpected sound pipe name."
-[[ $downloads =~ ^/home/[A-Za-z0-9._-]+/Downloads$ ]] || die "unexpected downloads folder."
+[[ $audio == - || $audio == "firefox${tag:+-$tag}-audio.fifo" ]] || die "unexpected sound pipe name."
+if [ -z "$tag" ]; then
+    [[ $downloads =~ ^/home/[A-Za-z0-9._-]+/Downloads$ ]] || die "unexpected downloads folder."
+else
+    # a profile gets its own folder, so one profile cannot read another's downloads
+    [[ $downloads =~ ^/home/[A-Za-z0-9._-]+/Downloads/$tag$ ]] || die "unexpected downloads folder."
+fi
 check_urls "$@"
 if [ "$audio" != - ]; then
     [ -p "$host_rt/$audio" ] || audio=-
@@ -107,6 +122,26 @@ cp /usr/local/share/debsway/firefox-user.js "$profile/user.js"
     echo "user_pref(\"browser.download.dir\", \"$downloads\");"
     echo 'user_pref("browser.download.useDownloadDir", true);'
 } >>"$profile/user.js"
+# A profile with its own user: its address and its JavaScript choice are in a file
+# only root can write (/etc/debsway/firefox-profiles/NAME.conf)
+if [ -n "$tag" ]; then
+    conf=/etc/debsway/firefox-profiles/$tag.conf
+    [ -r "$conf" ] || die "no settings for the profile $tag ($conf)."
+    url=$(sed -n 's/^url=//p' "$conf" | head -1)
+    fast=$(sed -n 's/^fast_js=//p' "$conf" | head -1)
+    [[ $url =~ ^https?://[A-Za-z0-9.-]+(:[0-9]+)?(/[A-Za-z0-9._~/?#=%+,@-]*)?$ ]] || die "the address in $conf isn't a plain web address."
+    {
+        echo "// The profile $tag: opens $url on start; keeps its cookies and logins."
+        echo 'user_pref("browser.startup.page", 1);'
+        echo "user_pref(\"browser.startup.homepage\", \"$url\");"
+        if [ "$fast" = yes ]; then
+            echo 'user_pref("javascript.options.ion", true);'
+            echo 'user_pref("javascript.options.baselinejit", true);'
+            echo 'user_pref("javascript.options.native_regexp", true);'
+            echo 'user_pref("javascript.options.asmjs", true);'
+        fi
+    } >>"$profile/user.js"
+fi
 
 if [ "$audio" != - ]; then
     mkdir -p "$run/home-config/pipewire/pipewire.conf.d"
@@ -120,8 +155,8 @@ context.modules = [
       audio.rate = 48000
       audio.channels = 2
       audio.position = [ FL FR ]
-      node.name = firefox-out
-      node.description = "firefox"
+      node.name = firefox${tag:+-$tag}-out
+      node.description = "firefox${tag:+ $tag}"
     }
   }
 ]

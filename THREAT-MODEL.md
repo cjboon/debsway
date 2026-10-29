@@ -52,7 +52,9 @@ this page to decide what else you need.
   files; only `~/Downloads` and the clipboard (while its window has focus) are
   shared, it gets no screen-reading or typing protocols from sway, no audio
   server or microphone, and a firewall rule keeps it off your local network.
-  `incognito` is the same idea with nothing kept and no shared clipboard. They
+  A profile made with `firefox-profiles/new-profile.sh` gets a user of its own the
+  same way, so profiles cannot read each other either. `incognito` is the same
+  idea with nothing kept and no shared clipboard. They
   share your kernel: a kernel bug could still get out, and an exploit that
   stays in the browser still has that profile's logins. `firefox-esr` runs as
   you and has none of this.

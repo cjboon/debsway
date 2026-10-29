@@ -1,12 +1,14 @@
-# Keeps the firefox user off your computer and your local network
-# (debsway extras/firefox-sandbox.sh). Only that user's traffic is touched.
+# Keeps the sandboxed Firefox users (firefox, and fx-NAME for each profile that has
+# a user of its own) off your computer and your local network. They share the
+# group debsway-fx, so this one rule covers them all (debsway extras/firefox-sandbox.sh).
+# Only their traffic is touched.
 # A hacked page can still reach the internet, but not:
 #   - programs on this machine that listen on the network (a local server,
 #     the Tor Browser proxy, a printing service, ...)
 #   - your router, printers, other computers, or your phone's hotspot
 # DNS stays open (your resolver is usually the router).
 #
-# This also means the sandboxed Firefox cannot open your router's page or a
+# This also means a sandboxed Firefox cannot open your router's page or a
 # server on this computer (localhost). To allow that for a while, run
 #     sudo systemctl stop debsway-firefox-firewall
 # and  sudo systemctl start debsway-firefox-firewall  to block it again. Or use
@@ -18,7 +20,7 @@ delete table inet debsway_firefox
 table inet debsway_firefox {
     chain output {
         type filter hook output priority 0; policy accept;
-        meta skuid "firefox" jump firefox
+        meta skgid "debsway-fx" jump firefox
     }
 
     chain firefox {

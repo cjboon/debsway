@@ -146,9 +146,15 @@ window. What is shared with you, and what is not:
 | Other programs' links | open in the running Firefox (a private message bus carries them) |
 | KeePassXC | no browser add-on (debsway's KeePassXC has none); copy and paste a password |
 
+It also becomes your **default browser**: links from other programs (a terminal, a file
+manager) open in it, because the desktop entry `debsway-firefox.desktop` is set as the
+handler for web links in `~/.config/mimeapps.list` (undone by `--remove`).
+
 `firefox-esr` runs the same Firefox as you, with everything you can reach, if the
-sandbox is ever in the way. Profiles made with `firefox-profiles/new-profile.sh`
-still run as you; moving them into the sandbox is a later step.
+sandbox is ever in the way; it stays installed, and starting it by name still works.
+Profiles made with `firefox-profiles/new-profile.sh` each get a user of their own like
+this one (`fx-NAME`), so a hacked page in one reaches neither your files nor the other
+profiles; they share the one firewall rule through the group `debsway-fx`.
 
 ## Remote access (`extras/remote-access.sh`)
 

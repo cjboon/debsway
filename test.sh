@@ -298,6 +298,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "Firefox profiles with a user of their own (new-profile.sh), with pretend sudo"
+if out=$(bash tools/test-profile-users.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") profile user checks"
+else
+    bad "profile user checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "Pinned keys and versions (pins.sh): checked by hand within a year?"
 now=$(date +%s)
 # Each "# checked: DATE" line belongs to the next VARIABLE= line
