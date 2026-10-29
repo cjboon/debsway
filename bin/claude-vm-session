@@ -80,8 +80,14 @@ case "${1:-connect}" in
         guest_ssh 'cat ~/.ssh/id_ed25519.pub'
         ;;
     install)
-        # First build (or rebuild): the real user triggers this from
-        # extras/claude-vm.sh. PROVISION installs Claude Code in the guest.
+        # First build: the real user triggers this from extras/claude-vm.sh.
+        # PROVISION installs Claude Code in the guest. It never replaces a VM
+        # that is already there (mockvps --yes would delete it unasked, with
+        # whatever the agent hasn't pushed): that is what rebuild is for.
+        if is_installed; then
+            echo "The VM is already built; kept as it is. For a fresh one: claude-vm rebuild"
+            exit 0
+        fi
         [ -f "$PROVISION" ] || die "the provisioning script is missing ($PROVISION); run extras/claude-vm.sh again."
         PROVISION_FILES="$PROVISION" mockvps --yes
         ;;

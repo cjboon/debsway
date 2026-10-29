@@ -54,4 +54,39 @@ check "the firewall's guest-SSH port matches the session's" test -n "$port_fw" -
 check "the session never execs one of its own functions" \
     bash -c "! grep -qE 'exec (mockvps|guest_ssh)( |\$)' '$HERE/bin/claude-vm-session'"
 
+# The session itself, as the claude-vm user. Its fixed paths are pointed into
+# $T in a copy (the real script has no way to change them), with a pretend id,
+# mockvps and ssh. $S/vm-running says whether the pretend VM is up.
+S=$T/session
+mkdir -p "$S/home/vm" "$S/home/.config/claude-vm" "$S/bin"
+sed -e "s|/home/claude-vm|$S/home|g" \
+    -e "s|/usr/local/libexec/claude-vm-mockvps-kvm|$S/bin/mockvps|" \
+    -e "s|^export PATH=.*|export PATH=$S/bin:\$PATH|" \
+    "$HERE/bin/claude-vm-session" >"$S/claude-vm-session"
+printf '#!/bin/sh\n[ "$1" = -un ] && echo claude-vm || exec /usr/bin/id "$@"\n' >"$S/bin/id"
+cat >"$S/bin/mockvps" <<MOCK
+#!/bin/sh
+echo "mockvps \$*" >>"$S/calls"
+case "\$1" in
+    --status) [ -e "$S/vm-running" ] && echo "VM 'claude-vm' is Running" || echo "VM 'claude-vm' is not running" ;;
+esac
+MOCK
+printf '#!/bin/sh\necho "ssh $*" >>"%s/calls"\n' "$S" >"$S/bin/ssh"
+chmod +x "$S/bin/id" "$S/bin/mockvps" "$S/bin/ssh"
+touch "$S/home/.config/claude-vm/provision.sh"
+session() { PATH="$S/bin:$PATH" DEBSWAY_NOABS=1 bash "$S/claude-vm-session" "$@"; }
+
+: >"$S/calls"
+session install >/dev/null 2>&1
+check "install builds a VM when there is none" grep -qx -- "mockvps --yes" "$S/calls"
+echo disk >"$S/home/vm/claude-vm.qcow2"
+: >"$S/calls"
+out=$(session install 2>&1)
+check "install never replaces a VM that is already built" bash -c "! grep -q mockvps '$S/calls'"
+check "install says to use rebuild for a fresh VM" grep -q 'claude-vm rebuild' <<<"$out"
+check "a built VM's disk is still there after install" test -s "$S/home/vm/claude-vm.qcow2"
+: >"$S/calls"
+session rebuild >/dev/null 2>&1
+check "rebuild still replaces it on purpose" grep -qx -- "mockvps --uninstall --yes" "$S/calls"
+
 [ "$fails" -eq 0 ]
