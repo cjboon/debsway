@@ -33,6 +33,20 @@ key_ok() {
     awk -F: '/^pub:/ { exit ($2 ~ /[er]/) }' <<<"$out"
 }
 
+# grub_no_wait FILE (/etc/default/grub): boot straight into Debian. The
+# guest has no screen, so GRUB's 5 s menu only adds to every start; a VM
+# that won't boot is rebuilt, not repaired from the menu.
+grub_no_wait() {
+    local f=$1
+    [ -f "$f" ] || return 0
+    if grep -q '^GRUB_TIMEOUT=' "$f"; then
+        sed -i 's/^GRUB_TIMEOUT=.*/GRUB_TIMEOUT=0/' "$f"
+    else
+        echo 'GRUB_TIMEOUT=0' >>"$f"
+    fi
+    update-grub
+}
+
 log "Installing prerequisites"
 apt-get update
 apt-get install -y --no-install-recommends ca-certificates gpg wget \
@@ -98,6 +112,9 @@ from the person's real computer.
 CLAUDEMD
 run chmod 600 "$home/.claude/CLAUDE.md" 2>/dev/null || true
 chown "$VM_USER:$VM_USER" "$home/.claude/CLAUDE.md"
+
+log "Booting without GRUB's menu wait"
+grub_no_wait /etc/default/grub || log "Couldn't update GRUB; the VM still boots, 5 s slower."
 
 log "Claude Code installed. The guest's ssh public key (add it on your git host):"
 cat "$home/.ssh/id_ed25519.pub"

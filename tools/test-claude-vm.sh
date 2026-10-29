@@ -136,4 +136,23 @@ gaveup=$(bash -c '
     wait_for_ssh_key_login' _ "$HERE/vendor/mockvps-kvm/mockvps-kvm.sh")
 check "and still gives up when the guest never answers" test "$gaveup" = died
 
+# The guest's provisioning turns off GRUB's 5 s menu wait, on a copy of
+# Debian's /etc/default/grub (and on one with no GRUB_TIMEOUT line at all)
+printf '%s\n' 'GRUB_DEFAULT=0' 'GRUB_TIMEOUT=5' 'GRUB_CMDLINE_LINUX_DEFAULT="quiet"' >"$T/grub"
+printf '%s\n' 'GRUB_DEFAULT=0' >"$T/grub-bare"
+# shellcheck disable=SC2016  # run by the inner bash
+grub_run() { bash -c '
+    eval "$(sed -n "/^grub_no_wait() {/,/^}/p" "$1")"
+    f=$2; update-grub() { echo updated >>"$f.log"; }
+    grub_no_wait "$f"' _ "$HERE/data/claude-vm-provision.sh" "$1"; }
+grub_run "$T/grub"
+grub_run "$T/grub-bare"
+check "provisioning sets GRUB_TIMEOUT=0 in the guest" \
+    test "$(grep '^GRUB_TIMEOUT' "$T/grub")" = GRUB_TIMEOUT=0
+check "and leaves GRUB's other settings alone" grep -qx 'GRUB_CMDLINE_LINUX_DEFAULT="quiet"' "$T/grub"
+check "it adds the line when there is none" grep -qx GRUB_TIMEOUT=0 "$T/grub-bare"
+check "then it runs update-grub" grep -qx updated "$T/grub.log"
+check "provisioning calls it on the guest's real file" \
+    grep -q '^grub_no_wait /etc/default/grub' "$HERE/data/claude-vm-provision.sh"
+
 [ "$fails" -eq 0 ]
