@@ -298,6 +298,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "Firefox's policies.json (bin/ublock-allow): uBlock, DNS-over-HTTPS off"
+if out=$(bash tools/test-firefox-policy.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") Firefox policy checks"
+else
+    bad "Firefox policy checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "Firefox profiles with a user of their own (new-profile.sh), with pretend sudo"
 if out=$(bash tools/test-profile-users.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") profile user checks"

@@ -218,12 +218,17 @@ takes all of it out again (your profiles stay).
   (`extras/firefox-profiles/new-profile.sh`).
 - **HTTPS-Only Mode**: Firefox won't load an unencrypted page without
   asking first, so nobody on café or hotel Wi-Fi can tamper with it.
+- **No DNS of its own**: Firefox's DNS-over-HTTPS is off and locked (a
+  policy), so it looks names up the way the rest of the system does instead
+  of sending them to a provider it picked (it does that by default in some
+  countries). Every Firefox debsway runs gets this, `incognito` and the
+  sandboxed `firefox` included.
 - **A notice when Firefox needs a restart**: after an update, the running
   browser keeps the old, unfixed version until you restart it. A check
   every 10 minutes shows a notification when that's the case.
 
 How: default prefs in `/etc/firefox-esr/debsway-hardening.js` (any
-profile can change them at `about:config`), a uBlock policy in
+profile can change them at `about:config`), a uBlock and DNS policy in
 `/usr/share/firefox-esr/distribution/policies.json` (only written if no other
 policies file exists), and a systemd user timer.
 `bash parts/firefox-hardening.sh --remove` undoes all of it.
