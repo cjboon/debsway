@@ -10,8 +10,8 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `w3m.sh` | w3m, a text-mode web browser for the terminal (no JavaScript) |
 | `keepassxc.sh` | KeePassXC password manager. Asks whether you want the Firefox extension (`webext-keepassxc-browser`): yes installs the full build (`keepassxc-full`, which has the browser integration), no installs the minimal one (`keepassxc-minimal`). Run it again to switch |
 | `git.sh` | git, and optionally GitHub's `gh`; sets your commit name and email |
-| `claude-code.sh` | Claude Code, from Anthropic's signed apt repo. `claude` runs it as its own user (`claude-agent`), working in `~/projects` and unable to read the rest of your home; `claude-unsandboxed` runs it as you. Your own `git` gets a guard inside `~/projects` that refuses repositories with hooks or settings that could run a program |
-| `claude-vm.sh` | The `claude-vm` command runs Claude Code inside a disposable Debian VM (QEMU/KVM, built with `mockvps-kvm`), so a kernel bug that would escape a user-level sandbox only reaches a VM you can delete. No shared folder — the agent hands work back only by pushing to a git host you pull from (it installs `claude-pull` for that). The VM reaches the internet but nothing on your machine or network (a firewall on its `claude-vm` user). Needs KVM. Self-contained, and can run alongside `claude-code.sh`. See `THREAT-MODEL.md` |
+| `claude-code.sh` | Claude Code, from Anthropic's signed apt repo. `claude` runs it as its own user (`claude-agent`), working in `~/projects` and unable to read the rest of your home (the lighter sandbox: it shares your kernel, so prefer `claude-vm.sh` if your computer has KVM); `claude-unsandboxed` runs it as you. Your own `git` gets a guard inside `~/projects` that refuses repositories with hooks or settings that could run a program |
+| `claude-vm.sh` | The `claude-vm` command runs Claude Code inside a disposable Debian VM (QEMU/KVM, built with `mockvps-kvm`), so a kernel bug that would escape a user-level sandbox only reaches a VM you can delete (the stronger of the two Claude Code sandboxes: [which one?](#which-claude-code-sandbox-claude-vmsh-or-claude-codesh)). No shared folder — the agent hands work back only by pushing to a git host you pull from (it installs `claude-pull` for that). The VM reaches the internet but nothing on your machine or network (a firewall on its `claude-vm` user). Needs KVM. Self-contained, and can run alongside `claude-code.sh`. See `THREAT-MODEL.md` |
 | `tor-browser.sh` | Tor Browser (Safest, JavaScript off, a bridge before its first connection if you need one: obfs4, webtunnel, Snowflake or meek). See below |
 | `whonix.sh` | Whonix Gateway + Workstation VMs on KVM. See below |
 | `onionshare.sh` | Share files, receive files, host a site or a chat over Tor, with a bridge if you need one (obfs4 or Snowflake). Prints `onionshare-cli` examples |
@@ -87,6 +87,39 @@ trash, VM disks and big downloads are left out; see
 **Not included: yt-dlp.** It has to run YouTube's own JavaScript, and
 the one runtime that sandboxes that code (deno) isn't in Debian;
 Debian's yt-dlp is also too old to keep working.
+
+## Which Claude Code sandbox? (`claude-vm.sh` or `claude-code.sh`)
+
+Both run Claude Code away from your files and your local network. They
+differ in how strong the wall is:
+
+| | `claude-vm.sh` (`claude-vm`) | `claude-code.sh` (`claude`) |
+|---|---|---|
+| Runs as | its own throwaway Debian VM (QEMU/KVM) | its own user, `claude-agent`, on your computer |
+| Kernel | its own (the guest's) | yours: a kernel bug that escapes the user could reach your computer |
+| Your files | no shared folder; work comes back only by `git push` to a host you pull from (`claude-pull`) | `~/projects` is shared both ways; the rest of your home is not readable |
+| Your network | firewalled off: internet only | firewalled off: internet only |
+| Needs | KVM (see below), disk and memory for the guest, a first-time build | nothing special; light and quick to start |
+
+**Use `claude-vm.sh` if your computer can.** Use `claude-code.sh` if it
+can't, or if you want the lightest setup and accept that it shares your
+kernel. Installing both is fine; they don't interfere.
+
+Does this computer have KVM? Both of these should succeed:
+
+```bash
+grep -cE 'vmx|svm' /proc/cpuinfo     # a number above 0: the CPU can do it
+ls -l /dev/kvm                       # the file exists: the kernel can too
+```
+
+No `/dev/kvm` usually means one of: virtualization (Intel VT-x or AMD-V) is
+switched off in the BIOS/firmware, the CPU is too old, or debsway itself is
+running inside a VM that doesn't pass virtualization through. The first is
+fixable in the BIOS; the others mean `claude-code.sh` is your option.
+
+What neither one protects: the internet (the agent can still send anything
+it can read to anywhere), and what you pull from it. Read what it leaves
+before you run it. See `THREAT-MODEL.md`.
 
 ## Remote access (`extras/remote-access.sh`)
 

@@ -61,7 +61,9 @@ this page to decide what else you need.
   would let `claude-agent` escape its user boundary reaches only a VM you can
   throw away, and the agent hands work back only by pushing to a git host you
   pull from. The same kind of firewall, on its `claude-vm` user, keeps the
-  guest off your network. The two can be installed together.
+  guest off your network. The two can be installed together. Use the VM if
+  your computer has KVM (`docs/extras.md` says how to check); `claude` is
+  the weaker, lighter choice for computers that can't run it.
 - **A stranger's USB stick running something.** Drives mount with
   `nosuid`, `nodev` and `noexec` (`parts/udiskie.sh`), so nothing on a stick
   can run from it by itself. They still mount the moment they're plugged

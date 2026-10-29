@@ -29,6 +29,10 @@
 #    run a program as you, and refuses if it finds some. A repository the agent
 #    made is then trusted for that command, so there is no "dubious ownership".
 #  - claude-unsandboxed starts Claude Code as you, with all your files.
+# This is the lighter of the two Claude Code sandboxes: it shares your
+# computer's kernel. If this computer supports KVM, extras/claude-vm.sh puts
+# the agent in a VM instead, which is the stronger wall (docs/extras.md).
+# Use this one when KVM isn't available, or you want the light setup.
 # What it still shares with you: the internet, and anything in ~/projects.
 # Treat what it leaves there as untrusted before you run it. See THREAT-MODEL.md.
 # Usage: bash claude-code.sh [--remove]
