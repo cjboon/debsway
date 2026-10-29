@@ -2,7 +2,8 @@
 # Checks who decides about the system tor service (tor@default): apt over Tor
 # and remote access use it, OnionShare masks it, and none of them may switch it
 # off or mask it while another still needs it (system_tor_wanted, lib/tor.sh),
-# on a pretend /etc. Changes nothing. Run by test.sh, or:
+# on a pretend /etc; and that Tor Browser's AppArmor fix is fully undone.
+# Changes nothing. Run by test.sh, or:
 #   bash tools/test-tor-service.sh
 # shellcheck disable=SC2016  # the inner bash expands its own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
@@ -44,6 +45,10 @@ for f in extras/onionshare.sh parts/apt-tor.sh extras/remote-access.sh; do
     check "$f doesn't decide about the tor service from one mark alone" \
         bash -c '! grep -nE "(if|&&|\|\|) \[ !? ?-[ef] (\"\\\$APT_TOR_MARK\"|/etc/tor/\.debsway-)" "$1"' _ "$HERE/$f"
 done
+# Tor Browser's AppArmor fix: taken out again on --remove, and the profile read
+# again, so the loaded rules lose it now rather than at the next reboot
+check "tor-browser.sh reloads Tor's AppArmor profile after taking its lines out" \
+    bash -c 'sed -n "/^unfix_apparmor_dns() {/,/^}/p" "$1" | grep -q "apparmor_parser -r /etc/apparmor.d/torbrowser.Tor.tor"' _ "$HERE/extras/tor-browser.sh"
 check "OnionShare masks the tor service only when nobody needs it" \
     bash -c 'grep -B8 "systemctl mask tor.service" "$1" | grep -q "system_tor_wanted"' _ "$HERE/extras/onionshare.sh"
 

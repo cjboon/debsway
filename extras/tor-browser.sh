@@ -87,6 +87,10 @@ fix_apparmor_dns() {
 unfix_apparmor_dns() {
     [ -f "$TOR_LOCAL" ] || return 0
     sudo sed -i "\\|^$DNS_BEGIN\$|,\\|^$DNS_END\$|d" "$TOR_LOCAL"
+    # Loaded rules stay until the profile is read again: read it now, without them
+    if [ -f /etc/apparmor.d/torbrowser.Tor.tor ] && [ -d /sys/kernel/security/apparmor ]; then
+        sudo apparmor_parser -r /etc/apparmor.d/torbrowser.Tor.tor || true
+    fi
 }
 
 # torbrowser-launcher unpacks Tor Browser here. Unpacking only adds files,

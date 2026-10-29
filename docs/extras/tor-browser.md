@@ -68,7 +68,7 @@ Later, the first time you run `torbrowser-launcher`, it downloads Tor Browser fr
 
 `bash extras/tor-browser.sh --remove`:
 
-- takes out the AppArmor lines it added;
+- takes out the AppArmor lines it added, and reloads the profile so they stop applying at once;
 - uninstalls `torbrowser-launcher` (and `xz-utils`, unless something else needs it);
 - turns `contrib` off again, but only if this script was what turned it on;
 - asks whether to delete the downloaded Tor Browser and its bookmarks (`~/.local/share/torbrowser`, `~/.cache/torbrowser`, `~/.config/torbrowser`). The default is no. If you say no, it removes only the debsway lines from `user.js`; the browser keeps those settings' last values.
