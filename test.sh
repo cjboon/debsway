@@ -77,8 +77,8 @@ done
 for f in data/sysctl-hardening.conf data/module-blacklist.conf data/foot.ini data/mousepad.settings data/snowflake-bridges.txt; do
     [ -f "$f" ] || bad "a part needs $f"
 done
-# bin/powermenu and bin/debsway-idle can't source lib/sway.sh, so their lock command is a copy
-for f in bin/powermenu bin/debsway-idle; do
+# bin/powermenu, bin/debsway-idle and bin/lid can't source lib/sway.sh, so their lock command is a copy
+for f in bin/powermenu bin/debsway-idle bin/lid; do
     grep -qF "$LOCK_CMD" "$f" || bad "$f's lock command differs from LOCK_CMD in lib/sway.sh"
 done
 # Every sysctl key in the hardening file exists on this kernel
@@ -316,6 +316,14 @@ if out=$(bash tools/test-secure-dns.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") secure DNS checks"
 else
     bad "secure DNS checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "The lid that doesn't suspend (extras/lid-awake.sh, bin/lid), with a pretend sway"
+if out=$(bash tools/test-lid.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") lid checks"
+else
+    bad "lid checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
 fi
 
 # --------------------------------------------------------------------

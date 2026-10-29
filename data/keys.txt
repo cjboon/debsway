@@ -53,6 +53,10 @@
 @end
     Bar: bat               click for the time left on the battery
     Super+Escape           lock the screen (type your password to unlock)
+@if lid
+    Close the lid          locks and turns the panel off; the laptop stays on
+                           (alarms ring). Power it off before packing it
+@end
 @if screenshot
     Print                  screenshot of the whole screen to ~/Pictures
     Super+Shift+s          drag a region, saved to ~/Pictures

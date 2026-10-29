@@ -1,0 +1,26 @@
+#!/bin/sh
+# lid close|open: written by debsway extras/lid-awake.sh
+# What closing the lid does when it doesn't suspend: the screen locks (if
+# swaylock is installed) and the laptop's own panel turns off; an external
+# screen stays on. Opening the lid turns the panel back on. sway runs it on the
+# lid switch (~/.config/sway/config.d/lid.conf).
+
+# panels: the laptop's own screens (eDP, LVDS or DSI), by sway's output names
+panels() {
+    swaymsg -p -t get_outputs 2>/dev/null | awk '/^Output (eDP|LVDS|DSI)-/ { print $2 }'
+}
+
+case ${1:-} in
+    close)
+        # the same as LOCK_CMD in lib/sway.sh (test.sh checks); -f returns once it is locked
+        if command -v swaylock >/dev/null && ! pgrep -x swaylock >/dev/null; then
+            swaylock -f -c 000000
+        fi
+        for p in $(panels); do swaymsg output "$p" power off >/dev/null; done
+        ;;
+    open)
+        for p in $(panels); do swaymsg output "$p" power on >/dev/null; done
+        ;;
+    *) echo "usage: lid close|open" >&2; exit 2 ;;
+esac
+exit 0

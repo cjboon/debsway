@@ -111,7 +111,9 @@ With the extras:
   profile's logins and your wallets. debsway doesn't sandbox your own
   user. Only install software you trust.
 - **A laptop that's on, asleep or locked.** The disk key is in memory
-  then. Shut down before leaving it somewhere or crossing a border.
+  then. Shut down before leaving it somewhere or crossing a border. With
+  `extras/lid-awake.sh` a closed lid means on and locked, not asleep: the
+  same applies.
 - **Physical tampering.** Someone with the laptop alone for a while
   could install a hardware keylogger or tamper with the boot process.
   debsway doesn't set up Secure Boot measurement or tamper evidence.
