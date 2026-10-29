@@ -11,6 +11,8 @@
 #   claude-vm stop       power the VM off
 #   claude-vm pubkey     the VM's ssh public key (add it on your git host)
 #   claude-vm rebuild    throw the VM away and build a fresh one
+# Started from a launcher (wmenu on Super+d), claude-vm and claude-vm shell
+# open their own foot window, which stays open after an error so you can read it.
 # To run Claude Code directly on your machine as yourself instead, with your
 # files, install it normally (see extras/claude-code.sh).
 set -euo pipefail
@@ -18,18 +20,40 @@ set -euo pipefail
 AGENT=claude-vm
 SESSION=/usr/local/libexec/claude-vm-session
 
-die() { printf 'claude-vm: %s\n' "$*" >&2; exit 1; }
+# hold: in the window opened below, keep what went wrong on screen until Enter
+hold() {
+    [ -n "${CLAUDE_VM_HOLD:-}" ] || return 0
+    printf '\nPress Enter to close this window.' >&2
+    read -r _ || true
+}
+die() { printf 'claude-vm: %s\n' "$*" >&2; hold; exit 1; }
 
 [ "$(id -u)" -ne 0 ] || die "run it as your normal user, not root."
-sudo -n -u "$AGENT" -l "$SESSION" >/dev/null 2>&1 ||
-    die "the VM sandbox isn't set up. Run: bash ~/debsway/extras/claude-vm.sh"
 
-case "${1:-connect}" in
+cmd=${1:-connect}
+case "$cmd" in
     connect | shell | status | stop | pubkey | rebuild) ;;
     -h | --help)
-        sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'
+        sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'
         exit 0 ;;
     *) die "unknown command '$1'. Try: claude-vm --help" ;;
 esac
 
-exec sudo -n -u "$AGENT" "$SESSION" "${1:-connect}"
+# Started from wmenu or another launcher there is no terminal to talk in, and
+# ssh would quietly give up: open one in sway and run again inside it
+if [ "$cmd" = connect ] || [ "$cmd" = shell ]; then
+    if [ ! -t 0 ] && [ ! -t 1 ] && [ -n "${WAYLAND_DISPLAY:-}" ] && command -v foot >/dev/null; then
+        exec foot --title="Claude (VM)" env CLAUDE_VM_HOLD=1 "$0" "$cmd"
+    fi
+fi
+
+sudo -n -u "$AGENT" -l "$SESSION" >/dev/null 2>&1 ||
+    die "the VM sandbox isn't set up. Run: bash ~/debsway/extras/claude-vm.sh"
+
+if [ -n "${CLAUDE_VM_HOLD:-}" ]; then
+    rc=0
+    sudo -n -u "$AGENT" "$SESSION" "$cmd" || rc=$?
+    [ "$rc" -eq 0 ] || hold
+    exit "$rc"
+fi
+exec sudo -n -u "$AGENT" "$SESSION" "$cmd"

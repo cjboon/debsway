@@ -15,12 +15,16 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 }
 
 mkdir -p "$T/fake"
-# a pretend sudo: "-l" says whether the rule exists (when $T/rule is there), else it writes down the call
+# a pretend sudo: "-l" says whether the rule exists (when $T/rule is there), else it writes down
+# the call (and fails if $T/sudo-fails is there); a pretend foot writes down how it was started
 cat >"$T/fake/sudo" <<EOF
 #!/bin/sh
-case "\$*" in *" -l "*) [ -e "$T/rule" ] ;; *) echo "sudo \$*" >>"$T/calls" ;; esac
+case "\$*" in *" -l "*) [ -e "$T/rule" ] ;; *) echo "sudo \$*" >>"$T/calls"; [ ! -e "$T/sudo-fails" ] ;; esac
 EOF
-chmod +x "$T/fake/sudo"
+printf '#!/bin/sh\necho "foot $*" >>"%s/calls"\n' "$T" >"$T/fake/foot"
+chmod +x "$T/fake/sudo" "$T/fake/foot"
+# not in sway unless a check says so, even when the tests run in sway
+unset WAYLAND_DISPLAY CLAUDE_VM_HOLD
 export PATH="$T/fake:$PATH" HOME="$T/home"
 run() { bash "$HERE/bin/claude-vm" "$@"; }
 
@@ -38,6 +42,34 @@ check "no argument runs the session's connect subcommand as claude-vm" \
 run status
 check "a known command is passed through to the session" \
     grep -qx "sudo -n -u claude-vm /usr/local/libexec/claude-vm-session status" "$T/calls"
+
+# From wmenu: no terminal on stdin or stdout, in sway
+: >"$T/calls"
+WAYLAND_DISPLAY=wayland-1 run </dev/null >/dev/null 2>&1
+check "from a launcher, claude-vm opens a foot window and runs itself in it" \
+    grep -qx "foot --title=Claude (VM) env CLAUDE_VM_HOLD=1 $HERE/bin/claude-vm connect" "$T/calls"
+check "and doesn't start the session outside it" bash -c "! grep -q '^sudo' '$T/calls'"
+: >"$T/calls"
+WAYLAND_DISPLAY=wayland-1 run shell </dev/null >/dev/null 2>&1
+check "claude-vm shell does the same" grep -q "^foot .*/claude-vm shell\$" "$T/calls"
+: >"$T/calls"
+WAYLAND_DISPLAY=wayland-1 run status </dev/null >/dev/null 2>&1
+check "a command that only prints (status) opens no window" bash -c "! grep -q '^foot' '$T/calls'"
+: >"$T/calls"
+run </dev/null >/dev/null 2>&1
+check "outside sway it opens no window" bash -c "! grep -q '^foot' '$T/calls'"
+# Inside that window
+: >"$T/calls"
+out=$(CLAUDE_VM_HOLD=1 run </dev/null 2>&1)
+check "in the window, claude-vm runs the session" \
+    grep -qx "sudo -n -u claude-vm /usr/local/libexec/claude-vm-session connect" "$T/calls"
+check "and the window closes when Claude Code ends" bash -c "! grep -q 'Press Enter' <<<'$out'"
+touch "$T/sudo-fails"
+out=$(CLAUDE_VM_HOLD=1 run </dev/null 2>&1)
+check "it stays open after an error until Enter" grep -q 'Press Enter to close' <<<"$out"
+check "and still reports the failure" bash -c "! CLAUDE_VM_HOLD=1 bash '$HERE/bin/claude-vm' </dev/null >/dev/null 2>&1"
+rm "$T/sudo-fails"
+check "claude-vm --help says so" bash -c "bash '$HERE/bin/claude-vm' --help | grep -q 'own foot window'"
 
 check "claude-vm-session refuses anyone but the claude-vm user" \
     bash -c "! bash '$HERE/bin/claude-vm-session' connect 2>/dev/null"
