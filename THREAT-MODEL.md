@@ -185,5 +185,9 @@ With the extras:
 - **Wi-Fi login pages may ask again** after reconnecting, because of the
   random MAC address. Switch to one made-up address per network in
   `/etc/NetworkManager/conf.d/90-debsway-random-mac.conf` (`stable`).
+- **The screen locks by itself only after 30 minutes idle**, so a laptop
+  left open is usable by whoever sits down until then. Lock it yourself
+  when you step away (Super+Escape), or make the wait shorter:
+  `timer lock 5`.
 - **Security fixes install themselves.** Rarely, an update changes
   something you relied on; the log is in `/var/log/unattended-upgrades/`.

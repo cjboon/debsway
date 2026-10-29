@@ -77,8 +77,10 @@ done
 for f in data/sysctl-hardening.conf data/module-blacklist.conf data/foot.ini data/mousepad.settings data/snowflake-bridges.txt; do
     [ -f "$f" ] || bad "a part needs $f"
 done
-# bin/powermenu can't source lib/sway.sh, so its lock command is a copy
-grep -qF "$LOCK_CMD" bin/powermenu || bad "bin/powermenu's lock command differs from LOCK_CMD in lib/sway.sh"
+# bin/powermenu and bin/debsway-idle can't source lib/sway.sh, so their lock command is a copy
+for f in bin/powermenu bin/debsway-idle; do
+    grep -qF "$LOCK_CMD" "$f" || bad "$f's lock command differs from LOCK_CMD in lib/sway.sh"
+done
 # Every sysctl key in the hardening file exists on this kernel
 while read -r key _; do
     [ -e "/proc/sys/${key//.//}" ] || meh "sysctl $key doesn't exist on this kernel (data/sysctl-hardening.conf)"

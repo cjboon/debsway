@@ -82,15 +82,15 @@ dim stop
 
 check "an unknown word is refused" not dim nonsense
 
-# the idle setup
-# shellcheck disable=SC2016  # the pattern names shell variables of the part, literally
-check "swayidle starts the fade 30 seconds before the lock" python3 -I -c '
-import re, sys
-s = open(sys.argv[1]).read()
-dim = int(re.search(r"timeout (\d+) .\$DIM start", s).group(1))
-lock = int(re.search(r"timeout (\d+) .\$LOCK_CMD", s).group(1))
-assert lock - dim == 30, (dim, lock)
-assert "resume \x27$DIM stop\x27" in s
-' "$HERE/parts/swayidle.sh"
+# the idle setup: bin/debsway-idle starts swayidle with the fade 30 seconds before
+# the lock (30 minutes when nothing is set), here with a pretend swayidle
+mkdir -p "$T/idlebin" "$T/idleconf"
+printf '#!/bin/sh\nprintf "%%s\\n" "$@" >"%s/swayidle-args"\n' "$T" >"$T/idlebin/swayidle"
+chmod +x "$T/idlebin/swayidle"
+PATH="$T/idlebin:$PATH" XDG_CONFIG_HOME="$T/idleconf" sh "$HERE/bin/debsway-idle"
+args=$(paste -sd' ' "$T/swayidle-args")
+check "swayidle starts the fade 30 seconds before the lock (1770 s, lock at 1800 s)" \
+    grep -q 'timeout 1770 .*/dim-warning start resume .*/dim-warning stop timeout 1800 swaylock' <<<"$args"
+check "...and turns the screen off 5 minutes after the lock (2100 s)" grep -q 'timeout 2100 swaymsg' <<<"$args"
 
 [ "$fails" -eq 0 ]

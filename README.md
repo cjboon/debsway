@@ -301,7 +301,7 @@ main ones:
 | Super+1 … 0, Super+Shift+1 … 0 | go to / send window to workspace |
 | Super+h/j/k/l or arrows | move focus |
 | Super+f | fullscreen |
-| Super+Escape | lock |
+| Super+Escape | lock (it also locks by itself after 30 minutes idle; `timer lock 10` changes that) |
 | Brightness keys, Super+F1 / F2 | brightness down / up |
 | Print, Super+Shift+p | screenshot of the whole screen to ~/Pictures |
 | Shift+Print, Super+Shift+s | screenshot of a region |

@@ -23,6 +23,7 @@
    `timer` (Super+t, or a click on the time in the bar) sets timers and alarms
    with systemd user timers and no extra package: `timer 10m tea`,
    `timer at 7:30`, `timer list`, `timer cancel`. The next one shows in the bar.
+   `timer lock 10` (or `l` in the timer menu) sets how many minutes idle before the screen locks.
    `timer stop`, clicking the notification or dismissing it ends the ringing (an alarm repeats a gentle bell phrase for up to 5 minutes, to wake you; a timer rings about 20 seconds). `timer clock` chooses whether the bar shows the date (the time is always am/pm)
    (`~/.config/debsway/clock`). Timers last until logout or reboot, and a
    laptop that is asleep does not wake for them.
@@ -50,7 +51,7 @@ checked with `sway -C` before it's kept.
 | `unattended-upgrades.sh` | unattended-upgrades | Debian's security fixes install themselves daily, with Debian's default rules; the Mullvad and Claude Code repositories debsway adds are included, any repository you add yourself is left to you. Log: `/var/log/unattended-upgrades/` |
 | `wmenu.sh` | wmenu | The launcher on Super+d, in the bar's black and white, opaque (the bar is see-through) and with a font a little bigger than the bar's so it covers the bar. If a strip of the bar still shows, raise the `12` in the `set $menu` line of `~/.config/sway/config` |
 | `swaylock.sh` | swaylock | Super+Escape locks |
-| `swayidle.sh` | swayidle, swaylock | Lock after 5 min, screen off after 10, lock before sleep. The screen fades down slowly for the 30 seconds before the lock, with a "Locking soon" notification; any key or mouse movement puts it back (`dim-warning`; a monitor with no backlight gets only the notification) |
+| `swayidle.sh` | swayidle, swaylock | Lock after 30 min idle (`timer lock 10` makes it 10; 1 to 120, kept when the part runs again; `bash status.sh` shows it), screen off 5 min after the lock, lock before sleep. The screen fades down slowly for the 30 seconds before the lock, with a "Locking soon" notification; any key or mouse movement puts it back (`dim-warning`; a monitor with no backlight gets only the notification) |
 | `brightnessctl.sh` | brightnessctl | `brightness up\|down [STEP]`, never below 5%; brightness keys and Super+F1/F2 |
 | `wl-clipboard.sh` | wl-clipboard | `wl-copy` / `wl-paste` |
 | `mako.sh` | mako-notifier | Notifications close after 5 seconds; Super+n / Super+Shift+n dismiss |

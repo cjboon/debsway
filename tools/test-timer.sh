@@ -2,6 +2,7 @@
 # Checks bin/timer (timers, alarms, clock format) with pretend systemd, notify-send
 # and sound player, so nothing is started and nothing rings. Run by test.sh, or:
 #   bash tools/test-timer.sh
+# shellcheck disable=SC2016  # the inner bash, and sway's own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 TIMER=$HERE/bin/timer
 
@@ -235,5 +236,42 @@ assert os.path.getsize(f) < 600000
 ' "$HERE/data/alarm.wav"
 check "the base part installs it" grep -q 'data/alarm.wav' "$HERE/parts/core-commands.sh"
 check "the sound extra no longer needs a sound theme package" bash -c "! grep -q 'sound-theme' '$HERE/extras/pipewire-audio.sh'"
+
+# How long before the screen locks: timer lock writes it, bin/debsway-idle runs
+# swayidle with it. swayidle, swaymsg and pkill are pretend ones.
+IDLE=$HERE/bin/debsway-idle
+for c in swayidle swaymsg pkill; do
+    printf '#!/bin/sh\necho "%s $*" >>"%s/calls"\nexit 0\n' "$c" "$T" >"$T/fake/$c"
+    chmod +x "$T/fake/$c"
+done
+export DEBSWAY_IDLE=$IDLE
+check "with nothing set the screen locks after 30 minutes" test "$("$IDLE" --minutes)" = 30
+check "timer lock alone says how long" grep -q 'after 30 minutes' <<<"$(t lock)"
+: >"$T/calls"
+out=$(SWAYSOCK=/pretend t lock 10 2>&1)
+check "timer lock 10 says so" grep -q 'now locks after 10 minutes' <<<"$out"
+check "...and debsway-idle reads 10" test "$("$IDLE" --minutes)" = 10
+check "...and swayidle is started again with it (sway keeps the old timeouts otherwise)" \
+    bash -c 'grep -q "^pkill -x swayidle" "$1" && grep -q "^swaymsg exec .*debsway-idle" "$1"' _ "$T/calls"
+t lock 15m >/dev/null
+check "timer lock 15m works too" test "$("$IDLE" --minutes)" = 15
+for bad in 0 121 abc 5h -3; do
+    check "timer lock $bad is refused" bash -c '! bash "$1" lock "$2"' _ "$TIMER" "$bad"
+done
+check "...and the time stays as it was" test "$("$IDLE" --minutes)" = 15
+check "without the idle lock set up it says how to get it" \
+    bash -c 'out=$(DEBSWAY_IDLE=/nonexistent bash "$1" lock 10 2>&1); [ $? -ne 0 ] && grep -q "parts/swayidle.sh" <<<"$out"' _ "$TIMER"
+: >"$T/calls"
+t lock 10 >/dev/null
+"$IDLE"
+run=$(grep '^swayidle ' "$T/calls")
+check "swayidle fades 30 seconds before the lock (570 s)" grep -q 'timeout 570 .*dim-warning start' <<<"$run"
+check "...locks at 600 s" grep -q "timeout 600 swaylock -f -c 000000" <<<"$run"
+check "...turns the screen off 5 minutes later (900 s)" grep -q 'timeout 900 swaymsg "output \* power off"' <<<"$run"
+check "...and locks before sleep" grep -q 'before-sleep swaylock' <<<"$run"
+printf 'minutes=500\n' >"$T/config/debsway/lock"
+check "a time out of range in the file falls back to 30" test "$("$IDLE" --minutes)" = 30
+check "the timer menu offers it" grep -q 'how long before the screen locks' "$TIMER"
+check "parts/swayidle.sh starts swayidle through debsway-idle" grep -qx 'IDLE_CMD="$HOME/.local/bin/debsway-idle"' "$HERE/parts/swayidle.sh"
 
 [ "$fails" -eq 0 ]

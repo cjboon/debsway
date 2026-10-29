@@ -99,6 +99,15 @@ for c in "$HOME"/.local/bin/firefox-*; do
 done
 $found || echo "  (none)"
 
+echo "Screen lock:"
+if [ -x "$HOME/.local/bin/debsway-idle" ] && [ -f "$SWAY_SNIPPETS/idle.conf" ]; then
+    echo "  after $("$HOME/.local/bin/debsway-idle" --minutes) minutes idle (change it: timer lock MINUTES)"
+elif [ -f "$SWAY_SNIPPETS/idle.conf" ]; then
+    echo "  after 5 minutes idle (to change it with timer lock: bash parts/swayidle.sh again)"
+else
+    echo "  only when you lock it (bash parts/swayidle.sh locks it after 30 minutes idle)"
+fi
+
 echo "sway snippets in $SWAY_SNIPPETS:"
 shopt -s nullglob
 snippets=("$SWAY_SNIPPETS"/*.conf)

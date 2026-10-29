@@ -10,6 +10,7 @@
 #   timer stop                  stop the sound of an alarm that is ringing (else: cancel)
 #   timer clock                 whether the bar shows the date (the time is always am/pm)
 #   timer clock date on|date off
+#   timer lock [MINUTES]        lock the screen after MINUTES idle (1 to 120; alone: how long now)
 #
 # A timer or alarm rings with a notification that stays until you dismiss it
 # and a sound: an alarm repeats it for up to 5 minutes (to wake you), a timer for
@@ -313,6 +314,38 @@ bar_format() {
     if [ "$(conf_get date)" = no ]; then echo '%a %-I:%M %p'; else echo '%a %Y-%m-%d %-I:%M %p'; fi
 }
 
+# --- how long before the screen locks ---------------------------------------
+# bin/debsway-idle (parts/swayidle.sh) reads the minutes from this file
+
+LOCK_CONF=${XDG_CONFIG_HOME:-$HOME/.config}/debsway/lock
+IDLE=${DEBSWAY_IDLE:-$HOME/.local/bin/debsway-idle}   # (a test points this elsewhere)
+
+lock_cmd() {
+    local m
+    if [ ! -x "$IDLE" ]; then
+        err "the screen doesn't lock by itself here (bash ~/debsway/parts/swayidle.sh sets that up)"
+        return 1
+    fi
+    if [ -z "${1:-}" ]; then
+        echo "The screen locks after $("$IDLE" --minutes) minutes idle. Change it: timer lock MINUTES (1 to 120)"
+        return 0
+    fi
+    m=${1%[mM]}
+    if [[ ! $m =~ ^[0-9]{1,3}$ ]] || [ "$((10#$m))" -lt 1 ] || [ "$((10#$m))" -gt 120 ]; then
+        err "'$1' isn't a number of minutes from 1 to 120, e.g. timer lock 10"
+        return 1
+    fi
+    m=$((10#$m))
+    mkdir -p "${LOCK_CONF%/*}"
+    printf '# Written by debsway timer lock: minutes idle before the screen locks\nminutes=%s\n' "$m" >"$LOCK_CONF"
+    # swayidle keeps the timeouts it started with, so start it again
+    if [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null; then
+        pkill -x swayidle 2>/dev/null
+        swaymsg exec "$IDLE" >/dev/null 2>&1
+    fi
+    echo "The screen now locks after $m minutes idle (fading down for the 30 seconds before)."
+}
+
 # --- the menu ---------------------------------------------------------------
 
 menu() {
@@ -347,8 +380,11 @@ menu() {
       7:30  or  7am  or  7:30pm      an alarm at the next 7:30
   Or a letter:
       c   cancel one    s   stop a ringing alarm    f   date in the bar    Esc or q   quit
-
 EOF
+        if [ -x "$IDLE" ]; then
+            printf '      l   how long before the screen locks (now %s minutes)\n' "$("$IDLE" --minutes)"
+        fi
+        echo
         read -r -e -p "  > " input || return 0
         # shellcheck disable=SC2086  # the words are meant to split
         set -- $input
@@ -364,13 +400,17 @@ EOF
                     cancel_cmd "$n"
                 fi ;;
             f | format | clock) echo; clock_cmd ;;
+            l | lock)
+                n=${2:-}
+                [ -n "$n" ] || read -r -p "  Lock after how many minutes idle (1 to 120)? " n || continue
+                [ -z "$n" ] || lock_cmd "$n" ;;
             *) set_cmd "$@" ;;
         esac
         sleep 1.6
     done
 }
 
-usage() { sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; }
 
 case ${1:-} in
     "") menu ;;
@@ -387,6 +427,7 @@ case ${1:-} in
             else show_list; err "which one? timer cancel N, or timer cancel all"; exit 1; fi
         fi ;;
     clock) shift; clock_cmd "$@" ;;
+    lock) shift; lock_cmd "$@" ;;
     fire) fire "${2:-}" ;;
     next) next ;;
     seconds) parse_duration "${2:-}" ;;   # (used by the tests)
