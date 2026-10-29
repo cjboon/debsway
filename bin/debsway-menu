@@ -36,7 +36,9 @@ gray_options() {
 if [ -z "$1" ]; then
     mapfile -t gray < <(gray_options)
     # --log-level=error: foot warns about a protocol sway lacks (the window icon), harmlessly
-    exec foot --log-level=error --app-id=debsway-run "${gray[@]}" "$(readlink -f -- "$0")" --tui
+    # scrollback.multiplier=1: one step of the mouse wheel is one arrow key in
+    # full-screen lists (the install checklist), not three
+    exec foot --log-level=error --app-id=debsway-run -o scrollback.multiplier=1.0 "${gray[@]}" "$(readlink -f -- "$0")" --tui
 fi
 
 # ---- inside the terminal ----

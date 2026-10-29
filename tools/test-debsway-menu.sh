@@ -52,6 +52,7 @@ check "a click opens a window named debsway-run" grep -qx -e --app-id=debsway-ru
 check "...quietly: only errors are logged (no warning about the missing icon protocol)" grep -qx -e --log-level=error "$T/foot"
 check "...not fullscreen, so the bar stays visible" not grep -qx -e --fullscreen "$T/foot"
 check "...with a black background" grep -qx 'colors.background=000000' "$T/foot"
+check "...where one step of the mouse wheel moves one line of a list, not three" grep -qx 'scrollback.multiplier=1.0' "$T/foot"
 check "...and the menu as its program" test "$(tail -1 "$T/foot")" = --tui
 # every color is a gray: red = green = blue in each
 check "every color it sets is a gray" python3 -I -c '
