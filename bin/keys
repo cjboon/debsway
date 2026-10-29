@@ -1,6 +1,27 @@
 #!/bin/sh
 # Shows the key cheat sheet (Esc closes it). Written by debsway install-base.sh
-# The pager of the debsway menu when that is installed; less otherwise.
-KEYS=$HOME/.local/share/debsway/keys.txt
-if [ -x "$HOME/.local/bin/debsway-menu" ]; then exec "$HOME/.local/bin/debsway-menu" --pager "$KEYS"; fi
-exec less "$KEYS"
+# data/keys.txt has blocks "@if COMMAND" ... "@end": a block is shown only if
+# COMMAND is installed, so the sheet lists just what this computer has.
+#   keys          the pager of the debsway menu when that is installed; less otherwise
+#   keys --text   the sheet as plain text on standard output
+SHEET=$HOME/.local/share/debsway/keys.txt
+
+# text: the sheet without the blocks of commands that are not installed
+text() {
+    awk '
+        /^@if / { skip = (system("command -v " $2 " >/dev/null 2>&1") != 0); next }
+        /^@end/ { skip = 0; next }
+        !skip'  "$SHEET"
+}
+
+if [ "$1" = --text ]; then text; exit; fi
+
+shown=$(mktemp) || exit 1
+trap 'rm -f "$shown"' EXIT
+text >"$shown"
+# ~/KEYS.txt follows along (only if it is the link or copy debsway made)
+if [ ! -e "$HOME/KEYS.txt" ] || [ -L "$HOME/KEYS.txt" ] || grep -q 'Super = the Windows' "$HOME/KEYS.txt" 2>/dev/null; then
+    rm -f "$HOME/KEYS.txt"
+    cp "$shown" "$HOME/KEYS.txt" 2>/dev/null
+fi
+if [ -x "$HOME/.local/bin/debsway-menu" ]; then "$HOME/.local/bin/debsway-menu" --pager "$shown"; else less "$shown"; fi

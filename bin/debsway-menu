@@ -229,7 +229,8 @@ run_choice() {
     local out
     case ${items[sel]} in
         Help)
-            mapfile -t lines <"$KEYS_FILE"
+            # the sheet without the lines for things that are not installed
+            mapfile -t lines < <("$HOME/.local/bin/keys" --text 2>/dev/null || cat "$KEYS_FILE")
             pager ;;
         Status)
             REDRAW=

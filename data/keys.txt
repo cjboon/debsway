@@ -3,6 +3,7 @@
   Press Esc to close this; arrows and Space scroll.
   Open it again any time: Super+?, click debsway > Help in the bar, or type  keys.
   (The debsway menu: arrows and Enter, or click. Esc closes every screen of it.)
+  Lines for things you have not installed are left out; add them with debsway --apps.
   It is also the file ~/KEYS.txt.
 
   START HERE
@@ -34,15 +35,22 @@
     Super+Shift+1 … 0      send the window to workspace 1 … 10
 
   SCREEN AND SOUND
+@if brightness
     Brightness keys        brightness down / up (or Super+F1 / Super+F2)
+    Bar: bright            scroll over it to change it
+@end
+@if volume
     Volume keys            volume down / up / mute, mic mute
                            (or Super+F11 / Super+F12 / Super+F10)
-    Bar: vol / bright      scroll over them to change them
-                           (click vol: mute; click bat: time left)
+    Bar: vol               scroll over it to change it; click: mute
+@end
+    Bar: bat               click for the time left on the battery
     Super+Escape           lock the screen (type your password to unlock)
+@if screenshot
     Print                  screenshot of the whole screen to ~/Pictures
     Super+Shift+s          drag a region, saved to ~/Pictures
     Super+Shift+x          drag a region, copied to the clipboard
+@end
 
   TIMERS AND ALARMS
     Super+t                menu: type 10m, 1h30 or 7:30 and press Enter
@@ -70,14 +78,30 @@
     bash ~/debsway/status.sh          what is installed
     bash ~/debsway/install-extras.sh  add programs (or one: extras/NAME.sh)
     display-scale          text too small on a sharp screen? makes it bigger
+@if claude
     claude                 Claude Code as its own user, in ~/projects/NAME
                            (claude-unsandboxed: as you, with all your files)
+@end
+@if claude-pull
     claude-pull            see what Claude pushed, bring it in if you say y
+@end
+@if nmtui
     nmtui                  pick a Wi-Fi network (or click its name in the bar)
+@end
+@if powerprofilesctl
     powerprofilesctl set power-saver | balanced | performance
+@end
+@if brightness
     brightness up 10       bigger brightness steps
+@end
+@if udiskie-umount
     udiskie-umount -a      unmount all USB drives before unplugging
+@end
+@if volume
     volume up|down 10      bigger volume steps (volume mute, volume micmute)
     wpctl status           sound devices and volume
+@end
+@if ublock-allow
     ublock-allow site.com  let a site that breaks load other sites' scripts
                            (then restart Firefox; ublock-allow --list)
+@end

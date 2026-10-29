@@ -26,7 +26,8 @@ mkdir -p "$T/fake" "$T/home/.local/bin" "$T/debsway"
     # arguments and whether it was asked to wait at the end
     printf '#!/bin/sh\necho "$PWD|$*|pause=$DEBSWAY_PAUSE" >>"%s/ran"\n' "$T" >"$T/fake/bash"
     printf '#!/bin/sh\ncat >/dev/null\n' >"$T/fake/less"
-    printf '#!/bin/sh\necho "keys" >>"%s/ran"\n' "$T" >"$T/home/.local/bin/keys"
+    # (keys --text prints the cheat sheet, as the real one does after filtering it)
+    printf '#!/bin/sh\n[ "$1" = --text ] && exec cat "%s/home/.local/share/debsway/keys.txt"\necho "keys" >>"%s/ran"\n' "$T" "$T" >"$T/home/.local/bin/keys"
 }
 chmod +x "$T/fake/"* "$T/home/.local/bin/keys"
 : >"$T/debsway/update.sh"
