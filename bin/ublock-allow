@@ -66,7 +66,11 @@ write_policy() {
     #                            for every add-on; incognito is private all the time).
     #   Override*Page          - no Mozilla first-run or what's-new tabs; Firefox
     #                            opens straight to the home page.
-    printf '{\n  "policies": {\n    "SearchEngines": { "Default": "DuckDuckGo", "DefaultPrivate": "DuckDuckGo" },\n    "OverrideFirstRunPage": "",\n    "OverridePostUpdatePage": "",\n    "ExtensionSettings": {\n      "uBlock0@raymondhill.net": { "private_browsing": true }\n    },\n    "3rdparty": {\n      "Extensions": {\n        "uBlock0@raymondhill.net": {\n          "adminSettings": "%s"\n        }\n      }\n    }\n  }\n}\n' "$inner" |
+    #   DNSOverHTTPS           - off, and locked: Firefox looks names up the way
+    #                            the rest of the system does, never through a
+    #                            DNS-over-HTTPS provider of its own choosing (on by
+    #                            default in some countries).
+    printf '{\n  "policies": {\n    "SearchEngines": { "Default": "DuckDuckGo", "DefaultPrivate": "DuckDuckGo" },\n    "OverrideFirstRunPage": "",\n    "OverridePostUpdatePage": "",\n    "DNSOverHTTPS": { "Enabled": false, "Locked": true },\n    "ExtensionSettings": {\n      "uBlock0@raymondhill.net": { "private_browsing": true }\n    },\n    "3rdparty": {\n      "Extensions": {\n        "uBlock0@raymondhill.net": {\n          "adminSettings": "%s"\n        }\n      }\n    }\n  }\n}\n' "$inner" |
         $SUDO tee "$POLICY" >/dev/null
     sum=$(sha256sum "$POLICY")
     echo "$sum" | $SUDO tee "$OURS" >/dev/null

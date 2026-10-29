@@ -64,6 +64,19 @@ MULLVAD_KEY_URL=https://repository.mullvad.net/deb/mullvad-keyring.asc
 # checked: 2026-10-27  Tor Browser 15.0.26
 SNOWFLAKE_BRIDGES_SOURCE="Tor Browser 15.0.26 pt_config.json"
 
+# DNS-over-TLS resolvers that extras/secure-dns.sh offers (lib/secure-dns.sh
+# says what each one is): the name its certificate must carry, then its
+# addresses. Checked against the provider's own page, and with openssl on port
+# 853 that the certificate matches the name (IPv4 addresses; IPv6 wasn't
+# reachable from where it was checked). Mullvad's public DNS isn't here: it
+# shuts down on 2026-11-02 (mullvad.net/en/blog/2026/9/3/...).
+# checked: 2026-10-29  quad9.net/service/service-addresses-and-features; openssl
+DOT_QUAD9="dns.quad9.net 9.9.9.9 149.112.112.112 2620:fe::fe 2620:fe::9"
+# checked: 2026-10-29  digitale-gesellschaft.ch/dns; openssl
+DOT_DIGIGES="dns.digitale-gesellschaft.ch 185.95.218.42 185.95.218.43 2a05:fc84::42 2a05:fc84::43"
+# checked: 2026-10-29  applied-privacy.net/services/dns; openssl
+DOT_APPLIEDPRIVACY="dot1.applied-privacy.net 146.255.56.98 2a02:1b8:10:234::2"
+
 # The Debian release everything was written and tested on.
 # checked: 2026-10-27
 DEBIAN_RELEASE=trixie

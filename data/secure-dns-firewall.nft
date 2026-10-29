@@ -1,0 +1,32 @@
+# Only Unbound sends DNS out of this computer (debsway extras/secure-dns.sh).
+# Every program asks Unbound on 127.0.0.1, and Unbound asks the resolver you
+# chose over an encrypted connection. A program that asks some other DNS server
+# itself (port 53, or DNS over TLS on 853) is refused, so nothing goes around
+# Unbound, even if something rewrites /etc/resolv.conf: DNS stops working
+# instead of leaking. The sandboxes' own rules allow port 53, but a refusal
+# here still counts for them.
+#
+# DNS over HTTPS (port 443) looks like any other web traffic, so it can't be
+# stopped this way: a program with its own (Mullvad Browser, for one) still
+# uses it. Firefox's is switched off (parts/firefox-hardening.sh).
+#
+# A VPN's tunnel (wg*, tun*) is allowed: Mullvad VPN points /etc/resolv.conf
+# at its own DNS server inside the tunnel while it is connected.
+
+table inet debsway_secure_dns
+delete table inet debsway_secure_dns
+
+table inet debsway_secure_dns {
+    chain output {
+        type filter hook output priority 0; policy accept;
+        # Questions to Unbound itself, on this computer
+        oifname "lo" accept
+        # Unbound asking the resolver you chose
+        meta skuid "unbound" accept
+        # A connected VPN's own DNS, inside its tunnel
+        oifname "wg*" accept
+        oifname "tun*" accept
+        udp dport { 53, 853 } reject
+        tcp dport { 53, 853 } reject with tcp reset
+    }
+}

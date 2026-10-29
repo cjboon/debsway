@@ -67,6 +67,9 @@ done
 for f in bin/claude-vm bin/claude-vm-session data/claude-vm-firewall.nft data/claude-vm-provision.sh vendor/mockvps-kvm/mockvps-kvm.sh; do
     [ -f "$f" ] || bad "extras/claude-vm.sh needs $f"
 done
+for f in lib/secure-dns.sh data/secure-dns-firewall.nft; do
+    [ -f "$f" ] || bad "extras/secure-dns.sh needs $f"
+done
 for f in bin/incognito bin/incognito-session bin/wayland-restrict data/incognito-user.js data/incognito-firewall.nft; do
     [ -f "$f" ] || bad "parts/incognito.sh needs $f"
 done
@@ -298,6 +301,22 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "Firefox's policies.json (bin/ublock-allow): uBlock, DNS-over-HTTPS off"
+if out=$(bash tools/test-firefox-policy.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") Firefox policy checks"
+else
+    bad "Firefox policy checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "Encrypted DNS (extras/secure-dns.sh): resolvers, Unbound's settings, the firewall rule"
+if out=$(bash tools/test-secure-dns.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") secure DNS checks"
+else
+    bad "secure DNS checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "Firefox profiles with a user of their own (new-profile.sh), with pretend sudo"
 if out=$(bash tools/test-profile-users.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") profile user checks"
@@ -316,7 +335,7 @@ while read -r day what; do
     else
         ok "$what checked $day"
     fi
-done < <(awk '/^# checked: / { day = $3 } /^[A-Z_]+=/ && day { sub(/=.*/, ""); print day, $0; day = "" }' pins.sh)
+done < <(awk '/^# checked: / { day = $3 } /^[A-Z][A-Z0-9_]*=/ && day { sub(/=.*/, ""); print day, $0; day = "" }' pins.sh)
 
 # --------------------------------------------------------------------
 section "Debian and Firefox features debsway relies on"
@@ -503,6 +522,25 @@ LIST
         done
         ok "$name apt repository: signed, has $*"
     }
+    # The resolvers extras/secure-dns.sh offers: each IPv4 address answers on port
+    # 853 with a certificate for its pinned name (IPv6 is often not reachable)
+    . lib/secure-dns.sh
+    if command -v openssl >/dev/null; then
+        for name in "${DNS_PROVIDERS[@]}"; do
+            pin=$(dns_pin "$name") tls=${pin%% *} bad_addr=
+            for a in ${pin#* }; do
+                [[ $a == *:* ]] && continue
+                echo | timeout 15 openssl s_client -connect "$a:853" -servername "$tls" \
+                    -verify_hostname "$tls" -verify_return_error -brief 2>&1 | grep -q '^Verification: OK' ||
+                    bad_addr+=" $a"
+            done
+            if [ -z "$bad_addr" ]; then ok "DNS over TLS: $tls answers with its certificate"
+            else bad "DNS over TLS: $tls not reachable or wrong certificate at$bad_addr (pins.sh DOT_*)"; fi
+        done
+    else
+        meh "openssl isn't installed, so the DNS-over-TLS resolvers weren't checked"
+    fi
+
     check_repo "Mullvad" "$MULLVAD_FPR" "$MULLVAD_KEY_URL" \
         https://repository.mullvad.net/deb/stable/dists/stable mullvad-vpn mullvad-browser
     check_repo "Claude Code" "$ANTHROPIC_FPR" "$ANTHROPIC_KEY_URL" \
