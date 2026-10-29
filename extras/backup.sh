@@ -71,19 +71,22 @@ fi
 printf '# Written by debsway extras/backup.sh\nBACKUP_REPO=%s\n' "$repo" >"$CONF"
 if [ -n "$cmd" ]; then printf 'PASSWORD_COMMAND=%s\n' "$cmd" >>"$CONF"; fi
 
-# Left out: caches, trash, and big things that can be downloaded again.
-# Edit the file to change it; one pattern per line.
-if [ ! -f "$EXCLUDES" ]; then
-    cat >"$EXCLUDES" <<EOF
-# Left out of backups (written by debsway extras/backup.sh)
-$HOME/.cache
-$HOME/.local/share/Trash
-$HOME/.local/share/libvirt/images
-$DEBSWAY_DIR/offline
-EOF
-fi
-# Folders of earlier versions moved into offline/
-grep -qxF "$DEBSWAY_DIR/offline" "$EXCLUDES" || echo "$DEBSWAY_DIR/offline" >>"$EXCLUDES"
+# write_excludes FILE: what is left out of backups: caches, trash, and big
+# things that can be downloaded or built again (VM disks: libvirt's, which
+# Whonix uses, and ~/vpskvm, mockvps-kvm's). The file is yours to edit, one
+# pattern per line; a later run only adds the lines debsway's list gained.
+write_excludes() {
+    local f=$1 line
+    if [ ! -f "$f" ]; then
+        printf '%s\n' "# Left out of backups (written by debsway extras/backup.sh)" \
+            "$HOME/.cache" "$HOME/.local/share/Trash" "$HOME/.local/share/libvirt/images" >"$f"
+    fi
+    # Added to debsway's list later (a line you deleted from the first three stays deleted)
+    for line in "$HOME/vpskvm" "$DEBSWAY_DIR/offline"; do
+        grep -qxF "$line" "$f" || echo "$line" >>"$f"
+    done
+}
+write_excludes "$EXCLUDES"
 
 install_bin backup
 note "Backups go to: $repo"

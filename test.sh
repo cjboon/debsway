@@ -174,6 +174,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "What backups leave out (extras/backup.sh), in a pretend home"
+if out=$(bash tools/test-backup.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") backup checks"
+else
+    bad "backup checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "Who keeps the system tor service on (lib/tor.sh), on a pretend /etc"
 if out=$(bash tools/test-tor-service.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") tor service checks"
