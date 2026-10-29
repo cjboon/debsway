@@ -202,6 +202,15 @@ sandboxes, `extras/claude-code.sh` and `extras/claude-vm.sh`.) If Claude Code
 pushes to the repository, add the ssh key its sandbox prints as a deploy key
 on GitHub (with write access), replacing the old install's.
 
+## The `debsway` command
+
+In a terminal, `debsway --help` lists what it does and `man debsway` has the
+details. `debsway --update` brings debsway up to date (see below),
+`debsway --apps` picks optional programs, `debsway --status` shows what is
+set up, `debsway --test` runs the checks, `debsway --welcome` shows the key
+cheat sheet again. On a sway screen, `debsway` alone (or a click on
+**debsway** in the bar) opens the menu.
+
 ## Updating
 
 ```bash

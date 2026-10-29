@@ -1,0 +1,102 @@
+.TH DEBSWAY 1 "debsway" "debsway" "User Commands"
+.SH NAME
+debsway \- set up, update and use the debsway desktop
+.SH SYNOPSIS
+.B debsway
+.RI [ OPTION ]
+.SH DESCRIPTION
+debsway is a set of shell scripts that turn a bare Debian 13 install into a
+small, privacy-minded sway desktop.
+This command is the one place to use it from: it opens the menu, brings the
+scripts up to date and runs the others.
+It does nothing a script in the debsway folder does not already do; it only
+starts them.
+.PP
+With no option, on a sway screen it opens the menu; anywhere else (a text
+console, ssh) it shows the help.
+.SH OPTIONS
+.TP
+.B \-\-menu
+Open the menu: a black-and-gray window under the status bar with Help, Install
+apps, Update and Status.
+Arrow keys and Enter choose, or click; Esc closes every screen of it.
+It needs a sway session.
+Clicking
+.B debsway
+at the left of the status bar opens the same menu.
+.TP
+.B \-\-update
+Fetch what is new, show every change and ask before bringing it in (only a
+plain fast-forward, so your own edits are never overwritten).
+Then list the parts and extras that are set up on this computer and use a file
+that changed since the last update, and offer to run them again one at a time.
+It never runs a script with
+.BR \-\-remove .
+A part of the base desktop that is new in the update is offered too.
+.IP
+.B \-\-update \-\-since
+.I COMMIT
+offers what changed after that commit (for updates made by hand earlier);
+.B \-\-update \-\-all
+offers everything that is set up.
+.TP
+.B \-\-apps
+Choose optional programs from a list and install them (the extras).
+A star marks one that is already set up; choosing it again repairs or updates
+it.
+.B \-\-apps \-\-list
+only prints the list.
+.TP
+.B \-\-status
+Show what debsway has set up: disk encryption, the base packages, the parts
+and the extras.
+.TP
+.B \-\-test
+Check that the scripts, packages, downloads and signing keys still work
+.RB ( "bash test.sh" ).
+.TP
+.B \-\-welcome
+Show the key cheat sheet again, the screen that opens at the first login.
+Esc closes it.
+.TP
+.B \-\-version
+Print which version of debsway this is.
+.TP
+.B \-\-dir
+Print where the debsway folder is.
+.TP
+.B \-\-help
+Show the short help.
+.SH FILES
+.TP
+.I ~/debsway
+The debsway folder: the scripts, and
+.I README.md
+and
+.IR THREAT-MODEL.md .
+.TP
+.I ~/.local/bin
+Where the commands the scripts install go (debsway, keys, timer, ...).
+.TP
+.I ~/.local/state/debsway/updated-to
+The commit the last update brought this computer to.
+.TP
+.I ~/.local/share/debsway/keys.txt
+The key cheat sheet.
+.SH ENVIRONMENT
+.TP
+.B DEBSWAY_DIR
+Where the debsway folder is, if it is not
+.IR ~/debsway .
+.TP
+.B DEBSWAY_ESC_WAIT
+Seconds the menu waits for the rest of an arrow key after an Esc byte
+(default 0.1).
+.SH EXIT STATUS
+0 on success; 1 if something failed (a script that did not finish, a missing
+folder); 2 for an option it does not know.
+.SH SEE ALSO
+.IR README.md ,
+.I THREAT-MODEL.md
+(what debsway protects against and what it does not),
+.IR docs/ .

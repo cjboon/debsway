@@ -218,6 +218,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "The debsway command and its man page (bin/debsway, data/debsway.1)"
+if out=$(bash tools/test-debsway-cmd.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") debsway command checks"
+else
+    bad "debsway command checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "Pinned keys and versions (pins.sh): checked by hand within a year?"
 now=$(date +%s)
 # Each "# checked: DATE" line belongs to the next VARIABLE= line
