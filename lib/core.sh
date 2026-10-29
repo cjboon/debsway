@@ -34,12 +34,26 @@ tty_read() {
 
 # pause_if_asked: when a script was started from the debsway menu
 # (DEBSWAY_PAUSE=1), its window closes the moment the script ends, so wait for
-# Enter first. Called at the end of what the user may want to read, not when
+# Esc (or Enter) first. Called at the end of what the user may want to read, not when
 # nothing was done. Does nothing in a terminal of your own.
 pause_if_asked() {
-    [ -n "${DEBSWAY_PAUSE:-}" ] || return 0
-    local _
-    tty_read _ $'\nPress Enter to close. '
+    [ -n "${DEBSWAY_PAUSE:-}" ] && [ -z "${DEBSWAY_NONINTERACTIVE:-}" ] || return 0
+    { : </dev/tty; } 2>/dev/null || return 0
+    local k more
+    printf '\nPress Esc to close. ' >&2
+    while IFS= read -rsn1 k </dev/tty; do
+        case $k in
+            '' | q | Q) break ;;
+            $'\e')
+                # a plain Esc closes; an arrow key (Esc plus more) does not
+                if IFS= read -rsn1 -t "${DEBSWAY_ESC_WAIT:-0.1}" more </dev/tty; then
+                    while IFS= read -rsn1 -t "${DEBSWAY_ESC_WAIT:-0.1}" more </dev/tty; do :; done
+                else
+                    break
+                fi ;;
+        esac
+    done
+    printf '\n' >&2
 }
 
 # ask "Question?" [y|n]: default answer is the second argument

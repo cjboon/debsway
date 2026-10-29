@@ -1,15 +1,19 @@
 #!/bin/bash
 # debsway-menu: written by debsway parts/debsway-menu.sh
 # The menu behind the "debsway" item in the bar. A click opens a black-and-gray
-# terminal that fills the space under the bar with the choices: Help, Install apps, Update,
-# Status. Arrow keys (or j/k) and Enter choose; so does a click. Esc or q
-# closes it. What you choose runs in that same window, and the window closes
-# when it ends (the install and update screens wait for Enter first, if they
+# terminal that fills the space under the bar, with the choices Help, Install
+# apps, Update and Status. Arrow keys (or j/k) and Enter choose; so does a
+# click. Esc closes every screen of it, the install list and the pager
+# included. What you choose runs in that same window, and the window closes
+# when it ends (the install and update screens wait for a key first, if they
 # did something you may want to read). The last three need the debsway folder
 # (~/debsway, or DEBSWAY_DIR); without it only Help shows.
-#   debsway-menu          open the window
-#   debsway-menu --tui    the menu itself, in the terminal you are in
+#   debsway-menu              open the window
+#   debsway-menu --tui        the menu itself, in the terminal you are in
+#   debsway-menu --pager FILE show FILE: arrows, Space and b scroll, Esc closes
 DIR=${DEBSWAY_DIR:-$HOME/debsway}
+KEYS_FILE=$HOME/.local/share/debsway/keys.txt
+[ -f "$KEYS_FILE" ] || KEYS_FILE=$DIR/data/keys.txt
 
 # The terminal's colors, all gray: black screen, light gray text. The eight
 # normal and eight bright colors programs ask for (red warnings, green
@@ -29,25 +33,152 @@ gray_options() {
     done
 }
 
-if [ "${1:-}" != --tui ]; then
+if [ -z "$1" ]; then
     mapfile -t gray < <(gray_options)
-    exec foot --app-id=debsway-run "${gray[@]}" "$(readlink -f -- "$0")" --tui
+    # --log-level=error: foot warns about a protocol sway lacks (the window icon), harmlessly
+    exec foot --log-level=error --app-id=debsway-run "${gray[@]}" "$(readlink -f -- "$0")" --tui
 fi
 
-# ---- the menu, in this terminal ----
+# ---- inside the terminal ----
+export LC_ALL=C.UTF-8   # so that cutting a line to the window's width counts characters
+saved=$(stty -g 2>/dev/null)
+# How long to wait for the rest of an arrow key or mouse report after an Esc
+# byte. Nothing follows a plain Esc, so this is also how long Esc takes to close.
+ESC_WAIT=${DEBSWAY_ESC_WAIT:-0.1}
+size=
+REDRAW=
+KEY=
+CX=0 CY=0
+
+screen_on() { printf '\e[?1049h\e[?25l\e[?1000h\e[?1006h'; stty -echo 2>/dev/null; }
+screen_off() {
+    printf '\e[?1000l\e[?1006l\e[?25h\e[?1049l'
+    [ -z "$saved" ] || stty "$saved" 2>/dev/null
+}
+trap screen_off EXIT
+trap 'exit 130' INT TERM HUP
+
+# on_idle: the window is a different size from when it was drawn (a new window
+# starts small and sway stretches it a moment later): draw it again
+on_idle() {
+    [ -z "$REDRAW" ] || [ "$(stty size 2>/dev/null || echo "24 80")" = "$size" ] || "$REDRAW"
+}
+
+# read_key: waits for one key or mouse report and sets KEY to: up down pgup pgdn
+# home end esc enter space click wheelup wheeldown other, or the character typed.
+# A click also sets CX and CY (column and row, counted from 1).
+read_key() {
+    local c rc k2 k3 k4 report btn
+    while :; do
+        IFS= read -rsn1 -t 0.25 c
+        rc=$?
+        [ "$rc" -ne 0 ] || break
+        [ "$rc" -gt 128 ] || exit 0   # nothing more to read: the window is gone
+        on_idle
+    done
+    case $c in
+        '') KEY=enter ;;
+        ' ') KEY=space ;;
+        $'\e')
+            KEY=esc   # nothing follows a plain Esc; an arrow or a mouse report follows at once
+            IFS= read -rsn1 -t "$ESC_WAIT" k2 || return 0
+            [ "$k2" = '[' ] || [ "$k2" = O ] || return 0
+            IFS= read -rsn1 -t "$ESC_WAIT" k3 || return 0
+            case $k3 in
+                A) KEY=up ;;
+                B) KEY=down ;;
+                H) KEY=home ;;
+                F) KEY=end ;;
+                [0-9])
+                    IFS= read -rsn1 -t "$ESC_WAIT" k4 || return 0   # the ~ that ends it
+                    case $k3 in
+                        1 | 7) KEY=home ;;
+                        4 | 8) KEY=end ;;
+                        5) KEY=pgup ;;
+                        6) KEY=pgdn ;;
+                        *) KEY=other ;;
+                    esac ;;
+                '<')
+                    # mouse: button;column;row then M (press) or m (release)
+                    report=
+                    while IFS= read -rsn1 -t "$ESC_WAIT" c; do
+                        if [ "$c" = M ] || [ "$c" = m ]; then break; fi
+                        report+=$c
+                    done
+                    IFS=';' read -r btn CX CY <<<"$report"
+                    KEY=other
+                    if [ "$c" = M ]; then
+                        case $btn in
+                            0) KEY=click ;;
+                            64) KEY=wheelup ;;
+                            65) KEY=wheeldown ;;
+                        esac
+                    fi ;;
+                *) KEY=other ;;
+            esac ;;
+        *) KEY=$c ;;
+    esac
+}
+
+# ---- the pager ----
+lines=()
+top=0
+page=20
+
+pager_draw() {
+    local rows cols i end maxtop
+    size=$(stty size 2>/dev/null || echo "24 80")
+    read -r rows cols <<<"$size"
+    page=$((rows - 1))
+    [ "$page" -ge 1 ] || page=1
+    maxtop=$((${#lines[@]} - page))
+    [ "$maxtop" -ge 0 ] || maxtop=0
+    [ "$top" -le "$maxtop" ] || top=$maxtop
+    [ "$top" -ge 0 ] || top=0
+    end=$((top + page))
+    [ "$end" -le "${#lines[@]}" ] || end=${#lines[@]}
+    printf '\e[H\e[2J'
+    for ((i = top; i < end; i++)); do printf '%s\e[0m\n' "${lines[i]:0:cols}"; done
+    printf '\e[%d;1H\e[2mEsc closes. Arrows, Space and b scroll.  (%d-%d of %d)\e[0m' \
+        "$rows" $((top + 1)) "$end" "${#lines[@]}"
+}
+
+# pager: shows `lines`; Esc (or q) ends the program
+pager() {
+    top=0
+    REDRAW=pager_draw
+    while :; do
+        pager_draw
+        read_key
+        case $KEY in
+            esc | q) exit 0 ;;
+            down | j | enter) top=$((top + 1)) ;;
+            up | k) top=$((top - 1)) ;;
+            space | pgdn | f) top=$((top + page)) ;;
+            pgup | b) top=$((top - page)) ;;
+            home | g) top=0 ;;
+            end | G) top=$((${#lines[@]} + 1000000)) ;;   # pager_draw brings it back to the last page
+            wheeldown) top=$((top + 3)) ;;
+            wheelup) top=$((top - 3)) ;;
+        esac
+    done
+}
+
+if [ "$1" = --pager ]; then
+    [ -r "${2:-}" ] || { echo "debsway-menu: can't read ${2:-a file}" >&2; exit 1; }
+    mapfile -t lines <"$2"
+    screen_on
+    pager
+fi
+[ "$1" = --tui ] || { echo "usage: debsway-menu [--tui | --pager FILE]" >&2; exit 2; }
+
+# ---- the menu ----
 items=(Help)
 if [ -f "$DIR/update.sh" ]; then items+=("Install apps" Update Status); fi
 n=${#items[@]}
 sel=0
 width=26
-saved=$(stty -g 2>/dev/null)
-
-finish() {
-    printf '\e[?1000l\e[?1006l\e[?25h\e[?1049l'
-    [ -z "$saved" ] || stty "$saved" 2>/dev/null
-}
-trap finish EXIT
-trap 'exit 130' INT TERM HUP
+first_row=1 first_col=1
 
 # draw: the title, the choices (the chosen one reversed), and a hint, centered
 draw() {
@@ -72,67 +203,46 @@ draw() {
     printf '\e[%d;%dH\e[2marrows and Enter, or click. Esc closes.\e[0m' $((first_row + n + 1)) "$left"
 }
 
-# run_choice: leaves the menu and runs the chosen entry in this window
+# run_choice: runs the chosen entry in this window
 run_choice() {
-    trap - EXIT
-    finish
+    local out
     case ${items[sel]} in
-        Help) exec "$HOME/.local/bin/keys" ;;
-        "Install apps") cd "$DIR" && export DEBSWAY_PAUSE=1 && exec bash install-extras.sh ;;
-        Update) cd "$DIR" && export DEBSWAY_PAUSE=1 && exec bash update.sh ;;
-        Status) cd "$DIR" && bash status.sh | less ; exit 0 ;;
+        Help)
+            mapfile -t lines <"$KEYS_FILE"
+            pager ;;
+        Status)
+            REDRAW=
+            printf '\e[2J\e[1;1HLooking at what is set up...'
+            out=$(cd "$DIR" && bash status.sh 2>&1)
+            mapfile -t lines <<<"$out"
+            pager ;;
+        "Install apps" | Update)
+            trap - EXIT
+            screen_off
+            cd "$DIR" || exit 1
+            export DEBSWAY_PAUSE=1
+            if [ "${items[sel]}" = Update ]; then exec bash update.sh; fi
+            exec bash install-extras.sh ;;
     esac
 }
 
-printf '\e[?1049h\e[?25l\e[?1000h\e[?1006h'
-stty -echo 2>/dev/null
-first_row=1 first_col=1
+screen_on
+REDRAW=draw
 while :; do
     draw
-    # A new window starts small and sway stretches it a moment later, so the
-    # size is looked at while waiting, and the menu redrawn (centered) when it
-    # changes. read returns above 128 when nothing was typed in that time.
-    while :; do
-        IFS= read -rsn1 -t 0.25 key
-        rc=$?
-        [ "$rc" -ne 0 ] || break
-        [ "$rc" -gt 128 ] || exit 0
-        [ "$(stty size 2>/dev/null || echo "24 80")" = "$size" ] || draw
-    done
-    case $key in
-        '') run_choice ;;                                  # Enter
-        j) sel=$(((sel + 1) % n)) ;;
-        k) sel=$(((sel + n - 1) % n)) ;;
-        q) exit 0 ;;
-        $'\e')
-            # an arrow or a mouse report follows at once; nothing follows a plain Esc
-            IFS= read -rsn1 -t 0.05 k2 || exit 0
-            [ "$k2" = '[' ] || exit 0
-            IFS= read -rsn1 -t 0.05 k3 || exit 0
-            case $k3 in
-                A) sel=$(((sel + n - 1) % n)) ;;
-                B) sel=$(((sel + 1) % n)) ;;
-                '<')
-                    # mouse: button;column;row then M (press) or m (release)
-                    report=
-                    while IFS= read -rsn1 -t 0.05 c; do
-                        [ "$c" = M ] || [ "$c" = m ] && break
-                        report+=$c
-                    done
-                    IFS=';' read -r btn mx my <<<"$report"
-                    if [ "$c" = M ]; then
-                        case $btn in
-                            64) sel=$(((sel + n - 1) % n)) ;;
-                            65) sel=$(((sel + 1) % n)) ;;
-                            0)
-                                i=$((my - first_row))
-                                if [ "$i" -ge 0 ] && [ "$i" -lt "$n" ] &&
-                                    [ "$mx" -ge "$first_col" ] && [ "$mx" -lt $((first_col + width)) ]; then
-                                    sel=$i
-                                    run_choice
-                                fi ;;
-                        esac
-                    fi ;;
-            esac ;;
+    read_key
+    case $KEY in
+        enter) run_choice ;;
+        down | j) sel=$(((sel + 1) % n)) ;;
+        up | k) sel=$(((sel + n - 1) % n)) ;;
+        wheeldown) sel=$(((sel + 1) % n)) ;;
+        wheelup) sel=$(((sel + n - 1) % n)) ;;
+        esc | q) exit 0 ;;
+        click)
+            i=$((CY - first_row))
+            if [ "$i" -ge 0 ] && [ "$i" -lt "$n" ] && [ "$CX" -ge "$first_col" ] && [ "$CX" -lt $((first_col + width)) ]; then
+                sel=$i
+                run_choice
+            fi ;;
     esac
 done

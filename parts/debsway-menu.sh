@@ -22,6 +22,8 @@ fi
 
 say "Installing the debsway menu"
 install_bin debsway-menu
+# the cheat sheet command: shows it with the menu's pager, so Esc closes it
+install_bin keys
 # The bar (the "debsway" item) and the cheat sheet that mentions it
 install_bin sway-status
 mkdir -p "${KEYS%/*}"

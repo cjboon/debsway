@@ -1,3 +1,6 @@
 #!/bin/sh
-# Shows the key cheat sheet (q closes it). Written by debsway install-base.sh
-exec less "$HOME/.local/share/debsway/keys.txt"
+# Shows the key cheat sheet (Esc closes it). Written by debsway install-base.sh
+# The pager of the debsway menu when that is installed; less otherwise.
+KEYS=$HOME/.local/share/debsway/keys.txt
+if [ -x "$HOME/.local/bin/debsway-menu" ]; then exec "$HOME/.local/bin/debsway-menu" --pager "$KEYS"; fi
+exec less "$KEYS"

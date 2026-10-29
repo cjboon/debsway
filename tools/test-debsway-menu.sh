@@ -30,10 +30,13 @@ mkdir -p "$T/fake" "$T/home/.local/bin" "$T/debsway"
 }
 chmod +x "$T/fake/"* "$T/home/.local/bin/keys"
 : >"$T/debsway/update.sh"
+mkdir -p "$T/home/.local/share/debsway"
+for i in $(seq 100); do echo "line $i"; done >"$T/home/.local/share/debsway/keys.txt"
 
 # 1. The window: in grays, running the menu, and not fullscreen (the bar stays visible)
 PATH="$T/fake:$PATH" HOME="$T/home" /bin/bash "$HERE/bin/debsway-menu"
 check "a click opens a window named debsway-run" grep -qx -e --app-id=debsway-run "$T/foot"
+check "...quietly: only errors are logged (no warning about the missing icon protocol)" grep -qx -e --log-level=error "$T/foot"
 check "...not fullscreen, so the bar stays visible" not grep -qx -e --fullscreen "$T/foot"
 check "...with a black background" grep -qx 'colors.background=000000' "$T/foot"
 check "...and the menu as its program" test "$(tail -1 "$T/foot")" = --tui
@@ -71,7 +74,10 @@ def run(script, env, keys, rows=24, cols=80):
                 if not data:
                     return
                 drawn += data
-    pump(0.6)
+    # wait until the menu has drawn (a fixed delay is too short on a busy machine)
+    deadline = time.time() + 6
+    while b"Esc closes" not in drawn and time.time() < deadline:
+        pump(0.1)
     for k in keys:
         if isinstance(k, tuple):      # ("resize", rows, cols): the window is stretched
             fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", k[1], k[2], 0, 0))
@@ -80,7 +86,7 @@ def run(script, env, keys, rows=24, cols=80):
         os.write(fd, (k(drawn) if callable(k) else k).encode())
         pump(0.5)
     status = None
-    for _ in range(30):
+    for _ in range(80):   # (up to 8 s: a busy machine can be slow to exit)
         done, st = os.waitpid(pid, os.WNOHANG)
         if done:
             status = os.waitstatus_to_exitcode(st)
@@ -104,7 +110,7 @@ def click_on(label):
 if __name__ == "__main__":
     script, home, path, folder, ranfile = sys.argv[1:6]
     scenario = sys.argv[6]
-    env = {"PATH": path, "HOME": home, "TERM": "xterm-256color", "DEBSWAY_DIR": folder, "LANG": "C.UTF-8"}
+    env = {"PATH": path, "HOME": home, "TERM": "xterm-256color", "DEBSWAY_DIR": folder, "LANG": "C.UTF-8", "DEBSWAY_ESC_WAIT": "1"}
     scenarios = {
         "enter": ["\r"],
         "down-enter": ["\x1b[B", "\r"],
@@ -113,10 +119,19 @@ if __name__ == "__main__":
         "click-update": [click_on("Update")],
         "click-outside": ["\x1b[<0;1;1M\x1b[<0;1;1m", "q"],
         "esc": ["\x1b"],
+        "help-esc": ["\r", "\x1b"],
+        "help-q": ["\r", "q"],
+        "help-space": ["\r", " ", "\x1b"],
+        "help-pgdn": ["\r", "\x1b[6~", "\x1b"],
+        "help-end": ["\r", "\x1b[F", "\x1b"],
+        "help-wheel": ["\r", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b"],
+        "status-esc": ["\x1b[A", "\r", "\x1b"],
         "resize": [("resize", 40, 120), "q"],
         "q": ["q"],
     }
     drawn, status = run(script, env, scenarios[scenario])
+    if len(sys.argv) > 7:
+        open(sys.argv[7], "w").write(re.sub(r"\x1b\[[0-9;?<]*[A-Za-z]", "\n", drawn))
     print("STATUS", status)
     print("DREW", "|".join(re.findall(r"(Help|Install apps|Update|Status)", drawn)[:4]))
     # where the title "debsway" was drawn each time: row;column
@@ -124,12 +139,30 @@ if __name__ == "__main__":
 PY
 menu() { # SCENARIO [FOLDER]: runs it, leaves the output in $out and what ran in $T/ran
     : >"$T/ran"
-    out=$(python3 -I "$T/drive.py" "$HERE/bin/debsway-menu" "$T/home" "$T/fake:/usr/bin:/bin" "${2-$T/debsway}" "$T/ran" "$1" 2>&1)
+    out=$(python3 -I "$T/drive.py" "$HERE/bin/debsway-menu" "$T/home" "$T/fake:/usr/bin:/bin" "${2-$T/debsway}" "$T/ran" "$1" "$T/screen" 2>&1)
 }
 
 menu enter
-check "Enter on the first entry opens Help" grep -qx keys "$T/ran"
 check "the four entries are drawn" grep -q 'DREW Help|Install apps|Update|Status' <<<"$out"
+check "Enter on the first entry opens Help in the pager, not less" grep -qx 'line 1' "$T/screen"
+check "...which says how to close it" grep -q 'Esc closes' "$T/screen"
+
+menu help-esc
+check "Esc closes the Help page and the window" grep -q 'STATUS 0' <<<"$out"
+menu help-q
+check "q does too" grep -q 'STATUS 0' <<<"$out"
+menu help-space
+check "Space scrolls a page" grep -qx 'line 24' "$T/screen"
+check "...and Esc then closes" grep -q 'STATUS 0' <<<"$out"
+menu help-pgdn
+check "Page Down scrolls a page" grep -qx 'line 24' "$T/screen"
+menu help-end
+check "End shows the last page" grep -qx 'line 100' "$T/screen"
+menu help-wheel
+check "the mouse wheel scrolls" grep -qx 'line 26' "$T/screen"
+menu status-esc
+check "Status is shown in the pager too" grep -qxF "$T/debsway|status.sh|pause=" "$T/ran"
+check "...and Esc closes it" grep -q 'STATUS 0' <<<"$out"
 
 menu down-enter
 check "Down then Enter runs install-extras.sh in the debsway folder" grep -qxF "$T/debsway|install-extras.sh|pause=1" "$T/ran"
@@ -161,7 +194,48 @@ check "...without leaving the menu" grep -q 'STATUS 0' <<<"$out"
 menu enter "$T/nowhere"
 check "without the debsway folder only Help is drawn" grep -q 'DREW Help$' <<<"$out"
 
-# 3. The screens it opens
+# 3. The prompt at the end of the install and update screens: Esc, Enter or q
+cat >"$T/pause.py" <<'PY'
+import os, pty, select, sys, time
+def run(keys, pause=True):
+    pid, fd = pty.fork()
+    if pid == 0:
+        env = dict(os.environ, TERM="xterm", DEBSWAY_ESC_WAIT="1")
+        if pause: env["DEBSWAY_PAUSE"] = "1"
+        else: env.pop("DEBSWAY_PAUSE", None)
+        os.execvpe("/bin/bash", ["bash", "-c", ". " + sys.argv[1] + "; pause_if_asked; echo AFTER-IT"], env)
+    out = b""
+    def pump(w):
+        nonlocal out
+        end = time.time() + w
+        while time.time() < end:
+            r, _, _ = select.select([fd], [], [], 0.05)
+            if r:
+                try: d = os.read(fd, 4096)
+                except OSError: return
+                if not d: return
+                out += d
+    pump(0.5)
+    waiting = b"AFTER-IT" not in out
+    for k in keys:
+        os.write(fd, k.encode()); pump(1.5)   # (a plain Esc is confirmed after DEBSWAY_ESC_WAIT)
+    os.kill(pid, 9); os.waitpid(pid, 0)
+    return waiting, b"AFTER-IT" in out, b"Press Esc to close" in out
+for name, keys, pause in [("none", [], False), ("x-then-esc", ["x", "\x1b"], True), ("enter", ["\r"], True),
+                          ("q", ["q"], True), ("arrow", ["\x1b[A"], True), ("nothing", [], True)]:
+    waiting, closed, prompted = run(keys, pause)
+    print(name, "waiting=%s closed=%s prompted=%s" % (waiting, closed, prompted))
+PY
+pausetest=$(python3 -I "$T/pause.py" "$HERE/lib/core.sh" 2>&1)
+check "with no menu, nothing waits" grep -qx 'none waiting=False closed=True prompted=False' <<<"$pausetest"
+check "the prompt asks for Esc" grep -q 'prompted=True' <<<"$pausetest"
+check "a stray key does not close it, Esc does" grep -qx 'x-then-esc waiting=True closed=True prompted=True' <<<"$pausetest"
+check "Enter closes it" grep -qx 'enter waiting=True closed=True prompted=True' <<<"$pausetest"
+check "q closes it" grep -qx 'q waiting=True closed=True prompted=True' <<<"$pausetest"
+check "an arrow key does not close it" grep -qx 'arrow waiting=True closed=False prompted=True' <<<"$pausetest"
+check "without a key it keeps waiting" grep -qx 'nothing waiting=True closed=False prompted=True' <<<"$pausetest"
+
+# 4. The screens it opens
 check "the install screen waits for Enter only when asked to" grep -q 'pause_if_asked' "$HERE/install-extras.sh"
 check "choosing nothing in the checklist leaves before that wait" python3 -I -c '
 import re, sys
