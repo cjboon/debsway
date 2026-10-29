@@ -12,5 +12,5 @@ PKGS=(sway foot libgl1-mesa-dri gpg)
 # needs it.
 PARTS=(unattended-upgrades pipewire-audio wmenu swaylock swayidle brightnessctl grim-slurp
     wl-clipboard mako udiskie emoji-font foot-config ufw power-profiles-daemon
-    power-menu needrestart sysctl-hardening module-blacklist boot-hardening
+    power-menu debsway-menu needrestart sysctl-hardening module-blacklist boot-hardening
     network-manager random-mac)

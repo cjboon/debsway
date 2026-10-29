@@ -1,12 +1,12 @@
 #!/bin/sh
-# Status line for swaybar: Help (click: key cheat sheet) | wifi (click: nmtui) | volume (scroll: louder/quieter,
+# Status line for swaybar: debsway (click: its menu) | wifi (click: nmtui) | volume (scroll: louder/quieter,
 # click: mute) | brightness (scroll) | battery (click: time left) | next timer | date
 # (click on the time or a timer: the timer menu; the format is set by `timer clock`)
 # Written by debsway install-base.sh. Each part only shows when this
 # system has what it needs, so it copes with anything missing or removed.
 # Redraws every 5 seconds, or right away on SIGUSR1 (the brightness keys
 # send it; the PID is in $XDG_RUNTIME_DIR/sway-status.pid).
-# Speaks swaybar's JSON protocol so that a click on Help can be heard.
+# Speaks swaybar's JSON protocol so that a click on debsway can be heard.
 
 PIDFILE=${XDG_RUNTIME_DIR:-/tmp}/sway-status.pid
 POWER=${DEBSWAY_POWER_DIR:-/sys/class/power_supply}   # (a test can point it elsewhere)
@@ -92,8 +92,14 @@ battery_time() {
 exec 3<&0
 while read -r event <&3; do
     case $(printf '%s' "$event" | tr -d ' ') in
-        *'"name":"help"'*'"button":1,'*)
-            foot --app-id=debsway-keys "$HOME/.local/bin/keys" >/dev/null 2>&1 & ;;
+        *'"name":"menu"'*'"button":1,'*)
+            # the menu (Help, Install apps, Update, Status); the key cheat sheet
+            # directly if the menu isn't installed
+            if [ -x "$HOME/.local/bin/debsway-menu" ]; then
+                "$HOME/.local/bin/debsway-menu" >/dev/null 2>&1 &
+            else
+                foot --app-id=debsway-keys "$HOME/.local/bin/keys" >/dev/null 2>&1 &
+            fi ;;
         *'"name":"wifi"'*'"button":1,'*)
             # nmtui measures its window once at the start, so wait for sway to size it
             command -v nmtui >/dev/null &&
@@ -138,7 +144,7 @@ block() {
 }
 
 while :; do
-    printf '[{"name":"help","full_text":"Help","separator":false,"separator_block_width":0}%s%s%s%s%s%s],\n' \
+    printf '[{"name":"menu","full_text":"debsway","separator":false,"separator_block_width":0}%s%s%s%s%s%s],\n' \
         "$(block wifi "$(wifi)")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
         "$(block bat "$(battery)")" "$(block timer "$(timer_text)")" "$(block date "$(date +"$(clock_format)")")"
     # wait returns early when SIGUSR1 arrives; the sleep ends by itself

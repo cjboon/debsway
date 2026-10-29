@@ -1,7 +1,7 @@
   KEYS                                   Super = the Windows / Cmd key
   ──────────────────────────────────────────────────────────────────
   Press q to close this; arrows and Space scroll.
-  Open it again any time: Super+?, click Help in the bar, or type  keys.
+  Open it again any time: Super+?, click debsway > Help in the bar, or type  keys.
   It is also the file ~/KEYS.txt.
 
   START HERE

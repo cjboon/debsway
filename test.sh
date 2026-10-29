@@ -202,6 +202,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "The debsway menu in the bar (bin/debsway-menu), with a pretend wmenu and foot"
+if out=$(bash tools/test-debsway-menu.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") debsway menu checks"
+else
+    bad "debsway menu checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "Pinned keys and versions (pins.sh): checked by hand within a year?"
 now=$(date +%s)
 # Each "# checked: DATE" line belongs to the next VARIABLE= line

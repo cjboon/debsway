@@ -1,0 +1,35 @@
+#!/bin/sh
+# debsway-menu: written by debsway parts/debsway-menu.sh
+# The menu behind the "debsway" item in the bar: Help, Install apps, Update,
+# Status. Escape closes it without doing anything. The last three need the
+# debsway folder (~/debsway, or DEBSWAY_DIR); without it only Help shows.
+DIR=${DEBSWAY_DIR:-$HOME/debsway}
+
+if [ -f "$DIR/update.sh" ]; then
+    items='Help
+Install apps
+Update
+Status'
+else
+    items=Help
+fi
+choice=$(printf '%s\n' "$items" | wmenu -p "debsway:") || exit 0
+
+# In a floating terminal. The inner sh gets the debsway folder as $1 (and the
+# script as $2), so nothing from the menu is ever put into the command text.
+# shellcheck disable=SC2016  # expanded by the inner sh, on purpose
+term() { # SCRIPT: runs  bash SCRIPT  and stays open until Enter, to read the end
+    exec foot --app-id=debsway-run sh -c \
+        'cd "$1" && bash "$2"; printf "\nPress Enter to close. "; read -r _' sh "$DIR" "$1"
+}
+# shellcheck disable=SC2016  # expanded by the inner sh, on purpose
+show_status() {
+    exec foot --app-id=debsway-run sh -c 'cd "$1" && bash status.sh | less' sh "$DIR"
+}
+
+case $choice in
+    Help) exec foot --app-id=debsway-keys "$HOME/.local/bin/keys" ;;
+    "Install apps") term install-extras.sh ;;
+    Update) term update.sh ;;
+    Status) show_status ;;
+esac

@@ -101,7 +101,7 @@ EOF
 note "Text too small on a sharp screen? display-scale makes it bigger (sway tells you once)."
 
 say "sway status bar"
-# bin/sway-status shows Help (clickable) | wifi | volume | brightness | battery | date
+# bin/sway-status shows debsway (clickable: parts/debsway-menu.sh) | wifi | volume | brightness | battery | date
 install_bin sway-status
 # Edit the stock bar in place; a second bar block would add a second bar
 if grep -q 'status_command while date' "$SWAY_CONFIG"; then
