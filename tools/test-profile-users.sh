@@ -85,10 +85,31 @@ check "fast JavaScript is written to the settings file" grep -qx 'fast_js=yes' "
 
 # names that cannot be a user are refused before anything happens
 : >"$T/calls"
-for bad in Bank 1bank 'bank_x' abcdefghijklmnopqrstuvwxyzabcdefghij ''; do
+for bad in Bank 1bank 'bank_x' abcdefghijklmnopqrstuvwxyzabcdefghij '' esr restart-check session; do
     check "the profile name \"$bad\" is refused" not run x x "make_profile '$bad' https://x.example/ no"
 done
 check "...and nothing was run for them" test ! -s "$T/calls"
+# a firefox-NAME command that someone else wrote is refused before a user is made
+mkdir -p "$T/home/.local/bin"
+printf '#!/bin/sh\necho mine\n' >"$T/home/.local/bin/firefox-work"
+: >"$T/calls"
+check "a name whose firefox-NAME command isn't debsway's is refused" not run x x 'make_profile work https://work.example/ no'
+check "...before any user, rule or settings file is made" test ! -s "$T/calls"
+check "...and that command is left as it was" grep -qx 'echo mine' "$T/home/.local/bin/firefox-work"
+
+# the sandboxed Firefox can't be removed while profiles still run through it
+# (the guard is tested on its own: the extra itself would run the real sudo)
+mkdir -p "$T/profiles"
+echo 'url=https://bank.example/' >"$T/profiles/bank.conf"
+out=$(DEBSWAY_FX_PROFILE_DIR="$T/profiles" run x x 'fx_sandbox_unused' 2>&1)
+rc=$?
+check "removing the sandbox with a profile left is refused" test "$rc" -ne 0
+check "...naming the profile and how to remove it" bash -c 'grep -q "bank" <<<"$1" && grep -q "new-profile.sh --remove" <<<"$1"' _ "$out"
+rm -f "$T/profiles/bank.conf"
+DEBSWAY_FX_PROFILE_DIR="$T/profiles" run x x 'fx_sandbox_unused' >/dev/null 2>&1
+check "with no profile left it goes ahead" test $? -eq 0
+check "the extra asks it first thing when removing, before any change" \
+    bash -c 'sed -n "/--remove ]; then/,/^fi/p" "$1" | sed -n 2p | grep -qx "    fx_sandbox_unused"' _ "$HERE/extras/firefox-sandbox.sh"
 
 # removing: the launcher, the rule and the settings go; the data stays unless you say so
 : >"$T/calls"; : >"$T/answers"; echo n >"$T/answers"

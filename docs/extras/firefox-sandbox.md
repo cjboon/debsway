@@ -87,4 +87,6 @@ The private message bus is how a second `firefox URL` finds the running browser:
 
 ## Removing it
 
-`bash extras/firefox-sandbox.sh --remove` stops and deletes the firewall service and rule, the sudoers rule, the limits file, the commands, the helper, the settings file, and the default-browser entry (links open in `firefox-esr` again). It removes the user `firefox` and then asks whether to delete its profile in `/var/lib/debsway-firefox`; the default is no, so your logins and history stay. If you made profiles with `firefox-profiles/new-profile.sh`, it lists them and tells you to remove each one. Firefox itself stays installed, as the Firefox extra's, and the group `debsway-fx` is not deleted.
+If you made profiles with `firefox-profiles/new-profile.sh`, they run through this sandbox, so `--remove` first refuses, names them and tells you to remove each one (`bash extras/firefox-profiles/new-profile.sh --remove NAME`); nothing is changed until they are gone.
+
+`bash extras/firefox-sandbox.sh --remove` stops and deletes the firewall service and rule, the sudoers rule, the limits file, the commands, the helper, the settings file, and the default-browser entry (links open in `firefox-esr` again). It removes the user `firefox` and the group `debsway-fx`, then asks whether to delete its profile in `/var/lib/debsway-firefox`; the default is no, so your logins and history stay. Firefox itself stays installed, as the Firefox extra's.

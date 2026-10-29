@@ -42,6 +42,7 @@ UNIT=/etc/systemd/system/debsway-firefox-firewall.service
 DESKTOP="$HOME/.local/share/applications/debsway-firefox.desktop"
 
 if [ "${1:-}" = --remove ]; then
+    fx_sandbox_unused
     sudo systemctl disable --now debsway-firefox-firewall.service >/dev/null 2>&1 || true
     sudo nft delete table inet debsway_firefox 2>/dev/null || true
     [ -f "$BIN/media-sandbox" ] || [ -x /usr/local/bin/incognito ] || remove_bin wayland-restrict
@@ -54,16 +55,13 @@ if [ "${1:-}" = --remove ]; then
     # links open in firefox-esr again
     unset_default_app debsway-firefox.desktop
     rm -f "$DESKTOP"
-    mapfile -t profiles < <(fx_profile_names)
-    if [ ${#profiles[@]} -gt 0 ]; then
-        warn "These Firefox profiles still have users of their own: ${profiles[*]}"
-        warn "Remove each with: bash extras/firefox-profiles/new-profile.sh --remove NAME"
-    fi
     if id "$NAME" >/dev/null 2>&1; then
         sudo pkill -KILL -u "$NAME" 2>/dev/null || true
         sudo userdel "$NAME"
         note "Removed the user $NAME."
     fi
+    # The group the firewall rule matched; no user is left in it now
+    if getent group "$FX_GROUP" >/dev/null; then sudo groupdel "$FX_GROUP" 2>/dev/null || true; fi
     if [ -d "$HOME_DIR" ]; then
         note "Its profile (logins, history, bookmarks) is still in $HOME_DIR."
         if ask "Delete that profile too?" n; then sudo rm -rf "$HOME_DIR"; fi

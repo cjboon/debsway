@@ -39,7 +39,7 @@ else
         fast=yes
     fi
 fi
-valid_name "$name" || die "\"$name\" isn't a usable name: lowercase letters, digits and dashes, starting with a letter, at most 28 long."
+valid_name "$name" || die "\"$name\" isn't a usable name: lowercase letters, digits and dashes, starting with a letter, at most 28 long (and not esr, restart-check or session)."
 [[ $url == *:* ]] || url="https://$url"
 valid_url "$url" || die "\"$url\" doesn't look like a web address."
 

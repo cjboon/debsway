@@ -12,7 +12,11 @@ OURS='debsway (extras/)?firefox-profiles/[a-z-]+\.sh'
 # files; only the clipboard and ~/Downloads/NAME are shared with you.
 make_profile() {
     local name=$1 url=$2 fast=$3 cmd="$BIN/firefox-$1" user=fx-$1 conf
-    fx_profile_name_ok "$name" || die "\"$name\" can't be a profile name: lowercase letters, digits and dashes, starting with a letter, at most 28 long."
+    fx_profile_name_ok "$name" || die "\"$name\" can't be a profile name: lowercase letters, digits and dashes, starting with a letter, at most 28 long (and not esr, restart-check or session)."
+    # A firefox-NAME command that isn't ours: stop before any user or rule is made
+    if [ -e "$cmd" ] && ! grep -qsE "$OURS" "$cmd"; then
+        die "$cmd already exists and isn't debsway's; pick another name. Nothing was changed."
+    fi
     # The sandbox itself (the group, the firewall, the session script) comes first
     if [ ! -x "$FX_CLIENT" ] || [ ! -x "$FX_SESSION" ]; then
         note "A profile with its own user needs the sandboxed Firefox (extras/firefox-sandbox.sh)."
@@ -31,10 +35,6 @@ make_profile() {
     note "$name: opens $url$([ "$fast" = yes ] && echo ', fast JavaScript'); runs as $user"
 
     mkdir -p "$BIN"
-    if [ -e "$cmd" ] && ! grep -qsE "$OURS" "$cmd"; then
-        warn "$cmd already exists and isn't ours; leaving it."
-        return 0
-    fi
     cat >"$cmd" <<EOF
 #!/bin/sh
 # firefox-$name: $url in its own Firefox profile, as its own locked-down user.

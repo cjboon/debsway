@@ -6,14 +6,19 @@
 # them and a new profile never has to touch the firewall.
 
 FX_GROUP=debsway-fx
-FX_PROFILE_DIR=/etc/debsway/firefox-profiles
 FX_HOME_ROOT=/var/lib/debsway-fx
-# (the two paths can be pointed elsewhere by a test)
+# (these three paths can be pointed elsewhere by a test)
+FX_PROFILE_DIR=${DEBSWAY_FX_PROFILE_DIR:-/etc/debsway/firefox-profiles}
 FX_SESSION=${DEBSWAY_FX_SESSION:-/usr/local/libexec/firefox-session}
 FX_CLIENT=${DEBSWAY_FX_CLIENT:-/usr/local/bin/firefox}
 
-# fx_profile_name_ok NAME: a name that makes a valid user, fx-NAME (at most 31 characters)
-fx_profile_name_ok() { [[ $1 =~ ^[a-z][a-z0-9-]{0,27}$ ]]; }
+# fx_profile_name_ok NAME: a name that makes a valid user, fx-NAME (at most 31
+# characters), and a command, firefox-NAME, that isn't one already: firefox-esr
+# is Firefox itself, and debsway has firefox-restart-check and firefox-session
+fx_profile_name_ok() {
+    [[ $1 =~ ^[a-z][a-z0-9-]{0,27}$ ]] || return 1
+    case $1 in esr | restart-check | session) return 1 ;; esac
+}
 
 fx_ensure_group() {
     getent group "$FX_GROUP" >/dev/null || sudo groupadd --system "$FX_GROUP"
@@ -58,6 +63,16 @@ fx_allow_session() {
 }
 
 fx_disallow_session() { sudo rm -f "/etc/sudoers.d/debsway-$1"; }
+
+# fx_sandbox_unused: stops (die) while profiles with a user of their own exist.
+# They run through the sandbox (its firefox command, session script, firewall
+# rule and limits), so removing it would leave them unable to start.
+fx_sandbox_unused() {
+    local profiles=()
+    mapfile -t profiles < <(fx_profile_names)
+    [ ${#profiles[@]} -eq 0 ] ||
+        die "These Firefox profiles still use the sandbox: ${profiles[*]}. Remove each first with: bash extras/firefox-profiles/new-profile.sh --remove NAME. Nothing was changed."
+}
 
 # fx_profile_names: the profiles that have a user, one per line
 fx_profile_names() {

@@ -24,7 +24,7 @@ Keeping each important site in its own compartment limits what any one page can 
 
 ## How it works, step by step
 
-`bash extras/firefox-profiles/new-profile.sh` asks for a short name (lowercase letters, digits and dashes, starting with a letter, up to 28 characters, for example `bank`) and the site's address. You can give both in one go: `bash extras/firefox-profiles/new-profile.sh bank https://mybank.example`. A missing `https://` is added. Only plain web addresses are accepted.
+`bash extras/firefox-profiles/new-profile.sh` asks for a short name (lowercase letters, digits and dashes, starting with a letter, up to 28 characters, for example `bank`; not `esr`, `restart-check` or `session`, whose `firefox-NAME` commands already exist) and the site's address. You can give both in one go: `bash extras/firefox-profiles/new-profile.sh bank https://mybank.example`. A missing `https://` is added. Only plain web addresses are accepted.
 
 It also asks "Fast JavaScript for this site?" (default no); `--fast-js` as a third word answers yes. debsway turns off Firefox's JavaScript JIT everywhere, because most serious exploits target it. Heavy web apps like webmail or office suites may feel slow without it, so this turns the JIT back on for that one profile only.
 
@@ -34,7 +34,7 @@ Then it:
 2. Creates the user `fx-NAME` (home `/var/lib/debsway-fx/NAME`, mode 700, no password, nologin shell, group `debsway-fx`, plus `render`).
 3. Writes `/etc/debsway/firefox-profiles/NAME.conf` with the address and the JavaScript choice. Only root can write it, so a taken-over profile cannot change them.
 4. Writes `/etc/sudoers.d/debsway-fx-NAME`, checked with `visudo`.
-5. Writes the launcher `~/.local/bin/firefox-NAME`, a two-line script that runs `firefox --profile NAME`. If a file by that name exists and is not debsway's, it warns and leaves it.
+5. Writes the launcher `~/.local/bin/firefox-NAME`, a two-line script that runs `firefox --profile NAME`. (If a file by that name already exists and is not debsway's, the script stops at the very start, before any user or rule is made.)
 
 When you start `firefox-NAME`, the same machinery as the sandboxed Firefox runs, with these differences: the user is `fx-NAME`; its sockets, sound pipe and runtime folder in memory are named for the profile; its downloads go to `~/Downloads/NAME`, a folder shared with you and with no other profile; and at every start the helper rewrites the profile's `user.js` so it opens the saved address and, if chosen, turns the JIT back on. Profiles can be open side by side. An address after the command, `firefox-bank https://mybank.example/statements`, opens in that profile.
 
