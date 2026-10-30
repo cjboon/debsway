@@ -16,7 +16,7 @@ this page to decide what else you need.
   AppImages, Sparrow's .deb) are not: run their script again, or let
   `test.sh` tell you when a newer release is out.
 - **Attacks through websites.** In every Firefox profile (the Firefox
-  extra, `extras/firefox.sh`), uBlock Origin
+  extra, `extras/firefox-sandbox.sh`), uBlock Origin
   blocks scripts and frames from other sites, where most malicious ads
   and drive-by attacks come from; the JavaScript JIT, the part of
   Firefox most exploits target, is off; and HTTPS-Only Mode refuses

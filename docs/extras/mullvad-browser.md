@@ -47,7 +47,7 @@ The script writes no browser settings of its own. Whatever the package does is h
 
 - **Your address.** It does not hide it. Without a VPN, sites see your real address and your network sees where you go.
 - **Being identified while logged in.** Hiding your address does not hide who you are to a site you have logged into (`THREAT-MODEL.md`).
-- **The rest of your computer.** It runs as you, with no sandbox from debsway. For that, `extras/firefox-sandbox.sh` or `incognito` exist (`extras/firefox.sh`).
+- **The rest of your computer.** It runs as you, with no sandbox from debsway. For that, `extras/firefox-sandbox.sh` and the `incognito` it offers exist.
 - **DNS over HTTPS.** The browser keeps its own DNS over HTTPS (sending name look-ups, encrypted, to a provider it chooses), which `extras/secure-dns.sh` cannot stop with a firewall rule (`docs/extras.md`).
 - **It is not Tor.** There is no three-relay hiding.
 - **A determined, well-funded attacker.**

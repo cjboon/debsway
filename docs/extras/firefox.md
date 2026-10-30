@@ -1,6 +1,6 @@
-# Firefox with hardening, and a throwaway window (`extras/firefox.sh`)
+# Firefox's hardening, and a throwaway window (part of `extras/firefox-sandbox.sh`)
 
-You get Firefox ESR with a few safer defaults for every profile: a blocker for scripts from other sites, no JavaScript JIT, and a refusal to load plain unencrypted pages without asking. You also get a notice when an update is waiting for a restart. If you say yes, you also get `incognito`, a separate Firefox that runs as a locked-down user and keeps nothing.
+This is what the sandboxed Firefox extra (`extras/firefox-sandbox.sh`, see [firefox-sandbox.md](firefox-sandbox.md)) sets up besides the sandbox itself. You get Firefox ESR with a few safer defaults for every profile: a blocker for scripts from other sites, no JavaScript JIT, and a refusal to load plain unencrypted pages without asking. You also get a notice when an update is waiting for a restart. If you say yes, you also get `incognito`, a separate Firefox that runs as a locked-down user and keeps nothing.
 
 ## The problem it solves
 
@@ -26,7 +26,7 @@ Two more things go wrong quietly. Firefox is fixed by updates, but a copy that i
 
 ## How it works, step by step
 
-When you run `bash extras/firefox.sh`:
+When you run `bash extras/firefox-sandbox.sh`, besides the sandbox:
 
 1. It installs `firefox-esr`, `libavcodec61` (video codecs), `webext-ublock-origin-firefox` (uBlock Origin from Debian) and `libnotify-bin` (for notifications).
 2. It runs `parts/firefox-hardening.sh`, which:
@@ -96,4 +96,4 @@ Only `http://` and `https://` addresses are accepted: `incognito https://example
 
 ## Removing it
 
-`bash extras/firefox.sh --remove` runs `parts/incognito.sh --remove` (stops and deletes the firewall rule and service, the sudoers rule, the limits file, the commands, the helper, and the `incognito` user), then `parts/firefox-hardening.sh --remove` (the timer, the check, the default settings, the allow list, and `policies.json` if it is still debsway's own), then removes the packages this script installed unless another extra needs them. Your Firefox profiles, with bookmarks and logins, stay in `~/.mozilla` and `~/.config/mozilla`.
+`bash extras/firefox-sandbox.sh --remove` asks whether incognito goes too; if so it runs `parts/incognito.sh --remove` (stops and deletes the firewall rule and service, the sudoers rule, the limits file, the commands, the helper, and the `incognito` user), then `parts/firefox-hardening.sh --remove` (the timer, the check, the default settings, the allow list, and `policies.json` if it is still debsway's own), then removes the packages it installed unless another extra needs them. If you keep incognito, Firefox and its hardening stay with it. Your Firefox profiles, with bookmarks and logins, stay in `~/.mozilla` and `~/.config/mozilla`.

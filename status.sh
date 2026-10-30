@@ -66,7 +66,7 @@ else
     echo "  (none recorded yet)"
 fi
 
-echo "Firefox (extras/firefox.sh):"
+echo "Firefox (extras/firefox-sandbox.sh):"
 if [ -x /usr/local/bin/incognito ]; then
     echo "  [x] incognito command (throwaway Firefox as the locked-down user)"
 else

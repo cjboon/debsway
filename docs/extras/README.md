@@ -8,7 +8,7 @@ doesn't, and how to remove it. The short list of all of them is in
 
 ## Browsing
 
-- [Firefox with hardening, and a throwaway window](firefox.md)
+- [Firefox's hardening, and a throwaway window](firefox.md)
 - [Firefox as its own locked-down user](firefox-sandbox.md)
 - [One Firefox profile per site](firefox-profiles.md)
 - [w3m, a web browser for the terminal](w3m.md): `docs/extras/w3m.md`

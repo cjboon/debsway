@@ -8,7 +8,6 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 
 | Script | What you get |
 |---|---|
-| `firefox.sh` | Firefox ESR with uBlock Origin in medium mode, HTTPS-Only Mode, the JavaScript JIT off, a restart notice, and (if you want it) `incognito`, a throwaway Firefox as a locked-down user. See below |
 | `pipewire-audio.sh` | Sound. `timer` and the alarm clock ring with `pw-play` (part of PipeWire) and debsway's own bell sound (an alarm repeats it for up to 5 minutes; click or dismiss the notification, or `timer stop`, to end it); without sound set up they only show a notification, and say so. The microphone is muted at every login and stays off until you switch it on (debsway menu > Microphone, or `debsway --mic on`); that is software muting, so a program running as you could unmute it, and a hardware switch is stronger. `volume up\|down\|mute\|micmute [STEP]` (5% steps, never above 100%, unmutes on a change, refreshes the bar); the volume and mute keys use it, and Super+F10 / F11 / F12 (mute / down / up) do for keyboards without them (packages: pipewire-audio) |
 | `grim-slurp.sh` | `screenshot` and its keys (packages: grim, slurp) |
 | `udiskie.sh` | USB drives mount under `/media/$USER/` with `nosuid,nodev,noexec`; encrypted (LUKS) sticks ask for their passphrase (packages: udiskie, udisks2, cryptsetup, polkitd) |
@@ -295,15 +294,18 @@ into (a bank, email, shopping, a work account) its own Firefox profile
 and a `firefox-NAME` command. See `extras/firefox-profiles/README.md` for why
 that's useful.
 
-## Firefox (`extras/firefox.sh`)
+## Firefox (`extras/firefox-sandbox.sh`)
 
 Installs Firefox ESR with the video codecs and uBlock Origin, runs the
-hardening below, and offers `incognito`. `bash extras/firefox.sh --remove`
-takes all of it out again (your profiles stay).
+hardening below, runs it as its own locked-down user (`firefox`), and offers
+`incognito`. `firefox-esr` still runs the same Firefox as you, for the odd
+page the sandbox's firewall blocks (your router's, say).
+`bash extras/firefox-sandbox.sh --remove` takes all of it out again (it asks
+about incognito; your profiles stay).
 
 ### Firefox hardening
 
-`extras/firefox.sh` runs `parts/firefox-hardening.sh`, which sets these for every Firefox profile:
+`extras/firefox-sandbox.sh` runs `parts/firefox-hardening.sh`, which sets these for every Firefox profile:
 
 - **uBlock Origin in "medium mode"**: scripts and frames from other
   sites are blocked everywhere. That's where most malicious ads and

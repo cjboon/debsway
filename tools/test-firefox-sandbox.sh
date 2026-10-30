@@ -187,4 +187,23 @@ check "the mask is set to rw, group and others to nothing" grep -qF -- '-exec se
 check "the session shares at its start, every 2 seconds while Firefox runs, and at its end" \
     bash -c 'grep -qx "share_downloads" "$1" && grep -qF "while kill -0 \"\$pid\" 2>/dev/null; do sleep 2; share_downloads; done &" "$1" && sed -n "/^cleanup() {/,/^}/p" "$1" | grep -q share_downloads' _ "$S"
 
+# 10. One Firefox extra: this one also installs Firefox ESR run as you
+# (firefox-esr), its hardening and the incognito offer (extras/firefox.sh is gone)
+X=$HERE/extras/firefox-sandbox.sh
+order() { python3 -I -c 'import sys; s = open(sys.argv[1]).read(); assert s.index(sys.argv[2]) < s.index(sys.argv[3])' "$X" "$1" "$2"; }
+check "the plain Firefox extra is gone; this is the only one" bash -c '[ ! -e "$1/extras/firefox.sh" ]' _ "$HERE"
+check "it sets up Firefox's hardening for every profile" grep -qx 'bash "$DEBSWAY_DIR/parts/firefox-hardening.sh"' "$X"
+check "it offers incognito (and keeps one that is there)" \
+    grep -qF 'if [ -x /usr/local/bin/incognito ] || ask "Set it up too?" y; then' "$X"
+check "it takes over the old Firefox extra's marker after installing its own (Firefox stays)" \
+    order 'apt_install firefox-esr' 'DEBSWAY_OWNER=firefox apt_purge'
+remove=$(sed -n '/^if \[ "${1:-}" = --remove \]/,/^fi$/p' "$X")
+rorder() { python3 -I -c 'import sys; s = sys.argv[1]; assert s.index(sys.argv[2]) < s.index(sys.argv[3])' "$remove" "$1" "$2"; }
+check "--remove asks about incognito first (its firewall and wayland-restrict decisions depend on it)" \
+    rorder 'ask "Remove incognito (the throwaway Firefox) too?" y' 'remove_bin wayland-restrict'
+check "--remove takes out the hardening, unless incognito stays" \
+    grep -qF 'bash "$DEBSWAY_DIR/parts/firefox-hardening.sh" --remove' <<<"$remove"
+check "--remove takes out the packages it installed" grep -qx '    apt_purge' <<<"$remove"
+check "the status screen names this extra for Firefox" grep -qF 'echo "Firefox (extras/firefox-sandbox.sh):"' "$HERE/status.sh"
+
 [ "$fails" -eq 0 ]

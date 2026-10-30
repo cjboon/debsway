@@ -281,11 +281,11 @@ fi
 section "Status lines: one extra's marker must not be another script's package"
 # install-extras.sh puts a * next to an extra when any item on its "# status:"
 # line is found, so a package that incognito, claude-vm or another script also
-# installs would leave the * on after --remove. firefox.sh and git.sh are known:
-# the program itself is their only marker.
+# installs would leave the * on after --remove. git.sh is known: the program
+# itself is its only marker.
 shared=0
 for f in extras/*.sh; do
-    case ${f##*/} in firefox.sh | git.sh) continue ;; esac
+    case ${f##*/} in git.sh) continue ;; esac
     for pkg in $(sed -n 's/^# status: //p' "$f" | head -1 | tr ' ' '\n' | sed -n 's/^apt://p'); do
         others=$(grep -lE "apt_install .*([ \"]|^)$pkg( |\"|$|\\\\)" extras/*.sh parts/*.sh install-base.sh 2>/dev/null | grep -vxF "$f" | paste -sd' ' || true)
         if [ -n "$others" ]; then
