@@ -62,12 +62,23 @@ nm_write_wifi() {
 # can beat debsway's drop-in; this catches that.
 sshd_problems() {
     awk -v user="$1" '
+        BEGIN {
+            # settings that must be "no" (sshd -T prints every one, in lower case)
+            split("AllowTcpForwarding AllowStreamLocalForwarding GatewayPorts AllowAgentForwarding X11Forwarding PermitTunnel PermitUserEnvironment", names, " ")
+            for (i in names) off[tolower(names[i])] = names[i]
+        }
+        ($1 in off) { got[$1] = 1; if ($2 != "no") print off[$1] " is " $2 }
+        $1 == "maxauthtries" { tries = 1; if ($2 + 0 > 3) print "MaxAuthTries is " $2 }
         $1 == "passwordauthentication" && $2 != "no" { print "PasswordAuthentication is " $2 }
         $1 == "kbdinteractiveauthentication" && $2 != "no" { print "KbdInteractiveAuthentication is " $2 }
         $1 == "permitrootlogin" && $2 != "no" { print "PermitRootLogin is " $2 }
         $1 == "listenaddress" && $2 !~ /^127\.0\.0\.1:/ { print "ListenAddress " $2 }
         $1 == "allowusers" { seen = 1; if ($0 != "allowusers " user) print "AllowUsers includes " $2 }
-        END { if (!seen) print "AllowUsers is not set" }'
+        END {
+            if (!seen) print "AllowUsers is not set"
+            for (k in off) if (!(k in got)) print off[k] " is not set"
+            if (!tries) print "MaxAuthTries is not set"
+        }'
 }
 
 # extras/secure-dns.sh's settings for Unbound. While they are there,

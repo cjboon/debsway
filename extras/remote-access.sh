@@ -114,6 +114,19 @@ PasswordAuthentication no
 KbdInteractiveAuthentication no
 PermitRootLogin no
 AllowUsers $USER
+# A shell (and file copies with scp or sftp), nothing more: no forwarding of
+# ports, sockets, your ssh agent or X11, no tunnels. A stolen key can't turn
+# this computer into a way into your network, or reach your agent.
+AllowTcpForwarding no
+AllowStreamLocalForwarding no
+GatewayPorts no
+AllowAgentForwarding no
+X11Forwarding no
+PermitTunnel no
+PermitUserEnvironment no
+# Few guesses per connection, and not long to make them
+MaxAuthTries 3
+LoginGraceTime 30
 EOF
 
 # Debian starts tor the moment it is installed; hold it until its bridge is in place

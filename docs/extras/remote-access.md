@@ -26,7 +26,7 @@ If you want to reach your computer from elsewhere, the usual way is to open a po
 
 1. **Asks first,** before installing anything. If you are logged in over ssh now, it warns you that ssh will move to 127.0.0.1 and ends that way in. It then needs an ssh public key: if `~/.ssh/authorized_keys` has none, it asks you to paste one, checks it with `ssh-keygen` and adds it.
 2. **Asks about a bridge,** on a first install when Tor is not already set up by something else. If you say you need one but none was set up, it warns and asks whether to go on.
-3. **Writes sshd's settings** to `/etc/ssh/sshd_config.d/00-debsway-remote-access.conf`: `ListenAddress 127.0.0.1`, `PasswordAuthentication no`, `KbdInteractiveAuthentication no`, `PermitRootLogin no`, `AllowUsers` your user. The file is named `00-` because sshd takes the first value it finds.
+3. **Writes sshd's settings** to `/etc/ssh/sshd_config.d/00-debsway-remote-access.conf`: `ListenAddress 127.0.0.1`, `PasswordAuthentication no`, `KbdInteractiveAuthentication no`, `PermitRootLogin no`, `AllowUsers` your user; and nothing but a shell and file copies (`scp`, `sftp`): no forwarding of ports or sockets (`AllowTcpForwarding no`, `AllowStreamLocalForwarding no`, `GatewayPorts no`), of your ssh agent (`AllowAgentForwarding no`) or of X11 (`X11Forwarding no`), no tunnels (`PermitTunnel no`), no environment settings from the key file (`PermitUserEnvironment no`), three tries per connection (`MaxAuthTries 3`) within 30 seconds (`LoginGraceTime 30`). The file is named `00-` because sshd takes the first value it finds. Afterwards it asks sshd what it will really do (`sshd -T`) and stops ssh if any of these is set otherwise elsewhere.
 4. **Installs `openssh-server`, `tor` and `openssl`** (plus `obfs4proxy` or `snowflake-client` for a bridge). Tor is kept from starting until its settings are in.
 5. **Checks sshd.** It switches off `ssh.socket` (which ignores `ListenAddress`), runs `sshd -t`, then `sshd -T` to see what sshd will really do. If a setting is wrong (another file overrides debsway's), it stops ssh and tells you. It restarts ssh and checks that it listens only on 127.0.0.1.
 6. **Sets up the onion service** in `/etc/tor/torrc` (`HiddenServiceDir /var/lib/tor/debsway-ssh/`, `HiddenServicePort 22 127.0.0.1:22`) and a marker file `/etc/tor/.debsway-remote-access`.
@@ -56,6 +56,7 @@ If you want to reach your computer from elsewhere, the usual way is to open a po
 - **Strangers finding the service,** since Tor client authorization hides it from anyone without the key.
 - **Your address being shown** to the person connecting.
 - **A hidden override of sshd's settings.** The script reads what sshd will actually do and stops if it differs.
+- **A stolen key used as a way in.** With forwarding and tunnels off, someone who has your key gets a shell as you, but can't use this computer to reach other machines on your network, or your ssh agent's keys.
 
 ## What it doesn't protect against
 
