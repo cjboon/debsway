@@ -178,6 +178,11 @@ check "...and one empty disk, in the user's cache folder" \
     bash -c 'grep -qF "if=none,id=disk,file=$2/debsway/iso-test/disk.qcow2" <<<"$1" && ! grep -q disk2 <<<"$1"' _ "$inst" "$T/cache"
 check "VM: when the installer restarts at the end, QEMU stops (not the stick again)" grep -qF -- ' -no-reboot' <<<"$inst"
 check "...but the installed system can restart normally" not grep -qF -- '-no-reboot' <<<"$booted"
+check "VM: QEMU is asked for a window (not a hidden VNC screen), for both runs" \
+    bash -c 'grep -qF -- "-display gtk" <<<"$1" && grep -qF -- "-display gtk" <<<"$2"' _ "$inst" "$booted"
+check "VM: QEMU's window package is installed if missing" grep -qF 'is_installed qemu-system-gui || need+=(qemu-system-gui)' "$TRY"
+check "VM: an interrupted install doesn't go on to the installed system" \
+    grep -qF '"${install_cmd[@]}" || die ' "$TRY"
 check "VM: the installed system starts without the stick" bash -c '[ -n "$1" ] && ! grep -q stick <<<"$1"' _ "$booted"
 check "VM: --two-disks adds a second disk (the installer should then ask)" \
     test "$(XDG_CACHE_HOME=$T/cache bash "$TRY" --print --two-disks --iso /x/my.iso | grep -c 'id=disk2,file=')" = 2

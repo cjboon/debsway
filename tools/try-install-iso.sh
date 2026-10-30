@@ -16,7 +16,8 @@
 #                                                 other debsway scripts need)
 #   bash tools/try-install-iso.sh --print ...     only show the QEMU commands
 #
-# It needs QEMU (qemu-system-x86, qemu-utils), the UEFI firmware (ovmf) and
+# It needs QEMU (qemu-system-x86, qemu-utils, and qemu-system-gui for its
+# window), the UEFI firmware (ovmf) and
 # access to /dev/kvm, and offers to install the packages (sudo) if they are
 # missing. Run it as your normal user, in your sway session (the VM is a window).
 # shellcheck disable=SC2054  # QEMU's options are comma-separated on purpose
@@ -70,8 +71,10 @@ if [ -z "$iso" ]; then
 fi
 [ "$mode" = boot ] || [ -f "$iso" ] || $print || die "No image $iso."
 
-# The machine: KVM, UEFI (its settings in a copy of its own), virtio network
-base=(qemu-system-x86_64 -enable-kvm -cpu host -machine q35 -m 2048
+# The machine: KVM, UEFI (its settings in a copy of its own), virtio network,
+# in a window (asked for by name: without it QEMU falls back to a hidden VNC
+# screen, and the installer waits where you can't see it)
+base=(qemu-system-x86_64 -enable-kvm -cpu host -machine q35 -m 2048 -display gtk
     -drive "if=pflash,format=raw,readonly=on,file=$CODE"
     -drive "if=pflash,format=raw,file=$VARS"
     -nic user,model=virtio-net-pci)
@@ -97,6 +100,9 @@ fi
 need=()
 command -v qemu-system-x86_64 >/dev/null || need+=(qemu-system-x86)
 command -v qemu-img >/dev/null || need+=(qemu-utils)
+# the window: a package of its own, which QEMU only recommends (and other
+# debsway VMs, run without a window, don't install)
+is_installed qemu-system-gui || need+=(qemu-system-gui)
 [ -f "$CODE" ] && [ -f "$VARS_TEMPLATE" ] || need+=(ovmf)
 if [ ${#need[@]} -gt 0 ]; then
     note "Missing: ${need[*]}."
@@ -143,9 +149,11 @@ EOF
       4. "Erasing data" fills the disk with random data: a few minutes.
       5. When it is done it restarts: the window closes by itself, and this
          script goes on to the installed system.
+    To stop earlier: close the window, or Ctrl+C here.
 
 EOF
-    "${install_cmd[@]}" || warn "QEMU ended with an error (see above)."
+    # It stops by itself when the installer restarts at the end (-no-reboot)
+    "${install_cmd[@]}" || die "QEMU stopped before the install was done (an error above, or Ctrl+C). Run this again to start over."
     ask "Start the installed system now?" y || { note "Later: bash tools/try-install-iso.sh --boot"; exit 0; }
 fi
 
