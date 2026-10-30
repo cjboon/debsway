@@ -5,7 +5,8 @@
 # home, and a firewall rule keeps it off your local network.
 #
 #   torrent                     what is downloading (the same as torrent list)
-#   torrent add MAGNET|FILE     a magnet link, or a .torrent file (or its URL)
+#   torrent add MAGNET|FILE     a magnet link, or a .torrent file (or its URL);
+#                               torrent MAGNET|FILE.torrent does the same
 #   torrent get N|all           copy finished downloads into ~/Downloads
 #   torrent pause N|all         stop downloading and sharing; resume N|all goes on
 #   torrent remove N            remove it, and its files in the client's folder
@@ -23,7 +24,8 @@ AUTH_FILE=${XDG_CONFIG_HOME:-$HOME/.config}/debsway/torrent-rpc
 DL=${DEBSWAY_TORRENT_DIR:-/var/lib/debsway-torrent/downloads}
 
 die() { printf 'torrent: %s\n' "$*" >&2; exit 1; }
-usage() { sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; }
+# usage: the comment at the top of this file, up to its first line of code
+usage() { awk 'NR > 1 && !/^#/ { exit } NR > 1 { sub(/^# ?/, ""); print }' "$0"; }
 
 [ -r "$AUTH_FILE" ] || die "no password file $AUTH_FILE. Set it up with: bash ~/debsway/extras/torrent.sh"
 command -v "$REMOTE" >/dev/null || die "transmission-remote is missing. Set it up with: bash ~/debsway/extras/torrent.sh"
@@ -106,6 +108,8 @@ case $cmd in
             case $t in
                 magnet:* | http://* | https://*) remote -a "$t" ;;
                 *) [ -f "$t" ] || die "no file $t"
+                   # A file the sandboxed Firefox saved may be its own and private
+                   [ -r "$t" ] || die "you can't read $t (it belongs to $(stat -c %U -- "$t")). Take it over with: sudo chown \"\$USER\": '$t'"
                    # transmission-remote reads the file and sends what is in it:
                    # the client itself can't see your home
                    remote -a "$t" ;;
@@ -133,5 +137,7 @@ case $cmd in
     info) [ $# -eq 1 ] || die "usage: torrent info N"; n=$(ids "$1") || exit 1; remote -t "$n" -i ;;
     files) [ $# -eq 1 ] || die "usage: torrent files N"; n=$(ids "$1") || exit 1; remote -t "$n" -f ;;
     -h | --help | help) usage ;;
+    # torrent MAGNET or torrent FILE.torrent: add it
+    magnet:* | *.torrent) exec "$0" add "$cmd" "$@" ;;
     *) usage >&2; exit 2 ;;
 esac

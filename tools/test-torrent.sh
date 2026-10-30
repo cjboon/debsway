@@ -103,6 +103,20 @@ echo d8:announce >"$T/home/x.torrent"
 tor add "$T/home/x.torrent" >/dev/null
 check "...a .torrent file is read by transmission-remote, as you (the client can't see your home)" test "$(last)" = "localhost:9091 -ne -a $T/home/x.torrent"
 check "...a file that isn't there is refused" not tor add "$T/home/nothing.torrent"
+: >"$T/calls"
+tor "$T/home/x.torrent" >/dev/null
+check "torrent FILE.torrent, without add, adds it" test "$(last)" = "localhost:9091 -ne -a $T/home/x.torrent"
+tor 'magnet:?xt=urn:btih:def' >/dev/null
+check "...and so does torrent MAGNET" test "$(last)" = 'localhost:9091 -ne -a magnet:?xt=urn:btih:def'
+cp "$T/home/x.torrent" "$T/home/locked.torrent" && chmod 000 "$T/home/locked.torrent"
+: >"$T/calls"
+said=$(tor add "$T/home/locked.torrent" 2>&1)
+check "a .torrent you can't read (the sandboxed Firefox's, say): it says whose it is and how to take it over" \
+    bash -c 'grep -q "you can.t read .* (it belongs to $(id -un))" <<<"$1" && grep -q "sudo chown" <<<"$1" && [ ! -s "$2" ]' _ "$said" "$T/calls"
+chmod 600 "$T/home/locked.torrent"
+help=$(tor help)
+check "the help is the comment at the top, and nothing of the code after it" \
+    bash -c 'grep -q "torrent get N|all" <<<"$1" && ! grep -qE "set -u|DEBSWAY_" <<<"$1"' _ "$help"
 
 said=$(tor get 1 2>&1)
 check "get: a finished download is copied into ~/Downloads, folders and all" \
