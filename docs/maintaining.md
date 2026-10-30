@@ -47,6 +47,9 @@ can change what the scripts rely on.
 - `status.sh`: what's installed, the Firefox hardening, sway snippets,
   how each Wi-Fi device is set up, and a warning if `/`, `/home` or swap
   isn't encrypted.
+- `prep/make-install-iso.sh`: an automatic Debian 13 install image with debsway
+  on it (see the README, "Before you reinstall"). What runs inside the
+  installer is `data/install-iso-*`; `tools/test-install-iso.sh` checks it.
 - `prep/fetch-offline-debs.sh`, `prep/fetch-tor-browser.sh`: download
   things you need before a reinstall (see the README).
 - `tools/pack-usb.sh /path/to/stick`: puts the last commit and `offline/`

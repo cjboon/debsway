@@ -35,6 +35,12 @@ WHONIX_KEY_URL=https://keys.openpgp.org/vks/v1/by-fingerprint/916B8D99C38EAF5E8A
 # checked: 2026-10-26  Whonix 18.2.4.2 LXQt
 WHONIX_TESTED_VERSION=18
 
+# Debian's installer images (prep/make-install-iso.sh): the Debian CD signing
+# key, which signs the SHA512SUMS of every release image (Debian 13's included).
+# checked: 2026-10-30  debian.org/CD/verify; keyring.debian.org; a good signature on 13.7.0's SHA512SUMS
+DEBIAN_CD_FPR=DF9B9C49EAA9298432589D76DA87E80D6294BE9B
+DEBIAN_CD_KEY_URL='https://keyring.debian.org/pks/lookup?op=get&search=0xDF9B9C49EAA9298432589D76DA87E80D6294BE9B'
+
 # Tails (extras/tails-usb.sh). The Tails signing key, which signs every Tails
 # image (expires 2028-10-22; Tails says it extends it as needed).
 # checked: 2026-10-29  tails.net/doc/about/openpgp_keys; tails.net/install/expert; keys.openpgp.org

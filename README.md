@@ -125,6 +125,20 @@ executable bit.
    the stick yourself (`fatlabel /dev/sdX1 DEBSWAY` for FAT,
    `e2label /dev/sdX1 DEBSWAY` for ext4).
 
+Or, instead of installing Debian by hand and copying debsway over: build
+**an automatic install stick** with `bash prep/make-install-iso.sh`. It
+downloads Debian 13's installer image (checked against the Debian CD signing
+key pinned in `pins.sh`), adds debsway's answers and debsway itself, and can
+write it to a USB stick. Booted from it, "Automatic install with debsway"
+installs Debian as below (encrypted LVM over the whole disk, no root password,
+standard system utilities only) and puts debsway in `~/debsway`; it asks only
+for the disk passphrase, your password, and the final "write the changes to
+disks?", which names the disk it erases (the stick itself is never offered).
+Then log in and run `bash ~/debsway/start.sh`. Options: `--user NAME`,
+`--keymap de`, `--locale de_DE.UTF-8`, `--no-erase` (skip filling the disk with
+random data), `--scripts FOLDER` (your own files, to `~/scripts`). Try the image
+in a VM first if you can; the script prints the command.
+
 ## Installing Debian
 
 In the installer:

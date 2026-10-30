@@ -92,6 +92,9 @@ w=$(sed -n '/--remove ]; then/,/^fi/p' extras/whonix.sh)
 for f in bin/onion-site bin/onion-site-session lib/onion-site.sh data/onion-site-firewall.nft data/onion-site-provision.sh; do
     [ -f "$f" ] || bad "extras/onion-site.sh needs $f"
 done
+for f in lib/install-iso.sh data/install-iso-preseed.cfg data/install-iso-disk.sh data/install-iso-late.sh; do
+    [ -f "$f" ] || bad "prep/make-install-iso.sh needs $f"
+done
 for f in bin/debsway-camera data/webcam-off.rules; do
     [ -f "$f" ] || bad "extras/webcam.sh needs $f"
 done
@@ -192,6 +195,14 @@ if out=$(bash tools/test-onion-site.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") onion site checks"
 else
     bad "onion site checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "The install ISO (prep/make-install-iso.sh): answers, boot menus, disk choice"
+if out=$(bash tools/test-install-iso.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") install ISO checks"
+else
+    bad "install ISO checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
 fi
 
 # --------------------------------------------------------------------
@@ -505,6 +516,7 @@ if online; then
     check_key "Sparrow" "$SPARROW_FPR" "$SPARROW_KEY_URL"
     check_key "Mullvad" "$MULLVAD_FPR" "$MULLVAD_KEY_URL"
     check_key "Tails" "$TAILS_FPR" "$TAILS_KEY_URL"
+    check_key "Debian CD" "$DEBIAN_CD_FPR" "$DEBIAN_CD_KEY_URL"
 
     # ----------------------------------------------------------------
     section "Newest releases: found, and signed by the pinned key"
