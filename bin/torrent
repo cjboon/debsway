@@ -1,0 +1,137 @@
+#!/bin/bash
+# torrent: written by debsway extras/torrent.sh
+# BitTorrent from the terminal. Transmission runs in the background as its own
+# locked-down user (debian-transmission), never as you: it can't see your
+# home, and a firewall rule keeps it off your local network.
+#
+#   torrent                     what is downloading (the same as torrent list)
+#   torrent add MAGNET|FILE     a magnet link, or a .torrent file (or its URL)
+#   torrent get N|all           copy finished downloads into ~/Downloads
+#   torrent pause N|all         stop downloading and sharing; resume N|all goes on
+#   torrent remove N            remove it, and its files in the client's folder
+#                               (copies you made with get stay)
+#   torrent info N              everything about one; files N lists its files
+#
+# N is the number torrent list shows. Your IP address is visible to everyone
+# sharing the same torrent. Treat what you download as untrusted: never run
+# programs from a torrent, and play videos with mpv from the media extra.
+set -u
+
+# (The DEBSWAY_ ones: a test points these elsewhere)
+REMOTE=${DEBSWAY_TR_REMOTE:-transmission-remote}
+AUTH_FILE=${XDG_CONFIG_HOME:-$HOME/.config}/debsway/torrent-rpc
+DL=${DEBSWAY_TORRENT_DIR:-/var/lib/debsway-torrent/downloads}
+
+die() { printf 'torrent: %s\n' "$*" >&2; exit 1; }
+usage() { sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'; }
+
+[ -r "$AUTH_FILE" ] || die "no password file $AUTH_FILE. Set it up with: bash ~/debsway/extras/torrent.sh"
+command -v "$REMOTE" >/dev/null || die "transmission-remote is missing. Set it up with: bash ~/debsway/extras/torrent.sh"
+
+# remote ARGS...: transmission-remote on this computer, the password from the
+# environment (TR_AUTH, read with -ne), never on the command line
+remote() {
+    local out rc
+    out=$(TR_AUTH=$(cat "$AUTH_FILE") "$REMOTE" localhost:9091 -ne "$@" 2>&1)
+    rc=$?
+    if [ $rc -ne 0 ]; then
+        case $out in
+            *"Couldn't connect"* | *"connection refused"* | *"Connection refused"*)
+                die "the torrent service isn't running. Start it: sudo systemctl start transmission-daemon" ;;
+        esac
+        printf '%s\n' "$out" >&2
+        return $rc
+    fi
+    printf '%s\n' "$out"
+}
+
+# ids N|all: the torrent numbers to act on (all: every one, or only the finished)
+ids() { # N|all [finished]
+    if [ "$1" = all ]; then
+        remote -l | awk -v done="${2:-}" 'NR > 1 && $1 ~ /^[0-9]+\*?$/ {
+            sub(/\*$/, "", $1); if (done == "" || $2 == "100%") print $1 }'
+    elif [[ $1 =~ ^[0-9]+$ ]]; then
+        echo "$1"
+    else
+        die "'$1' isn't a torrent number (torrent list shows them) or all"
+    fi
+}
+
+# free NAME: NAME, or "NAME (2).ext" and so on if NAME is taken
+free() {
+    local f=$1 base ext n=2
+    [ -e "$f" ] || [ -L "$f" ] || { printf '%s' "$f"; return; }
+    base=${f%.*} ext=.${f##*.}
+    [[ ${f##*/} == *.* ]] || { base=$f ext=; }
+    while [ -e "$base ($n)$ext" ] || [ -L "$base ($n)$ext" ]; do n=$((n + 1)); done
+    printf '%s' "$base ($n)$ext"
+}
+
+# get_one N: copies torrent N's files, if it is finished, into the Downloads folder
+get_one() {
+    local info name pct loc src f rel target n=0
+    info=$(remote -t "$1" -i) || return 1
+    name=$(sed -n 's/^ *Name: //p' <<<"$info" | head -1)
+    pct=$(sed -n 's/^ *Percent Done: //p' <<<"$info" | head -1)
+    loc=$(sed -n 's/^ *Location: //p' <<<"$info" | head -1)
+    [ -n "$name" ] || { printf 'torrent: no torrent %s\n' "$1" >&2; return 1; }
+    # The name comes from the torrent: one plain name, nothing that leads elsewhere
+    case $name in
+        */* | . | .. | -*) printf 'torrent: %s has an odd name, not copied: %s\n' "$1" "$name" >&2; return 1 ;;
+    esac
+    [ "$loc" = "$DL" ] || { printf 'torrent: %s is in %s, not the client'"'"'s folder; not copied\n' "$1" "$loc" >&2; return 1; }
+    [ "$pct" = 100% ] || { printf 'torrent: %s (%s) is not finished yet (%s)\n' "$1" "$name" "$pct" >&2; return 1; }
+    src=$DL/$name
+    # Regular files only (cp -P: a link stays a link), never overwriting yours
+    while IFS= read -r -d '' f; do
+        rel=${f#"$DL"/}
+        target=$(free "$dest/$rel")
+        if mkdir -p "${target%/*}" && cp -P --no-preserve=all -- "$f" "$target"; then
+            n=$((n + 1))
+        else
+            printf 'torrent: could not copy %s\n' "$f" >&2
+        fi
+    done < <(find "$src" -type f -print0 2>/dev/null)
+    [ "$n" -gt 0 ] || { printf 'torrent: nothing to copy for %s (%s)\n' "$1" "$name" >&2; return 1; }
+    printf 'torrent: %s: %d file(s) in %s\n' "$name" "$n" "$dest"
+}
+
+cmd=${1:-list}
+[ $# -eq 0 ] || shift
+case $cmd in
+    list | ls) remote -l ;;
+    add)
+        [ $# -ge 1 ] || die "usage: torrent add MAGNET|FILE.torrent"
+        for t in "$@"; do
+            case $t in
+                magnet:* | http://* | https://*) remote -a "$t" ;;
+                *) [ -f "$t" ] || die "no file $t"
+                   # transmission-remote reads the file and sends what is in it:
+                   # the client itself can't see your home
+                   remote -a "$t" ;;
+            esac
+        done ;;
+    get)
+        [ $# -eq 1 ] || die "usage: torrent get N|all"
+        [[ $1 == all || $1 =~ ^[0-9]+$ ]] || die "'$1' isn't a torrent number (torrent list shows them) or all"
+        dest=$(xdg-user-dir DOWNLOAD 2>/dev/null) || dest=
+        [ -n "$dest" ] && [ "$dest" != "$HOME" ] || dest=$HOME/Downloads
+        mkdir -p "$dest" || die "couldn't make $dest"
+        mapfile -t list < <(ids "$1" finished)
+        [ ${#list[@]} -gt 0 ] || die "nothing finished to copy yet"
+        rc=0
+        for n in "${list[@]}"; do get_one "$n" || rc=1; done
+        exit $rc ;;
+    pause | stop) [ $# -eq 1 ] || die "usage: torrent pause N|all"
+        if [ "$1" = all ]; then n=all; else n=$(ids "$1") || exit 1; fi
+        remote -t "$n" -S ;;
+    resume | start) [ $# -eq 1 ] || die "usage: torrent resume N|all"
+        if [ "$1" = all ]; then n=all; else n=$(ids "$1") || exit 1; fi
+        remote -t "$n" -s ;;
+    remove | rm) [ $# -eq 1 ] || die "usage: torrent remove N"
+        n=$(ids "$1") || exit 1; remote -t "$n" --remove-and-delete ;;
+    info) [ $# -eq 1 ] || die "usage: torrent info N"; n=$(ids "$1") || exit 1; remote -t "$n" -i ;;
+    files) [ $# -eq 1 ] || die "usage: torrent files N"; n=$(ids "$1") || exit 1; remote -t "$n" -f ;;
+    -h | --help | help) usage ;;
+    *) usage >&2; exit 2 ;;
+esac
