@@ -13,10 +13,10 @@ netinst_name() {
     sed -nE 's/^[0-9a-f]{128}  (debian-[0-9]+(\.[0-9]+)+-amd64-netinst\.iso)$/\1/p' "$1" | head -1
 }
 
-# netinst_ok SHA512SUMS ISO: the image's SHA-512 is the one in the list
+# netinst_ok SHA512SUMS FILE NAME: FILE's SHA-512 is the one the list gives
+# for the image NAME (FILE may still be the download, NAME.part)
 netinst_ok() {
-    local name want
-    name=$(basename -- "$2")
+    local name=$3 want
     want=$(awk -v n="$name" '$2 == n { print $1; exit }' "$1")
     [ -n "$want" ] && echo "$want  $2" | sha512sum -c --quiet - >/dev/null 2>&1
 }

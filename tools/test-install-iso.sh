@@ -34,9 +34,14 @@ check "a list entry that isn't a netinst image name is ignored" test -z "$(netin
 echo "debsway test image" >"$T/debian-13.7.0-amd64-netinst.iso"
 sum=$(sha512sum "$T/debian-13.7.0-amd64-netinst.iso" | cut -d' ' -f1)
 printf '%s  %s\n' "$sum" debian-13.7.0-amd64-netinst.iso >"$T/SUMS"
-check "an image with the listed checksum passes" netinst_ok "$T/SUMS" "$T/debian-13.7.0-amd64-netinst.iso"
+check "an image with the listed checksum passes" netinst_ok "$T/SUMS" "$T/debian-13.7.0-amd64-netinst.iso" debian-13.7.0-amd64-netinst.iso
+# the download is checked while it is still NAME.part (a check by file name refused every download)
+cp "$T/debian-13.7.0-amd64-netinst.iso" "$T/debian-13.7.0-amd64-netinst.iso.part"
+check "...also while the download is still called NAME.part" netinst_ok "$T/SUMS" "$T/debian-13.7.0-amd64-netinst.iso.part" debian-13.7.0-amd64-netinst.iso
+check "the script checks the download under the image's name" grep -q 'netinst_ok "$work/SHA512SUMS" "$iso.part" "$name"' "$HERE/prep/make-install-iso.sh"
 echo changed >>"$T/debian-13.7.0-amd64-netinst.iso"
-check "a changed image is refused" not netinst_ok "$T/SUMS" "$T/debian-13.7.0-amd64-netinst.iso"
+check "a changed image is refused" not netinst_ok "$T/SUMS" "$T/debian-13.7.0-amd64-netinst.iso" debian-13.7.0-amd64-netinst.iso
+check "an image the list doesn't name is refused" not netinst_ok "$T/SUMS" "$T/debian-13.7.0-amd64-netinst.iso.part" debian-14.0.0-amd64-netinst.iso
 check "the Debian CD signing key is pinned" test "$DEBIAN_CD_FPR" = DF9B9C49EAA9298432589D76DA87E80D6294BE9B
 check "a missing xorriso is offered, installed the debsway way (a marker package)" \
     bash -c 'grep -q "ask \"Install it for now (needs your sudo password)?\" y" "$1" && grep -q "^    apt_install xorriso$" "$1"' _ "$HERE/prep/make-install-iso.sh"

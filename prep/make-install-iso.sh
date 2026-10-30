@@ -98,11 +98,11 @@ name=$(netinst_name "$work/SHA512SUMS")
 [ -n "$name" ] || die "No netinst image in Debian's list."
 iso=$SAVED/$name
 note "$name (the list is signed by the Debian CD signing key)"
-if [ -f "$iso" ] && netinst_ok "$work/SHA512SUMS" "$iso"; then
+if [ -f "$iso" ] && netinst_ok "$work/SHA512SUMS" "$iso" "$name"; then
     note "Using the saved copy, checked again: $iso"
 else
     wget -q --show-progress -c -O "$iso.part" "$DEBIAN_CD_BASE/$name" || die "The download didn't finish; run this again to go on."
-    if ! netinst_ok "$work/SHA512SUMS" "$iso.part"; then
+    if ! netinst_ok "$work/SHA512SUMS" "$iso.part" "$name"; then
         rm -f "$iso.part"
         die "The image doesn't have the checksum in Debian's signed list, so it was deleted."
     fi
