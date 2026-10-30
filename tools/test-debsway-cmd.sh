@@ -22,7 +22,7 @@ for s in update install-extras status test; do
     printf '#!/bin/bash\necho "%s $*" >>"%s/ran"\n' "$s" "$T" >"$T/dir/$s.sh"
 done
 # shellcheck disable=SC2016  # written into the pretend program, expanded when it runs
-printf '#!/bin/sh\necho "menu" >>"%s/ran"\n' "$T" >"$T/home/.local/bin/debsway-menu"
+printf '#!/bin/sh\necho "menu${*:+ $*}" >>"%s/ran"\n' "$T" >"$T/home/.local/bin/debsway-menu"
 # shellcheck disable=SC2016
 printf '#!/bin/sh\necho "keys" >>"%s/ran"\n' "$T" >"$T/home/.local/bin/keys"
 # shellcheck disable=SC2016
@@ -61,8 +61,16 @@ check "--menu opens the menu" grep -qx 'menu' "$T/ran"
 out=$(d)
 check "with no option anywhere else it shows the help" grep -q '^usage: debsway' <<<"$out"
 check "...and starts nothing" test ! -s "$T/ran"
-check "--menu without a sway screen says so" grep -q 'needs your sway session' <(d --menu 2>&1)
-check "--menu without a sway screen fails" not d --menu
+check "--menu without a sway screen or a terminal says so" grep -q 'needs your sway session or a terminal' <(d --menu 2>&1)
+check "--menu without a sway screen or a terminal fails" not d --menu
+# a text console or ssh: no sway, but a terminal (script gives it one)
+tty_d() { : >"$T/ran"; env -u WAYLAND_DISPLAY HOME="$T/home" DEBSWAY_DIR="$T/dir" script -qec "bash '$CMD' $*" /dev/null >/dev/null 2>&1; }
+if command -v script >/dev/null; then
+    tty_d
+    check "with no option in a terminal without sway, it opens the menu right there" grep -qx 'menu --tui' "$T/ran"
+    tty_d --menu
+    check "--menu does the same" grep -qx 'menu --tui' "$T/ran"
+fi
 
 # mistakes
 d --nonsense >/dev/null 2>"$T/err"; rc=$?

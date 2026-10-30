@@ -9,7 +9,8 @@ usage() {
     cat <<'TEXT'
 usage: debsway [OPTION]
 
-  (no option)  open the menu in a sway session; show this help anywhere else
+  (no option)  open the menu: a window in sway, or in this terminal on a
+               text console or over ssh; this help when there is no terminal
   --menu       open the menu: Help, Install apps, Update, Status
   --update     bring debsway up to date, then rerun the scripts whose files
                changed (more: --update --since COMMIT, --update --all)
@@ -36,19 +37,24 @@ need_dir() {
         die "can't find the debsway folder ($DIR). Set DEBSWAY_DIR to where it is, or get it again: git clone <address> ~/debsway"
 }
 
+MENU=$HOME/.local/bin/debsway-menu
 # in_sway: there is a screen to open a window on
-in_sway() { [ -n "${WAYLAND_DISPLAY:-}" ] && [ -x "$HOME/.local/bin/debsway-menu" ]; }
+in_sway() { [ -n "${WAYLAND_DISPLAY:-}" ] && [ -x "$MENU" ]; }
+# in_terminal: no sway, but a terminal to show the menu in (a text console, ssh)
+in_terminal() { [ -t 0 ] && [ -t 1 ] && [ -x "$MENU" ]; }
 
 cmd=${1:-}
 [ $# -eq 0 ] || shift
 
 case $cmd in
     "")
-        if in_sway; then exec "$HOME/.local/bin/debsway-menu"; fi
+        if in_sway; then exec "$MENU"; fi
+        if in_terminal; then exec "$MENU" --tui; fi
         usage ;;
     --menu | menu)
-        in_sway || die "the menu opens a window, so it needs your sway session (and the debsway menu installed: bash $DIR/parts/debsway-menu.sh)."
-        exec "$HOME/.local/bin/debsway-menu" ;;
+        if in_sway; then exec "$MENU"; fi
+        in_terminal || die "the menu needs your sway session or a terminal (and the debsway menu installed: bash $DIR/parts/debsway-menu.sh)."
+        exec "$MENU" --tui ;;
     --update | update) need_dir; exec bash "$DIR/update.sh" "$@" ;;
     --apps | apps) need_dir; exec bash "$DIR/install-extras.sh" "$@" ;;
     --status | status) need_dir; exec bash "$DIR/status.sh" "$@" ;;
