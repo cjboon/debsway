@@ -13,7 +13,9 @@
 #
 # Settings are in ~/.config/sway/config.d/display.conf, one line per screen.
 # sway doesn't say how big a screen is, so its size comes from the screen's
-# own data (EDID) in /sys/class/drm; without it the sharpness is unknown.
+# own data (EDID) in /sys/class/drm; without it the sharpness is unknown. A
+# virtual machine's screen (Virtual-1) has a size the VM made up, so it is
+# left unknown too: no "sharp screen" notice from a VM.
 
 DRM=${DEBSWAY_DRM_DIR:-/sys/class/drm}
 CONF=$HOME/.config/sway/config.d/display.conf
@@ -35,8 +37,9 @@ edid_mm() {
             { for (i = 1; i <= NF; i++) b[n++] = $i }
             END {
                 if (n < 128 || b[0] != 0 || b[1] != 255 || b[7] != 0) exit
-                # the first detailed timing has the image size in mm
-                w = b[66] + 16 * int(b[68] / 16); h = b[67] + (b[68] % 16) * 256
+                # the first detailed timing has the image size in mm: the low 8
+                # bits of each in bytes 66 and 67, the high 4 in byte 68
+                w = b[66] + int(b[68] / 16) * 256; h = b[67] + (b[68] % 16) * 256
                 if (b[54] + b[55] == 0 || w == 0 || h == 0) { w = b[21] * 10; h = b[22] * 10 }
                 if (w > 0 && h > 0) print w, h
             }'
@@ -60,8 +63,12 @@ screens() {
         /Scale factor:/ { scale = $3 + 0 }
         END { emit() }' |
     while IFS='	' read -r name id mode scale; do
+        # a VM's screen (QEMU names it Virtual-1): the size in its EDID is made up
         # shellcheck disable=SC2046  # the two numbers are meant to split
-        set -- $(edid_mm "$name")
+        case $name in
+            Virtual-*) set -- ;;
+            *) set -- $(edid_mm "$name") ;;
+        esac
         printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$name" "$id" "$mode" "$scale" "${1:--}" "${2:--}"
     done |
     awk -F'\t' -v sharp="$SHARP" '{
@@ -92,7 +99,7 @@ list() {
     screens | while IFS='	' read -r name id mode scale mmw mmh ppi sug; do
         n=$((n + 1))
         if [ "$ppi" = - ]; then
-            sharp="size unknown"
+            case $name in Virtual-*) sharp="a VM's screen, no real size" ;; *) sharp="size unknown" ;; esac
         else
             sharp="${mmw}x${mmh} mm, $ppi pixels per inch"
         fi

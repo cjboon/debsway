@@ -198,6 +198,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "Screen sharpness (bin/display-scale): EDID sizes, the notice, VM screens"
+if out=$(bash tools/test-display-scale.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") display-scale checks"
+else
+    bad "display-scale checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "The install ISO (prep/make-install-iso.sh): answers, boot menus, disk choice"
 if out=$(bash tools/test-install-iso.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") install ISO checks"
