@@ -7,7 +7,7 @@
 # installs ncal, whose cal draws the month in timer's screen.
 # Usage: bash core-commands.sh [--remove]
 # status: bin:timer
-# files: data/keys.txt data/alarm.wav
+# files: data/keys.txt data/alarm.wav bin/keys bin/debsway-welcome bin/timer bin/display-scale bin/sway-status
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 

@@ -132,4 +132,20 @@ git -C "$T/W" commit -q -am third && git -C "$T/W" push -q origin main
 ARGS='' out=$(upd y y)
 check "your own commits stop a plain update, with a message" grep -q 'both changed' <<<"$out"
 
+# Every command a script installs is one of its files: a script that installs
+# them from a list (install_bin "$c") must name them on its "# files:" line, or
+# update.sh never puts in a newer one when only that command changed (timer and
+# the bar, installed by parts/core-commands.sh, were missed that way)
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+missing=$(cd "$HERE" && bash -c '. ./lib.sh; . lib/update.sh
+    for s in parts/*.sh extras/*.sh; do
+        grep -qF "install_bin \"\$" "$s" || continue
+        names=$(sed -n "s/^COMMANDS=(\(.*\))\$/\1/p" "$s")
+        [ -n "$names" ] || { echo "$s: installs a command named by a variable, and has no COMMANDS=(...) to check"; continue; }
+        # (the list first: grep -q stops reading early, which pipefail counts as a failure)
+        inputs=$(update_inputs "$s")
+        for n in $names; do grep -qx "bin/$n" <<<"$inputs" || echo "$s: bin/$n"; done
+    done' 2>&1)
+check "update.sh sees every command a script installs from a list${missing:+ (missing: $(paste -sd' ' <<<"$missing"))}" test -z "$missing"
+
 [ "$fails" -eq 0 ]
