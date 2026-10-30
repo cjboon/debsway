@@ -290,26 +290,91 @@ none = s.index("No extras chosen")
 wait = s.index("pause_if_asked")
 assert none < wait and "exit 0" in s[none:wait], "the no-choice exit must come first"
 ' "$HERE/install-extras.sh"
-check "the checklist colors are all grays" python3 -I -c '
-import re, sys
-s = open(sys.argv[1]).read()
-palette = re.search(r"NEWT_COLORS:-.([^\x27]+)", s).group(1)
-colors = set(re.findall(r"#[0-9a-f]{6}", palette))
-assert colors and all(c[1:3] == c[3:5] == c[5:7] for c in colors), colors
-' "$HERE/install-extras.sh"
-check "nmtui and the install list use the same colors" python3 -I -c '
-import re, sys
-pal = lambda f: re.search(r"NEWT_COLORS:-.([^\x27]+)", open(f).read()).group(1)
-assert pal(sys.argv[1]) == pal(sys.argv[2])
-' "$HERE/install-extras.sh" "$HERE/bin/nmtui"
+# shellcheck disable=SC2016  # the inner shells expand their own variables
+check "the install list and nmtui have the same color block" \
+    bash -c 'b() { sed -n "/^# newt (whiptail/,/^export NEWT_COLORS$/p" "$1"; }; [ -n "$(b "$1")" ] && [ "$(b "$1")" = "$(b "$2")" ]' _ "$HERE/install-extras.sh" "$HERE/bin/nmtui"
 
 # the nmtui wrapper: runs the real program with debsway's colors, unless you set your own
 # shellcheck disable=SC2016  # written into the pretend program, expanded when it runs
-printf '#!/bin/sh\necho "colors=$NEWT_COLORS"\necho "args=$*"\n' >"$T/fake/nmtui"
+printf '#!/bin/sh\necho "colors=$NEWT_COLORS"\necho "colorterm=${COLORTERM:-}"\necho "args=$*"\n' >"$T/fake/nmtui"
 chmod +x "$T/fake/nmtui"
-nm=$(env -u NEWT_COLORS DEBSWAY_NMTUI="$T/fake/nmtui" bash "$HERE/bin/nmtui" connect X)
-check "the nmtui wrapper sets debsway's colors" grep -q 'colors=root=#ffffff,#000000' <<<"$nm"
+nm=$(env -u NEWT_COLORS -u COLORTERM TERM=foot DEBSWAY_NMTUI="$T/fake/nmtui" bash "$HERE/bin/nmtui" connect X)
+check "the nmtui wrapper sets debsway's colors: in foot, exact white on black" grep -q 'colors=root=#ffffff,#000000' <<<"$nm"
+check "...telling newt the terminal has 24-bit color, or it ignores them (and draws blue and red)" grep -qx 'colorterm=truecolor' <<<"$nm"
 check "...and passes its arguments on" grep -qx 'args=connect X' <<<"$nm"
+nm=$(env -u NEWT_COLORS -u COLORTERM TERM=linux DEBSWAY_NMTUI="$T/fake/nmtui" bash "$HERE/bin/nmtui")
+# shellcheck disable=SC2016
+check "at the console (no 24-bit color): color names" bash -c 'grep -q "colors=root=white,black" <<<"$1" && grep -qx "colorterm=" <<<"$1"' _ "$nm"
+# shellcheck disable=SC2016
+check "every one of newt's color sets is given (one left out stays red)" bash -c '
+for c in root border window shadow title button actbutton compactbutton checkbox actcheckbox entry disentry label listbox actlistbox sellistbox actsellistbox textbox acttextbox helpline roottext emptyscale fullscale; do
+    grep -qE "(^| )$c=" <<<"${1#colors=}" || exit 1
+done' _ "$(grep '^colors=' <<<"$nm")"
+
+# the real whiptail, as the install list starts it: only black and white come out,
+# the chosen line reversed (white behind it)
+if command -v whiptail >/dev/null; then
+    cat >"$T/wt.py" <<'PY'
+import os, pty, select, sys, time, fcntl, termios, struct, re
+def run(term):
+    pid, fd = pty.fork()
+    if pid == 0:
+        env = dict(os.environ, TERM=term); env.pop("COLORTERM", None); env.pop("NEWT_COLORS", None)
+        os.execvpe("bash", ["bash", "-c", 'eval "$(sed -n "/^# newt (whiptail/,/^export NEWT_COLORS$/p" "$1")"; exec whiptail --checklist pick 15 60 4 a one OFF b two OFF', "_", sys.argv[1]], env)
+    fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 80, 0, 0))
+    out = b""; end = time.time() + 1.0
+    while time.time() < end:
+        r, _, _ = select.select([fd], [], [], 0.05)
+        if r:
+            try: d = os.read(fd, 65536)
+            except OSError: break
+            if not d: break
+            out += d
+    os.kill(pid, 9); os.waitpid(pid, 0)
+    return set(re.findall(rb"\x1b\[([0-9;]*)m", out))
+bw = {b"", b"1", b"30", b"37", b"40", b"47", b"38;2;0;0;0", b"38;2;255;255;255", b"48;2;0;0;0", b"48;2;255;255;255"}
+for term, white_bg in (("foot", b"48;2;255;255;255"), ("linux", b"47")):
+    c = run(term)
+    print(term, "bw" if c and c <= bw else sorted(c - bw), "reversed" if white_bg in c else "flat")
+PY
+    wt=$(python3 -I "$T/wt.py" "$HERE/install-extras.sh" 2>&1)
+    check "the real whiptail in foot: only black and white, the chosen line reversed" grep -qx 'foot bw reversed' <<<"$wt"
+    check "...and at the console" grep -qx 'linux bw reversed' <<<"$wt"
+fi
+
+# the introduction (prep/intro.sh, start.sh's first screen) says what to press
+if command -v less >/dev/null; then
+    cat >"$T/intro.py" <<'PY'
+import os, pty, select, sys, time, fcntl, termios, struct, re
+pid, fd = pty.fork()
+if pid == 0:
+    os.execvpe("bash", ["bash", sys.argv[1]], dict(os.environ, TERM="xterm", DEBSWAY_ASSUME_YES="1"))
+fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 20, 80, 0, 0))
+def pump(w):
+    out = b""; end = time.time() + w
+    while time.time() < end:
+        r, _, _ = select.select([fd], [], [], 0.05)
+        if r:
+            try: d = os.read(fd, 65536)
+            except OSError: break
+            if not d: break
+            out += d
+    return re.sub(rb"\x1b\[[0-9;?]*[A-Za-z]|\x1b[=>]|\r|\x07", b"", out).decode(errors="replace")
+print("first", "Space for more, b to go back, q to go on" in pump(1.0))
+for _ in range(12):
+    os.write(fd, b" "); time.sleep(0.1)
+print("end", "The end. Press q to go on to the question" in pump(1.0))
+os.write(fd, b"q"); time.sleep(0.5)
+done, st = os.waitpid(pid, os.WNOHANG)
+if not done:
+    os.kill(pid, 9); os.waitpid(pid, 0)
+print("q", bool(done) and os.waitstatus_to_exitcode(st) == 0)
+PY
+    intro=$(python3 -I "$T/intro.py" "$HERE/prep/intro.sh" 2>&1)
+    check "the introduction says what to press while you read (Space, b, q)" grep -qx 'first True' <<<"$intro"
+    check "...and on its last page that q goes on" grep -qx 'end True' <<<"$intro"
+    check "...and q does go on" grep -qx 'q True' <<<"$intro"
+fi
 nm=$(NEWT_COLORS='root=red,blue' DEBSWAY_NMTUI="$T/fake/nmtui" bash "$HERE/bin/nmtui")
 check "colors you set yourself win" grep -qx 'colors=root=red,blue' <<<"$nm"
 # shellcheck disable=SC2016  # a literal $HOME in the bar's script

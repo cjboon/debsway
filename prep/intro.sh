@@ -61,9 +61,12 @@ responsible for what you run on your computer and for how you use it.
 EOF
 )
 
-# Longer than the screen: page it (space for more, q to get to the question)
+# Longer than the screen: page it (space for more, q to get to the question).
+# less's own prompt is a lone ":", so it says what to press, and at the end
+# that q goes on (in less's prompt language: ?e...:... is "at the end, or not")
+INTRO_PROMPT='?eThe end\. Press q to go on to the question:Space for more\, b to go back\, q to go on.'
 if [ -t 1 ] && command -v less >/dev/null; then
-    printf '%s\n\n' "$text" | less -FRX
+    printf '%s\n\n' "$text" | less -FRX -Ps"$INTRO_PROMPT"
 else
     printf '%s\n\n' "$text"
 fi

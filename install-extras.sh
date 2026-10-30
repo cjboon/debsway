@@ -42,10 +42,31 @@ if [ "$mode" != install ] && ! { : </dev/tty; } 2>/dev/null; then
     exit 0
 fi
 
-# The checklist in white on black, to match the terminal it opens in (whiptail
-# is blue and red by default). Your own NEWT_COLORS wins if you set one. The same
-# colors as bin/nmtui.
-export NEWT_COLORS=${NEWT_COLORS:-'root=#ffffff,#000000 border=#ffffff,#000000 window=#ffffff,#000000 shadow=#000000,#000000 title=#ffffff,#000000 button=#ffffff,#000000 button_active=#000000,#ffffff actbutton=#000000,#ffffff compactbutton=#ffffff,#000000 checkbox=#ffffff,#000000 entry=#ffffff,#000000 disentry=#aaaaaa,#000000 textbox=#ffffff,#000000 acttextbox=#000000,#ffffff label=#ffffff,#000000 listbox=#ffffff,#000000 actlistbox=#000000,#ffffff sellistbox=#ffffff,#000000 actsellistbox=#000000,#ffffff'}
+# The checklist in white on black, to match the terminal it opens in, the
+# chosen line reversed. Your own NEWT_COLORS wins if you set one. The same
+# block as bin/nmtui.
+# newt (whiptail, nmtui) reads #rrggbb colors only when the terminal says it
+# has 24-bit color (COLORTERM=truecolor); otherwise it ignores them all and
+# draws its own blue and red, the chosen line hard to see. foot has 24-bit
+# color, so it is said for it. The Linux console has none and gets color
+# names (its black is black; foot's "black" is a dark teal). Every one of
+# newt's color sets is given: one left out stays red.
+if [ -z "${NEWT_COLORS:-}" ]; then
+    if [ "${TERM:-}" = linux ]; then
+        _w=white _b=black _g=gray
+    else
+        _w='#ffffff' _b='#000000' _g='#aaaaaa'
+        case ${COLORTERM:-} in truecolor | 24bit) ;; *) export COLORTERM=truecolor ;; esac
+    fi
+    NEWT_COLORS="root=$_w,$_b border=$_w,$_b window=$_w,$_b shadow=$_b,$_b title=$_w,$_b"
+    NEWT_COLORS+=" button=$_w,$_b actbutton=$_b,$_w compactbutton=$_w,$_b"
+    NEWT_COLORS+=" checkbox=$_w,$_b actcheckbox=$_b,$_w entry=$_w,$_b disentry=$_g,$_b label=$_w,$_b"
+    NEWT_COLORS+=" listbox=$_w,$_b actlistbox=$_b,$_w sellistbox=$_w,$_b actsellistbox=$_b,$_w"
+    NEWT_COLORS+=" textbox=$_w,$_b acttextbox=$_b,$_w helpline=$_w,$_b roottext=$_w,$_b"
+    NEWT_COLORS+=" emptyscale=$_w,$_b fullscale=$_b,$_w"
+    unset _w _b _g
+fi
+export NEWT_COLORS
 
 # whiptail comes with Debian's standard system: a list of check boxes
 pick_with_whiptail() {
