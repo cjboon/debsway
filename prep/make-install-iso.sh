@@ -32,6 +32,9 @@
 #   --scripts  a folder of your own, copied to ~/scripts in the new system
 # Then it offers to write the image to a USB stick (as tails-usb does: only USB
 # sticks, you type its name, and it reads it back to check).
+# It runs as you; sudo is asked for only to install xorriso if it is missing
+# (it offers to, and removes it again at the end, whether the build worked or
+# not; one you had before stays) and to write a stick.
 # Test it in a VM first if you can (the end of this script says how).
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/appimage.sh"
@@ -55,14 +58,35 @@ user_ok "$user" || die "\"$user\" can't be a user name (lowercase letters, digit
 keymap_ok "$keymap" || die "\"$keymap\" doesn't look like a keyboard layout (us, de, fr, gb...)."
 locale_ok "$locale" || die "\"$locale\" doesn't look like a locale (en_US.UTF-8, de_DE.UTF-8...)."
 [ -z "$scripts" ] || [ -d "$scripts" ] || die "No folder $scripts."
-for c in wget gpg sha512sum md5sum xorriso git; do
+for c in wget gpg sha512sum md5sum git; do
     command -v "$c" >/dev/null || die "$c is missing. Install it with: sudo apt install $([ "$c" = md5sum ] || [ "$c" = sha512sum ] && echo coreutils || echo "$c")"
 done
+# At the end, whatever happens: the temporary folder goes, and so does
+# xorriso if this run installed it (a marker package, so apt takes out just
+# what came with it)
+work='' installed_here=false
+cleanup() {
+    [ -z "$work" ] || rm -rf "$work"
+    if $installed_here; then
+        note "Removing xorriso again (it was only needed to build the image)."
+        apt_purge >/dev/null 2>&1 || warn "Couldn't remove it; do it yourself with: sudo apt purge $(apt_marker)"
+    fi
+}
+trap cleanup EXIT
+
+# xorriso builds the image: the only step here that needs sudo, besides writing
+# a stick at the end
+if ! command -v xorriso >/dev/null; then
+    note "xorriso, which builds the image, isn't installed. It is removed again at the end."
+    ask "Install it for now (needs your sudo password)?" y ||
+        die "Nothing was built. Install it yourself with: sudo apt install xorriso"
+    installed_here=true
+    apt_install xorriso
+fi
 
 SAVED=$DEBSWAY_DIR/offline/install-iso
 mkdir -p "$SAVED"
 work=$(mktemp -d)
-trap 'rm -rf "$work"' EXIT
 
 say "The newest Debian 13 installer image"
 wget -q -O "$work/SHA512SUMS" "$DEBIAN_CD_BASE/SHA512SUMS" &&

@@ -38,6 +38,21 @@ check "an image with the listed checksum passes" netinst_ok "$T/SUMS" "$T/debian
 echo changed >>"$T/debian-13.7.0-amd64-netinst.iso"
 check "a changed image is refused" not netinst_ok "$T/SUMS" "$T/debian-13.7.0-amd64-netinst.iso"
 check "the Debian CD signing key is pinned" test "$DEBIAN_CD_FPR" = DF9B9C49EAA9298432589D76DA87E80D6294BE9B
+check "a missing xorriso is offered, installed the debsway way (a marker package)" \
+    bash -c 'grep -q "ask \"Install it for now (needs your sudo password)?\" y" "$1" && grep -q "^    apt_install xorriso$" "$1"' _ "$HERE/prep/make-install-iso.sh"
+# the clean-up, run on its own: it takes xorriso out only if this run put it in
+eval "$(sed -n '/^cleanup() {/,/^}/p' "$HERE/prep/make-install-iso.sh")"
+apt_purge() { echo purged >>"$T/purged"; }
+work=$T/work; mkdir -p "$work"; installed_here=true
+cleanup >/dev/null 2>&1
+check "at the end, xorriso is removed again if this run installed it" grep -qx purged "$T/purged"
+check "...and the temporary folder is gone" test ! -e "$T/work"
+: >"$T/purged"; work=''; installed_here=false
+cleanup >/dev/null 2>&1
+check "an xorriso that was there before stays" test ! -s "$T/purged"
+check "the clean-up runs whatever happens (on exit)" grep -qx 'trap cleanup EXIT' "$HERE/prep/make-install-iso.sh"
+check "...and the marker is named for the script, so it comes out cleanly" \
+    test "$(cd "$HERE" && env -u DEBSWAY_OWNER bash -c '. ./lib.sh; apt_marker' "$HERE/prep/make-install-iso.sh")" = debsway-make-install-iso
 
 # ---- the installer's answers ----
 P=$(fill_preseed "$HERE/data/install-iso-preseed.cfg" me de_DE.UTF-8 de true)
