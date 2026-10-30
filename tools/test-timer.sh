@@ -286,6 +286,7 @@ bash "$TIMER" cancel all >/dev/null 2>&1
 bash "$TIMER" 10m tea >/dev/null
 scr() { env PATH="$T/calbin:$PATH" COLUMNS="${C:-100}" LINES="${R:-30}" bash "$TIMER" screen; }
 plain() { sed 's/\x1b\[[0-9;]*m//g'; }
+not() { ! "$@"; }
 widths() { python3 -I -c 'import sys; print(" ".join(sorted({str(len(l)) for l in sys.stdin.read().split("\n") if l})))'; }
 # shape TEXT: "ROWS WIDTHS LEFT-MARGIN" of the screen, without colours
 shape() { local p; p=$(plain <<<"$1"); printf '%s %s %s' "$(grep -c . <<<"$p")" "$(LANG=C.UTF-8 widths <<<"$p")" "$(grep -m1 . <<<"$p" | grep -o '^ *' | tr -d '\n' | wc -c)"; }
@@ -309,8 +310,26 @@ fi
 out=$(LANG=C scr)
 check "without UTF-8 the box is drawn with plain + - |" bash -c '! grep -q "╭" <<<"$1" && grep -q "^ *+---" <<<"$1"' _ "$out"
 check "...in the same shape" test "$(shape "$out")" = "19 86 14"
-out=$(LANG=C.UTF-8 C=60 R=10 scr)
-check "a window smaller than the box still shows all of it (no margin)" test "$(shape "$out")" = "19 72 0"
+# A window too small for the box (a small screen, a VM's window): the plain
+# layout, every line within the window, so nothing wraps (the box did, in a VM)
+fits() { # COLS TEXT: no line wider than COLS, no box drawn
+    python3 -I -c 'import re, sys; c = int(sys.argv[1]); t = re.sub(r"\x1b\[[0-9;]*m", "", sys.argv[2]); assert all(len(l) <= c for l in t.split("\n")), t; assert "╭" not in t and "+---" not in t' "$1" "$2"
+}
+bash "$TIMER" 10m tea >/dev/null
+out=$(LANG=C.UTF-8 C=60 R=20 scr)
+check "a window narrower than the box: the plain layout, every line within it" fits 60 "$out"
+check "...still with the date, the timer and how to close" \
+    bash -c 'grep -qE "TIMER AND ALARM +[A-Z][a-z]{2} [0-9]{4}-" <<<"$1" && grep -q "1) tea: " <<<"$1" && grep -q "Esc or q" <<<"$1"' _ "$(plain <<<"$out")"
+check "...and without the month when it is short too" not grep -q 'October 2026' <<<"$(plain <<<"$out")"
+out=$(LANG=C.UTF-8 C=70 R=30 scr)
+check "a narrow but tall window: the plain layout with the month" \
+    bash -c 'grep -q "October 2026" <<<"$1"' _ "$(plain <<<"$out")"
+check "...every line within it" fits 70 "$out"
+out=$(LANG=C.UTF-8 C=100 R=18 scr)
+check "a wide but short window: the plain layout too (the box would scroll off)" fits 100 "$out"
+bash "$TIMER" cancel all >/dev/null 2>&1
+check "the menu waits for its window to reach its size before drawing (sway stretches a new one)" \
+    python3 -I -c 'import sys; s = open(sys.argv[1]).read(); m = s.index("menu() {"); assert m < s.index("    settle\n", m) < s.index("draw_screen\n", s.index("    settle\n", m))' "$TIMER"
 check "parts/core-commands.sh installs ncal (cal) and --remove takes it out" \
     bash -c 'grep -qx "apt_install ncal" "$1" && grep -qx "    apt_purge ncal" "$1"' _ "$HERE/parts/core-commands.sh"
 

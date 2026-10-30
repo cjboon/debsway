@@ -426,12 +426,69 @@ running_lines() {
     while [ ${#RUN[@]} -lt 8 ]; do RUN+=("$(pad '' "$w")"); done
 }
 
+# settle: a new window starts small and sway stretches it a moment later;
+# waits (up to 0.6 s) until its size stops changing, so the screen is drawn
+# for the size it ends up (as debsway-menu does)
+settle() {
+    local prev cur same=0 i
+    prev=$(stty size 2>/dev/null)
+    for ((i = 0; i < 20; i++)); do
+        /bin/sleep 0.03 2>/dev/null || return 0
+        cur=$(stty size 2>/dev/null)
+        if [ "$cur" = "$prev" ]; then
+            same=$((same + 1))
+            [ "$same" -lt 4 ] || return 0
+        else
+            same=0
+            prev=$cur
+        fi
+    done
+}
+
+# draw_compact COLS ROWS: the same, without the box, for a window too small for
+# it (a small screen, or a VM's window): every line fits COLS, nothing wraps
+draw_compact() {
+    local cols=$1 rows=$2 w i
+    w=$((cols - 2)); [ "$w" -ge 20 ] || w=20
+    MARGIN=''
+    calendar_lines
+    printf '\n  %s%s%s\n' "$BOLD" "$(pad "TIMER AND ALARM  $(date +'%a %Y-%m-%d  %-I:%M %p')" "$w")" "$OFF"
+    # the month, if there is room for it as well as the rest
+    if [ "$rows" -ge 24 ]; then
+        echo
+        for i in 0 1 2 3 4 5 6 7; do printf '%s\n' "${CAL[i]}"; done
+    fi
+    echo
+    if [ ${#IDS[@]} -eq 0 ]; then
+        printf '  %s\n' "$(pad 'Nothing set yet.' "$w")"
+    else
+        local now left name
+        now=$(date +%s)
+        for i in "${!IDS[@]}"; do
+            left=$((DUES[i] - now)); [ "$left" -ge 0 ] || left=0
+            name=${LABELS[i]:-${KINDS[i]}}
+            if [ "$left" -eq 0 ]; then left=ringing; else left=$(left_text "$left"); fi
+            printf '  %s\n' "$(pad "$((i + 1))) $name: $left, at $(clock_at "${DUES[i]}")" "$w")"
+        done
+    fi
+    echo
+    printf '  %s\n' "$(pad 'A time: 10m  1h30  7:30  7am (Enter)' "$w")"
+    printf '  %s\n' "$(pad 'c cancel  s stop  f date in bar' "$w")"
+    if [ -x "$IDLE" ]; then printf '  %s\n' "$(pad "l lock (now $("$IDLE" --minutes) min idle)" "$w")"; fi
+    printf '  %s%s%s\n' "$DIM" "$(pad 'Esc or q   close' "$w")" "$OFF"
+}
+
 # draw_screen: the whole menu screen, without the prompt
 draw_screen() {
     local cols=${COLUMNS:-} rows=${LINES:-} m top i in=$((BOX_W - 2)) half
     [ -n "$cols" ] && [ -n "$rows" ] || read -r rows cols < <(stty size 2>/dev/null)
     [ "${cols:-0}" -gt 0 ] || cols=80
     [ "${rows:-0}" -gt 0 ] || rows=24
+    # Too small for the box (it would wrap): the plain layout
+    if [ "$cols" -lt "$BOX_W" ] || [ "$rows" -lt $((BOX_H + 2)) ]; then
+        draw_compact "$cols" "$rows"
+        return
+    fi
     m=$(((cols - BOX_W) / 2)); [ $m -ge 0 ] || m=0
     top=$(((rows - BOX_H - 2) / 2)); [ $top -ge 0 ] || top=0
     MARGIN=$(printf '%*s' "$m" '')
@@ -481,6 +538,7 @@ menu() {
         printf '%s\n' '"\e": "\C-a\C-kq\C-m"'
     } >"$inputrc"
     export INPUTRC=$inputrc
+    settle
     while :; do
         load check
         printf '\033[H\033[2J'
