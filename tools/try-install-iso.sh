@@ -65,9 +65,10 @@ base=(qemu-system-x86_64 -enable-kvm -cpu host -machine q35 -m 2048
 install_cmd=("${base[@]}"
     -drive "if=none,id=disk,file=$DISK" -device virtio-blk-pci,drive=disk,bootindex=1)
 $two && install_cmd+=(-drive "if=none,id=disk2,file=$DISK2" -device virtio-blk-pci,drive=disk2)
-# the image as a USB stick, read-only, booted first
+# the image as a USB stick, read-only, booted first; when the installer
+# restarts at the end, QEMU stops instead (else the stick starts it again)
 install_cmd+=(-drive "if=none,id=stick,format=raw,readonly=on,file=$iso"
-    -device qemu-xhci -device usb-storage,drive=stick,bootindex=0)
+    -device qemu-xhci -device usb-storage,drive=stick,bootindex=0 -no-reboot)
 boot_cmd=("${base[@]}" -drive "if=none,id=disk,file=$DISK" -device virtio-blk-pci,drive=disk,bootindex=1)
 $two && boot_cmd+=(-drive "if=none,id=disk2,file=$DISK2" -device virtio-blk-pci,drive=disk2)
 
@@ -127,8 +128,8 @@ EOF
     cat <<EOF
          If it names anything else, choose No.
       4. "Erasing data" fills the disk with random data: a few minutes.
-      5. When it says it will restart, CLOSE THE WINDOW (else it starts the
-         installer again from the stick).
+      5. When it is done it restarts: the window closes by itself, and this
+         script goes on to the installed system.
 
 EOF
     "${install_cmd[@]}" || warn "QEMU ended with an error (see above)."

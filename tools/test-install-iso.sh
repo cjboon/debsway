@@ -176,6 +176,8 @@ check "...with UEFI, as on a laptop (the firmware read-only, its settings a copy
     bash -c 'grep -qF "if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd" <<<"$1" && grep -qF "if=pflash,format=raw,file=$2/debsway/iso-test/vars.fd" <<<"$1"' _ "$inst" "$T/cache"
 check "...and one empty disk, in the user's cache folder" \
     bash -c 'grep -qF "if=none,id=disk,file=$2/debsway/iso-test/disk.qcow2" <<<"$1" && ! grep -q disk2 <<<"$1"' _ "$inst" "$T/cache"
+check "VM: when the installer restarts at the end, QEMU stops (not the stick again)" grep -qF -- ' -no-reboot' <<<"$inst"
+check "...but the installed system can restart normally" not grep -qF -- '-no-reboot' <<<"$booted"
 check "VM: the installed system starts without the stick" bash -c '[ -n "$1" ] && ! grep -q stick <<<"$1"' _ "$booted"
 check "VM: --two-disks adds a second disk (the installer should then ask)" \
     test "$(XDG_CACHE_HOME=$T/cache bash "$TRY" --print --two-disks --iso /x/my.iso | grep -c 'id=disk2,file=')" = 2
