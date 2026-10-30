@@ -134,7 +134,9 @@ installs Debian as below (encrypted LVM over the whole disk, no root password,
 standard system utilities only) and puts debsway in `~/debsway`; it asks only
 for the disk passphrase, your password, and the final "write the changes to
 disks?", which names the disk it erases (the stick itself is never offered).
-Then log in and run `bash ~/debsway/start.sh`. Options: `--user NAME`,
+At the first login on the console it asks once "Set it up now?": Enter runs
+`bash ~/debsway/start.sh` (the usual introduction and questions), n leaves it
+for later. Options: `--user NAME`,
 `--keymap de`, `--locale de_DE.UTF-8`, `--no-erase` (skip filling the disk with
 random data), `--scripts FOLDER` (your own files, to `~/scripts`). Try the image
 in a VM first: `bash tools/try-install-iso.sh` starts it the way a laptop would

@@ -1,8 +1,10 @@
 #!/bin/bash
 # Builds a Debian 13 install image that installs Debian the way debsway's
 # README says (encrypted LVM over the whole disk, no root password, only
-# "standard system utilities") and puts debsway in ~/debsway, so the first
-# login only needs:  bash ~/debsway/start.sh
+# "standard system utilities") and puts debsway in ~/debsway. At the first
+# login on the console it asks once "Set it up now?": yes runs
+# bash ~/debsway/start.sh, as you, on the running system (not inside the
+# installer, where nothing runs yet and nobody can be asked).
 #
 # It asks you, at install time, for the three things that must be yours:
 #   - the disk encryption passphrase (you type it at every boot),
@@ -118,6 +120,7 @@ mkdir -p "$stage/debsway-install" "$stage/debsway" "$stage/isolinux" "$stage/boo
 fill_preseed "$DEBSWAY_DIR/data/install-iso-preseed.cfg" "$user" "$locale" "$keymap" "$erase" >"$stage/debsway-install/preseed.cfg"
 cp "$DEBSWAY_DIR/data/install-iso-disk.sh" "$stage/debsway-install/disk.sh"
 cp "$DEBSWAY_DIR/data/install-iso-late.sh" "$stage/debsway-install/late.sh"
+cp "$DEBSWAY_DIR/data/install-iso-first-login.sh" "$stage/debsway-install/first-login.sh"
 if [ -n "$scripts" ]; then cp -R "$scripts" "$stage/debsway-install/scripts"; note "Your scripts: $scripts -> ~/scripts"; fi
 # debsway: the last commit, then offline/ but the installers themselves
 git -C "$DEBSWAY_DIR" archive --format=tar HEAD | tar -x -C "$stage/debsway" ||

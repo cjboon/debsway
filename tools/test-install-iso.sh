@@ -153,6 +153,8 @@ sed -e "s|/cdrom|$T/cdrom|g" -e "s|/target|$T/target|g" "$HERE/data/install-iso-
 mkdir -p "$T/cdrom/debsway/bin" "$T/cdrom/debsway/extras" "$T/cdrom/debsway-install/scripts" "$T/target/home/me" "$T/fake"
 echo x >"$T/cdrom/debsway/README.md"; echo x >"$T/cdrom/debsway/start.sh"; echo x >"$T/cdrom/debsway/bin/keys"
 echo x >"$T/cdrom/debsway-install/scripts/mine.txt"
+cp "$HERE/data/install-iso-first-login.sh" "$T/cdrom/debsway-install/first-login.sh"
+printf '%s\n' '# ~/.profile: Debian'"'"'s own' 'PATH="$HOME/.local/bin:$PATH"' >"$T/target/home/me/.profile"
 chmod -R a-w "$T/cdrom"
 printf '#!/bin/sh\necho "in-target $*" >>"%s/intarget"\n' "$T" >"$T/fake/in-target"
 chmod +x "$T/fake/in-target"
@@ -163,7 +165,38 @@ check "...with scripts runnable and files writable again" \
 check "...owned by the new user" grep -qx 'in-target chown -R me:me /home/me/debsway' "$T/intarget"
 check "your own scripts go to ~/scripts" test -f "$T/target/home/me/scripts/mine.txt"
 check "a bad user name is refused" not env PATH="$T/fake:$PATH" sh "$L" '../x'
+check "the new user's .profile gets the first-login question, after what it had" \
+    bash -c 'head -1 "$1" | grep -q "Debian" && grep -qx "# >>> debsway first login >>>" "$1"' _ "$T/target/home/me/.profile"
+PATH="$T/fake:$PATH" sh "$L" me
+check "...once, even if the installer's step runs again" test "$(grep -c '^# >>> debsway first login >>>$' "$T/target/home/me/.profile")" = 1
 chmod -R u+w "$T/cdrom"
+
+# ---- the first login: asks once, on the console ----
+F=$T/first
+login() { # TTY ANSWER: a login shell reading that ~/.profile; what it printed in $T/said
+    printf '%s\n' '# ~/.profile: Debian'"'"'s own' 'echo before' >"$F/.profile"
+    cat "$HERE/data/install-iso-first-login.sh" >>"$F/.profile"
+    echo 'echo after' >>"$F/.profile"
+    printf '%s\n' "$2" | HOME=$F DEBSWAY_TTY=$1 sh -c '. "$HOME/.profile"' >"$T/said" 2>&1
+}
+mkdir -p "$F/debsway"
+printf '#!/bin/sh\necho "start.sh ran as $(id -un)"\n' >"$F/debsway/start.sh"
+login /dev/tty1 ''
+check "first login on the console: asks \"Set it up now?\", and Enter runs start.sh" \
+    bash -c 'grep -q "Set it up now? \[Y/n\]" "$1" && grep -q "start.sh ran as" "$1"' _ "$T/said"
+check "...then the question is gone from ~/.profile, the rest kept" \
+    bash -c '! grep -q "debsway first login" "$1" && grep -qx "echo before" "$1" && grep -qx "echo after" "$1"' _ "$F/.profile"
+check "...and the login goes on" grep -qx after "$T/said"
+login /dev/tty1 n
+check "no: start.sh doesn't run, it says how to later, and doesn't ask again" \
+    bash -c '! grep -q "start.sh ran" "$1" && grep -q "Later: bash ~/debsway/start.sh" "$1" && ! grep -q "debsway first login" "$2"' _ "$T/said" "$F/.profile"
+login /dev/pts/0 ''
+check "a login over ssh or in a terminal window doesn't ask, and keeps the question for the console" \
+    bash -c '! grep -q "Set it up" "$1" && grep -q "debsway first login" "$2"' _ "$T/said" "$F/.profile"
+mv "$F/debsway" "$F/gone"
+login /dev/tty1 ''
+check "without ~/debsway it says nothing, and takes the question out" \
+    bash -c '! grep -q "Set it up" "$1" && ! grep -q "debsway first login" "$2"' _ "$T/said" "$F/.profile"
 
 # ---- trying the image in a VM (tools/try-install-iso.sh), its commands only ----
 TRY=$HERE/tools/try-install-iso.sh

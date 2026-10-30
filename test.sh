@@ -92,7 +92,7 @@ w=$(sed -n '/--remove ]; then/,/^fi/p' extras/whonix.sh)
 for f in bin/onion-site bin/onion-site-session lib/onion-site.sh data/onion-site-firewall.nft data/onion-site-provision.sh; do
     [ -f "$f" ] || bad "extras/onion-site.sh needs $f"
 done
-for f in lib/install-iso.sh data/install-iso-preseed.cfg data/install-iso-disk.sh data/install-iso-late.sh; do
+for f in lib/install-iso.sh data/install-iso-preseed.cfg data/install-iso-disk.sh data/install-iso-late.sh data/install-iso-first-login.sh; do
     [ -f "$f" ] || bad "prep/make-install-iso.sh needs $f"
 done
 for f in bin/debsway-camera data/webcam-off.rules; do
