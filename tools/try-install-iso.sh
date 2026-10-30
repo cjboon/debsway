@@ -9,8 +9,11 @@
 #   bash tools/try-install-iso.sh --two-disks     with a second empty disk: the
 #                                                 installer should then ask which
 #   bash tools/try-install-iso.sh --boot          start the installed system again
-#   bash tools/try-install-iso.sh --clean         delete the VM's files (and QEMU and
-#                                                 the firmware, if this script installed them)
+#   bash tools/try-install-iso.sh --clean         delete the VM's files, to start over
+#                                                 (no software is removed)
+#   bash tools/try-install-iso.sh --remove        remove the packages this script
+#                                                 installed (not ones you had, or that
+#                                                 other debsway scripts need)
 #   bash tools/try-install-iso.sh --print ...     only show the QEMU commands
 #
 # It needs QEMU (qemu-system-x86, qemu-utils), the UEFI firmware (ovmf) and
@@ -35,18 +38,28 @@ while [ $# -gt 0 ]; do
         --two-disks) two=true; shift ;;
         --boot) mode=boot; shift ;;
         --clean) mode=clean; shift ;;
+        --remove) mode=remove; shift ;;
         --print) print=true; shift ;;
-        -h | --help) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h | --help) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) die "Unknown option $1. Try: bash tools/try-install-iso.sh --help" ;;
     esac
 done
 
 if [ "$mode" = clean ]; then
     rm -rf "$DIR"
-    note "Deleted $DIR."
-    if is_installed "$(apt_marker)"; then
-        ask "Also remove QEMU and the UEFI firmware, which this script installed?" y && apt_purge
+    note "Deleted $DIR. No software was removed."
+    exit 0
+fi
+if [ "$mode" = remove ]; then
+    if ! is_installed "$(apt_marker)"; then
+        note "This script installed no packages, so there is nothing to remove."
+        exit 0
     fi
+    mapfile -t mine < <(marker_depends "$(apt_marker)")
+    note "This script installed: ${mine[*]}."
+    note "Removed are only those that nothing else needs: QEMU stays if Whonix, claude-vm or"
+    note "mockvps-kvm use it, and so does anything you had before."
+    ask "Remove them?" n && apt_purge
     exit 0
 fi
 
@@ -87,7 +100,7 @@ command -v qemu-img >/dev/null || need+=(qemu-utils)
 [ -f "$CODE" ] && [ -f "$VARS_TEMPLATE" ] || need+=(ovmf)
 if [ ${#need[@]} -gt 0 ]; then
     note "Missing: ${need[*]}."
-    ask "Install them (needs your sudo password)? bash tools/try-install-iso.sh --clean removes them again." y ||
+    ask "Install them (needs your sudo password)? bash tools/try-install-iso.sh --remove removes them again." y ||
         die "Nothing was started. Install them yourself: sudo apt install ${need[*]}"
     apt_install "${need[@]}"
 fi
@@ -142,7 +155,7 @@ cat <<'EOF'
       - It asks for the disk passphrase at start, then shows a login.
       - You can log in with your user; sudo true works with your password.
       - ls ~/debsway shows debsway (bash ~/debsway/start.sh sets the rest up).
-    Close the window to stop it. Delete everything: bash tools/try-install-iso.sh --clean
+    Close the window to stop it. Start over: bash tools/try-install-iso.sh --clean
 
 EOF
 "${boot_cmd[@]}" || warn "QEMU ended with an error (see above)."

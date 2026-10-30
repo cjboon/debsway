@@ -140,7 +140,8 @@ random data), `--scripts FOLDER` (your own files, to `~/scripts`). Try the image
 in a VM first: `bash tools/try-install-iso.sh` starts it the way a laptop would
 (UEFI, the image as a USB stick, an empty 20 GB disk), says what to check, then
 starts the installed system; `--two-disks` checks that it asks which disk,
-`--clean` deletes the VM (and QEMU, if it installed it).
+`--clean` deletes the VM to start over, `--remove` removes the packages it
+installed (QEMU stays if Whonix, claude-vm or mockvps-kvm use it).
 
 ## Installing Debian
 

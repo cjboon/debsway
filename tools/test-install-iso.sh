@@ -186,7 +186,10 @@ check "VM: an unknown option is refused" not bash "$TRY" --frobnicate
 mkdir -p "$T/cache/debsway/iso-test" && echo x >"$T/cache/debsway/iso-test/disk.qcow2"
 XDG_CACHE_HOME=$T/cache bash "$TRY" --clean </dev/null >/dev/null 2>&1
 check "VM: --clean deletes the VM's files" test ! -e "$T/cache/debsway/iso-test"
-check "...and removes QEMU only through its own marker package" \
-    bash -c 'grep -q "is_installed \"\$(apt_marker)\"" "$1" && grep -q "apt_purge" "$1"' _ "$TRY"
+clean_block=$(sed -n '/^if \[ "\$mode" = clean \]/,/^fi/p' "$TRY")
+remove_block=$(sed -n '/^if \[ "\$mode" = remove \]/,/^fi/p' "$TRY")
+check "...and removes no software (that is --remove)" bash -c '[ -n "$1" ] && ! grep -qE "apt_purge|ask " <<<"$1"' _ "$clean_block"
+check "VM: --remove names what this script installed, asks (default no), then removes through its marker" \
+    bash -c 'grep -q "marker_depends" <<<"$1" && grep -q "ask \"Remove them?\" n && apt_purge" <<<"$1"' _ "$remove_block"
 
 [ "$fails" -eq 0 ]
