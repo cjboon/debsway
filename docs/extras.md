@@ -40,6 +40,7 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `backup.sh` | Encrypted backups of your home folder with restic, and a `backup` command. Prints examples |
 | `metadata-cleaner.sh` | Metadata Cleaner, the graphical program Tails ships, and the `mat2` command: removes hidden metadata from photos, PDFs and documents before you share them. Prints examples |
 | `media.sh` | imv (images) and mpv (video, music), each started in a bubblewrap sandbox that sees only the files you open. Prints examples and keys |
+| `yt-dlp.sh` | yt-dlp, the video downloader, as its own locked-down user (`ytdlp`): `yt-dlp URL` works as usual and the files land in `~/Downloads`, copied out as you. The official release, checked against yt-dlp's pinned signing key and installed as root's file (it can't change itself); YouTube's JavaScript runs in Debian's QuickJS, as `ytdlp`; config files ignored; a firewall rule keeps it off your local network. Run it again to update yt-dlp. See [extras/yt-dlp.md](extras/yt-dlp.md) |
 | `mockvps-kvm.sh` | `mockvps-kvm`: a disposable Debian "VPS" in a local QEMU/KVM VM for trying out server setups, with snapshots and one-command removal. See `vendor/mockvps-kvm/README.md`. Run `bash extras/mockvps-kvm.sh` once, then use the `mockvps-kvm` command; the script in `vendor/` is the program itself and refuses to run directly until that setup is done (`MOCKVPS_FORCE=1` overrides) |
 | `mousepad.sh` | Mousepad, a simple graphical text editor (made the default for text files). The first time it also sets its look: solarized-dark, 16 pt monospace, tabs of 4 spaces, line numbers and a margin at column 80 (`data/mousepad.settings`); later runs leave your changes alone |
 | `file-manager.sh` | Thunar, a light graphical file manager, with Trash and thumbnails (made the default for folders). Prints its keys |
@@ -99,10 +100,6 @@ command that prints the password (it is stored in
 trash, VM disks and big downloads are left out; see
 `~/.config/debsway/backup-excludes`), and `backup snapshots`,
 `backup restore latest --target ~/restored` and the like work on it.
-
-**Not included: yt-dlp.** It has to run YouTube's own JavaScript, and
-the one runtime that sandboxes that code (deno) isn't in Debian;
-Debian's yt-dlp is also too old to keep working.
 
 ## Which Claude Code sandbox? (`claude-vm.sh` or `claude-code.sh`)
 

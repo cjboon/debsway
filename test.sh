@@ -198,6 +198,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "yt-dlp as its own user (extras/yt-dlp.sh): the command, the session, what it installs"
+if out=$(bash tools/test-yt-dlp.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") yt-dlp checks"
+else
+    bad "yt-dlp checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "Screen sharpness (bin/display-scale): EDID sizes, the notice, VM screens"
 if out=$(bash tools/test-display-scale.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") display-scale checks"
@@ -525,6 +533,7 @@ if online; then
     check_key "Mullvad" "$MULLVAD_FPR" "$MULLVAD_KEY_URL"
     check_key "Tails" "$TAILS_FPR" "$TAILS_KEY_URL"
     check_key "Debian CD" "$DEBIAN_CD_FPR" "$DEBIAN_CD_KEY_URL"
+    check_key "yt-dlp" "$YTDLP_FPR" "$YTDLP_KEY_URL"
 
     # ----------------------------------------------------------------
     section "Newest releases: found, and signed by the pinned key"

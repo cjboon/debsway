@@ -1,0 +1,63 @@
+#!/bin/bash
+# yt-dlp: written by debsway extras/yt-dlp.sh, installed as /usr/local/bin/yt-dlp.
+# Downloads videos with yt-dlp, which runs as its own locked-down user (ytdlp),
+# never as you: it can't read your files and is kept off your local network.
+# Use it like yt-dlp, e.g.  yt-dlp URL   or  yt-dlp -x URL  (sound only).
+# What it downloads is copied into your Downloads folder when it is done (as
+# you, so the copies are yours); ytdlp never gets into your home.
+#
+# Updating yt-dlp (sites change, and an old yt-dlp stops working):
+#   bash ~/debsway/extras/yt-dlp.sh
+# Treat what it downloads as untrusted; play it with mpv, which debsway's media
+# extra runs in a sandbox.
+# (The DEBSWAY_ ones: a test points these elsewhere)
+set -u
+
+SUDO=${DEBSWAY_SUDO:-sudo}
+SESSION=${DEBSWAY_YTDLP_SESSION:-/usr/local/libexec/yt-dlp-session}
+OUT=${DEBSWAY_YTDLP_OUT:-/var/lib/debsway-ytdlp-out}
+
+die() { printf 'yt-dlp: %s\n' "$*" >&2; exit 1; }
+
+[ "$(id -u)" -ne 0 ] || die "run it as yourself, not as root."
+
+dest=$(xdg-user-dir DOWNLOAD 2>/dev/null) || dest=
+[ -n "$dest" ] && [ "$dest" != "$HOME" ] || dest=$HOME/Downloads
+mkdir -p "$dest" || die "couldn't make $dest"
+
+id=$(od -An -N12 -tx1 /dev/urandom | tr -d ' \n')
+"$SUDO" -n -u ytdlp "$SESSION" "$id" "$@"
+rc=$?
+
+# free NAME: NAME, or "NAME (2).ext" and so on if NAME is taken
+free() {
+    local f=$1 base ext n=2
+    [ -e "$f" ] || [ -L "$f" ] || { printf '%s' "$f"; return; }
+    base=${f%.*} ext=.${f##*.}
+    [[ ${f##*/} == *.* ]] || { base=$f ext=; }
+    while [ -e "$base ($n)$ext" ] || [ -L "$base ($n)$ext" ]; do n=$((n + 1)); done
+    printf '%s' "$base ($n)$ext"
+}
+
+run=$OUT/$id
+copied=0
+if [ -d "$run" ]; then
+    # Regular files only: a link (to one of your files, say) is left behind, and
+    # so are unfinished downloads. cp -P: should a file be swapped for a link
+    # meanwhile, the link is copied as a link, not the file it points to.
+    while IFS= read -r -d '' f; do
+        rel=${f#"$run"/}
+        case $rel in *.part | *.ytdl | *.part-Frag*) continue ;; esac
+        target=$(free "$dest/$rel")
+        mkdir -p "${target%/*}" &&
+            cp -P --no-preserve=all -- "$f" "$target" &&
+            copied=$((copied + 1))
+    done < <(find "$run" -type f -print0)
+    rm -rf -- "$run"
+fi
+[ "$copied" -eq 0 ] || printf 'yt-dlp: %d file(s) in %s\n' "$copied" "$dest" >&2
+
+if [ "$rc" -eq 1 ] && [ "$copied" -eq 0 ]; then
+    printf 'yt-dlp: if a site stopped working, a newer yt-dlp may fix it: bash ~/debsway/extras/yt-dlp.sh\n' >&2
+fi
+exit "$rc"

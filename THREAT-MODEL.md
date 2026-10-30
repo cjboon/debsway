@@ -61,6 +61,15 @@ this page to decide what else you need.
   share your kernel: a kernel bug could still get out, and an exploit that
   stays in the browser still has that profile's logins. `firefox-esr` runs as
   you and has none of this.
+- **A video downloader, or the site JavaScript it runs, reaching your
+  files.** `yt-dlp` (`extras/yt-dlp.sh`) runs as its own user, `ytdlp`, with
+  no password, login or access to your home; what it downloads is copied out
+  into `~/Downloads` by your user afterwards (regular files only). yt-dlp is
+  the official release checked against its pinned signing key and owned by
+  root, so it can't change itself; YouTube's JavaScript runs in Debian's
+  QuickJS as `ytdlp`, which QuickJS itself doesn't restrict; a firewall rule
+  keeps `ytdlp` off your local network, not off the internet. It shares your
+  kernel, and the files it brings are still untrusted.
 - **A booby-trapped image or video, or a coding assistant that goes wrong,
   reaching your files.** `imv` and `mpv` (`extras/media.sh`) start inside
   bubblewrap: they see only the files you open, read-only, and have no

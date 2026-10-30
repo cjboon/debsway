@@ -1,0 +1,32 @@
+#!/bin/bash
+# yt-dlp-session RUN-ID [YT-DLP OPTIONS AND URLS...]: written by debsway
+# extras/yt-dlp.sh, installed as /usr/local/libexec/yt-dlp-session, owned by
+# root. It runs as the user ytdlp (your user may run this, and nothing else, as
+# ytdlp: /etc/sudoers.d/debsway-ytdlp). The yt-dlp command (bin/yt-dlp) starts
+# it with a new RUN-ID each time.
+#
+# yt-dlp runs in a folder of its own for this run, $OUT/RUN-ID, which only
+# ytdlp and your group can open; the yt-dlp command copies what it downloaded
+# from there into your ~/Downloads afterwards. yt-dlp itself is root's file:
+# ytdlp can run it but not change it. YouTube's JavaScript runs in Debian's
+# QuickJS (qjs), as ytdlp too. Config files are ignored, so a run can't leave
+# settings behind for the next one; give options on the command line.
+set -eu
+
+YTDLP=/usr/local/lib/debsway/yt-dlp/yt-dlp
+OUT=/var/lib/debsway-ytdlp-out
+HOME_DIR=/var/lib/debsway-ytdlp
+
+id=${1:-}
+[[ $id =~ ^[0-9a-f]{24}$ ]] || { echo "yt-dlp-session: start it with the yt-dlp command" >&2; exit 2; }
+shift
+
+export HOME=$HOME_DIR XDG_CACHE_HOME=$HOME_DIR/.cache PATH=/usr/bin:/bin
+# Files and folders it makes: rw for ytdlp and your group (the folder's), so
+# you can copy them out and delete them; nothing for anyone else
+umask 0007
+# A new folder each run (it fails if one with that id is there already)
+mkdir -m 2770 "$OUT/$id"
+cd "$OUT/$id"
+# python3 -I: no Python settings from the environment, no packages of ytdlp's own
+exec python3 -I "$YTDLP" --ignore-config --no-update --js-runtimes quickjs "$@"

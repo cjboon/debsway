@@ -1,0 +1,38 @@
+# Keeps the ytdlp user (debsway extras/yt-dlp.sh: yt-dlp, and the QuickJS and
+# ffmpeg it runs) off your computer and your local network. Only its traffic is
+# touched; the rules are the sandboxed Firefox's (data/firefox-firewall.nft).
+# A hacked yt-dlp, or the JavaScript a site makes it run, can still reach the
+# internet, but not:
+#   - programs on this machine that listen on the network (a local server,
+#     the Tor Browser proxy, a printing service, ...)
+#   - your router, printers, other computers, or your phone's hotspot
+# DNS stays open (your resolver is usually the router).
+#
+# To download from a server on your own network for a while, run
+#     sudo systemctl stop debsway-ytdlp-firewall
+# and  sudo systemctl start debsway-ytdlp-firewall  to block it again.
+
+table inet debsway_ytdlp
+delete table inet debsway_ytdlp
+
+table inet debsway_ytdlp {
+    chain output {
+        type filter hook output priority 0; policy accept;
+        meta skuid "ytdlp" jump ytdlp
+    }
+
+    chain ytdlp {
+        # Answers to connections that others made to it (it can listen)
+        ct state established,related accept
+        udp dport 53 accept
+        tcp dport 53 accept
+        # Anything addressed to this computer itself goes out through "lo",
+        # whichever of its addresses is used (127.0.0.1, its LAN address, its
+        # public IPv4 or IPv6 address), so this catches them all
+        oifname "lo" reject
+        ip daddr { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8,
+                   169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16,
+                   224.0.0.0/4, 255.255.255.255 } reject
+        ip6 daddr { ::1, fc00::/7, fe80::/10, ff00::/8 } reject
+    }
+}

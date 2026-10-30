@@ -47,6 +47,14 @@ DEBIAN_CD_KEY_URL='https://keyring.debian.org/pks/lookup?op=get&search=0xDF9B9C4
 TAILS_FPR=A490D0F4D311A4153E2BB7CADBB802B258ACD84F
 TAILS_KEY_URL=https://tails.net/tails-signing.key
 
+# yt-dlp (extras/yt-dlp.sh). Simon Sawicki (yt-dlp signing key), which signs the
+# SHA2-256SUMS of every release (rsa4096, 2023-02-26). Fetched from
+# keys.openpgp.org, not from the GitHub repository whose releases it signs.
+# checked: 2026-10-30  github.com/yt-dlp/yt-dlp public.key and README; keys.openpgp.org;
+#   a good signature on 2026.10.26's SHA2-256SUMS
+YTDLP_FPR=AC0CBBE6848D6A873464AF4E57CF65933B5A7581
+YTDLP_KEY_URL=https://keys.openpgp.org/vks/v1/by-fingerprint/AC0CBBE6848D6A873464AF4E57CF65933B5A7581
+
 # Feather Wallet (extras/feather-wallet.sh). FeatherWallet <dev@featherwallet.org>.
 # checked: 2026-10-26  featherwallet.org/download; docs.featherwallet.org
 FEATHER_FPR=8185E158A33330C7FD61BC0D1F76E155CEFBA71C
