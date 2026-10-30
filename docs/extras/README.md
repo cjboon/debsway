@@ -56,6 +56,7 @@ doesn't, and how to remove it. The short list of all of them is in
 - [Phone tethering over USB](phone-tethering.md)
 - [USB drives that mount by themselves, safely](udiskie.md)
 - [Closing the lid locks but doesn't suspend](lid-awake.md)
+- [A webcam switch, off at every boot](webcam.md)
 
 ## Everyday tools
 

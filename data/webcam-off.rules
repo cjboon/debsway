@@ -1,0 +1,5 @@
+# Written by debsway extras/webcam.sh. A USB camera starts switched off
+# (disconnected, as if unplugged) at boot and whenever one is plugged in. Switch
+# it on from the debsway menu (Webcam) or with: debsway --camera on
+# Only a whole USB device being added runs this, not a camera being switched on.
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", RUN+="/usr/local/libexec/debsway-camera added %k"

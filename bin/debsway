@@ -20,6 +20,7 @@ usage: debsway [OPTION]
   --wifi [on|off]       switch Wi-Fi on or off (no word: say whether it is on)
   --bluetooth [on|off]  the same for Bluetooth
   --mic [on|off]        the same for the microphone (muted at every login)
+  --camera [on|off]     the same for the webcam (with the webcam extra; off at every boot)
   --welcome    show the key cheat sheet again (the first-login screen)
   --version    which version of debsway this is
   --dir        where the debsway folder is
@@ -59,7 +60,7 @@ case $cmd in
     --apps | apps) need_dir; exec bash "$DIR/install-extras.sh" "$@" ;;
     --status | status) need_dir; exec bash "$DIR/status.sh" "$@" ;;
     --test | test) need_dir; cd "$DIR" && exec bash test.sh "$@" ;;
-    --wifi | --bluetooth | --mic)
+    --wifi | --bluetooth | --mic | --camera)
         [ -x "$HOME/.local/bin/radios" ] || die "the radio switch isn't installed (bash $DIR/parts/debsway-menu.sh)."
         exec "$HOME/.local/bin/radios" "${cmd#--}" "$@" ;;
     --welcome | welcome)

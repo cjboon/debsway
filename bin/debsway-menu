@@ -217,7 +217,7 @@ n=${#ids[@]}
 # radio_label NAME: what the entry shows, e.g. "Wi-Fi: on"
 radio_label() {
     local name state
-    case $1 in wifi) name=Wi-Fi ;; bluetooth) name=Bluetooth ;; mic) name=Microphone ;; esac
+    case $1 in wifi) name=Wi-Fi ;; bluetooth) name=Bluetooth ;; mic) name=Microphone ;; camera) name=Webcam ;; esac
     state=$("$RADIOS" "$1" status 2>/dev/null)
     case $state in
         blocked) state="off (hardware switch)" ;;
@@ -261,7 +261,7 @@ draw() {
 run_choice() {
     local out
     case ${ids[sel]} in
-        wifi | bluetooth | mic)
+        wifi | bluetooth | mic | camera)
             "$RADIOS" "${ids[sel]}" toggle >/dev/null 2>&1
             refresh_items
             return 0 ;;

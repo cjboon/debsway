@@ -127,6 +127,9 @@ With the extras:
   adapter off. The microphone mute is software: a program running as you can
   unmute it, so against that a hardware switch or unplugging is the stronger
   kind. `incognito` and the sandboxed `firefox` never get your audio server.
+  With `extras/webcam.sh` a USB webcam is disconnected at every boot until
+  you switch it on, the same kind of software switch: a cover over the lens
+  is the stronger kind.
 - **Being identified while logged in.** A VPN, Tor or Mullvad Browser
   hides your IP address, not who you are to a site you've logged into.
 - **What you share with the sandboxes.** `claude-agent` and you both
