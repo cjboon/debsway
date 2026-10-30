@@ -25,8 +25,12 @@ export HOME=$HOME_DIR XDG_CACHE_HOME=$HOME_DIR/.cache PATH=/usr/bin:/bin
 # Files and folders it makes: rw for ytdlp and your group (the folder's), so
 # you can copy them out and delete them; nothing for anyone else
 umask 0007
-# A new folder each run (it fails if one with that id is there already)
-mkdir -m 2770 "$OUT/$id"
+# A new folder each run (it fails if one with that id is there already). A
+# plain mkdir: it inherits the setgid bit and your group from $OUT, so what
+# yt-dlp makes in it gets your group and you can read it. (mkdir -m, or any
+# chmod, would lose the setgid bit: Linux clears it when a user who isn't in
+# the folder's group, as ytdlp isn't in yours, sets the mode.)
+mkdir "$OUT/$id"
 cd "$OUT/$id"
 # python3 -I: no Python settings from the environment, no packages of ytdlp's own
 exec python3 -I "$YTDLP" --ignore-config --no-update --js-runtimes quickjs "$@"

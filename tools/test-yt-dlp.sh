@@ -59,6 +59,22 @@ RC=3 yt URL >/dev/null 2>&1
 check "yt-dlp's exit status is passed on" test $? = 3
 check "copies are made with cp -P (a file swapped for a link meanwhile stays a link)" \
     grep -q 'cp -P --no-preserve=all -- "$f" "$target"' "$HERE/bin/yt-dlp"
+# a file that can't be copied: the run's folder (and what is in it) is kept
+cat >"$T/session-unreadable" <<EOF
+#!/bin/bash
+id=\$1
+mkdir "$T/out/\$id" && cd "$T/out/\$id" || exit 9
+echo ok >fine.mp4
+echo locked >locked.mp4 && chmod 000 locked.mp4
+EOF
+chmod +x "$T/session-unreadable"
+said=$(env PATH="$T/fake:/usr/bin:/bin" HOME="$T/home" DEBSWAY_SUDO="$T/fake/sudo" DEBSWAY_YTDLP_SESSION="$T/session-unreadable" \
+    DEBSWAY_YTDLP_OUT="$T/out" bash "$HERE/bin/yt-dlp" URL 2>&1)
+check "a file it can't copy: the run's folder is kept, nothing downloaded is lost" \
+    bash -c 'ls "$1"/*/locked.mp4' _ "$T/out"
+check "...and it says so, and where" grep -q "1 file(s) could not be copied; they are still in $T/out/" <<<"$said"
+check "...the others are still copied" test -f "$T/home/Downloads/fine.mp4"
+chmod -R u+rwx "$T/out" && rm -rf "${T:?}/out/"*
 printf '#!/bin/bash\nexit 1\n' >"$T/session-fails"
 chmod +x "$T/session-fails"
 said=$(env PATH="$T/fake:/usr/bin:/bin" HOME="$T/home" DEBSWAY_SUDO="$T/fake/sudo" DEBSWAY_YTDLP_SESSION="$T/session-fails" \
@@ -68,6 +84,8 @@ check "when it fails with nothing downloaded, it says how to update yt-dlp" grep
 # ---- the session script, as ytdlp would run it (paths moved into the temp folder) ----
 S=$T/yt-dlp-session
 mkdir -p "$T/s/out" "$T/s/home" "$T/s/lib"
+# as extras/yt-dlp.sh makes it: setgid, so what is made in it gets its group
+chmod 2770 "$T/s/out"
 sed -e "s|^YTDLP=.*|YTDLP=$T/s/lib/yt-dlp|" -e "s|^OUT=.*|OUT=$T/s/out|" -e "s|^HOME_DIR=.*|HOME_DIR=$T/s/home|" \
     "$HERE/bin/yt-dlp-session" >"$S"
 cat >"$T/s/lib/yt-dlp" <<'EOF'
@@ -85,6 +103,11 @@ check "...with config files ignored, no self-update, QuickJS for the JavaScript,
 check "...in this run's own folder" grep -qxF "cwd $T/s/out/$id" <<<"$out"
 check "...made rw for ytdlp and your group only, its group kept for what is made in it (2770)" \
     test "$(stat -c %a "$T/s/out/$id")" = 2770
+# Linux drops the setgid bit when ytdlp (not in your group) sets a folder's mode,
+# so the folder must get it from $OUT, never from mkdir -m or chmod: with them
+# yt-dlp's files got ytdlp's group and couldn't be read (the first real run)
+check "...by a plain mkdir: no mkdir -m or chmod, which would lose the setgid bit as ytdlp" \
+    bash -c 'grep -qx "mkdir \"\$OUT/\$id\"" "$1" && ! grep -qE "^[^#]*(mkdir -m|chmod)" "$1"' _ "$HERE/bin/yt-dlp-session"
 check "...with ytdlp's home and a plain PATH" grep -qxF "home $T/s/home path /usr/bin:/bin" <<<"$out"
 check "a run id that is there already is refused (no writing into another run)" not bash "$S" "$id" URL
 for bad in '' x '../aaaaaaaaaaaaaaaaaaaaaaa' 0123456789ABCDEF01234567 0123456789abcdef0123456; do

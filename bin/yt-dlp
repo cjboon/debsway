@@ -40,7 +40,7 @@ free() {
 }
 
 run=$OUT/$id
-copied=0
+copied=0 failed=0
 if [ -d "$run" ]; then
     # Regular files only: a link (to one of your files, say) is left behind, and
     # so are unfinished downloads. cp -P: should a file be swapped for a link
@@ -49,13 +49,20 @@ if [ -d "$run" ]; then
         rel=${f#"$run"/}
         case $rel in *.part | *.ytdl | *.part-Frag*) continue ;; esac
         target=$(free "$dest/$rel")
-        mkdir -p "${target%/*}" &&
-            cp -P --no-preserve=all -- "$f" "$target" &&
+        if mkdir -p "${target%/*}" && cp -P --no-preserve=all -- "$f" "$target"; then
             copied=$((copied + 1))
+        else
+            failed=$((failed + 1))
+        fi
     done < <(find "$run" -type f -print0)
-    rm -rf -- "$run"
+    # Kept if anything couldn't be copied, so nothing downloaded is lost
+    [ "$failed" -gt 0 ] || rm -rf -- "$run"
 fi
 [ "$copied" -eq 0 ] || printf 'yt-dlp: %d file(s) in %s\n' "$copied" "$dest" >&2
+if [ "$failed" -gt 0 ]; then
+    printf 'yt-dlp: %d file(s) could not be copied; they are still in %s\n' "$failed" "$run" >&2
+    printf 'yt-dlp: please report this (ls -la %s shows their owner and mode)\n' "$run" >&2
+fi
 
 if [ "$rc" -eq 1 ] && [ "$copied" -eq 0 ]; then
     printf 'yt-dlp: if a site stopped working, a newer yt-dlp may fix it: bash ~/debsway/extras/yt-dlp.sh\n' >&2
