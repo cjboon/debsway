@@ -1,8 +1,8 @@
 #!/bin/bash
 # debsway-menu: written by debsway parts/debsway-menu.sh
 # The menu behind the "debsway" item in the bar. A click opens a black-and-gray
-# terminal that fills the space under the bar, with the choices Help, Install
-# apps, Update and Status. Arrow keys (or j/k) and Enter choose; so does a
+# terminal that fills the space under the bar, with the choices Help, Terminal,
+# Install apps, Update and Status. Arrow keys (or j/k) and Enter choose; so does a
 # click. Esc closes every screen of it, the install list and the pager
 # included. What you choose runs in that same window, and the window closes
 # when it ends (the install and update screens wait for a key first, if they
@@ -202,6 +202,12 @@ fi
 RADIOS=$HOME/.local/bin/radios
 ids=(help)
 items=(Help)
+# A terminal window, as Super+Enter opens: for a mouse, or where the keys don't
+# arrive (sway in a VM's window: the computer's own sway takes Super first)
+if [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null; then
+    ids+=(terminal)
+    items+=(Terminal)
+fi
 if [ -f "$DIR/update.sh" ]; then
     ids+=(apps update status)
     items+=("Install apps" Update Status)
@@ -265,6 +271,9 @@ run_choice() {
             "$RADIOS" "${ids[sel]}" toggle >/dev/null 2>&1
             refresh_items
             return 0 ;;
+        terminal)
+            swaymsg exec foot >/dev/null 2>&1
+            exit 0 ;;
         help)
             # the sheet without the lines for things that are not installed
             mapfile -t lines < <("$HOME/.local/bin/keys" --text 2>/dev/null || cat "$KEYS_FILE")

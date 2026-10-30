@@ -130,6 +130,8 @@ if __name__ == "__main__":
     script, home, path, folder, ranfile = sys.argv[1:6]
     scenario = sys.argv[6]
     env = {"PATH": path, "HOME": home, "TERM": "xterm-256color", "DEBSWAY_DIR": folder, "LANG": "C.UTF-8", "DEBSWAY_ESC_WAIT": "1"}
+    if scenario.startswith("sway-"):
+        env["SWAYSOCK"] = "/nonexistent/sway.sock"
     scenarios = {
         "enter": ["\r"],
         "down-enter": ["\x1b[B", "\r"],
@@ -150,12 +152,15 @@ if __name__ == "__main__":
         "click-mic": [click_on("Microphone"), "\x1b"],
         "early-resize": [("early", 40, 120), "q"],
         "q": ["q"],
+        "sway-terminal": ["j", "\r"],
+        "sway-click-terminal": [click_on("Terminal")],
     }
     drawn, status = run(script, env, scenarios[scenario])
     if len(sys.argv) > 7:
         open(sys.argv[7], "w").write(re.sub(r"\x1b\[[0-9;?<]*[A-Za-z]", "\n", drawn))
     print("STATUS", status)
     print("DREW", "|".join(re.findall(r"(Help|Install apps|Update|Status)", drawn)[:4]))
+    print("DREWALL", "|".join(re.findall(r"(Help|Terminal|Install apps|Update|Status)", drawn)[:5]))
     # where the title "debsway" was drawn each time: row;column
     print("TITLES", " ".join("%s;%s" % m for m in re.findall(r"\x1b\[(\d+);(\d+)H\x1b\[1mdebsway", drawn)))
 PY
@@ -164,6 +169,20 @@ menu() { # SCENARIO [FOLDER]: runs it, leaves the output in $out and what ran in
     out=$(python3 -I "$T/drive.py" "$HERE/bin/debsway-menu" "$T/home" "$T/fake:/usr/bin:/bin" "${2-$T/debsway}" "$T/ran" "$1" "$T/screen" 2>&1)
 }
 
+menu enter
+check "outside sway there is no Terminal entry (it would open in this terminal anyway)" not grep -q '^DREWALL.*Terminal' <<<"$out"
+# inside sway: a Terminal entry, second, opening foot through sway as Super+Enter does
+printf '#!/bin/sh
+echo "swaymsg $*" >>"%s/ran"
+' "$T" >"$T/fake/swaymsg"
+chmod +x "$T/fake/swaymsg"
+menu sway-terminal
+check "inside sway the menu has Terminal, after Help" grep -q 'DREWALL Help|Terminal|Install apps|Update|Status' <<<"$out"
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+check "...which opens foot through sway, and the menu closes" bash -c 'grep -qx "swaymsg exec foot" "$1" && grep -q "STATUS 0" <<<"$2"' _ "$T/ran" "$out"
+menu sway-click-terminal
+check "...also with a click" grep -qx 'swaymsg exec foot' "$T/ran"
+rm -f "$T/fake/swaymsg"
 menu enter
 check "the four entries are drawn" grep -q 'DREW Help|Install apps|Update|Status' <<<"$out"
 check "Enter on the first entry opens Help in the pager, not less" grep -qx 'line 1' "$T/screen"

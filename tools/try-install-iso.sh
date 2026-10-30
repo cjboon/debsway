@@ -163,6 +163,9 @@ cat <<'EOF'
       - It asks for the disk passphrase at start, then shows a login.
       - You can log in with your user; sudo true works with your password.
       - ls ~/debsway shows debsway (bash ~/debsway/start.sh sets the rest up).
+    Keys: your own sway takes Super (Super+Enter, Super+d...) before the VM
+    sees it. Press Ctrl+Alt+G in the window to give the VM the keyboard, and
+    again to take it back; or click debsway in the VM's bar, then Terminal.
     Close the window to stop it. Start over: bash tools/try-install-iso.sh --clean
 
 EOF
