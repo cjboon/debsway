@@ -159,4 +159,32 @@ check "...and handles web links only" grep -q '^MimeType=x-scheme-handler/http;x
 check "it can be removed" grep -q -e '--remove' "$e"
 check "the Firefox profile is offered for deletion, never deleted silently" grep -q 'Delete that profile too?' "$e"
 
+# 9. Downloads readable for you. You are named in ~/Downloads' default ACL, but a
+# file Firefox saves as private (600) gets an empty ACL mask, so that entry gave
+# you nothing ("Permission denied"). The session opens the mask on what its user
+# saved, and shuts the group and others entries.
+S=$HERE/bin/firefox-session
+mkdir -p "$T/share/Downloads/sub" "$T/share/bin"
+printf '#!/bin/sh\nfor a; do case $a in -*) ;; *) echo "${a##*/}" >>"%s/share/fixed" ;; esac; done\n' "$T" >"$T/share/bin/setfacl"
+chmod +x "$T/share/bin/setfacl"
+for f in private:600 normal:644 open-to-group:660 group-read:640 exec-group:670 world:606; do
+    : >"$T/share/Downloads/${f%%:*}" && chmod "${f##*:}" "$T/share/Downloads/${f%%:*}"
+done
+: >"$T/share/Downloads/sub/deeper" && chmod 600 "$T/share/Downloads/sub/deeper"
+ln -s "$T/share/Downloads/private" "$T/share/Downloads/link"
+: >"$T/share/fixed"
+( eval "$(sed -n '/^share_downloads() {/,/^}/p' "$S")"
+  PATH="$T/share/bin:$PATH" user=$(id -un) downloads=$T/share/Downloads share_downloads )
+fixed=$(sort "$T/share/fixed" | paste -sd' ')
+check "a download saved private (600) is opened up for you" grep -qw private <<<"$fixed"
+check "...so is one others could read (644, 606), and one with an odd mask (670)" \
+    bash -c 'for f in normal world exec-group; do grep -qw "$f" <<<"$1" || exit 1; done' _ "$fixed"
+check "...but not one already readable to you and no one else (660, 640)" \
+    bash -c '! grep -qw open-to-group <<<"$1" && ! grep -qw group-read <<<"$1"' _ "$fixed"
+check "...nor files in subfolders (other profiles' folders), nor links" \
+    bash -c '! grep -qw deeper <<<"$1" && ! grep -qw link <<<"$1"' _ "$fixed"
+check "the mask is set to rw, group and others to nothing" grep -qF -- '-exec setfacl -m g::-,o::-,m::rw {} +' "$S"
+check "the session shares at its start, every 2 seconds while Firefox runs, and at its end" \
+    bash -c 'grep -qx "share_downloads" "$1" && grep -qF "while kill -0 \"\$pid\" 2>/dev/null; do sleep 2; share_downloads; done &" "$1" && sed -n "/^cleanup() {/,/^}/p" "$1" | grep -q share_downloads' _ "$S"
+
 [ "$fails" -eq 0 ]

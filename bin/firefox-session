@@ -100,10 +100,26 @@ rm -rf "$run"
 mkdir -m 700 "$run"
 mkdir "$run/run" "$run/tmp"
 mkdir -p "$profile"   # (umask 077: only the firefox user can enter it)
-pid=
+pid='' sharer=''
+
+# share_downloads: what this user saved in its downloads folder, readable by
+# you and nobody else. You are named in the folder's default ACL (bin/firefox),
+# but a named user's ACL entry counts only as far as the file's mask allows,
+# and the mask comes from the mode the file was created with: a download
+# Firefox saves as private (600) gets an empty mask, and you can't read it.
+# This sets the mask to rw, and the file's group and others entries to
+# nothing (another profile's user shares this one's group, and can pass
+# through ~/Downloads). Only files this user owns, straight in that folder.
+share_downloads() {
+    command -v setfacl >/dev/null || return 0
+    find "$downloads" -maxdepth 1 -type f -user "$user" \( ! -perm -g=r -o -perm /g=x,o=rwx \) \
+        -exec setfacl -m g::-,o::-,m::rw {} + 2>/dev/null || true
+}
 
 cleanup() {
     trap - EXIT INT TERM HUP
+    [ -z "$sharer" ] || kill "$sharer" 2>/dev/null || true
+    share_downloads
     if [ -n "$pid" ]; then
         kill -TERM -- "-$pid" 2>/dev/null || true
         sleep 1
@@ -191,4 +207,8 @@ setsid env -i \
     FIREFOX_PIPEWIRE_CONFIG="$run/home-config" \
     "$noabs" bash -c "$start" firefox-start "$@" &
 pid=$!
+# Downloads become readable for you as they land, and those of earlier sessions too
+share_downloads
+while kill -0 "$pid" 2>/dev/null; do sleep 2; share_downloads; done &
+sharer=$!
 wait "$pid" || true
