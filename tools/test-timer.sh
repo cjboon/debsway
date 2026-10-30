@@ -180,6 +180,9 @@ import os, pty, select, sys, time
 def run(keys, wait=0.5):
     pid, fd = pty.fork()
     if pid == 0:
+        # a size, as a real window has once sway has sized it (a pty starts 0x0)
+        import fcntl, struct, termios
+        fcntl.ioctl(0, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 80, 0, 0))
         os.execvpe("/bin/bash", ["bash", sys.argv[1]], dict(os.environ, TERM="xterm"))
     out = b""
     def pump(w):
@@ -328,6 +331,19 @@ check "...every line within it" fits 70 "$out"
 out=$(LANG=C.UTF-8 C=100 R=18 scr)
 check "a wide but short window: the plain layout too (the box would scroll off)" fits 100 "$out"
 bash "$TIMER" cancel all >/dev/null 2>&1
+# A new window reports 0x0 until sway sizes it: that never counts as settled
+# (it did: four 0x0 in a row, and the box was drawn for 80 columns, at the left)
+cat >"$T/settle.sh" <<'EOF'
+# (a file counts the calls: settle runs stty inside $(...), a subshell)
+echo 0 >"$2"
+stty() { local n; n=$(($(cat "$COUNT") + 1)); echo "$n" >"$COUNT"; if [ "$n" -le 10 ]; then echo "0 0"; else echo "40 120"; fi; }
+COUNT=$2
+eval "$(sed -n '/^settle() {/,/^}/p' "$1")"
+settle
+cat "$COUNT"
+EOF
+calls=$(bash "$T/settle.sh" "$TIMER" "$T/settle-count")
+check "the wait doesn't take a window's 0x0 (not sized yet) for its size" test "$calls" -gt 10
 check "the menu waits for its window to reach its size before drawing (sway stretches a new one)" \
     python3 -I -c 'import sys; s = open(sys.argv[1]).read(); m = s.index("menu() {"); assert m < s.index("    settle\n", m) < s.index("draw_screen\n", s.index("    settle\n", m))' "$TIMER"
 check "parts/core-commands.sh installs ncal (cal) and --remove takes it out" \

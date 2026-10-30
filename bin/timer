@@ -427,14 +427,17 @@ running_lines() {
 }
 
 # settle: a new window starts small and sway stretches it a moment later;
-# waits (up to 0.6 s) until its size stops changing, so the screen is drawn
-# for the size it ends up (as debsway-menu does)
+# waits (up to 1.5 s) until its size stops changing, so the screen is drawn
+# for the size it ends up (as debsway-menu does). Before sway has given it a
+# size at all a window reports 0x0, which never counts as settled: drawn for
+# that, the box sat at the left of the window.
 settle() {
     local prev cur same=0 i
     prev=$(stty size 2>/dev/null)
-    for ((i = 0; i < 20; i++)); do
+    for ((i = 0; i < 50; i++)); do
         /bin/sleep 0.03 2>/dev/null || return 0
         cur=$(stty size 2>/dev/null)
+        case $cur in '' | '0 '* | *' 0') same=0; prev=$cur; continue ;; esac
         if [ "$cur" = "$prev" ]; then
             same=$((same + 1))
             [ "$same" -lt 4 ] || return 0
