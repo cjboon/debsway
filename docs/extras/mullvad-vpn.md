@@ -33,7 +33,7 @@ The script does not log you in, connect, or change any setting. You do that.
 - An unattended-upgrades allowance for `repository.mullvad.net`.
 - The package `mullvad-vpn` (its service, `mullvad` command, app under `/opt`).
 - `~/.local/bin/mullvad-vpn`.
-- No firewall rules of debsway's own. (The Mullvad app manages its own.) debsway's sandboxes with a firewall rule (Firefox, yt-dlp, BitTorrent, Claude Code) keep working with it: each rule is a table of its own that only rejects traffic to your local network, and lets DNS through first, Mullvad's (10.64.0.1) included. With lockdown mode they too lose the internet while the VPN is off.
+- No firewall rules of debsway's own. (The Mullvad app manages its own.) debsway's sandboxes with a firewall rule (Firefox, yt-dlp, Claude Code) keep working with it: each rule is a table of its own that only rejects traffic to your local network, and lets DNS through first, Mullvad's (10.64.0.1) included. With lockdown mode they too lose the internet while the VPN is off.
 
 ## Using it
 

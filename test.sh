@@ -198,14 +198,6 @@ else
 fi
 
 # --------------------------------------------------------------------
-section "BitTorrent as its own user (extras/torrent.sh): settings, the command, Mullvad"
-if out=$(bash tools/test-torrent.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") torrent checks"
-else
-    bad "torrent checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
-
-# --------------------------------------------------------------------
 section "yt-dlp as its own user (extras/yt-dlp.sh): the command, the session, what it installs"
 if out=$(bash tools/test-yt-dlp.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") yt-dlp checks"

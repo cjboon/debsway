@@ -70,14 +70,6 @@ this page to decide what else you need.
   QuickJS as `ytdlp`, which QuickJS itself doesn't restrict; a firewall rule
   keeps `ytdlp` off your local network, not off the internet. It shares your
   kernel, and the files it brings are still untrusted.
-- **A BitTorrent peer, torrent or client bug reaching your files.**
-  `torrent` (`extras/torrent.sh`) runs Debian's Transmission as
-  `debian-transmission` under Debian's systemd hardening, with `/home`
-  invisible to it and the system read-only but for its own folders. Its
-  remote control answers this computer only, with a password that isn't
-  Debian's default; it opens no router ports, and a firewall rule keeps it
-  off your local network. Everyone sharing a torrent still sees your IP
-  address (only a VPN hides it), and what it downloads is untrusted.
 - **A booby-trapped image or video, or a coding assistant that goes wrong,
   reaching your files.** `imv` and `mpv` (`extras/media.sh`) start inside
   bubblewrap: they see only the files you open, read-only, and have no

@@ -32,7 +32,6 @@ doesn't, and how to remove it. The short list of all of them is in
 - [A disposable practice server](mockvps-kvm.md)
 - [Images and video in a sandbox](media.md)
 - [yt-dlp as its own locked-down user](yt-dlp.md)
-- [BitTorrent as its own locked-down user](torrent.md)
 
 ## Passwords, keys and backups
 
