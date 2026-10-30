@@ -165,4 +165,26 @@ check "your own scripts go to ~/scripts" test -f "$T/target/home/me/scripts/mine
 check "a bad user name is refused" not env PATH="$T/fake:$PATH" sh "$L" '../x'
 chmod -R u+w "$T/cdrom"
 
+# ---- trying the image in a VM (tools/try-install-iso.sh), its commands only ----
+TRY=$HERE/tools/try-install-iso.sh
+q=$(XDG_CACHE_HOME=$T/cache bash "$TRY" --print --iso /x/my.iso)
+inst=$(sed -n '/^# the installer:/{n;p}' <<<"$q")
+booted=$(sed -n '/^# the installed system:/{n;p}' <<<"$q")
+check "VM: the image is plugged in as a USB stick, read-only, and started first" \
+    bash -c 'grep -qF -- "-drive if=none,id=stick,format=raw,readonly=on,file=/x/my.iso" <<<"$1" && grep -qF -- "-device usb-storage,drive=stick,bootindex=0" <<<"$1"' _ "$inst"
+check "...with UEFI, as on a laptop (the firmware read-only, its settings a copy)" \
+    bash -c 'grep -qF "if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd" <<<"$1" && grep -qF "if=pflash,format=raw,file=$2/debsway/iso-test/vars.fd" <<<"$1"' _ "$inst" "$T/cache"
+check "...and one empty disk, in the user's cache folder" \
+    bash -c 'grep -qF "if=none,id=disk,file=$2/debsway/iso-test/disk.qcow2" <<<"$1" && ! grep -q disk2 <<<"$1"' _ "$inst" "$T/cache"
+check "VM: the installed system starts without the stick" bash -c '[ -n "$1" ] && ! grep -q stick <<<"$1"' _ "$booted"
+check "VM: --two-disks adds a second disk (the installer should then ask)" \
+    test "$(XDG_CACHE_HOME=$T/cache bash "$TRY" --print --two-disks --iso /x/my.iso | grep -c 'id=disk2,file=')" = 2
+check "VM: a missing image is refused" not env XDG_CACHE_HOME="$T/cache" bash "$TRY" --iso "$T/nothing.iso"
+check "VM: an unknown option is refused" not bash "$TRY" --frobnicate
+mkdir -p "$T/cache/debsway/iso-test" && echo x >"$T/cache/debsway/iso-test/disk.qcow2"
+XDG_CACHE_HOME=$T/cache bash "$TRY" --clean </dev/null >/dev/null 2>&1
+check "VM: --clean deletes the VM's files" test ! -e "$T/cache/debsway/iso-test"
+check "...and removes QEMU only through its own marker package" \
+    bash -c 'grep -q "is_installed \"\$(apt_marker)\"" "$1" && grep -q "apt_purge" "$1"' _ "$TRY"
+
 [ "$fails" -eq 0 ]

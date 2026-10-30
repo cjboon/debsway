@@ -50,6 +50,7 @@ can change what the scripts rely on.
 - `prep/make-install-iso.sh`: an automatic Debian 13 install image with debsway
   on it (see the README, "Before you reinstall"). What runs inside the
   installer is `data/install-iso-*`; `tools/test-install-iso.sh` checks it.
+  `tools/try-install-iso.sh` installs from a built image in a throwaway QEMU VM.
 - `prep/fetch-offline-debs.sh`, `prep/fetch-tor-browser.sh`: download
   things you need before a reinstall (see the README).
 - `tools/pack-usb.sh /path/to/stick`: puts the last commit and `offline/`

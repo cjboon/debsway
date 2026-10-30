@@ -137,7 +137,10 @@ disks?", which names the disk it erases (the stick itself is never offered).
 Then log in and run `bash ~/debsway/start.sh`. Options: `--user NAME`,
 `--keymap de`, `--locale de_DE.UTF-8`, `--no-erase` (skip filling the disk with
 random data), `--scripts FOLDER` (your own files, to `~/scripts`). Try the image
-in a VM first if you can; the script prints the command.
+in a VM first: `bash tools/try-install-iso.sh` starts it the way a laptop would
+(UEFI, the image as a USB stick, an empty 20 GB disk), says what to check, then
+starts the installed system; `--two-disks` checks that it asks which disk,
+`--clean` deletes the VM (and QEMU, if it installed it).
 
 ## Installing Debian
 
