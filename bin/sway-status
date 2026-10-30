@@ -95,21 +95,26 @@ exec 3<&0
 # click while it is open closes it (sway's kill fails when no window has that
 # app id). The debsway menu's window is left open while it runs Update or
 # Install apps (it marks itself busy, by its PID): that click brings it to
-# the front instead, so an update is never cut off.
+# the front instead, so an update is never cut off. One of these windows at a
+# time: opening one closes the others (but not a busy menu).
+menu_busy() {
+    mb_pid=$(cat "${XDG_RUNTIME_DIR:-/tmp}/debsway-menu-busy" 2>/dev/null)
+    case $mb_pid in '' | *[!0-9]*) return 1 ;; esac
+    kill -0 "$mb_pid" 2>/dev/null
+}
 open_or_close() {
     oc_id=$1
     shift
-    if [ "$oc_id" = debsway-run ]; then
-        oc_pid=$(cat "${XDG_RUNTIME_DIR:-/tmp}/debsway-menu-busy" 2>/dev/null)
-        case $oc_pid in
-            '' | *[!0-9]*) ;;
-            *) if kill -0 "$oc_pid" 2>/dev/null; then
-                   swaymsg -q "[app_id=\"$oc_id\"] focus" >/dev/null 2>&1
-                   return 0
-               fi ;;
-        esac
+    if [ "$oc_id" = debsway-run ] && menu_busy; then
+        swaymsg -q "[app_id=\"$oc_id\"] focus" >/dev/null 2>&1
+        return 0
     fi
     swaymsg -q "[app_id=\"$oc_id\"] kill" >/dev/null 2>&1 && return 0
+    for oc_other in debsway-run debsway-keys debsway-nmtui debsway-timer; do
+        [ "$oc_other" != "$oc_id" ] || continue
+        [ "$oc_other" != debsway-run ] || ! menu_busy || continue
+        swaymsg -q "[app_id=\"$oc_other\"] kill" >/dev/null 2>&1 || true
+    done
     "$@" >/dev/null 2>&1 &
 }
 while read -r event <&3; do

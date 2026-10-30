@@ -406,7 +406,7 @@ printf '#!/bin/sh\necho "$*" >>"%s/oc/sway"\ncase "$*" in *kill*) [ -e "%s/oc/op
 chmod +x "$T/oc/bin/swaymsg"
 oc() { # APP-ID: runs open_or_close as the bar would; what happened is in $T/oc/sway and $T/oc/ran
     : >"$T/oc/sway"; rm -f "$T/oc/ran"
-    PATH="$T/oc/bin:$PATH" XDG_RUNTIME_DIR="$T/oc/xdg" sh -c 'eval "$(sed -n "/^open_or_close() {/,/^}/p" "$1")"; open_or_close "$2" touch "$3"; wait' \
+    PATH="$T/oc/bin:$PATH" XDG_RUNTIME_DIR="$T/oc/xdg" sh -c 'eval "$(sed -n "/^menu_busy() {/,/^}/p; /^open_or_close() {/,/^}/p" "$1")"; open_or_close "$2" touch "$3"; wait' \
         _ "$HERE/bin/sway-status" "$1" "$T/oc/ran"
 }
 rm -f "$T/oc/open"; oc debsway-timer
@@ -424,6 +424,14 @@ check "...a busy mark left by a menu that is gone doesn't stop the closing" grep
 echo 'x; reboot' >"$T/oc/xdg/debsway-menu-busy"; oc debsway-run
 check "...nor does a mark that isn't a number" grep -q kill "$T/oc/sway"
 rm -f "$T/oc/xdg/debsway-menu-busy" "$T/oc/open"
+oc debsway-timer
+# shellcheck disable=SC2016  # expanded by the inner shell, on purpose
+check "one bar window at a time: opening the timer closes the menu, the Wi-Fi screen and the cheat sheet" \
+    bash -c 'for w in debsway-run debsway-nmtui debsway-keys; do grep -qx -- "-q \[app_id=\"$w\"\] kill" "$1/sway" || exit 1; done; [ -e "$1/ran" ]' _ "$T/oc"
+echo $$ >"$T/oc/xdg/debsway-menu-busy"; oc debsway-timer
+# shellcheck disable=SC2016  # expanded by the inner shell, on purpose
+check "...but not a debsway menu that is running Update" bash -c '! grep -q "debsway-run" "$1/sway" && [ -e "$1/ran" ]' _ "$T/oc"
+rm -f "$T/oc/xdg/debsway-menu-busy"
 # shellcheck disable=SC2016  # expanded by the inner shell or Python, on purpose
 check "the time, the Wi-Fi name and debsway in the bar each open or close their window" bash -c '
     grep -qF "open_or_close debsway-timer foot --app-id=debsway-timer" "$1" &&
