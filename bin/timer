@@ -1,6 +1,7 @@
 #!/bin/bash
 # timer: timers, alarms and the look of the clock in the bar.
-# Written by debsway install-base.sh. Needs nothing but systemd and date.
+# Written by debsway install-base.sh. Needs systemd and date, and cal (ncal) for
+# the month in its screen.
 #
 #   timer                       a small menu (also: click the time in the bar, or Super+t)
 #   timer 10m [NAME]            a timer: 90s, 10m, 1h30m, 1.5h (a bare number is minutes)
@@ -346,6 +347,123 @@ lock_cmd() {
     echo "The screen now locks after $m minutes idle (fading down for the 30 seconds before)."
 }
 
+# --- the menu's screen -------------------------------------------------------
+#
+# One box, 72 columns by 19 rows (it fits the menu window on a 1366x768 screen
+# too), centred in the window:
+#   the title and today's date and time
+#   this month (ncal's cal, today highlighted) | the timers and alarms running
+#   what to type, on a grid of two columns, and how to close it
+
+BOX_W=72 BOX_H=19 CAL_W=24
+if [[ ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} =~ [Uu][Tt][Ff]-?8 ]]; then
+    B_H=─ B_V=│ B_TL=╭ B_TR=╮ B_BL=╰ B_BR=╯ B_L=├ B_R=┤ B_T=┬ B_B=┴
+else
+    B_H=- B_V='|' B_TL=+ B_TR=+ B_BL=+ B_BR=+ B_L=+ B_R=+ B_T=+ B_B=+
+fi
+BOLD=$'\033[1m' DIM=$'\033[2m' REV=$'\033[7m' OFF=$'\033[0m'
+
+# pad TEXT WIDTH: TEXT cut or filled with spaces to WIDTH characters
+pad() { local s=${1:0:$2}; printf '%s%*s' "$s" $(($2 - ${#s})) ''; }
+# center TEXT WIDTH
+center() { local s=${1:0:$2} l; l=$((($2 - ${#s}) / 2)); printf '%*s%s%*s' "$l" '' "$s" $(($2 - ${#s} - l)) ''; }
+# rule N: N of the line character
+rule() { local s; printf -v s '%*s' "$1" ''; printf '%s' "${s// /$B_H}"; }
+
+# calendar_lines: this month as 8 lines of CAL_W columns (in CAL), today in
+# reverse. cal prints a month 20 columns wide, 3 to a day.
+calendar_lines() {
+    local line out cell k today i=0
+    CAL=()
+    today=$(date +%-d)
+    if command -v cal >/dev/null; then
+        # (no highlighting of its own: cal marks today only on a terminal)
+        while IFS= read -r line && [ $i -lt 8 ]; do
+            line=$(pad "$line" 20)
+            if [ $i -ge 2 ]; then
+                out=''
+                for k in 0 1 2 3 4 5 6; do
+                    cell=${line:$((k * 3)):2}
+                    if [ "${cell// /}" = "$today" ]; then out+=$REV$cell$OFF; else out+=$cell; fi
+                    [ $k -eq 6 ] || out+=' '
+                done
+                line=$out
+            elif [ $i -eq 1 ]; then
+                line=$DIM$line$OFF
+            else
+                line=$BOLD$line$OFF
+            fi
+            CAL+=("  $line  ")
+            i=$((i + 1))
+        done < <(cal 2>/dev/null | sed -e 's/\x1b\[[0-9;]*m//g' -e 's/.\x08//g')
+    else
+        CAL=("$(pad '' $CAL_W)" "$(pad '' $CAL_W)" "$(center 'No calendar yet:' $CAL_W)" "$(center 'debsway --update' $CAL_W)")
+    fi
+    while [ ${#CAL[@]} -lt 8 ]; do CAL+=("$(pad '' $CAL_W)"); done
+}
+
+# running_lines: the timers and alarms, as 8 lines of the box's right column (in RUN)
+running_lines() {
+    local w=$((BOX_W - 3 - CAL_W)) i now left name
+    RUN=("$BOLD$(pad '  Timers and alarms' "$w")$OFF")
+    if [ ${#IDS[@]} -eq 0 ]; then
+        RUN+=("$(pad '' "$w")" "$(pad '' "$w")" "$DIM$(center 'Nothing set yet:' "$w")$OFF" "$DIM$(center 'type a time below.' "$w")$OFF")
+    else
+        # columns: the number, the name, the time left, when it rings (Fri 12:30 PM)
+        RUN+=("$DIM$(pad "     $(pad name 13)$(pad left 13)" $((w - 14)))$(printf '%12s' 'rings at')  $OFF")
+        now=$(date +%s)
+        for i in "${!IDS[@]}"; do
+            if [ "$i" -ge 6 ] && [ ${#IDS[@]} -gt 6 ]; then
+                RUN[7]=$(pad "     ...and $((${#IDS[@]} - 5)) more: timer list" "$w")
+                break
+            fi
+            left=$((DUES[i] - now)); [ "$left" -ge 0 ] || left=0
+            name=${LABELS[i]:-${KINDS[i]}}
+            if [ "$left" -eq 0 ]; then left=ringing; else left=$(left_text "$left"); fi
+            RUN+=("$(pad "  $((i + 1))) $(pad "$name" 12) $(pad "$left" 13)" $((w - 14)))$(printf '%12s' "$(clock_at "${DUES[i]}")")  ")
+        done
+    fi
+    while [ ${#RUN[@]} -lt 8 ]; do RUN+=("$(pad '' "$w")"); done
+}
+
+# draw_screen: the whole menu screen, without the prompt
+draw_screen() {
+    local cols=${COLUMNS:-} rows=${LINES:-} m top i in=$((BOX_W - 2)) half
+    [ -n "$cols" ] && [ -n "$rows" ] || read -r rows cols < <(stty size 2>/dev/null)
+    [ "${cols:-0}" -gt 0 ] || cols=80
+    [ "${rows:-0}" -gt 0 ] || rows=24
+    m=$(((cols - BOX_W) / 2)); [ $m -ge 0 ] || m=0
+    top=$(((rows - BOX_H - 2) / 2)); [ $top -ge 0 ] || top=0
+    MARGIN=$(printf '%*s' "$m" '')
+    half=$((in / 2))
+    calendar_lines
+    running_lines
+    # line TEXT: one row of the box (TEXT already IN columns wide)
+    line() { printf '%s%s%s%s\n' "$MARGIN" "$B_V" "$1" "$B_V"; }
+    two() { line "$(pad "    $1" "$half")$(pad "    $2" $((in - half)))"; }
+    for ((i = 0; i < top; i++)); do echo; done
+    printf '%s%s%s%s\n' "$MARGIN" "$B_TL" "$(rule "$in")" "$B_TR"
+    local now_text
+    now_text=$(date +'%a %Y-%m-%d  %-I:%M %p')
+    line "  $BOLD$(pad 'TIMER AND ALARM' $((in - 4 - ${#now_text})))$OFF$now_text  "
+    printf '%s%s%s%s%s%s\n' "$MARGIN" "$B_L" "$(rule $CAL_W)" "$B_T" "$(rule $((in - CAL_W - 1)))" "$B_R"
+    for i in 0 1 2 3 4 5 6 7; do
+        printf '%s%s%s%s%s%s\n' "$MARGIN" "$B_V" "${CAL[i]}" "$B_V" "${RUN[i]}" "$B_V"
+    done
+    printf '%s%s%s%s%s%s\n' "$MARGIN" "$B_L" "$(rule $CAL_W)" "$B_B" "$(rule $((in - CAL_W - 1)))" "$B_R"
+    line "  $BOLD$(pad 'Type a time and press Enter, or a letter' $((in - 2)))$OFF"
+    two '10m   1h30   45s' 'a timer   ("10m tea" names it)'
+    two '7:30  7am    7:30pm' 'an alarm, at the next 7:30'
+    two 'c    cancel one' 's    stop a ringing alarm'
+    if [ -x "$IDLE" ]; then
+        two 'f    date in the bar' "l    lock after $("$IDLE" --minutes) min idle"
+    else
+        two 'f    date in the bar' ''
+    fi
+    line "$DIM$(center 'Esc or q   close' "$in")$OFF"
+    printf '%s%s%s%s\n' "$MARGIN" "$B_BL" "$(rule "$in")" "$B_BR"
+}
+
 # --- the menu ---------------------------------------------------------------
 
 menu() {
@@ -368,24 +486,8 @@ menu() {
         printf '\033[H\033[2J'
         # The date is always shown here, even when the bar leaves it out: a click
         # on the time is the quick way to see today's date (Esc closes it again)
-        printf '\n  TIMER AND ALARM%*s\n\n' 30 "$(date +'%a %Y-%m-%d %-I:%M %p')"
-        if [ ${#IDS[@]} -gt 0 ]; then
-            echo "  Running"
-            show_list
-            echo
-        fi
-        cat <<'EOF'
-  Type a time and press Enter:
-      10m  or  1h30  or  45s         a timer ("10m tea" gives it a name)
-      7:30  or  7am  or  7:30pm      an alarm at the next 7:30
-  Or a letter:
-      c   cancel one    s   stop a ringing alarm    f   date in the bar    Esc or q   quit
-EOF
-        if [ -x "$IDLE" ]; then
-            printf '      l   how long before the screen locks (now %s minutes)\n' "$("$IDLE" --minutes)"
-        fi
-        echo
-        read -r -e -p "  > " input || return 0
+        draw_screen
+        read -r -e -p "$MARGIN  > " input || return 0
         # shellcheck disable=SC2086  # the words are meant to split
         set -- $input
         case ${1:-} in
@@ -431,5 +533,6 @@ case ${1:-} in
     fire) fire "${2:-}" ;;
     next) next ;;
     seconds) parse_duration "${2:-}" ;;   # (used by the tests)
+    screen) load check; draw_screen ;;    # (used by the tests)
     *) set_cmd "$@" ;;
 esac

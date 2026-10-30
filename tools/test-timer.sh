@@ -271,7 +271,47 @@ check "...turns the screen off 5 minutes later (900 s)" grep -q 'timeout 900 swa
 check "...and locks before sleep" grep -q 'before-sleep swaylock' <<<"$run"
 printf 'minutes=500\n' >"$T/config/debsway/lock"
 check "a time out of range in the file falls back to 30" test "$("$IDLE" --minutes)" = 30
-check "the timer menu offers it" grep -q 'how long before the screen locks' "$TIMER"
+check "the timer menu offers it" grep -q 'lock after $("$IDLE" --minutes) min idle' "$TIMER"
 check "parts/swayidle.sh starts swayidle through debsway-idle" grep -qx 'IDLE_CMD="$HOME/.local/bin/debsway-idle"' "$HERE/parts/swayidle.sh"
+
+# the menu's screen: one box with this month (ncal's cal) and the timers, centred
+mkdir -p "$T/calbin"
+cat >"$T/calbin/cal" <<'EOF'
+#!/bin/sh
+printf '%s\n' '    October 2026      ' 'Su Mo Tu We Th Fr Sa  ' '             1  2  3  ' ' 4  5  6  7  8  9 10  ' \
+    '11 12 13 14 15 16 17  ' '18 19 20 21 22 23 24  ' '25 26 27 28 29 30 31  ' '                      '
+EOF
+chmod +x "$T/calbin/cal"
+bash "$TIMER" cancel all >/dev/null 2>&1
+bash "$TIMER" 10m tea >/dev/null
+scr() { env PATH="$T/calbin:$PATH" COLUMNS="${C:-100}" LINES="${R:-30}" bash "$TIMER" screen; }
+plain() { sed 's/\x1b\[[0-9;]*m//g'; }
+widths() { python3 -I -c 'import sys; print(" ".join(sorted({str(len(l)) for l in sys.stdin.read().split("\n") if l})))'; }
+# shape TEXT: "ROWS WIDTHS LEFT-MARGIN" of the screen, without colours
+shape() { local p; p=$(plain <<<"$1"); printf '%s %s %s' "$(grep -c . <<<"$p")" "$(LANG=C.UTF-8 widths <<<"$p")" "$(grep -m1 . <<<"$p" | grep -o '^ *' | tr -d '\n' | wc -c)"; }
+out=$(LANG=C.UTF-8 scr)
+check "the screen is one box of 19 rows, every row the same width, centred (14 + 72 + 14)" test "$(shape "$out")" = "19 86 14"
+check "...and centred in the window's height too (30 rows: 4 above it)" bash -c '[ "$(sed -n "1,4p" <<<"$1" | grep -c .)" = 0 ] && sed -n 5p <<<"$1" | grep -q "╭"' _ "$out"
+check "it shows this month from cal" grep -q 'October 2026' <<<"$(plain <<<"$out")"
+today=$(date +%-d)
+check "...with today highlighted" grep -qF "$(printf '\033[7m%2s\033[0m' "$today")" <<<"$out"
+check "...and the running timer, by name" grep -qE '1\) tea +(10|9) min' <<<"$(plain <<<"$out")"
+check "the date and time are at the top, beside the title" grep -qE 'TIMER AND ALARM +[A-Z][a-z]{2} [0-9]{4}-[0-9]{2}-[0-9]{2} ' <<<"$(plain <<<"$out")"
+bash "$TIMER" cancel all >/dev/null 2>&1
+out=$(LANG=C.UTF-8 scr)
+check "with nothing set it says so" grep -q 'Nothing set yet' <<<"$(plain <<<"$out")"
+check "...and the box keeps its shape" test "$(shape "$out")" = "19 86 14"
+out=$(LANG=C.UTF-8 env PATH="$T/fake:/usr/bin:/bin" COLUMNS=100 LINES=30 bash "$TIMER" screen 2>&1)
+if ! command -v cal >/dev/null; then
+    check "without cal it says how to get it" grep -q 'debsway --update' <<<"$out"
+    check "...in the same shape" test "$(shape "$out")" = "19 86 14"
+fi
+out=$(LANG=C scr)
+check "without UTF-8 the box is drawn with plain + - |" bash -c '! grep -q "╭" <<<"$1" && grep -q "^ *+---" <<<"$1"' _ "$out"
+check "...in the same shape" test "$(shape "$out")" = "19 86 14"
+out=$(LANG=C.UTF-8 C=60 R=10 scr)
+check "a window smaller than the box still shows all of it (no margin)" test "$(shape "$out")" = "19 72 0"
+check "parts/core-commands.sh installs ncal (cal) and --remove takes it out" \
+    bash -c 'grep -qx "apt_install ncal" "$1" && grep -qx "    apt_purge ncal" "$1"' _ "$HERE/parts/core-commands.sh"
 
 [ "$fails" -eq 0 ]
