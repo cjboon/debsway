@@ -399,6 +399,40 @@ check "colors you set yourself win" grep -qx 'colors=root=red,blue' <<<"$nm"
 # shellcheck disable=SC2016  # a literal $HOME in the bar's script
 check "the Wi-Fi name in the bar opens the wrapper" grep -q 'exec "\$HOME/.local/bin/nmtui"' "$HERE/bin/sway-status"
 
+# a click on the bar opens a window, a second click closes it (open_or_close in
+# bin/sway-status), with a pretend swaymsg: "kill" succeeds only if one is open
+mkdir -p "$T/oc/bin" "$T/oc/xdg"
+printf '#!/bin/sh\necho "$*" >>"%s/oc/sway"\ncase "$*" in *kill*) [ -e "%s/oc/open" ] ;; *) exit 0 ;; esac\n' "$T" "$T" >"$T/oc/bin/swaymsg"
+chmod +x "$T/oc/bin/swaymsg"
+oc() { # APP-ID: runs open_or_close as the bar would; what happened is in $T/oc/sway and $T/oc/ran
+    : >"$T/oc/sway"; rm -f "$T/oc/ran"
+    PATH="$T/oc/bin:$PATH" XDG_RUNTIME_DIR="$T/oc/xdg" sh -c 'eval "$(sed -n "/^open_or_close() {/,/^}/p" "$1")"; open_or_close "$2" touch "$3"; wait' \
+        _ "$HERE/bin/sway-status" "$1" "$T/oc/ran"
+}
+rm -f "$T/oc/open"; oc debsway-timer
+check "bar: a click with nothing open opens the window" test -e "$T/oc/ran"
+touch "$T/oc/open"; oc debsway-timer
+# shellcheck disable=SC2016  # expanded by the inner shell or Python, on purpose
+check "...a click while it is open closes it, and opens nothing" \
+    bash -c 'grep -qx -- "-q \[app_id=\"debsway-timer\"\] kill" "$1/sway" && [ ! -e "$1/ran" ]' _ "$T/oc"
+echo $$ >"$T/oc/xdg/debsway-menu-busy"; oc debsway-run
+# shellcheck disable=SC2016  # expanded by the inner shell or Python, on purpose
+check "...but the debsway menu running Update (busy) is only brought to the front, never closed" \
+    bash -c 'grep -qx -- "-q \[app_id=\"debsway-run\"\] focus" "$1/sway" && ! grep -q kill "$1/sway" && [ ! -e "$1/ran" ]' _ "$T/oc"
+echo 999999999 >"$T/oc/xdg/debsway-menu-busy"; oc debsway-run
+check "...a busy mark left by a menu that is gone doesn't stop the closing" grep -q kill "$T/oc/sway"
+echo 'x; reboot' >"$T/oc/xdg/debsway-menu-busy"; oc debsway-run
+check "...nor does a mark that isn't a number" grep -q kill "$T/oc/sway"
+rm -f "$T/oc/xdg/debsway-menu-busy" "$T/oc/open"
+# shellcheck disable=SC2016  # expanded by the inner shell or Python, on purpose
+check "the time, the Wi-Fi name and debsway in the bar each open or close their window" bash -c '
+    grep -qF "open_or_close debsway-timer foot --app-id=debsway-timer" "$1" &&
+    grep -qF "open_or_close debsway-nmtui foot --app-id=debsway-nmtui" "$1" &&
+    grep -qF "open_or_close debsway-run \"\$HOME/.local/bin/debsway-menu\"" "$1"' _ "$HERE/bin/sway-status"
+# shellcheck disable=SC2016  # expanded by the inner shell or Python, on purpose
+check "the menu marks itself busy before Update or Install apps, and unmarks after" \
+    python3 -I -c 'import sys; s = open(sys.argv[1]).read(); a = s.index("echo $$ >\"$busy\""); assert a < s.index("bash update.sh") and a < s.index("bash install-extras.sh") < s.index("rm -f \"$DEBSWAY_PAUSED_FILE\" \"$busy\"")' "$HERE/bin/debsway-menu"
+
 # the bar
 check "the bar shows debsway" grep -q '"full_text":"debsway"' "$HERE/bin/sway-status"
 check "the bar has no separate Help any more" not grep -q '"name":"help"' "$HERE/bin/sway-status"

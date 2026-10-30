@@ -90,24 +90,46 @@ battery_time() {
 
 # Clicks and scrolls arrive on stdin, one line of JSON each (sway puts spaces in it)
 exec 3<&0
+
+# open_or_close APP-ID COMMAND...: a click on the bar opens that window, and a
+# click while it is open closes it (sway's kill fails when no window has that
+# app id). The debsway menu's window is left open while it runs Update or
+# Install apps (it marks itself busy, by its PID): that click brings it to
+# the front instead, so an update is never cut off.
+open_or_close() {
+    oc_id=$1
+    shift
+    if [ "$oc_id" = debsway-run ]; then
+        oc_pid=$(cat "${XDG_RUNTIME_DIR:-/tmp}/debsway-menu-busy" 2>/dev/null)
+        case $oc_pid in
+            '' | *[!0-9]*) ;;
+            *) if kill -0 "$oc_pid" 2>/dev/null; then
+                   swaymsg -q "[app_id=\"$oc_id\"] focus" >/dev/null 2>&1
+                   return 0
+               fi ;;
+        esac
+    fi
+    swaymsg -q "[app_id=\"$oc_id\"] kill" >/dev/null 2>&1 && return 0
+    "$@" >/dev/null 2>&1 &
+}
 while read -r event <&3; do
     case $(printf '%s' "$event" | tr -d ' ') in
         *'"name":"menu"'*'"button":1,'*)
             # the menu (Help, Install apps, Update, Status); the key cheat sheet
             # directly if the menu isn't installed
             if [ -x "$HOME/.local/bin/debsway-menu" ]; then
-                "$HOME/.local/bin/debsway-menu" >/dev/null 2>&1 &
+                open_or_close debsway-run "$HOME/.local/bin/debsway-menu"
             else
-                foot --app-id=debsway-keys "$HOME/.local/bin/keys" >/dev/null 2>&1 &
+                open_or_close debsway-keys foot --app-id=debsway-keys "$HOME/.local/bin/keys"
             fi ;;
         *'"name":"wifi"'*'"button":1,'*)
             # nmtui measures its window once at the start, so wait for sway to size it
             # (the debsway wrapper if there is one: nmtui in the debsway colors)
             # shellcheck disable=SC2016  # expanded by the inner sh, on purpose
             if [ -x "$HOME/.local/bin/nmtui" ]; then
-                foot --app-id=debsway-nmtui sh -c 'sleep 0.5; exec "$HOME/.local/bin/nmtui"' >/dev/null 2>&1 &
+                open_or_close debsway-nmtui foot --app-id=debsway-nmtui sh -c 'sleep 0.5; exec "$HOME/.local/bin/nmtui"'
             elif command -v nmtui >/dev/null; then
-                foot --app-id=debsway-nmtui sh -c 'sleep 0.5; exec nmtui' >/dev/null 2>&1 &
+                open_or_close debsway-nmtui foot --app-id=debsway-nmtui sh -c 'sleep 0.5; exec nmtui'
             fi ;;
         # the scroll wheel is button 4 (up) and 5 (down); the volume and brightness
         # commands also tell this script to redraw
@@ -117,7 +139,7 @@ while read -r event <&3; do
         *'"name":"bright"'*'"button":4,'*) "$HOME/.local/bin/brightness" up ;;
         *'"name":"bright"'*'"button":5,'*) "$HOME/.local/bin/brightness" down ;;
         *'"name":"date"'*'"button":1,'* | *'"name":"timer"'*'"button":1,'*)
-            foot --app-id=debsway-timer "$HOME/.local/bin/timer" >/dev/null 2>&1 & ;;
+            open_or_close debsway-timer foot --app-id=debsway-timer "$HOME/.local/bin/timer" ;;
         *'"name":"bat"'*'"button":1,'*)
             command -v notify-send >/dev/null &&
                 notify-send -a debsway -t 8000 "Battery $(battery | sed 's/^bat //; s/+$//')" "$(battery_time)" ;;

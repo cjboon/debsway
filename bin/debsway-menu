@@ -295,6 +295,10 @@ run_choice() {
             DEBSWAY_PAUSED_FILE=$(mktemp -u "${TMPDIR:-/tmp}/debsway-paused.XXXXXX")
             export DEBSWAY_PAUSED_FILE
             local rc log=
+            # Busy: a click on debsway in the bar now brings this window to the
+            # front instead of closing it (bin/sway-status), so nothing is cut off
+            local busy=${XDG_RUNTIME_DIR:-/tmp}/debsway-menu-busy
+            echo $$ >"$busy"
             if [ "${ids[sel]}" = update ]; then
                 # What Update prints is also kept, for a look afterwards
                 log=${XDG_STATE_HOME:-$HOME/.local/state}/debsway/menu-update.log
@@ -310,7 +314,7 @@ run_choice() {
                     "$rc" "${log:+ What it printed is in $log}" >&2
                 IFS= read -r _ </dev/tty || true
             fi
-            rm -f "$DEBSWAY_PAUSED_FILE"
+            rm -f "$DEBSWAY_PAUSED_FILE" "$busy"
             exit "$rc" ;;
     esac
 }
