@@ -5,7 +5,7 @@
 # VM has its own disk and no shared folder with you: the agent's only way to
 # hand work back is to push to a git host you pull from (claude-pull). It can
 # reach the internet but nothing on your machine or local network.
-#   claude-vm            log in and start Claude Code in the VM
+#   claude-vm            start the VM, run Claude Code in it, power it off on exit
 #   claude-vm shell      a plain shell in the VM
 #   claude-vm status     is the VM running?
 #   claude-vm stop       power the VM off

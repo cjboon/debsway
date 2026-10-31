@@ -61,21 +61,31 @@ ensure_up() {
     fi
 }
 
+# Run a command in the guest over ssh, then power the VM off unless another
+# window is still logged in (our own ssh has ended, so who lists only others).
+# The disk is kept, so unpushed work is still there next time.
+session_then_stop() {
+    local rc=0
+    ssh -t -o StrictHostKeyChecking=accept-new -o HostKeyAlias="$VM_NAME" \
+        -o IdentitiesOnly=yes -i "$KEY_FILE" -p "$SSH_HOST_PORT" "$VM_USER@$SSH_HOST_IP" "$1" || rc=$?
+    if [ "$(guest_ssh 'who | wc -l' 2>/dev/null || echo 1)" = 0 ]; then
+        echo "Powering the VM off."
+        mockvps --stop >/dev/null 2>&1 || echo "claude-vm-session: could not power off; run: claude-vm stop" >&2
+    fi
+    return "$rc"
+}
+
 is_installed() { [ -s "$WORKDIR/$VM_NAME.qcow2" ]; }
 
 case "${1:-connect}" in
     connect)
         ensure_up
         # -t for a real terminal; run Claude Code in the guest's projects folder
-        exec ssh -t -o StrictHostKeyChecking=accept-new -o HostKeyAlias="$VM_NAME" \
-            -o IdentitiesOnly=yes -i "$KEY_FILE" -p "$SSH_HOST_PORT" "$VM_USER@$SSH_HOST_IP" \
-            'cd ~/projects && exec claude'
+        session_then_stop 'cd ~/projects && exec claude'
         ;;
     shell)
         ensure_up
-        exec ssh -t -o StrictHostKeyChecking=accept-new -o HostKeyAlias="$VM_NAME" \
-            -o IdentitiesOnly=yes -i "$KEY_FILE" -p "$SSH_HOST_PORT" "$VM_USER@$SSH_HOST_IP" \
-            'cd ~/projects 2>/dev/null; exec bash -l'
+        session_then_stop 'cd ~/projects 2>/dev/null; exec bash -l'
         ;;
     status) mockvps --status ;;
     stop)   mockvps --stop ;;

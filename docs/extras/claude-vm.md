@@ -44,7 +44,7 @@ When you run `bash extras/claude-vm.sh`:
 When you run `claude-vm` (in a terminal, or in wmenu with Super+d, which opens its own foot window):
 
 1. The session script runs as `claude-vm`, through `debsway-no-abstract-sockets` (Landlock stops it connecting to X11's abstract sockets).
-2. If the VM is off, it starts it ("about a minute"), with QEMU on KVM. Once running, connecting is quick.
+2. If the VM is off, it starts it ("about a minute"), with QEMU on KVM. When you exit, it powers the VM off again (unless another window is still connected); the disk is kept.
 3. It logs into the guest over ssh with a key kept by `claude-vm`, to `127.0.0.1:2242`, and runs `claude` in the guest's `~/projects`.
 
 The guest's `CLAUDE.md` tells the agent it can use `sudo` in the guest, and that nothing in the VM is kept unless pushed.

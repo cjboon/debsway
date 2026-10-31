@@ -170,7 +170,7 @@ fi
 
 cat <<EOF
 
-    claude-vm              Claude Code inside the disposable VM
+    claude-vm              Claude Code inside the disposable VM (boots it; powers it off when you exit)
     claude-vm shell        a plain shell in the VM
     claude-vm status       is the VM running?
     claude-vm stop         power the VM off
