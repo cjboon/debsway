@@ -1,7 +1,7 @@
 #!/bin/bash
-# media-sandbox COMMAND [ARGS...]: written by debsway extras/media.sh
-# Runs imv or mpv inside bubblewrap, so a booby-trapped image or video can't
-# read your files. The program sees only the files and folders you name on
+# media-sandbox COMMAND [ARGS...]: written by debsway extras/media.sh (also extras/pdf-viewer.sh)
+# Runs imv, mpv or zathura inside bubblewrap, so a booby-trapped image, video or
+# PDF can't read your files. The program sees only the files and folders you name on
 # its command line (read-only), its own empty home, and your screen. It has
 # no network unless you give mpv a URL, and your sound is available to mpv only.
 # It gets a restricted Wayland socket (bin/wayland-restrict), not your real
@@ -41,7 +41,7 @@ for v in LANG LC_ALL TERM XCURSOR_THEME XCURSOR_SIZE XDG_CURRENT_DESKTOP; do
     [ -z "${!v:-}" ] || args+=(--setenv "$v" "${!v}")
 done
 # the program's own settings, read-only, if there are any
-for d in "$HOME/.config/mpv" "$HOME/.config/imv"; do
+for d in "$HOME/.config/mpv" "$HOME/.config/imv" "$HOME/.config/zathura"; do
     [ -d "$d" ] && args+=(--ro-bind "$d" "$d")
 done
 # sound for mpv: your audio server's socket (it could also listen to the microphone)

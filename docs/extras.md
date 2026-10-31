@@ -17,6 +17,8 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `webcam.sh` | A webcam switch: a USB camera (most laptops' built-in ones) starts **off** at every boot and when plugged in, and the debsway menu gets a Webcam line (`debsway --camera on\|off`). Off disconnects its USB device, as if unplugged. A root helper does it; your user may run it with `on` or `off` only. See [extras/webcam.md](extras/webcam.md) |
 | `phone-tethering.sh` | Use a phone's mobile data over the USB cable (usbmuxd and the iPhone pairing tools; Android needs nothing but its own "USB tethering" switch). Switch Wi-Fi off from the menu to use only the phone |
 | `firefox-sandbox.sh` | `firefox`: Firefox as its own locked-down user (`firefox`), as a normal window. Your logins and history are kept in that user's home, not yours; a hacked page reaches only that, not your files. Clipboard shared while it has focus; `~/Downloads` shared both ways; sound through a pipe (it cannot hear your microphone); firewalled off your router and local services; links from other programs open in the running window. `firefox-esr` still runs Firefox as you. See the section below |
+| `pdf-viewer.sh` | zathura PDF viewer, in a sandbox |
+| `archive-tools.sh` | unzip, zip, 7z, bzip2 and zstd for archives |
 | `w3m.sh` | w3m, a text-mode web browser for the terminal (no JavaScript) |
 | `console-only.sh` | log in to tmux (the same bar and keys) instead of starting sway |
 | `keepassxc.sh` | KeePassXC password manager, the minimal build (`keepassxc-minimal`): no browser integration and no Firefox add-on, so no web page can talk to it; copy and paste a password, or use auto-type. On a computer with the full build and the add-on, running it again switches to the minimal one |

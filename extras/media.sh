@@ -6,16 +6,17 @@
 # URL) and an empty home. DEBSWAY_NO_SANDBOX=1 runs one without it.
 # Usage: bash media.sh [--remove]
 # summary: imv and mpv, each in a sandbox
-# status: apt:imv apt:mpv apt:bubblewrap bin:imv bin:mpv bin:media-sandbox
+# status: apt:imv apt:mpv bin:imv bin:mpv bin:media-sandbox
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
 if [ "${1:-}" = --remove ]; then
     remove_bin imv
     remove_bin mpv
-    remove_bin media-sandbox
-    # incognito needs it too
-    [ -x /usr/local/bin/incognito ] || remove_bin wayland-restrict
+    # the pdf-viewer extra uses the sandbox too
+    [ -f "$BIN/zathura" ] || remove_bin media-sandbox
+    # incognito needs wayland-restrict too
+    [ -f "$BIN/media-sandbox" ] || [ -x /usr/local/bin/incognito ] || remove_bin wayland-restrict
     apt_purge imv mpv bubblewrap
     exit
 fi

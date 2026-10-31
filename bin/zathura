@@ -1,0 +1,4 @@
+#!/bin/sh
+# zathura: written by debsway extras/pdf-viewer.sh
+# The PDF viewer, run in a sandbox that sees only the files you open.
+exec "$HOME/.local/bin/media-sandbox" /usr/bin/zathura "$@"

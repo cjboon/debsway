@@ -11,6 +11,8 @@ doesn't, and how to remove it. The short list of all of them is in
 - [Firefox's hardening, and a throwaway window](firefox.md)
 - [Firefox as its own locked-down user](firefox-sandbox.md)
 - [One Firefox profile per site](firefox-profiles.md)
+- [PDF viewer in a sandbox](pdf-viewer.md): `docs/extras/pdf-viewer.md`
+- [Archive tools](archive-tools.md): `docs/extras/archive-tools.md`
 - [Console-only, tmux instead of sway](console-only.md): `docs/extras/console-only.md`
 - [w3m, a web browser for the terminal](w3m.md): `docs/extras/w3m.md`
 - [Tor Browser](tor-browser.md)
