@@ -5,7 +5,11 @@
 # The Debian CD signing key is pinned in pins.sh (DEBIAN_CD_FPR).
 
 DEBIAN_CD_BASE=https://cdimage.debian.org/debian-cd/current/amd64/iso-dvd
-DEBIAN_CD_NAME=debian-13.7.0-amd64-DVD-1.iso
+
+# dvd_name SHA512SUMS: the DVD-1 image's file name in a (verified) list
+dvd_name() {
+    sed -nE 's/^[0-9a-f]{128}  (debian-[0-9]+(\.[0-9]+)+-amd64-DVD-1\.iso)$/\1/p' "$1" | head -1
+}
 
 # The kernel arguments that start the automatic install
 AUTO_ARGS="auto=true priority=critical preseed/file=/cdrom/debsway-install/preseed.cfg"

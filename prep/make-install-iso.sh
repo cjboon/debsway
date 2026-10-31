@@ -90,7 +90,7 @@ SAVED=$DEBSWAY_DIR/offline/install-iso
 mkdir -p "$SAVED"
 work=$(mktemp -d)
 
-say "Debian 13.7.0 DVD-1 installer image"
+say "The newest Debian 13 DVD-1 installer image"
 wget -q -O "$work/SHA512SUMS" "$DEBIAN_CD_BASE/SHA512SUMS" &&
     wget -q -O "$work/SHA512SUMS.sign" "$DEBIAN_CD_BASE/SHA512SUMS.sign" ||
     die "Couldn't download Debian's list of image checksums."
@@ -99,12 +99,9 @@ verify_detached "$DEBIAN_CD_FPR" "$DEBIAN_CD_KEY_URL" \
     "$work/SHA512SUMS.sign" "$work/SHA512SUMS" ||
     die "Debian's list of checksums isn't signed by the Debian CD signing key. Nothing was built."
 
-name=$DEBIAN_CD_NAME
+name=$(dvd_name "$work/SHA512SUMS")
+[ -n "$name" ] || die "No DVD-1 image in Debian's list."
 iso=$SAVED/$name
-
-if ! awk -v n="$name" '$2 == n { found = 1 } END { exit !found }' "$work/SHA512SUMS"; then
-    die "$name isn't in Debian's signed checksum list."
-fi
 
 note "$name (the list is signed by the Debian CD signing key)"
 
