@@ -33,6 +33,11 @@ fi
 [ "${VERSION_CODENAME:-}" = "$DEBIAN_RELEASE" ] ||
     warn "Written for Debian 13 ($DEBIAN_RELEASE); this is ${PRETTY_NAME:-unknown}."
 
+# An install that never saw a network (the ISO uses wifi after it, and it can
+# be done off the net all the way) is left without any Debian apt source. Make
+# sure there is one before anything is downloaded.
+apt_sources_ensure
+
 # The optional programs are chosen now, right after you agreed to the base
 # install, and installed once the base is done. Nothing is checked for you.
 picked=$(mktemp)

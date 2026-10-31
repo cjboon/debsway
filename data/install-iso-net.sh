@@ -8,10 +8,10 @@
 # with questions about wifi or "network autoconfiguration failed", and it
 # installs from the ISO alone. wifi.sh sets up wifi after the install, when
 # debsway's own install begins.
-# (DEBSWAY_NET, DEBSWAY_SET and DEBSWAY_WAIT are for tests.)
+# (DEBSWAY_NET, DEBSWAY_SEED and DEBSWAY_WAIT are for tests.)
 
 NET=${DEBSWAY_NET:-/sys/class/net}
-SET=${DEBSWAY_SET:-debconf-set}
+SEED=${DEBSWAY_SEED:-debconf-set-selections}
 WAIT=${DEBSWAY_WAIT:-8}
 
 # wired: the names of the ports that are not loopback, wifi or virtual
@@ -45,8 +45,18 @@ while :; do
     [ -n "$ports" ] && sleep 1 || break
 done
 
-$SET netcfg/enable false
-$SET apt-setup/use_mirror false
-$SET pkgsel/upgrade none
+# The questions and their templates are not loaded yet (netcfg, apt-setup and
+# pkgsel run later in the menu), so debconf-set would silently not set them.
+# debconf-set-selections registers a dummy template when it has to, and is
+# what the preseed itself goes through.
+seed=$(mktemp)
+{
+    printf '%s\n' 'd-i netcfg/enable boolean false' \
+        'd-i apt-setup/use_mirror boolean false' \
+        'd-i pkgsel/upgrade select none'
+} >"$seed"
+# (debconf-set-selections reads the values from stdin)
+$SEED <"$seed" 2>/dev/null
+rm -f "$seed"
 logger -t debsway "no wired link: network setup skipped (wifi.sh does wifi after the install)" 2>/dev/null || true
 exit 0

@@ -8,6 +8,10 @@
 #   bash tools/try-install-iso.sh --iso FILE      ...from FILE
 #   bash tools/try-install-iso.sh --two-disks     with a second empty disk: the
 #                                                 installer should then ask which
+#   bash tools/try-install-iso.sh --no-net        no network in the VM: everything
+#                                                 the installer asks should still
+#                                                 be answerable (this laptop's
+#                                                 wifi-only case)
 #   bash tools/try-install-iso.sh --boot          start the installed system again
 #   bash tools/try-install-iso.sh --clean         delete the VM's files, to start over
 #                                                 (no software is removed)
@@ -32,16 +36,17 @@ DISK=$DIR/disk.qcow2
 DISK2=$DIR/disk2.qcow2
 VARS=$DIR/vars.fd
 
-mode=install iso='' two=false print=false
+mode=install iso='' two=false print=false no_net=false
 while [ $# -gt 0 ]; do
     case $1 in
         --iso) iso=${2:-}; shift 2 ;;
         --two-disks) two=true; shift ;;
+        --no-net) no_net=true; shift ;;
         --boot) mode=boot; shift ;;
         --clean) mode=clean; shift ;;
         --remove) mode=remove; shift ;;
         --print) print=true; shift ;;
-        -h | --help) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h | --help) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) die "Unknown option $1. Try: bash tools/try-install-iso.sh --help" ;;
     esac
 done
@@ -76,16 +81,18 @@ fi
 # screen, and the installer waits where you can't see it)
 base=(qemu-system-x86_64 -enable-kvm -cpu host -machine q35 -m 2048 -display gtk
     -drive "if=pflash,format=raw,readonly=on,file=$CODE"
-    -drive "if=pflash,format=raw,file=$VARS"
-    -nic user,model=virtio-net-pci)
-install_cmd=("${base[@]}"
+    -drive "if=pflash,format=raw,file=$VARS")
+# a wired look by default; --no-net takes the network out (a wifi-only laptop)
+nic=(-nic user,model=virtio-net-pci)
+$no_net && nic=("-nic" "none")
+install_cmd=("${base[@]}" "${nic[@]}"
     -drive "if=none,id=disk,file=$DISK" -device virtio-blk-pci,drive=disk,bootindex=1)
 $two && install_cmd+=(-drive "if=none,id=disk2,file=$DISK2" -device virtio-blk-pci,drive=disk2)
 # the image as a USB stick, read-only, booted first; when the installer
 # restarts at the end, QEMU stops instead (else the stick starts it again)
 install_cmd+=(-drive "if=none,id=stick,format=raw,readonly=on,file=$iso"
     -device qemu-xhci -device usb-storage,drive=stick,bootindex=0 -no-reboot)
-boot_cmd=("${base[@]}" -drive "if=none,id=disk,file=$DISK" -device virtio-blk-pci,drive=disk,bootindex=1)
+boot_cmd=("${base[@]}" "${nic[@]}" -drive "if=none,id=disk,file=$DISK" -device virtio-blk-pci,drive=disk,bootindex=1)
 $two && boot_cmd+=(-drive "if=none,id=disk2,file=$DISK2" -device virtio-blk-pci,drive=disk2)
 
 if $print; then
@@ -139,6 +146,13 @@ if [ "$mode" = install ]; then
       2. It asks only for the disk encryption passphrase (twice) and your
          user's password (twice). Use throwaway ones.
 EOF
+    if $no_net; then
+        cat <<'EOF'
+      -- With --no-net there are NO network questions at all: no wifi prompt,
+         no "network autoconfiguration failed" (the install uses the stick
+         alone; wifi.sh asks for the wifi after the install).
+EOF
+    fi
     if $two; then
         echo "      3. With two disks it should ASK which disk (vda or vdb), never the stick."
     else
@@ -163,6 +177,15 @@ cat <<'EOF'
       - It asks for the disk passphrase at start, then shows a login.
       - You can log in with your user; sudo true works with your password.
       - ls ~/debsway shows debsway (bash ~/debsway/start.sh sets the rest up).
+EOF
+if $no_net; then
+    cat <<'EOF'
+      - It was installed without a network, so also: bash ~/debsway/install-base.sh
+        puts deb.debian.org into /etc/apt/sources.list, and `sudo apt-get update`
+        works after the wifi is on (bash ~/debsway/wifi.sh).
+EOF
+fi
+cat <<'EOF'
     Keys: your own sway takes Super (Super+Enter, Super+d...) before the VM
     sees it. Press Ctrl+Alt+G in the window to give the VM the keyboard, and
     again to take it back; or click debsway in the VM's bar, then Terminal.

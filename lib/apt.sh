@@ -170,6 +170,38 @@ apt_needed_by_marker() {
         awk '$1 == "ii" { print $2 }')
 }
 
+# apt_sources_ok DIR: an active (non-comment, no cdrom, no local file) line
+# names the release in DIR's sources.list or .list/.sources files, so apt
+# can fetch it
+apt_sources_ok() {
+    local cn=${VERSION_CODENAME:-}
+    [ -n "$cn" ] || return 1
+    { cat "$1/sources.list" 2>/dev/null
+      cat "$1/sources.list.d/"*.list "$1/sources.list.d/"*.sources 2>/dev/null
+    } | grep -vE '^\s*(#|$)|cdrom:|file:' | grep -q -- "$cn"
+}
+
+# apt_sources_ensure: an install without a network leaves no Debian sources
+# (the installer's cdrom lines get commented out at the end), and a mirror
+# question can be answered with none. Before packages are downloaded: if
+# nothing in /etc/apt names the running release, add deb.debian.org's lines.
+# http unless ca-certificates is already there, so the first apt-get works.
+# (DEBSWAY_APT_DIR is where /etc/apt is, for tests.)
+apt_sources_ensure() {
+    local dir=${DEBSWAY_APT_DIR:-/etc/apt} proto=https src
+    [ -n "${VERSION_CODENAME:-}" ] || { warn "No VERSION_CODENAME: not touching apt sources."; return 0; }
+    is_installed ca-certificates || proto=http
+    if apt_sources_ok "$dir"; then
+        note "apt sources already name $VERSION_CODENAME."
+        return 0
+    fi
+    src="deb $proto://deb.debian.org/debian $VERSION_CODENAME main non-free-firmware
+deb $proto://deb.debian.org/debian $VERSION_CODENAME-updates main non-free-firmware
+deb $proto://security.debian.org/debian-security $VERSION_CODENAME-security main non-free-firmware"
+    printf '%s\n' "$src" | $SUDO tee -a "$dir/sources.list" >/dev/null
+    note "Added deb.debian.org's sources for $VERSION_CODENAME (deb-src lines are left to you)."
+}
+
 # key_ok FILE FPR: FILE holds exactly one key, it is FPR, and it hasn't
 # expired or been revoked. apt trusts every key in a signed-by file, so a
 # file with a second key next to the pinned one must not pass.

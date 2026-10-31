@@ -2,10 +2,11 @@
 # Checks prep/make-install-iso.sh's pieces without a network, an ISO, xorriso or
 # the Debian installer: picking the image from Debian's list, the installer's
 # answers (nothing secret, the three questions left to you), the boot menu
-# edits (on excerpts of Debian 13's own menu files), md5sum.txt, and the two
-# scripts that run inside the installer (choosing the disk, copying debsway),
-# with pretend commands. Changes nothing outside a temp folder. Run by test.sh,
-# or:  bash tools/test-install-iso.sh
+# edits (on excerpts of Debian 13's own menu files), md5sum.txt, the three
+# scripts that run inside the installer (skipping network setup without a
+# cable, choosing the disk, copying debsway), and the apt sources an install
+# without a network is left with. Changes nothing outside a temp folder.
+# Run by test.sh, or:  bash tools/test-install-iso.sh
 # shellcheck disable=SC2016  # the inner shells expand their own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 # shellcheck disable=SC1091
@@ -149,7 +150,8 @@ check "no disk besides the stick: nothing is chosen" test -z "$(disk /dev/sdb1 /
 
 # ---- inside the installer: no cable, no network setup ----
 N=$HERE/data/install-iso-net.sh
-net() { # PORT:CARRIER... (w = wifi): what net.sh sets
+net() { # PORT:CARRIER... (w = wifi): what net.sh seeds (its fake
+    # debconf-set-selections copies everything it is fed into $T/set)
     rm -rf "$T/net"; mkdir -p "$T/net/lo"
     for p in "$@"; do
         n=${p%%:*}; c=${p#*:}
@@ -157,18 +159,60 @@ net() { # PORT:CARRIER... (w = wifi): what net.sh sets
         case $n in w*) mkdir "$T/net/$n/wireless" ;; *) mkdir "$T/net/$n/device" ;; esac
         [ "$c" = - ] || echo "$c" >"$T/net/$n/carrier"
     done
-    printf '#!/bin/sh\necho "$@" >>"%s/set"\n' "$T" >"$T/setq"; chmod +x "$T/setq"
+    printf '#!/bin/sh\ncat >>"%s/set"\n' "$T" >"$T/seed"; chmod +x "$T/seed"
     : >"$T/set"
-    DEBSWAY_NET=$T/net DEBSWAY_SET=$T/setq DEBSWAY_WAIT=1 sh "$N"
+    DEBSWAY_NET=$T/net DEBSWAY_SEED=$T/seed DEBSWAY_WAIT=1 sh "$N"
     cat "$T/set"
 }
 check "a cable plugged in: the network is left alone" test -z "$(net eth0:1 wlan0:1)"
-check "wifi only: network setup is switched off" grep -qx 'netcfg/enable false' <<<"$(net wlan0:1)"
-check "...and no mirror is asked for" grep -qx 'apt-setup/use_mirror false' <<<"$(net wlan0:1)"
-check "a wired port with no cable: switched off" grep -qx 'netcfg/enable false' <<<"$(net eth0:0 wlan0:1)"
-check "a wired port that reports no carrier at all: switched off" grep -qx 'netcfg/enable false' <<<"$(net eth0:-)"
-check "no ports at all: switched off" grep -qx 'netcfg/enable false' <<<"$(net)"
+check "wifi only: network setup is switched off" grep -qx 'd-i netcfg/enable boolean false' <<<"$(net wlan0:1)"
+check "...and no mirror is asked for" grep -qx 'd-i apt-setup/use_mirror boolean false' <<<"$(net wlan0:1)"
+check "...and no upgrade, which the network would be needed for" grep -qx 'd-i pkgsel/upgrade select none' <<<"$(net wlan0:1)"
+check "a wired port with no cable: switched off" grep -qx 'd-i netcfg/enable boolean false' <<<"$(net eth0:0 wlan0:1)"
+check "a wired port that reports no carrier at all: switched off" grep -qx 'd-i netcfg/enable boolean false' <<<"$(net eth0:-)"
+check "no ports at all: switched off" grep -qx 'd-i netcfg/enable boolean false' <<<"$(net)"
 check "net.sh is in the preseed" grep -q 'preseed/early_command string sh /cdrom/debsway-install/net.sh' "$HERE/data/install-iso-preseed.cfg"
+check "the installer picks the interface again (auto is netcfg's default too)" \
+    grep -q '^d-i netcfg/choose_interface select auto' "$HERE/data/install-iso-preseed.cfg"
+check "the boot line leaves the network to net.sh (nothing is forced off)" \
+    not grep -q 'netcfg/enable=false' <<<"$AUTO_ARGS"
+
+# ---- back home: apt sources after an install without a network ----
+A=$T/apt
+sources() { mkdir -p "$A/sources.list.d"; printf '%s\n' "$@" >"$A/sources.list"; }
+apt_ok() { ( VERSION_CODENAME=trixie; apt_sources_ok "$A" ); }
+apt_fix() { # HTTPS(true|false): apt_sources_ensure's work in $A (for trixie)
+    ( case $1 in
+          true) is_installed() { return 0; } ;;   # ca-certificates is there
+          false) is_installed() { return 1; } ;;  # and it is not
+      esac
+      VERSION_CODENAME=trixie DEBSWAY_APT_DIR=$A SUDO= apt_sources_ensure )
+}
+sources '# deb cdrom:[Debian GNU/Linux 13.7.0 _Trixie_ - Official]/ trixie main non-free-firmware'
+apt_fix true >/dev/null
+check "a list with only the installer's commented cdrom line: Debian's sources are added" \
+    bash -c 'grep -qxF "deb https://deb.debian.org/debian trixie main non-free-firmware" "$1" &&
+             grep -qxF "deb https://deb.debian.org/debian trixie-updates main non-free-firmware" "$1" &&
+             grep -qxF "deb https://security.debian.org/debian-security trixie-security main non-free-firmware" "$1" &&
+             grep -qF "# deb cdrom:" "$1"' _ "$A/sources.list"
+check "...and those lines count as the release having sources" apt_ok
+before=$(md5sum <"$A/sources.list")
+apt_fix true >/dev/null
+check "sources that already name the release: nothing is touched" \
+    test "$before" = "$(md5sum <"$A/sources.list")"
+printf '%s\n' 'Types: deb' 'URIs: http://deb.debian.org/debian' 'Suites: trixie' 'Components: main' >"$A/sources.list.d/other.sources"
+rm -f "$A/sources.list"
+apt_fix true >/dev/null
+check "a deb822 stanza naming the release is enough: nothing is added" test ! -e "$A/sources.list"
+check "...and it counts as the release having sources" apt_ok
+rm -f "$A/sources.list.d/other.sources"
+sources '# deb cdrom:[Debian GNU/Linux 13.7.0 _Trixie_ - Official]/ trixie main non-free-firmware'
+apt_fix false >/dev/null
+check "without ca-certificates the new lines come over http" \
+    bash -c '! grep -q "^deb https://" "$1" && grep -q "^deb http://deb.debian.org/debian" "$1"' _ "$A/sources.list"
+n=$(grep -c '' "$A/sources.list")
+( VERSION_CODENAME= DEBSWAY_APT_DIR=$A SUDO= apt_sources_ensure ) >/dev/null 2>&1
+check "the release name is missing: nothing is bolted on (it would be broken)" test "$(grep -c '' "$A/sources.list")" = "$n"
 
 # ---- inside the installer: debsway into ~/debsway ----
 L=$T/late.sh
@@ -242,6 +286,15 @@ check "VM: an interrupted install doesn't go on to the installed system" \
 check "VM: the installed system starts without the stick" bash -c '[ -n "$1" ] && ! grep -q stick <<<"$1"' _ "$booted"
 check "VM: --two-disks adds a second disk (the installer should then ask)" \
     test "$(XDG_CACHE_HOME=$T/cache bash "$TRY" --print --two-disks --iso /x/my.iso | grep -c 'id=disk2,file=')" = 2
+q=$(XDG_CACHE_HOME=$T/cache bash "$TRY" --print --no-net --iso /x/my.iso)
+inst=$(sed -n '/^# the installer:/{n;p}' <<<"$q")
+check "VM: --no-net takes the network card out (the way a wifi-only laptop would be)" \
+    bash -c 'grep -qF -- "-nic none" <<<"$1" && ! grep -q virtio-net <<<"$1"' _ "$inst"
+check "...while the default keeps its virtio card" \
+    bash -c 'grep -qF -- "-nic user,model=virtio-net-pci" <<<"$1"' \
+    _ "$(XDG_CACHE_HOME=$T/cache bash "$TRY" --print --iso /x/my.iso | sed -n '/^# the installer:/{n;p}')"
+check "VM: --no-net is in the usage, and the what-to-check mentions it" \
+    bash -c 'grep -qF "NO network questions at all" "$1" && bash "$1" --help | grep -q -- --no-net' _ "$TRY"
 check "VM: a missing image is refused" not env XDG_CACHE_HOME="$T/cache" bash "$TRY" --iso "$T/nothing.iso"
 check "VM: an unknown option is refused" not bash "$TRY" --frobnicate
 mkdir -p "$T/cache/debsway/iso-test" && echo x >"$T/cache/debsway/iso-test/disk.qcow2"
