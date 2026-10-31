@@ -7,7 +7,7 @@
 # terminus-bold-24. A file name from /usr/share/consolefonts also works.
 dir=/usr/share/consolefonts
 conf="$HOME/.config/debsway/console-font"
-default=Uni3-DejaVu30x16
+default=Uni3-Terminus28x14
 
 # name file size
 FONTS=(

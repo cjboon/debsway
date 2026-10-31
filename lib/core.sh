@@ -226,7 +226,7 @@ case "$(tty 2>/dev/null)" in
                 m=$(cat "$HOME/.config/debsway/login" 2>/dev/null); m=${m:-sway}
                 if [ "$m" = console ]; then
                     # bigger text on the console; ~/.config/debsway/console-font names another
-                    setfont "$(cat "$HOME/.config/debsway/console-font" 2>/dev/null || echo Uni3-DejaVu30x16)" 2>/dev/null
+                    setfont "$(cat "$HOME/.config/debsway/console-font" 2>/dev/null || echo Uni3-Terminus28x14)" 2>/dev/null
                     rm -f "$HOME/.config/debsway/console-redraw"
                     tmux new-session -A -s main
                     # console-font leaves this to say: detached on purpose, come back with the new font

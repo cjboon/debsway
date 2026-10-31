@@ -16,4 +16,4 @@ Alt takes the place of Super: Alt+1 … Alt+0 go to workspaces, Alt+Shift+1 … 
 
 ## What it changes on your computer
 
-- `~/.profile`: the autostart block (it also sets the console font to DejaVu Sans Mono 30x16, the same typeface as foot, though the console only has fixed sizes, so it is a little larger than foot at size 14; to change it, type `console-font`: it lists the sizes, you type a number or a name such as `dejavu-43` or `terminus-bold-24`, and the text changes at once and is remembered in `~/.config/debsway/console-font`; `console-font list` only shows the list), and `~/.config/debsway/login` holds the mode. `sway` still starts the desktop by hand.
+- `~/.profile`: the autostart block (it also sets the console font to Terminus 28x14 (`terminus-28`); to change it, type `console-font`: it lists the sizes, you type a number or a name such as `dejavu-43` or `terminus-bold-24`, and the text changes at once and is remembered in `~/.config/debsway/console-font`; `console-font list` only shows the list), and `~/.config/debsway/login` holds the mode. `sway` still starts the desktop by hand.
