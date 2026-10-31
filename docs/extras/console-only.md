@@ -16,4 +16,4 @@ Alt takes the place of Super: Alt+1 … Alt+0 go to workspaces, Alt+Shift+1 … 
 
 ## What it changes on your computer
 
-- `~/.profile`: the autostart block, and `~/.config/debsway/login` holds the mode. `sway` still starts the desktop by hand.
+- `~/.profile`: the autostart block (it also sets the console font to Terminus Bold 24x12, bigger than the default; to change it, put another name from `/usr/share/consolefonts` in `~/.config/debsway/console-font`, e.g. `Uni3-TerminusBold32x16` for larger or `Uni3-Terminus16` for the old size), and `~/.config/debsway/login` holds the mode. `sway` still starts the desktop by hand.
