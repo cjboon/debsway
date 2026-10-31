@@ -1,0 +1,204 @@
+#!/bin/sh
+# Status line for swaybar: debsway (click: its menu) | wifi (click: nmtui) | volume (scroll: louder/quieter,
+# click: mute) | brightness (scroll) | battery (click: time left) | next timer | date
+# (click on the time or a timer: the timer menu; the format is set by `timer clock`)
+# Written by debsway install-base.sh. Each part only shows when this
+# system has what it needs, so it copes with anything missing or removed.
+# Redraws every 5 seconds, or right away on SIGUSR1 (the brightness keys
+# send it; the PID is in $XDG_RUNTIME_DIR/sway-status.pid).
+# Speaks swaybar's JSON protocol so that a click on debsway can be heard.
+
+PIDFILE=${XDG_RUNTIME_DIR:-/tmp}/sway-status.pid
+POWER=${DEBSWAY_POWER_DIR:-/sys/class/power_supply}   # (a test can point it elsewhere)
+wifi() {
+    if command -v nmcli >/dev/null; then
+        name=$(nmcli -t -f NAME,TYPE connection show --active 2>/dev/null |
+            awk -F: '$2 == "802-11-wireless" { print $1; exit }')
+        if [ -n "$name" ]; then echo "$name"; return; fi
+    fi
+    if command -v iw >/dev/null; then
+        for d in /sys/class/net/*; do
+            [ -d "$d/wireless" ] || continue
+            name=$(iw dev "${d##*/}" link 2>/dev/null | sed -n 's/^[[:space:]]*SSID: //p')
+            if [ -n "$name" ]; then echo "$name"; return; fi
+        done
+    fi
+    if [ -n "$(ip route show default 2>/dev/null)" ]; then echo online; else echo offline; fi
+}
+
+volume() {
+    command -v wpctl >/dev/null || return 0
+    wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null |
+        awk '{ v = int($2 * 100 + 0.5); print ($3 == "[MUTED]") ? "vol muted" : "vol " v "%" }'
+}
+
+brightness() {
+    for d in /sys/class/backlight/*; do
+        [ -r "$d/brightness" ] || continue
+        max=$(cat "$d/max_brightness")
+        [ "$max" -gt 0 ] || continue
+        echo "bright $((($(cat "$d/brightness") * 100 + max / 2) / max))%"
+        return
+    done
+}
+
+battery() {
+    for b in "$POWER"/BAT*; do
+        [ -r "$b/capacity" ] || continue
+        cap=$(cat "$b/capacity")
+        if [ "$(cat "$b/status" 2>/dev/null)" = Charging ]; then
+            echo "bat $cap%+"
+        else
+            echo "bat $cap%"
+        fi
+        return
+    done
+}
+
+# battery_time: a sentence on how long the battery will last (or take to fill)
+battery_time() {
+    for b in "$POWER"/BAT*; do
+        [ -r "$b/capacity" ] || continue
+        status=$(cat "$b/status" 2>/dev/null)
+        # energy (uWh) and power (uW), or on some laptops charge (uAh) and current (uA):
+        # either way the ratio is hours
+        for pair in "energy_now energy_full power_now" "charge_now charge_full current_now"; do
+            # shellcheck disable=SC2086  # the three names are meant to split
+            set -- $pair
+            [ -r "$b/$1" ] && [ -r "$b/$3" ] && break
+        done
+        now=$(cat "$b/$1" 2>/dev/null); full=$(cat "$b/$2" 2>/dev/null); rate=$(cat "$b/$3" 2>/dev/null)
+        case $status in
+            Discharging) left=$now ;;
+            Charging) left=$((full - now)) ;;
+            Full) echo "Fully charged"; return ;;
+            *) echo "Plugged in, not charging ($(cat "$b/capacity")%)"; return ;;
+        esac
+        if [ "${rate:-0}" -le 0 ] 2>/dev/null; then echo "Not enough data yet, try again in a minute"; return; fi
+        mins=$((left * 60 / rate))
+        if [ "$mins" -ge 60 ]; then t="$((mins / 60)) h $((mins % 60)) min"; else t="$mins min"; fi
+        if [ "$status" = Charging ]; then echo "$t until full"; else echo "$t left"; fi
+        return
+    done
+    echo "No battery found"
+}
+
+# json TEXT: TEXT made safe to put inside a JSON string (a network name can hold quotes)
+json() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+
+# clock_format: the date(1) format for the time, as chosen with `timer clock`
+clock_format() {
+    conf=${XDG_CONFIG_HOME:-$HOME/.config}/debsway/clock
+    case $(sed -n 's/^date=//p' "$conf" 2>/dev/null) in no) echo '%a %-I:%M %p' ;; *) echo '%a %Y-%m-%d %-I:%M %p' ;; esac
+}
+
+# timer_text: the next timer or alarm ("tea 4m"), if there is one
+timer_text() {
+    [ -x "$HOME/.local/bin/timer" ] && "$HOME/.local/bin/timer" next
+}
+
+# block NAME TEXT: one part of the bar, " | TEXT", nothing if TEXT is empty
+block() {
+    [ -n "$2" ] || return 0
+    if [ -n "$TMUX_BAR" ]; then
+        printf ' | #[range=user|%s]%s#[norange]' "$1" "$(printf '%s' "$2" | sed 's/#/##/g')"
+        return 0
+    fi
+    printf ',{"name":"%s","full_text":" | %s","separator":false,"separator_block_width":0}' "$1" "$(json "$2")"
+}
+
+# --battery: the sentence a click on bat shows (console-click uses it)
+if [ "${1:-}" = --battery ]; then
+    echo "Battery $(battery | sed 's/^bat //; s/+$//'): $(battery_time)"
+    exit 0
+fi
+
+# --tmux: the same bar as one line of tmux status text (extras/console-only.sh),
+# each part a click range named like the bar's; then exit
+if [ "${1:-}" = --tmux ]; then
+    TMUX_BAR=1
+    printf '#[range=user|menu]debsway#[norange]%s%s%s%s%s%s' \
+        "$(block wifi "$(wifi)")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
+        "$(block bat "$(battery)")" "$(block timer "$(timer_text)")" "$(block date "$(date +"$(clock_format)")")"
+    exit 0
+fi
+echo $$ >"$PIDFILE"
+trap 'rm -f "$PIDFILE"' EXIT
+trap 'exit' TERM INT HUP
+trap ':' USR1
+
+# Clicks and scrolls arrive on stdin, one line of JSON each (sway puts spaces in it)
+exec 3<&0
+
+# open_or_close APP-ID COMMAND...: a click on the bar opens that window, and a
+# click while it is open closes it (sway's kill fails when no window has that
+# app id). The debsway menu's window is left open while it runs Update or
+# Install apps (it marks itself busy, by its PID): that click brings it to
+# the front instead, so an update is never cut off. One of these windows at a
+# time: opening one closes the others (but not a busy menu).
+menu_busy() {
+    mb_pid=$(cat "${XDG_RUNTIME_DIR:-/tmp}/debsway-menu-busy" 2>/dev/null)
+    case $mb_pid in '' | *[!0-9]*) return 1 ;; esac
+    kill -0 "$mb_pid" 2>/dev/null
+}
+open_or_close() {
+    oc_id=$1
+    shift
+    if [ "$oc_id" = debsway-run ] && menu_busy; then
+        swaymsg -q "[app_id=\"$oc_id\"] focus" >/dev/null 2>&1
+        return 0
+    fi
+    swaymsg -q "[app_id=\"$oc_id\"] kill" >/dev/null 2>&1 && return 0
+    for oc_other in debsway-run debsway-keys debsway-nmtui debsway-timer; do
+        [ "$oc_other" != "$oc_id" ] || continue
+        [ "$oc_other" != debsway-run ] || ! menu_busy || continue
+        swaymsg -q "[app_id=\"$oc_other\"] kill" >/dev/null 2>&1 || true
+    done
+    "$@" >/dev/null 2>&1 &
+}
+while read -r event <&3; do
+    case $(printf '%s' "$event" | tr -d ' ') in
+        *'"name":"menu"'*'"button":1,'*)
+            # the menu (Help, Install apps, Update, Status); the key cheat sheet
+            # directly if the menu isn't installed
+            if [ -x "$HOME/.local/bin/debsway-menu" ]; then
+                open_or_close debsway-run "$HOME/.local/bin/debsway-menu"
+            else
+                open_or_close debsway-keys foot --app-id=debsway-keys "$HOME/.local/bin/keys"
+            fi ;;
+        *'"name":"wifi"'*'"button":1,'*)
+            # nmtui measures its window once at the start, so wait for sway to size it
+            # (the debsway wrapper if there is one: nmtui in the debsway colors)
+            # shellcheck disable=SC2016  # expanded by the inner sh, on purpose
+            if [ -x "$HOME/.local/bin/nmtui" ]; then
+                open_or_close debsway-nmtui foot --app-id=debsway-nmtui sh -c 'sleep 0.5; exec "$HOME/.local/bin/nmtui"'
+            elif command -v nmtui >/dev/null; then
+                open_or_close debsway-nmtui foot --app-id=debsway-nmtui sh -c 'sleep 0.5; exec nmtui'
+            fi ;;
+        # the scroll wheel is button 4 (up) and 5 (down); the volume and brightness
+        # commands also tell this script to redraw
+        *'"name":"vol"'*'"button":1,'*) "$HOME/.local/bin/volume" mute ;;
+        *'"name":"vol"'*'"button":4,'*) "$HOME/.local/bin/volume" up ;;
+        *'"name":"vol"'*'"button":5,'*) "$HOME/.local/bin/volume" down ;;
+        *'"name":"bright"'*'"button":4,'*) "$HOME/.local/bin/brightness" up ;;
+        *'"name":"bright"'*'"button":5,'*) "$HOME/.local/bin/brightness" down ;;
+        *'"name":"date"'*'"button":1,'* | *'"name":"timer"'*'"button":1,'*)
+            open_or_close debsway-timer foot --app-id=debsway-timer "$HOME/.local/bin/timer" ;;
+        *'"name":"bat"'*'"button":1,'*)
+            command -v notify-send >/dev/null &&
+                notify-send -a debsway -t 8000 "Battery $(battery | sed 's/^bat //; s/+$//')" "$(battery_time)" ;;
+    esac
+done &
+reader=$!
+trap 'kill $reader 2>/dev/null; rm -f "$PIDFILE"' EXIT
+
+echo '{"version":1,"click_events":true}'
+echo '['
+while :; do
+    printf '[{"name":"menu","full_text":"debsway","separator":false,"separator_block_width":0}%s%s%s%s%s%s],\n' \
+        "$(block wifi "$(wifi)")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
+        "$(block bat "$(battery)")" "$(block timer "$(timer_text)")" "$(block date "$(date +"$(clock_format)")")"
+    # wait returns early when SIGUSR1 arrives; the sleep ends by itself
+    sleep 5 &
+    wait $!
+done

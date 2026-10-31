@@ -1,0 +1,65 @@
+#!/bin/bash
+# dim-warning start|stop: written by debsway parts/swayidle.sh
+# A warning before the screen locks. swayidle runs "start" 30 seconds before the
+# lock: the screen fades down slowly to 10% and a notification says it is about
+# to lock. Any key or mouse movement makes swayidle run "stop", which puts the
+# brightness back exactly where it was. A screen with no backlight (a desktop
+# monitor) can't be dimmed, so it only gets the notification.
+#   DEBSWAY_DIM_SECONDS  how long the fade takes (default 30)
+#   DEBSWAY_DIM_TO       the brightness it fades down to, in percent (default 10)
+#   DEBSWAY_DIM_TICK     seconds between steps (default 1; a test makes it small)
+STATE=${XDG_RUNTIME_DIR:-/tmp}/dim-warning
+SECONDS_TOTAL=${DEBSWAY_DIM_SECONDS:-30}
+TO=${DEBSWAY_DIM_TO:-10}
+TICK=${DEBSWAY_DIM_TICK:-1}
+
+backlight() { command -v brightnessctl >/dev/null && brightnessctl -m 2>/dev/null | grep -q .; }
+percent() { brightnessctl -m | cut -d, -f4 | tr -d %; }
+
+# stop: end the fade and put the brightness back
+stop() {
+    local pid
+    pid=$(cat "$STATE.pid" 2>/dev/null)
+    # (only a process that really is this script's fade, not a stale number)
+    if [ -n "$pid" ] && { tr '\0' ' ' <"/proc/$pid/cmdline"; } 2>/dev/null | grep -q 'dim-warning'; then
+        kill "$pid" 2>/dev/null
+    fi
+    if [ -f "$STATE.saved" ]; then
+        brightnessctl -q set "$(cat "$STATE.saved")%" 2>/dev/null
+    fi
+    rm -f "$STATE.pid" "$STATE.saved"
+}
+
+fade() {
+    local from=$1 steps i level
+    steps=$((SECONDS_TOTAL))
+    [ "$steps" -ge 1 ] || steps=1
+    for ((i = 1; i <= steps; i++)); do
+        sleep "$TICK"
+        level=$((from - (from - TO) * i / steps))
+        [ "$level" -ge "$TO" ] || level=$TO
+        brightnessctl -q set "$level%" 2>/dev/null
+    done
+}
+
+case ${1:-} in
+    start)
+        if command -v notify-send >/dev/null; then
+            notify-send -a debsway -u critical -t $((SECONDS_TOTAL * 1000)) \
+                "Locking soon" "Move the mouse or press a key to stay unlocked." 2>/dev/null
+        fi
+        backlight || exit 0
+        [ ! -f "$STATE.saved" ] || stop   # a fade still running from before: start over
+        from=$(percent)
+        # nothing to fade if it is already at or below the dim level
+        [ "$from" -gt "$TO" ] || exit 0
+        echo "$from" >"$STATE.saved"
+        # the fade runs on its own, so swayidle is not kept waiting
+        setsid bash "$0" fade "$from" >/dev/null 2>&1 &
+        echo $! >"$STATE.pid"
+        ;;
+    fade) fade "$2" ;;
+    stop) stop ;;
+    *) echo "usage: dim-warning start|stop" >&2; exit 2 ;;
+esac
+exit 0

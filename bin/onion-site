@@ -1,0 +1,53 @@
+#!/bin/bash
+# onion-site [start|stop|status|shell|upload|update|address|rebuild]: written by
+# debsway extras/onion-site.sh
+# Your onion site, which runs in its own VM with no network: only Tor on this
+# computer reaches it, so nothing the site does can give away your address.
+#   onion-site start                  start the site's VM (the site is up while it runs)
+#   onion-site stop                   stop it (the site is down)
+#   onion-site status                 is it running?
+#   onion-site address                the site's .onion address
+#   onion-site upload static FOLDER   FOLDER becomes the site's files (/srv/site/static)
+#   onion-site upload app FOLDER      FOLDER becomes the app (/srv/site/app; Python: app.py)
+#   onion-site shell                  a shell in the VM, as the site's user
+#   onion-site update                 the VM's security updates, through Tor
+#   onion-site rebuild                throw the VM away and build a fresh one
+#                                     (the .onion address stays; the site's files don't)
+set -euo pipefail
+
+AGENT=onion-site
+SESSION=/usr/local/libexec/onion-site-session
+ADDRESS=${XDG_STATE_HOME:-$HOME/.local/state}/debsway/onion-site-address
+
+die() { printf 'onion-site: %s\n' "$*" >&2; exit 1; }
+
+[ "$(id -u)" -ne 0 ] || die "run it as your normal user, not root."
+
+cmd=${1:-}
+case "$cmd" in
+    start | stop | status | shell | update | rebuild) ;;
+    upload)
+        case ${2:-} in static | app) ;; *) die "upload what? onion-site upload static FOLDER, or upload app FOLDER" ;; esac
+        [ -d "${3:-}" ] || die "no folder '${3:-}'. onion-site upload ${2} FOLDER"
+        ;;
+    address)
+        [ -s "$ADDRESS" ] || die "no address saved here. Run: bash ~/debsway/extras/onion-site.sh"
+        cat "$ADDRESS"
+        exit 0 ;;
+    -h | --help | "")
+        sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+        [ -n "$cmd" ] || exit 2
+        exit 0 ;;
+    *) die "unknown command '$cmd'. Try: onion-site --help" ;;
+esac
+
+sudo -n -u "$AGENT" -l "$SESSION" >/dev/null 2>&1 ||
+    die "the onion site isn't set up. Run: bash ~/debsway/extras/onion-site.sh"
+
+if [ "$cmd" = upload ]; then
+    # No shared folder: the files go to the VM as one stream (owner and
+    # permissions of yours aren't carried over)
+    tar -C "$3" --owner=0 --group=0 -cf - . | sudo -n -u "$AGENT" "$SESSION" upload "$2"
+    exit
+fi
+exec sudo -n -u "$AGENT" "$SESSION" "$cmd"

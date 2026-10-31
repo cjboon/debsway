@@ -1,0 +1,115 @@
+    1  cd debsway/
+    2  ls
+    3  bash prep/fetch-offline-debs.sh 
+    4  sudo apt update
+    5  ./wifi.sh 
+    6  ./status.sh 
+    7  ls
+    8  ./start.sh 
+    9  cd /etc/apt/
+   10  cat sources.list
+   11  suvo vi sources.list
+   12  sudo vi sources.list
+   13  sudo apt update
+   14  cat sources.list
+   15  man sources.list
+   16  ls
+   17  cat sources.list~
+   18  cd sources.list.d/
+   19  ls
+   20  cd ..
+   21  ls
+   22  man sources
+   23  man sources.list
+   24  ls
+   25  sudo vi sources.list
+   26  ls
+   27  cd 
+   28  ls
+   29  cd debsway/
+   30  ls
+   31  cd offline/
+   32  ls
+   33  cd debs/
+   34  ls
+   35  cd verify/
+   36  ls
+   37  cd debian/
+   38  ls
+   39  man gzip
+   40  gzip -x main_Packages.gz
+   41  ls
+   42  gzip main_Packages.gz
+   43  gzip -f  main_Packages.gz
+   44  ls
+   45  gzip --unzip main_Packages.gz
+   46  gzip --help
+   47  gzip -d main_Packages.gz
+   48  ls
+   49  gzip -d main_Packages.gz.gz
+   50  ls
+   51  gzip -d main_Packages.gz
+   52  ls
+   53  cat main_Packages 
+   54  ls
+   55  gzip main_Packages 
+   56  ls
+   57  cd ..
+   58  ls
+   59  cd ..
+   60  ls
+   61  cd ..
+   62  ls
+   63  cd ..
+   64  ls
+   65  cd lib
+   66  ls
+   67  cd ..
+   68  ls
+   69  cd off
+   70  cd offline/
+   71  ls
+   72  cd ..
+   73  ls
+   74  cd dta
+   75  ls
+   76  cd dtaa
+   77  cd data
+   78  ls
+   79  cd ..
+   80  ls
+   81  cd prep
+   82  ls
+   83  cd ..
+   84  cd parts/
+   85  ls
+   86  cd ..
+   87  ls
+   88  cd tools/
+   89  ls
+   90  cd ..
+   91  ls
+   92  man
+   93  ls
+   94  cd /etc/apt/
+   95  sudo vi sources.list
+   96  sudo apt update
+   97  ifconfig usb0 up
+   98  sudo ifconfig usb0 up
+   99  ifconfig
+  100  sudo ifconfig
+  101  dhclient
+  102  sudo dhclient
+  103  sudo su
+  104  sudo apt update
+  105  ip addr show enxaaf7ed000bba
+  106  ip route
+  107  cd /etc/apt/
+  108  sudo vi sources.list
+  109  sudo apt update
+  110  sudo apt upgrade
+  111  cd 
+  112  ls
+  113  ls -al
+  114  history
+  115  history > backup_history_01.txt

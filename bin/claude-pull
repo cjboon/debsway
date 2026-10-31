@@ -1,0 +1,26 @@
+#!/bin/bash
+# claude-pull [DIR]: written by debsway extras/claude-code.sh
+# Brings what Claude pushed to GitHub into your own copy of a repository
+# (default: the one you're in), after showing you what it changes. Nothing
+# comes in unless you say yes, and only on top of what you have.
+set -euo pipefail
+
+die() { printf 'claude-pull: %s\n' "$*" >&2; exit 1; }
+
+cd "${1:-.}"
+git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "$PWD is not a git repository."
+# A hooks folder that came in with the pull would run as you
+[ -z "$(git config core.hooksPath)" ] || die "core.hooksPath is set here; remove it first: git config --unset core.hooksPath"
+git fetch --quiet
+if [ -z "$(git rev-list 'HEAD..@{upstream}')" ]; then
+    echo "Up to date: nothing new on GitHub."
+    exit 0
+fi
+git --no-pager log --stat --format='%n%C(yellow)%h%Creset %s%n%b' 'HEAD..@{upstream}'
+echo
+echo "Every changed line: git diff HEAD..@{upstream}"
+read -rp "Bring these in? [y/N] " answer
+case $answer in
+    [yY]*) git merge --ff-only '@{upstream}' ;;
+    *) echo "Nothing changed." ;;
+esac

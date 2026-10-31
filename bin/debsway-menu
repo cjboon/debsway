@@ -1,0 +1,358 @@
+#!/bin/bash
+# debsway-menu: written by debsway parts/debsway-menu.sh
+# The menu behind the "debsway" item in the bar. A click opens a black-and-gray
+# terminal in a floating, centered window, with the choices Help, Terminal (Font size on a
+# text console), Install apps, Update and Status. Arrow keys (or j/k) and Enter choose; so does a
+# click. Esc closes every screen of it, the install list and the pager
+# included. What you choose runs in that same window, and the window closes
+# when it ends (the install and update screens wait for a key first, if they
+# did something you may want to read). The last three need the debsway folder
+# (~/debsway, or DEBSWAY_DIR); without it only Help shows.
+#   debsway-menu              open the window
+#   debsway-menu --tui        the menu itself, in the terminal you are in
+#   debsway-menu --pager FILE show FILE: arrows, Space and b scroll, Esc closes
+DIR=${DEBSWAY_DIR:-$HOME/debsway}
+KEYS_FILE=$HOME/.local/share/debsway/keys.txt
+[ -f "$KEYS_FILE" ] || KEYS_FILE=$DIR/data/keys.txt
+
+# The terminal's colors, all gray: black screen, light gray text. The eight
+# normal and eight bright colors programs ask for (red warnings, green
+# headings...) come out as shades, so nothing is colored.
+gray_options() {
+    local i=0 c
+    printf '%s\n' -o colors.foreground=d0d0d0 -o colors.background=000000 \
+        -o colors.selection-foreground=000000 -o colors.selection-background=d0d0d0 -o colors.alpha=1.0
+    for c in 000000 9a9a9a b8b8b8 c8c8c8 8a8a8a a8a8a8 bcbcbc d0d0d0; do
+        printf '%s\n' -o "colors.regular$i=$c"
+        i=$((i + 1))
+    done
+    i=0
+    for c in 606060 aaaaaa d8d8d8 e0e0e0 9a9a9a b8b8b8 d0d0d0 ffffff; do
+        printf '%s\n' -o "colors.bright$i=$c"
+        i=$((i + 1))
+    done
+}
+
+if [ -z "$1" ]; then
+    mapfile -t gray < <(gray_options)
+    # --log-level=error: foot warns about a protocol sway lacks (the window icon), harmlessly
+    # scrollback.multiplier=1: one step of the mouse wheel is one arrow key in
+    # full-screen lists (the install checklist), not three
+    exec foot --log-level=error --app-id=debsway-run -o scrollback.multiplier=1.0 "${gray[@]}" "$(readlink -f -- "$0")" --tui
+fi
+
+# ---- inside the terminal ----
+export LC_ALL=C.UTF-8   # so that cutting a line to the window's width counts characters
+saved=$(stty -g 2>/dev/null)
+# How long to wait for the rest of an arrow key or mouse report after an Esc
+# byte. Nothing follows a plain Esc, so this is also how long Esc takes to close.
+ESC_WAIT=${DEBSWAY_ESC_WAIT:-0.1}
+size=
+REDRAW=
+KEY=
+CX=0 CY=0
+
+screen_on() { printf '\e[?1049h\e[?25l\e[?1000h\e[?1006h'; stty -echo 2>/dev/null; }
+screen_off() {
+    printf '\e[?1000l\e[?1006l\e[?25h\e[?1049l'
+    [ -z "$saved" ] || stty "$saved" 2>/dev/null
+}
+trap screen_off EXIT
+trap 'exit 130' INT TERM HUP
+
+# settle: a new window starts at a small default size and sway stretches it a
+# moment later. Drawing at once would show the menu off to one side and then
+# jump, so wait (at most about half a second) until the size has stopped
+# changing for a fraction of a second.
+settle() {
+    local prev cur same=0 i
+    prev=$(stty size 2>/dev/null)
+    for ((i = 0; i < 20; i++)); do
+        sleep 0.03
+        cur=$(stty size 2>/dev/null)
+        if [ "$cur" = "$prev" ]; then
+            same=$((same + 1))
+            [ "$same" -lt 4 ] || return 0
+        else
+            same=0
+            prev=$cur
+        fi
+    done
+}
+
+# on_idle: the window is a different size from when it was drawn (a new window
+# starts small and sway stretches it a moment later): draw it again
+on_idle() {
+    [ -z "$REDRAW" ] || [ "$(stty size 2>/dev/null || echo "24 80")" = "$size" ] || "$REDRAW"
+}
+
+# read_key: waits for one key or mouse report and sets KEY to: up down pgup pgdn
+# home end esc enter space click wheelup wheeldown other, or the character typed.
+# A click also sets CX and CY (column and row, counted from 1).
+read_key() {
+    local c rc k2 k3 k4 report btn
+    while :; do
+        IFS= read -rsn1 -t 0.1 c
+        rc=$?
+        [ "$rc" -ne 0 ] || break
+        [ "$rc" -gt 128 ] || exit 0   # nothing more to read: the window is gone
+        on_idle
+    done
+    case $c in
+        '') KEY=enter ;;
+        ' ') KEY=space ;;
+        $'\e')
+            KEY=esc   # nothing follows a plain Esc; an arrow or a mouse report follows at once
+            IFS= read -rsn1 -t "$ESC_WAIT" k2 || return 0
+            [ "$k2" = '[' ] || [ "$k2" = O ] || return 0
+            IFS= read -rsn1 -t "$ESC_WAIT" k3 || return 0
+            case $k3 in
+                A) KEY=up ;;
+                B) KEY=down ;;
+                H) KEY=home ;;
+                F) KEY=end ;;
+                [0-9])
+                    IFS= read -rsn1 -t "$ESC_WAIT" k4 || return 0   # the ~ that ends it
+                    case $k3 in
+                        1 | 7) KEY=home ;;
+                        4 | 8) KEY=end ;;
+                        5) KEY=pgup ;;
+                        6) KEY=pgdn ;;
+                        *) KEY=other ;;
+                    esac ;;
+                '<')
+                    # mouse: button;column;row then M (press) or m (release)
+                    report=
+                    while IFS= read -rsn1 -t "$ESC_WAIT" c; do
+                        if [ "$c" = M ] || [ "$c" = m ]; then break; fi
+                        report+=$c
+                    done
+                    IFS=';' read -r btn CX CY <<<"$report"
+                    KEY=other
+                    if [ "$c" = M ]; then
+                        case $btn in
+                            0) KEY=click ;;
+                            64) KEY=wheelup ;;
+                            65) KEY=wheeldown ;;
+                        esac
+                    fi ;;
+                *) KEY=other ;;
+            esac ;;
+        *) KEY=$c ;;
+    esac
+}
+
+# ---- the pager ----
+lines=()
+top=0
+page=20
+
+pager_draw() {
+    local rows cols i end maxtop
+    size=$(stty size 2>/dev/null || echo "24 80")
+    read -r rows cols <<<"$size"
+    page=$((rows - 1))
+    [ "$page" -ge 1 ] || page=1
+    maxtop=$((${#lines[@]} - page))
+    [ "$maxtop" -ge 0 ] || maxtop=0
+    [ "$top" -le "$maxtop" ] || top=$maxtop
+    [ "$top" -ge 0 ] || top=0
+    end=$((top + page))
+    [ "$end" -le "${#lines[@]}" ] || end=${#lines[@]}
+    printf '\e[H\e[2J'
+    for ((i = top; i < end; i++)); do printf '%s\e[0m\n' "${lines[i]:0:cols}"; done
+    printf '\e[%d;1H\e[2mEsc closes. Arrows, Space and b scroll.  (%d-%d of %d)\e[0m' \
+        "$rows" $((top + 1)) "$end" "${#lines[@]}"
+}
+
+# pager: shows `lines`; Esc (or q) ends the program
+pager() {
+    top=0
+    REDRAW=pager_draw
+    while :; do
+        pager_draw
+        read_key
+        case $KEY in
+            esc | q) exit 0 ;;
+            down | j | enter) top=$((top + 1)) ;;
+            up | k) top=$((top - 1)) ;;
+            space | pgdn | f) top=$((top + page)) ;;
+            pgup | b) top=$((top - page)) ;;
+            home | g) top=0 ;;
+            end | G) top=$((${#lines[@]} + 1000000)) ;;   # pager_draw brings it back to the last page
+            wheeldown) top=$((top + 3)) ;;
+            wheelup) top=$((top - 3)) ;;
+        esac
+    done
+}
+
+if [ "$1" = --pager ]; then
+    [ -r "${2:-}" ] || { echo "debsway-menu: can't read ${2:-a file}" >&2; exit 1; }
+    mapfile -t lines <"$2"
+    screen_on
+    settle
+    pager
+fi
+[ "$1" = --tui ] || { echo "usage: debsway-menu [--tui | --pager FILE]" >&2; exit 2; }
+
+# ---- the menu ----
+# ids say what an entry does; items are what it shows. Wi-Fi, Bluetooth and
+# the microphone are listed only when this computer has them (bin/radios), with
+# their state; choosing one flips it and the menu stays open.
+RADIOS=$HOME/.local/bin/radios
+ids=(help)
+items=(Help)
+# A terminal window, as Super+Enter opens: for a mouse, or where the keys don't
+# arrive (sway in a VM's window: the computer's own sway takes Super first)
+if [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null; then
+    ids+=(terminal)
+    items+=(Terminal)
+fi
+# Text size, on a text console only (console-only mode): there is no Terminal
+# there, and the menu runs in the console itself
+if [ -z "${SWAYSOCK:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ] && [ -x "$HOME/.local/bin/console-font" ]; then
+    ids+=(font)
+    items+=("Font size")
+fi
+if [ -f "$DIR/update.sh" ]; then
+    ids+=(apps update status)
+    items+=("Install apps" Update Status)
+fi
+radio_ids=()
+if [ -x "$RADIOS" ]; then
+    mapfile -t radio_ids < <("$RADIOS" list 2>/dev/null | awk '{ print $1 }')
+fi
+fixed=${#ids[@]}
+for r in "${radio_ids[@]}"; do ids+=("$r"); items+=(""); done
+n=${#ids[@]}
+
+# radio_label NAME: what the entry shows, e.g. "Wi-Fi: on"
+radio_label() {
+    local name state
+    case $1 in wifi) name=Wi-Fi ;; bluetooth) name=Bluetooth ;; mic) name=Microphone ;; camera) name=Webcam ;; esac
+    state=$("$RADIOS" "$1" status 2>/dev/null)
+    case $state in
+        blocked) state="off (hardware switch)" ;;
+        "") state="unknown" ;;
+    esac
+    printf '%s: %s' "$name" "$state"
+}
+refresh_items() {
+    local i
+    for ((i = fixed; i < n; i++)); do items[i]=$(radio_label "${ids[i]}"); done
+}
+refresh_items
+sel=0
+width=38
+first_row=1 first_col=1
+
+# draw: the title, the choices (the chosen one reversed), and a hint, centered
+draw() {
+    local rows cols top left i y
+    size=$(stty size 2>/dev/null || echo "24 80")
+    read -r rows cols <<<"$size"
+    top=$(((rows - n - 4) / 2 + 1))
+    [ "$top" -ge 1 ] || top=1
+    left=$(((cols - width) / 2 + 1))
+    [ "$left" -ge 1 ] || left=1
+    first_row=$((top + 2))
+    first_col=$left
+    printf '\e[2J\e[%d;%dH\e[1mdebsway\e[0m' "$top" "$left"
+    for i in "${!items[@]}"; do
+        y=$((first_row + i))
+        if [ "$i" -eq "$sel" ]; then
+            printf '\e[%d;%dH\e[7m %-*s \e[0m' "$y" "$left" $((width - 2)) "${items[i]}"
+        else
+            printf '\e[%d;%dH %-*s ' "$y" "$left" $((width - 2)) "${items[i]}"
+        fi
+    done
+    printf '\e[%d;%dH\e[2marrows and Enter, or click. Esc closes.\e[0m' $((first_row + n + 1)) "$left"
+}
+
+# run_choice: runs the chosen entry in this window
+run_choice() {
+    local out
+    case ${ids[sel]} in
+        wifi | bluetooth | mic | camera)
+            "$RADIOS" "${ids[sel]}" toggle >/dev/null 2>&1
+            refresh_items
+            return 0 ;;
+        terminal)
+            swaymsg exec foot >/dev/null 2>&1
+            exit 0 ;;
+        font)
+            # console-font lists the sizes and asks; leave the menu's screen
+            # for it, then come back to the menu
+            screen_off
+            printf '\e[2J\e[1;1H'
+            "$HOME/.local/bin/console-font"
+            printf '\nPress Enter to go back. '
+            IFS= read -r _ </dev/tty || true
+            screen_on
+            settle ;;
+        help)
+            # the sheet without the lines for things that are not installed
+            mapfile -t lines < <("$HOME/.local/bin/keys" --text 2>/dev/null || cat "$KEYS_FILE")
+            pager ;;
+        status)
+            REDRAW=
+            printf '\e[2J\e[1;1HLooking at what is set up...'
+            out=$(cd "$DIR" && bash status.sh 2>&1)
+            mapfile -t lines <<<"$out"
+            pager ;;
+        apps | update)
+            trap - EXIT
+            screen_off
+            cd "$DIR" || exit 1
+            export DEBSWAY_PAUSE=1
+            # The scripts wait for a key at their end (pause_if_asked), which
+            # marks this file; one that stops on an error before that would
+            # close the window at once, so this waits instead
+            DEBSWAY_PAUSED_FILE=$(mktemp -u "${TMPDIR:-/tmp}/debsway-paused.XXXXXX")
+            export DEBSWAY_PAUSED_FILE
+            local rc log=
+            # Busy: a click on debsway in the bar now brings this window to the
+            # front instead of closing it (bin/sway-status), so nothing is cut off
+            local busy=${XDG_RUNTIME_DIR:-/tmp}/debsway-menu-busy
+            echo $$ >"$busy"
+            if [ "${ids[sel]}" = update ]; then
+                # What Update prints is also kept, for a look afterwards
+                log=${XDG_STATE_HOME:-$HOME/.local/state}/debsway/menu-update.log
+                mkdir -p "${log%/*}"
+                bash update.sh 2>&1 | tee "$log"
+                rc=${PIPESTATUS[0]}
+            else
+                bash install-extras.sh
+                rc=$?
+            fi
+            if [ "$rc" -ne 0 ] && [ ! -e "$DEBSWAY_PAUSED_FILE" ]; then
+                printf '\nIt stopped with an error (status %s).%s\nPress Enter to close. ' \
+                    "$rc" "${log:+ What it printed is in $log}" >&2
+                IFS= read -r _ </dev/tty || true
+            fi
+            rm -f "$DEBSWAY_PAUSED_FILE" "$busy"
+            exit "$rc" ;;
+    esac
+}
+
+screen_on
+settle
+REDRAW=draw
+while :; do
+    draw
+    read_key
+    case $KEY in
+        enter) run_choice ;;
+        down | j) sel=$(((sel + 1) % n)) ;;
+        up | k) sel=$(((sel + n - 1) % n)) ;;
+        wheeldown) sel=$(((sel + 1) % n)) ;;
+        wheelup) sel=$(((sel + n - 1) % n)) ;;
+        esc | q) exit 0 ;;
+        click)
+            i=$((CY - first_row))
+            if [ "$i" -ge 0 ] && [ "$i" -lt "$n" ] && [ "$CX" -ge "$first_col" ] && [ "$CX" -lt $((first_col + width)) ]; then
+                sel=$i
+                run_choice
+            fi ;;
+    esac
+done

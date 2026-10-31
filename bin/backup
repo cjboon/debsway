@@ -1,0 +1,19 @@
+#!/bin/bash
+# backup: written by debsway extras/backup.sh
+#   backup            back up your home folder now
+#   backup ARGS...    any restic command, on your backup (e.g. backup snapshots)
+# Without a PASSWORD_COMMAND in the config, restic asks for the password.
+conf="$HOME/.config/debsway/backup.conf"
+[ -f "$conf" ] || { echo "Not set up. Run: bash ~/debsway/extras/backup.sh" >&2; exit 1; }
+repo=$(sed -n 's/^BACKUP_REPO=//p' "$conf")
+cmd=$(sed -n 's/^PASSWORD_COMMAND=//p' "$conf")
+if [ ! -f "$repo/config" ]; then
+    echo "Backup not found at $repo. Is the drive plugged in?" >&2
+    exit 1
+fi
+export RESTIC_REPOSITORY="$repo"
+if [ -n "$cmd" ]; then export RESTIC_PASSWORD_COMMAND="$cmd"; fi
+if [ $# -eq 0 ]; then
+    exec restic backup --exclude-caches --exclude-file="$HOME/.config/debsway/backup-excludes" "$HOME"
+fi
+exec restic "$@"

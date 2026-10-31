@@ -1,0 +1,29 @@
+#!/bin/bash
+# Automatic security updates: every day apt quietly installs Debian's
+# security fixes (and Debian's own stable fixes) in the background.
+# Debian's default rules are kept. Packages from the other apt repositories
+# debsway adds (Mullvad, Claude Code) are updated too: the script that adds
+# a repository allows it (allow_unattended_updates in lib/apt.sh). Any
+# repository you add yourself is left for you to update. What it did is
+# logged in /var/log/unattended-upgrades/.
+# Usage: bash unattended-upgrades.sh [--remove]
+# status: apt:unattended-upgrades
+. "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+need_user
+
+CONF=/etc/apt/apt.conf.d/20auto-upgrades
+
+if [ "${1:-}" = --remove ]; then
+    apt_purge unattended-upgrades
+    sudo rm -f "$CONF"
+    note "Automatic updates are off. Update yourself with: sudo apt update && sudo apt upgrade"
+    exit
+fi
+
+say "Installing unattended-upgrades"
+apt_install unattended-upgrades
+# The package normally writes this too; written here so it's on for sure
+printf '%s\n' 'APT::Periodic::Update-Package-Lists "1";' 'APT::Periodic::Unattended-Upgrade "1";' |
+    sudo tee "$CONF" >/dev/null
+sudo systemctl enable --now apt-daily.timer apt-daily-upgrade.timer >/dev/null 2>&1 || true
+note "Security updates install themselves daily. See what would update: sudo unattended-upgrade --dry-run"

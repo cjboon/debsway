@@ -1,0 +1,15 @@
+#!/bin/sh
+# whonix: written by debsway extras/whonix.sh
+#   whonix          start both VMs and open the Workstation
+#   whonix gateway  start the Gateway and open it (Tor settings)
+#   whonix stop     shut both down
+v="virsh -c qemu:///session"
+up() { [ "$($v domstate "$1" 2>/dev/null)" = running ] || $v start "$1" >/dev/null; }
+case "${1:-start}" in
+    start) up Whonix-Gateway && up Whonix-Workstation &&
+        exec virt-manager -c qemu:///session --show-domain-console Whonix-Workstation ;;
+    gateway) up Whonix-Gateway &&
+        exec virt-manager -c qemu:///session --show-domain-console Whonix-Gateway ;;
+    stop) $v shutdown Whonix-Workstation 2>/dev/null; $v shutdown Whonix-Gateway 2>/dev/null; true ;;
+    *) echo "usage: whonix [start|gateway|stop]" >&2; exit 2 ;;
+esac

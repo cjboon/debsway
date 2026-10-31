@@ -1,0 +1,79 @@
+#!/bin/bash
+# debsway: written by debsway parts/debsway-menu.sh
+# One command for debsway. Without an option it opens the menu on a sway
+# screen and prints the help anywhere else. man debsway has the details.
+set -u
+DIR=${DEBSWAY_DIR:-$HOME/debsway}
+
+usage() {
+    cat <<'TEXT'
+usage: debsway [OPTION]
+
+  (no option)  open the menu: a window in sway, or in this terminal on a
+               text console or over ssh; this help when there is no terminal
+  --menu       open the menu: Help, Install apps, Update, Status
+  --update     bring debsway up to date, then rerun the scripts whose files
+               changed (more: --update --since COMMIT, --update --all)
+  --apps       pick optional programs to install (--apps --list lists them)
+  --status     show what debsway has set up on this computer
+  --test       check that the scripts, packages, downloads and keys still work
+  --wifi [on|off]       switch Wi-Fi on or off (no word: say whether it is on)
+  --bluetooth [on|off]  the same for Bluetooth
+  --mic [on|off]        the same for the microphone (muted at every login)
+  --camera [on|off]     the same for the webcam (with the webcam extra; off at every boot)
+  --welcome    show the key cheat sheet again (the first-login screen)
+  --version    which version of debsway this is
+  --dir        where the debsway folder is
+  --help       this help
+
+More: man debsway, and README.md in the debsway folder.
+TEXT
+}
+
+die() { printf 'debsway: %s\n' "$*" >&2; exit 1; }
+
+# need_dir: the commands that run a script of debsway's need its folder
+need_dir() {
+    [ -f "$DIR/lib.sh" ] ||
+        die "can't find the debsway folder ($DIR). Set DEBSWAY_DIR to where it is, or get it again: git clone <address> ~/debsway"
+}
+
+MENU=$HOME/.local/bin/debsway-menu
+# in_sway: there is a screen to open a window on
+in_sway() { [ -n "${WAYLAND_DISPLAY:-}" ] && [ -x "$MENU" ]; }
+# in_terminal: no sway, but a terminal to show the menu in (a text console, ssh)
+in_terminal() { [ -t 0 ] && [ -t 1 ] && [ -x "$MENU" ]; }
+
+cmd=${1:-}
+[ $# -eq 0 ] || shift
+
+case $cmd in
+    "")
+        if in_sway; then exec "$MENU"; fi
+        if in_terminal; then exec "$MENU" --tui; fi
+        usage ;;
+    --menu | menu)
+        if in_sway; then exec "$MENU"; fi
+        in_terminal || die "the menu needs your sway session or a terminal (and the debsway menu installed: bash $DIR/parts/debsway-menu.sh)."
+        exec "$MENU" --tui ;;
+    --update | update) need_dir; exec bash "$DIR/update.sh" "$@" ;;
+    --apps | apps) need_dir; exec bash "$DIR/install-extras.sh" "$@" ;;
+    --status | status) need_dir; exec bash "$DIR/status.sh" "$@" ;;
+    --test | test) need_dir; cd "$DIR" && exec bash test.sh "$@" ;;
+    --wifi | --bluetooth | --mic | --camera)
+        [ -x "$HOME/.local/bin/radios" ] || die "the radio switch isn't installed (bash $DIR/parts/debsway-menu.sh)."
+        exec "$HOME/.local/bin/radios" "${cmd#--}" "$@" ;;
+    --welcome | welcome)
+        # the same cheat sheet the first login opens, in this terminal
+        if [ -x "$HOME/.local/bin/keys" ]; then exec "$HOME/.local/bin/keys"; fi
+        die "the key cheat sheet isn't installed (bash $DIR/install-base.sh)." ;;
+    --version | version)
+        need_dir
+        git -C "$DIR" describe --always --dirty 2>/dev/null || echo unknown ;;
+    --dir) echo "$DIR" ;;
+    --help | -h | help) usage ;;
+    *)
+        printf 'debsway: unknown option "%s"\n\n' "$cmd" >&2
+        usage >&2
+        exit 2 ;;
+esac

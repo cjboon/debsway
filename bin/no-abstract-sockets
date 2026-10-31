@@ -1,0 +1,60 @@
+#!/bin/bash
+# no-abstract-sockets COMMAND [ARGS...]: written by debsway (parts/incognito.sh
+# and extras/claude-code.sh install it as root, under /usr/local/libexec).
+# Runs COMMAND so that it (and everything it starts) can't connect to an
+# "abstract" Unix socket made by any program outside it. Those sockets have no
+# owner or permissions: any user on the computer can connect to one. XWayland
+# listens on one (@/tmp/.X11-unix/X0), and anyone who connects to X11 can read
+# every X11 window, watch the keys typed into them and type for you. The
+# kernel's Landlock (Linux 6.12 or newer) is what stops it. Nothing else is
+# restricted: files, the network and ordinary sockets work as before, and
+# COMMAND can still make and use abstract sockets of its own.
+# Stops with an error if the kernel can't do it, unless
+# DEBSWAY_ALLOW_ABSTRACT_SOCKETS=1 is set (then COMMAND runs unrestricted).
+set -euo pipefail
+[ $# -ge 1 ] || { echo "usage: no-abstract-sockets COMMAND [ARGS...]" >&2; exit 2; }
+code=$(cat <<'PY'
+import ctypes
+import os
+import struct
+import sys
+
+SYS_CREATE, SYS_RESTRICT = 444, 446   # x86-64 numbers (arm64 uses the same ones)
+CREATE_VERSION = 1
+SCOPE_ABSTRACT_UNIX_SOCKET = 1
+PR_SET_NO_NEW_PRIVS = 38
+
+libc = ctypes.CDLL(None, use_errno=True)
+
+
+def fail(why):
+    if os.environ.get("DEBSWAY_ALLOW_ABSTRACT_SOCKETS") == "1":
+        os.execvp(sys.argv[1], sys.argv[1:])
+    print("no-abstract-sockets: " + why, file=sys.stderr)
+    print("no-abstract-sockets: (DEBSWAY_ALLOW_ABSTRACT_SOCKETS=1 runs it without this protection.)",
+          file=sys.stderr)
+    sys.exit(1)
+
+
+abi = libc.syscall(SYS_CREATE, None, 0, CREATE_VERSION)
+if abi < 6:
+    fail("this kernel can't stop a program reaching abstract sockets (needs Linux 6.12 "
+         "with Landlock; version found: %s)." % abi)
+# handled_access_fs = 0, handled_access_net = 0: only the scope is set
+attr = struct.pack("QQQ", 0, 0, SCOPE_ABSTRACT_UNIX_SOCKET)
+fd = libc.syscall(SYS_CREATE, attr, len(attr), 0)
+if fd < 0:
+    fail("Landlock refused the rule (error %d)." % ctypes.get_errno())
+if libc.prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0:
+    fail("couldn't set no_new_privs (error %d)." % ctypes.get_errno())
+if libc.syscall(SYS_RESTRICT, fd, 0) != 0:
+    fail("Landlock couldn't apply the rule (error %d)." % ctypes.get_errno())
+os.close(fd)
+try:
+    os.execvp(sys.argv[1], sys.argv[1:])
+except OSError as e:
+    print("no-abstract-sockets: %s: %s" % (sys.argv[1], e.strerror), file=sys.stderr)
+    sys.exit(127)
+PY
+)
+exec python3 -I -c "$code" "$@"

@@ -1,0 +1,9 @@
+#!/bin/sh
+# tails-usb: written by debsway extras/tails-usb.sh
+# Makes a Tails USB stick: downloads the newest Tails (through Tor when Tor runs
+# here), checks its signature and that it is the current release, writes it to
+# a USB stick you pick and type the name of, and reads it back to check.
+# Everything on the stick is erased. A checked copy is kept for the next stick.
+DIR=${DEBSWAY_DIR:-$HOME/debsway}
+[ -f "$DIR/extras/tails-usb.sh" ] || { echo "tails-usb: can't find the debsway folder ($DIR). Set DEBSWAY_DIR to where it is." >&2; exit 1; }
+exec bash "$DIR/extras/tails-usb.sh" --make "$@"

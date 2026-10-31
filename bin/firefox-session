@@ -1,0 +1,214 @@
+#!/bin/bash
+# firefox-session: written by debsway extras/firefox-sandbox.sh
+# Runs as the user "firefox", or as "fx-NAME" for a Firefox profile with its own
+# user (the firefox command starts it through sudo; it is the only thing your
+# user may run as those users). Opens Firefox as a normal
+# window on your sway, through the restricted Wayland socket the firefox
+# command made: it can show windows and use the clipboard while it has focus,
+# but sway does not give it the screen-reading, typing or session-lock
+# protocols. The profile lives in this user's own home and is kept.
+# Sound: its own PipeWire whose only output is a pipe into your user's player,
+# as in incognito; it never reaches your audio server or microphone.
+#   firefox-session start RUNTIME_DIR WAYLAND_DISPLAY AUDIO DOWNLOADS [URL...]
+#   firefox-session open [URL...]     opens the URLs in the Firefox that is running
+set -euo pipefail
+umask 077
+export PATH=/usr/local/bin:/usr/bin:/bin
+
+die() { printf 'firefox: %s\n' "$*" >&2; exit 1; }
+
+# Keeps it off XWayland's abstract socket, which any user can connect to
+noabs=/usr/local/libexec/debsway-no-abstract-sockets
+need_noabs() { [ -x "$noabs" ] || die "$noabs is missing. Run: bash ~/debsway/extras/firefox-sandbox.sh"; }
+
+# Who this is: "firefox" (tag empty), or "fx-NAME" for the profile NAME
+user=$(id -un)
+case $user in
+    firefox) tag= ;;
+    fx-*)
+        tag=${user#fx-}
+        [[ $tag =~ ^[a-z][a-z0-9-]{0,27}$ ]] || die "unexpected user name."
+        ;;
+    *) die "this runs as the user firefox (or fx-NAME); use the firefox command." ;;
+esac
+home=$(getent passwd "$user" | cut -d: -f6)
+[ -d "$home" ] || die "$user's home folder is missing."
+profile=$home/profile
+# One fixed place in memory for what only lives while it runs: the private
+# message bus (how links from other programs reach the running Firefox), the
+# runtime folder and the temporary files
+run=/dev/shm/$user-run
+bus="unix:path=$run/run/bus"
+
+# Only plain web addresses are accepted from the caller
+check_urls() {
+    local a
+    for a in "$@"; do
+        [[ $a =~ ^https?://[^[:space:]]+$ ]] || die "only http:// and https:// addresses can be opened."
+    done
+}
+
+cmd=${1:-}
+[ $# -eq 0 ] || shift
+
+case $cmd in
+open)
+    check_urls "$@"
+    [ -S "$run/run/bus" ] || die "Firefox is not running."
+    need_noabs
+    if [ $# -eq 0 ]; then set -- --new-window; else
+        urls=()
+        for a in "$@"; do urls+=(--new-tab "$a"); done
+        set -- "${urls[@]}"
+    fi
+    exec env -i PATH="$PATH" LANG=C.UTF-8 HOME="$home" XDG_RUNTIME_DIR="$run/run" \
+        XDG_CONFIG_HOME="$home/.config" XDG_CACHE_HOME="$home/.cache" XDG_DATA_HOME="$home/.local/share" \
+        MOZ_ENABLE_WAYLAND=1 MOZ_DBUS_REMOTE=1 DBUS_SESSION_BUS_ADDRESS="$bus" \
+        "$noabs" firefox-esr --profile "$profile" "$@" ;;
+start) ;;
+*) die "usage: firefox-session start RUNTIME_DIR WAYLAND_DISPLAY AUDIO DOWNLOADS [URL...] | open [URL...]" ;;
+esac
+
+[ $# -ge 4 ] || die "usage: firefox-session start RUNTIME_DIR WAYLAND_DISPLAY AUDIO DOWNLOADS [URL...]"
+host_rt=$1 host_wl=$2 audio=$3 downloads=$4
+shift 4
+
+# These come from the user who called us, so nothing else is accepted
+[[ $host_rt =~ ^/run/user/[0-9]+$ ]] || die "unexpected runtime folder."
+[[ $host_wl =~ ^[A-Za-z0-9._-]+$ ]] || die "unexpected Wayland display name."
+[ -S "$host_rt/$host_wl" ] || die "can't reach the Wayland socket."
+[[ $audio == - || $audio == "firefox${tag:+-$tag}-audio.fifo" ]] || die "unexpected sound pipe name."
+if [ -z "$tag" ]; then
+    [[ $downloads =~ ^/home/[A-Za-z0-9._-]+/Downloads$ ]] || die "unexpected downloads folder."
+else
+    # a profile gets its own folder, so one profile cannot read another's downloads
+    [[ $downloads =~ ^/home/[A-Za-z0-9._-]+/Downloads/$tag$ ]] || die "unexpected downloads folder."
+fi
+check_urls "$@"
+if [ "$audio" != - ]; then
+    [ -p "$host_rt/$audio" ] || audio=-
+    for c in pipewire wireplumber pipewire-pulse; do
+        command -v "$c" >/dev/null || audio=-
+    done
+fi
+command -v dbus-daemon >/dev/null || die "dbus-daemon is missing (package dbus-daemon)."
+need_noabs
+[ -d /dev/shm ] || die "/dev/shm (memory) isn't available."
+
+# Left behind by a crash or a power cut (the firefox command allows one at a time)
+rm -rf "$run"
+mkdir -m 700 "$run"
+mkdir "$run/run" "$run/tmp"
+mkdir -p "$profile"   # (umask 077: only the firefox user can enter it)
+pid='' sharer=''
+
+# share_downloads: what this user saved in its downloads folder, readable by
+# you and nobody else. You are named in the folder's default ACL (bin/firefox),
+# but a named user's ACL entry counts only as far as the file's mask allows,
+# and the mask comes from the mode the file was created with: a download
+# Firefox saves as private (600) gets an empty mask, and you can't read it.
+# This sets the mask to rw, and the file's group and others entries to
+# nothing (another profile's user shares this one's group, and can pass
+# through ~/Downloads). Only files this user owns, straight in that folder.
+share_downloads() {
+    command -v setfacl >/dev/null || return 0
+    find "$downloads" -maxdepth 1 -type f -user "$user" \( ! -perm -g=r -o -perm /g=x,o=rwx \) \
+        -exec setfacl -m g::-,o::-,m::rw {} + 2>/dev/null || true
+}
+
+cleanup() {
+    trap - EXIT INT TERM HUP
+    [ -z "$sharer" ] || kill "$sharer" 2>/dev/null || true
+    share_downloads
+    if [ -n "$pid" ]; then
+        kill -TERM -- "-$pid" 2>/dev/null || true
+        sleep 1
+        kill -KILL -- "-$pid" 2>/dev/null || true
+    fi
+    rm -rf "$run"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM HUP
+
+# The profile is kept; its settings are put in again at every start
+cp /usr/local/share/debsway/firefox-user.js "$profile/user.js"
+{
+    echo 'user_pref("browser.download.folderList", 2);'
+    echo "user_pref(\"browser.download.dir\", \"$downloads\");"
+    echo 'user_pref("browser.download.useDownloadDir", true);'
+} >>"$profile/user.js"
+# A profile with its own user: its address and its JavaScript choice are in a file
+# only root can write (/etc/debsway/firefox-profiles/NAME.conf)
+if [ -n "$tag" ]; then
+    conf=/etc/debsway/firefox-profiles/$tag.conf
+    [ -r "$conf" ] || die "no settings for the profile $tag ($conf)."
+    url=$(sed -n 's/^url=//p' "$conf" | head -1)
+    fast=$(sed -n 's/^fast_js=//p' "$conf" | head -1)
+    [[ $url =~ ^https?://[A-Za-z0-9.-]+(:[0-9]+)?(/[A-Za-z0-9._~/?#=%+,@-]*)?$ ]] || die "the address in $conf isn't a plain web address."
+    {
+        echo "// The profile $tag: opens $url on start; keeps its cookies and logins."
+        echo 'user_pref("browser.startup.page", 1);'
+        echo "user_pref(\"browser.startup.homepage\", \"$url\");"
+        if [ "$fast" = yes ]; then
+            echo 'user_pref("javascript.options.ion", true);'
+            echo 'user_pref("javascript.options.baselinejit", true);'
+            echo 'user_pref("javascript.options.native_regexp", true);'
+            echo 'user_pref("javascript.options.asmjs", true);'
+        fi
+    } >>"$profile/user.js"
+fi
+
+if [ "$audio" != - ]; then
+    mkdir -p "$run/home-config/pipewire/pipewire.conf.d"
+    cat >"$run/home-config/pipewire/pipewire.conf.d/10-firefox.conf" <<EOT
+context.modules = [
+  { name = libpipewire-module-pipe-tunnel
+    args = {
+      tunnel.mode = sink
+      pipe.filename = "$host_rt/$audio"
+      audio.format = S16LE
+      audio.rate = 48000
+      audio.channels = 2
+      audio.position = [ FL FR ]
+      node.name = firefox${tag:+-$tag}-out
+      node.description = "firefox${tag:+ $tag}"
+    }
+  }
+]
+EOT
+fi
+
+# One session: the message bus, the sound server (if any), then Firefox.
+# Closing it all is one signal to the group.
+# shellcheck disable=SC2016  # expanded by the inner bash, on purpose
+start='
+    waitfor() { for _ in $(seq 50); do [ -S "$1" ] && return 0; sleep 0.1; done; return 1; }
+    dbus-daemon --session --address="$DBUS_SESSION_BUS_ADDRESS" --nofork --nopidfile &
+    waitfor "$XDG_RUNTIME_DIR/bus" || exit 1
+    if [ -n "$FIREFOX_AUDIO" ]; then
+        export XDG_CONFIG_HOME="$FIREFOX_PIPEWIRE_CONFIG"
+        pipewire &
+        if waitfor "$XDG_RUNTIME_DIR/pipewire-0"; then
+            wireplumber -p policy &
+            pipewire-pulse &
+            waitfor "$XDG_RUNTIME_DIR/pulse/native" || true
+        fi
+        export XDG_CONFIG_HOME="$HOME/.config"
+    fi
+    exec firefox-esr --profile "$FIREFOX_PROFILE" "$@"'
+setsid env -i \
+    PATH="$PATH" LANG=C.UTF-8 HOME="$home" TMPDIR="$run/tmp" XDG_RUNTIME_DIR="$run/run" \
+    XDG_CONFIG_HOME="$home/.config" XDG_CACHE_HOME="$home/.cache" XDG_DATA_HOME="$home/.local/share" \
+    WAYLAND_DISPLAY="$host_rt/$host_wl" MOZ_ENABLE_WAYLAND=1 MOZ_DBUS_REMOTE=1 GTK_USE_PORTAL=0 \
+    LIBGL_ALWAYS_SOFTWARE=1 DBUS_SESSION_BUS_ADDRESS="$bus" \
+    PULSE_SERVER="unix:$run/run/pulse/native" \
+    FIREFOX_AUDIO="$([ "$audio" != - ] && echo 1)" FIREFOX_PROFILE="$profile" \
+    FIREFOX_PIPEWIRE_CONFIG="$run/home-config" \
+    "$noabs" bash -c "$start" firefox-start "$@" &
+pid=$!
+# Downloads become readable for you as they land, and those of earlier sessions too
+share_downloads
+while kill -0 "$pid" 2>/dev/null; do sleep 2; share_downloads; done &
+sharer=$!
+wait "$pid" || true

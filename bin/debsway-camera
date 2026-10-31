@@ -1,0 +1,77 @@
+#!/bin/bash
+# debsway-camera on|off|status: written by debsway extras/webcam.sh
+# Installed as /usr/local/libexec/debsway-camera, owned by root. Your user may run
+# "debsway-camera on" and "debsway-camera off" as root, and nothing else (a rule
+# in /etc/sudoers.d); status needs no root. The debsway menu and radios use it.
+#
+# A USB camera is switched off by telling the kernel to disconnect its USB device
+# (/sys/bus/usb/devices/DEVICE/authorized = 0), as if it were unplugged: no
+# program can open it until it is switched on again. A camera is any USB device
+# with a video interface (USB class 0x0e); a disconnected device no longer lists
+# its interfaces, so its raw descriptors are read instead. A camera that isn't
+# on USB (some new laptops' MIPI cameras) isn't seen or switched.
+#   status        "on", "off", or "none" (no USB camera); exit 0
+#   added DEVICE  udev runs this (as root) when a whole USB device is added, at
+#                 boot and when plugged in: a camera starts switched off. Not
+#                 when one is switched on, which adds only its interfaces.
+set -euo pipefail
+
+# Where /sys is: always the real one for root; a test may point it elsewhere
+if [ "$(id -u)" -eq 0 ]; then SYS=/sys; else SYS=${DEBSWAY_SYS:-/sys}; fi
+USB=$SYS/bus/usb/devices
+
+die() { printf 'debsway-camera: %s\n' "$*" >&2; exit 2; }
+
+# has_video DEVICE-DIR: its descriptors include an interface of class 0x0e (video).
+# Each descriptor is: length, type, ...; an interface descriptor is type 4 and
+# has its class at byte 5.
+has_video() {
+    local -a b
+    local i=0 len
+    read -ra b < <(od -An -v -tu1 "$1/descriptors" 2>/dev/null | tr -s ' \n' ' ')
+    while [ "$i" -lt "${#b[@]}" ]; do
+        len=${b[i]}
+        [ "${len:-0}" -ge 2 ] || return 1
+        if [ "${b[i + 1]}" = 4 ] && [ "$((i + 5))" -lt "${#b[@]}" ] && [ "${b[i + 5]}" = 14 ]; then return 0; fi
+        i=$((i + len))
+    done
+    return 1
+}
+
+# cameras: the USB devices (like 1-6 or 3-1.2) that are cameras
+cameras() {
+    local d n
+    for d in "$USB"/*; do
+        n=${d##*/}
+        [[ $n =~ ^[0-9]+-[0-9]+(\.[0-9]+)*$ ]] || continue
+        [ -f "$d/authorized" ] || continue
+        if has_video "$d"; then echo "$n"; fi
+    done
+}
+
+set_all() { # 0|1
+    local n found=false
+    for n in $(cameras); do
+        found=true
+        [ "$(cat "$USB/$n/authorized")" = "$1" ] || echo "$1" >"$USB/$n/authorized"
+    done
+    $found || { echo "debsway-camera: no USB camera found." >&2; exit 1; }
+}
+
+case ${1:-} in
+    status)
+        list=$(cameras)
+        if [ -z "$list" ]; then echo none; exit 0; fi
+        for n in $list; do
+            if [ "$(cat "$USB/$n/authorized")" = 1 ]; then echo on; exit 0; fi
+        done
+        echo off ;;
+    added)
+        n=${2:-}
+        # (root hubs, usb1 and the like, are never cameras)
+        [[ $n =~ ^[0-9]+-[0-9]+(\.[0-9]+)*$ ]] || exit 0
+        if [ -f "$USB/$n/authorized" ] && has_video "$USB/$n"; then echo 0 >"$USB/$n/authorized"; fi ;;
+    on) set_all 1 ;;
+    off) set_all 0 ;;
+    *) die "usage: debsway-camera on|off|status (added DEVICE: for udev)" ;;
+esac

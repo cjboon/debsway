@@ -1,0 +1,31 @@
+#!/bin/sh
+# debsway-idle: written by debsway parts/swayidle.sh
+# Runs swayidle with debsway's timeouts. The screen locks after the minutes set
+# with  timer lock MINUTES  (30 unless you changed it; 1 to 120); for the 30
+# seconds before that it fades down with a notice (bin/dim-warning), and it
+# turns off 5 minutes after the lock. It always locks before the laptop sleeps.
+# sway starts it (~/.config/sway/config.d/idle.conf); timer lock restarts it.
+#   debsway-idle              run swayidle
+#   debsway-idle --minutes    print the minutes until the lock
+conf=${XDG_CONFIG_HOME:-$HOME/.config}/debsway/lock
+
+minutes=$(sed -n 's/^minutes=//p' "$conf" 2>/dev/null | tail -n 1)
+case $minutes in '' | *[!0-9]*) minutes=30 ;; esac
+[ "$minutes" -ge 1 ] && [ "$minutes" -le 120 ] || minutes=30
+
+if [ "${1:-}" = --minutes ]; then
+    echo "$minutes"
+    exit 0
+fi
+
+lock=$((minutes * 60))
+dim=$((lock - 30))
+off=$((lock + 300))
+DIM=$HOME/.local/bin/dim-warning
+# the same as LOCK_CMD in lib/sway.sh (test.sh checks)
+LOCK='swaylock -f -c 000000'
+exec swayidle -w \
+    timeout "$dim" "$DIM start" resume "$DIM stop" \
+    timeout "$lock" "$LOCK" \
+    timeout "$off" 'swaymsg "output * power off"' resume 'swaymsg "output * power on"' \
+    before-sleep "$LOCK"

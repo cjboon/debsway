@@ -1,0 +1,127 @@
+#!/bin/bash
+# git [ARGS...]: written by debsway extras/claude-code.sh
+# Your git, with one guard. claude-agent can change any file in ~/projects,
+# including the .git folder of a repository: a hook, or a setting such as
+# core.fsmonitor, would run as YOU the next time you use git there. So inside
+# ~/projects, before git runs, this looks at the repository's .git/config and
+# .git/hooks, and refuses if it finds anything that can run a program. A repository
+# that claude-agent made also gets git's "dubious ownership" warning; when the
+# check passes, this trusts that one repository for that one command.
+# Everywhere else it is plain git. /usr/bin/git skips the guard.
+#
+# (A file could change between the check and the run; it is a guard against a
+# sloppy or confused assistant, not against one racing your keystrokes.)
+
+REAL=${DEBSWAY_REAL_GIT:-/usr/bin/git}
+AGENT=${DEBSWAY_AGENT_USER:-claude-agent}
+PROJECTS=${DEBSWAY_PROJECTS:-$HOME/projects}
+
+plain() { exec "$REAL" "$@"; }
+
+[ -z "${GIT_DIR:-}" ] || plain "$@"
+
+# Where git will work: the folder you are in, moved by any leading -C
+dir=$(pwd -P) || plain "$@"
+args=("$@")
+i=0
+while [ $i -lt ${#args[@]} ]; do
+    case ${args[i]} in
+        -C)
+            i=$((i + 1))
+            [ $i -lt ${#args[@]} ] || plain "$@"
+            case ${args[i]} in /*) dir=${args[i]} ;; *) dir=$dir/${args[i]} ;; esac
+            dir=$(cd -- "$dir" 2>/dev/null && pwd -P) || plain "$@"
+            ;;
+        -c) i=$((i + 1)) ;;
+        --git-dir | --git-dir=* | --work-tree | --work-tree=*) plain "$@" ;;
+        -*) ;;
+        *) break ;;
+    esac
+    i=$((i + 1))
+done
+
+# The top of the repository that holds that folder
+top=$dir
+while [ ! -e "$top/.git" ]; do
+    [ "$top" != / ] || plain "$@"
+    top=${top%/*}
+    [ -n "$top" ] || top=/
+done
+case $top in
+    "$PROJECTS" | "$PROJECTS"/*) ;;
+    *) plain "$@" ;;
+esac
+
+# The settings that can't run anything. Anything else in .git/config is refused.
+config_ok() { # KEY VALUE
+    case $1 in
+        core.repositoryformatversion | core.filemode | core.bare | core.logallrefupdates | core.ignorecase | \
+            core.precomposeunicode | core.symlinks | core.autocrlf | core.eol | core.safecrlf | core.quotepath | \
+            core.sparsecheckout | core.sparsecheckoutcone | extensions.objectformat | \
+            user.name | user.email | pull.rebase | pull.ff | push.default | push.autosetupremote | \
+            fetch.prune | fetch.prunetags) return 0 ;;
+        remote.*.url | remote.*.pushurl | submodule.*.url) url_ok "$2"; return ;;
+        remote.*.fetch | remote.*.push | remote.*.tagopt | remote.*.prune | remote.*.prunetags | \
+            remote.*.mirror | remote.*.promisor | remote.*.partialclonefilter | submodule.*.active | \
+            branch.*.remote | branch.*.merge | branch.*.rebase | branch.*.description | \
+            branch.*.pushremote | branch.*.vscode-merge-base) return 0 ;;
+    esac
+    return 1
+}
+
+# A remote that is an ordinary address, not a helper program (ext::, fd::...)
+url_ok() {
+    [[ $1 =~ ^(https?|ssh|git|file)://[^[:space:]]+$ ]] && return 0
+    [[ $1 =~ ^[A-Za-z0-9._-]+@[A-Za-z0-9._-]+:[^[:space:]]*$ ]] && return 0
+    [[ $1 =~ ^[A-Za-z0-9._/~+-][^[:space:]:]*$ ]] && return 0   # a folder
+    return 1
+}
+
+problems=()
+
+# check_gitdir GITDIR: its config and hooks, and those of its submodules
+check_gitdir() {
+    local gd=$1 f rec key val
+    [ -d "$gd" ] || return 0
+    [ ! -e "$gd/config.worktree" ] || problems+=("config.worktree")
+    while IFS= read -r -d '' f; do
+        while IFS= read -r -d '' rec; do
+            if [[ $rec == *$'\n'* ]]; then key=${rec%%$'\n'*}; val=${rec#*$'\n'}; else key=$rec; val=; fi
+            config_ok "$key" "$val" || problems+=("${f#"$gd"/}: $key")
+        done < <("$REAL" config --file "$f" --list -z 2>/dev/null)
+    done < <({ [ -f "$gd/config" ] && printf '%s\0' "$gd/config"; find "$gd/modules" -name config -type f -print0 2>/dev/null; })
+    while IFS= read -r -d '' f; do
+        case ${f##*/} in *.sample) ;; *) problems+=("${f#"$gd"/}") ;; esac
+    done < <({ [ -L "$gd/hooks" ] && printf '%s\0' "$gd/hooks"; find "$gd/hooks" -mindepth 1 -print0 2>/dev/null; find "$gd/modules" -path '*/hooks/*' -print0 2>/dev/null; })
+}
+
+if [ -d "$top/.git" ]; then
+    gitdir=$top/.git
+elif [ -f "$top/.git" ]; then
+    # a worktree or submodule: .git says where the real folder is
+    gitdir=$(sed -n 's/^gitdir: //p' "$top/.git" | head -n 1)
+    case $gitdir in /*) ;; *) gitdir=$top/$gitdir ;; esac
+    gitdir=$(cd -- "$gitdir" 2>/dev/null && pwd -P) || plain "$@"
+else
+    plain "$@"
+fi
+check_gitdir "$gitdir"
+if [ -f "$gitdir/commondir" ]; then
+    common=$(cd -- "$gitdir/$(head -n 1 "$gitdir/commondir")" 2>/dev/null && pwd -P) && check_gitdir "$common"
+fi
+
+if [ ${#problems[@]} -gt 0 ]; then
+    {
+        printf 'git: not running here. %s holds things that could run a program as you:\n' "${top/#$HOME/\~}/.git"
+        printf '  %s\n' "${problems[@]}"
+        echo "Look at them. Remove what you don't want, or, if you trust them, run /usr/bin/git yourself."
+    } >&2
+    exit 1
+fi
+
+# Clean. A repository claude-agent made would otherwise be refused for its owner
+extra=()
+if [ "$(stat -c %U "$top/.git" 2>/dev/null)" = "$AGENT" ] || [ "$(stat -c %U "$top" 2>/dev/null)" = "$AGENT" ]; then
+    extra=(-c "safe.directory=$top" -c "safe.directory=$top/*")
+fi
+exec "$REAL" "${extra[@]}" "$@"

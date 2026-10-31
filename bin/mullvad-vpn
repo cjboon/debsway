@@ -1,0 +1,3 @@
+#!/bin/sh
+# mullvad-vpn: written by debsway extras/mullvad-vpn.sh
+exec "/opt/Mullvad VPN/mullvad-vpn" "$@"

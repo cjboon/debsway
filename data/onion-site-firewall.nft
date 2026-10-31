@@ -1,0 +1,41 @@
+# Keeps the onion-site user off your computer and your local network
+# (debsway extras/onion-site.sh). Only that user's traffic is touched.
+#
+# onion-site runs the site's VM (one qemu-system-x86_64 process). After its
+# first setup the VM runs with QEMU's restrict=on: the guest can't send a single
+# packet out, so it can't give away this computer's address whatever the site
+# does. This rule is the second wall, for the QEMU process itself: the internet
+# (which the first setup needs, to install Debian), but not your router,
+# printers, other machines or the services on this computer, except two on
+# loopback:
+#   127.0.0.1:2243  the VM's own SSH console, which the host logs in to
+#   127.0.0.1:9050  Tor's SOCKS port, which "onion-site update" lends the VM
+#                   for apt (through socat, one connection at a time)
+# Tor reaches the site through 127.0.0.1:18080, which this user listens on;
+# the answers are "established" connections and pass.
+# DNS stays open (it goes to your resolver, or Unbound with extras/secure-dns.sh).
+
+table inet debsway_onion_site
+delete table inet debsway_onion_site
+
+table inet debsway_onion_site {
+    chain output {
+        type filter hook output priority 0; policy accept;
+        meta skuid "onion-site" jump onion_site
+    }
+
+    chain onion_site {
+        # Answers to connections that others made to it (Tor visiting the site)
+        ct state established,related accept
+        udp dport 53 accept
+        tcp dport 53 accept
+        ip daddr 127.0.0.1 tcp dport { 2243, 9050 } accept
+        # Anything addressed to this computer itself goes out through "lo",
+        # whichever of its addresses is used, so this catches them all
+        oifname "lo" reject
+        ip daddr { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8,
+                   169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16,
+                   224.0.0.0/4, 255.255.255.255 } reject
+        ip6 daddr { ::1, fc00::/7, fe80::/10, ff00::/8 } reject
+    }
+}

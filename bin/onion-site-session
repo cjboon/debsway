@@ -1,0 +1,133 @@
+#!/bin/bash
+# onion-site-session SUBCOMMAND: written by debsway extras/onion-site.sh
+# Installed as /usr/local/libexec/onion-site-session. Your user may run exactly
+# this, as the onion-site user, and nothing else (a rule in /etc/sudoers.d). The
+# onion-site command calls it. It drives the site's VM (one qemu-system-x86_64
+# process, via the bundled mockvps-kvm).
+#
+# After its first setup the VM runs with no network (QEMU's restrict=on): only
+# two host-loopback ports lead in, the VM's SSH console (2243) and its nginx
+# (18080, which Tor's onion service points at). "update" adds one more way, for
+# apt: 10.0.2.100:9050 in the VM is relayed to the host's Tor.
+set -euo pipefail
+
+[ "$(id -un)" = onion-site ] || { echo "onion-site-session: only for the onion-site user." >&2; exit 1; }
+
+# Run again without a way to reach XWayland's abstract socket, which any user
+# can connect to (qemu and ssh below inherit this)
+noabs=/usr/local/libexec/debsway-no-abstract-sockets
+if [ -z "${DEBSWAY_NOABS:-}" ]; then
+    [ -x "$noabs" ] || { echo "onion-site-session: $noabs is missing. Run: bash extras/onion-site.sh" >&2; exit 1; }
+    export DEBSWAY_NOABS=1
+    exec "$noabs" "$0" "$@"
+fi
+
+# Fixed configuration. The ports must match data/onion-site-firewall.nft and
+# lib/onion-site.sh.
+export HOME=/home/onion-site
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+export LANG=${LANG:-C.UTF-8}
+unset SUDO_USER
+export USER=onion-site LOGNAME=onion-site
+export VM_NAME=onion-site
+export VM_USER=site
+export SSH_HOST_IP=127.0.0.1
+export SSH_HOST_PORT=2243
+export WORKDIR=$HOME/vm
+export WEB_TUNNEL=0
+WEB=127.0.0.1:18080:80
+SOCKS=10.0.2.100:9050
+
+MOCKVPS=/usr/local/libexec/onion-site-mockvps-kvm
+PROVISION=$HOME/.config/onion-site/provision.sh
+KEY_FILE=$HOME/.ssh/${VM_NAME}_id
+
+die() { printf 'onion-site-session: %s\n' "$*" >&2; exit 1; }
+mockvps() { [ -x "$MOCKVPS" ] || die "the VM engine is missing ($MOCKVPS); run extras/onion-site.sh again."; "$MOCKVPS" "$@"; }
+
+# Non-interactive, key-only ssh into the VM, independent of ~/.ssh/config
+guest_ssh() {
+    ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new \
+        -o HostKeyAlias="$VM_NAME" -o IdentitiesOnly=yes -o LogLevel=ERROR \
+        -i "$KEY_FILE" -p "$SSH_HOST_PORT" "$VM_USER@$SSH_HOST_IP" "$@"
+}
+
+is_installed() { [ -s "$WORKDIR/$VM_NAME.qcow2" ]; }
+running() { mockvps --status 2>/dev/null | grep -q Running; }
+
+# boot: start the VM with no network, the site's port forwarded
+boot() {
+    echo "Starting the site's VM; this takes about a minute."
+    env NET_RESTRICT=1 HOST_FORWARDS="$WEB" "$MOCKVPS" --start 2>&1 |
+        sed -un 's/^==> /  /p; /^\(ERROR\|WARNING\):/p' ||
+        die "could not start the VM (see $WORKDIR/${VM_NAME}-run.log)."
+}
+
+ensure_up() {
+    is_installed || die "no VM yet. Set it up first: bash ~/debsway/extras/onion-site.sh"
+    running || boot
+}
+
+case "${1:-}" in
+    start) ensure_up; echo "The site is up." ;;
+    stop) mockvps --stop ;;
+    status) mockvps --status ;;
+    shell)
+        ensure_up
+        exec ssh -t -o StrictHostKeyChecking=accept-new -o HostKeyAlias="$VM_NAME" \
+            -o IdentitiesOnly=yes -i "$KEY_FILE" -p "$SSH_HOST_PORT" "$VM_USER@$SSH_HOST_IP" \
+            'cd /srv/site 2>/dev/null; exec bash -l'
+        ;;
+    upload)
+        # upload static|app: a tar stream on standard input replaces that folder
+        # (there is no shared folder; the onion-site command sends it)
+        case ${2:-} in static | app) ;; *) die "upload what? static or app" ;; esac
+        ensure_up
+        guest_ssh "set -e; new=\$(mktemp -d /srv/site/.upload.XXXXXX); tar -x --no-same-owner -C \"\$new\"
+            rm -rf /srv/site/$2.old; mv /srv/site/$2 /srv/site/$2.old; mv \"\$new\" /srv/site/$2
+            chmod 755 /srv/site/$2; rm -rf /srv/site/$2.old
+            if [ $2 = app ] && systemctl cat site-app.service >/dev/null 2>&1; then sudo -n /usr/bin/systemctl restart site-app.service; fi"
+        echo "Uploaded to /srv/site/$2 in the VM."
+        ;;
+    update)
+        # apt through the host's Tor: restart the VM with the relay, upgrade, and
+        # restart it without the relay. PROVISION_FILES runs the upgrade as root.
+        is_installed || die "no VM yet. Set it up first: bash ~/debsway/extras/onion-site.sh"
+        up=$(mktemp)
+        trap 'rm -f "$up"' EXIT
+        printf '%s\n' '#!/bin/bash' 'set -e' 'export DEBIAN_FRONTEND=noninteractive' \
+            'apt-get update' 'apt-get -y upgrade' 'apt-get -y autoremove --purge' >"$up"
+        if running; then mockvps --stop >/dev/null; fi
+        echo "Updating the VM's packages through Tor (slow)."
+        rc=0
+        env NET_RESTRICT=1 HOST_FORWARDS="$WEB" GUEST_SOCKS="$SOCKS" PROVISION_FILES="$up" "$MOCKVPS" --start || rc=$?
+        # Never left running with the relay, whether the update worked or not
+        mockvps --stop >/dev/null || true
+        boot
+        [ "$rc" -eq 0 ] || die "the update didn't finish (see above). The site runs again, without the relay to Tor."
+        echo "Updated, and running again without the relay to Tor."
+        ;;
+    install)
+        # First build: the real user triggers this from extras/onion-site.sh. It
+        # never replaces a VM that is already there: rebuild is for that.
+        if is_installed; then
+            echo "The site's VM is already built; kept as it is. For a fresh one: onion-site rebuild"
+            exit 0
+        fi
+        [ -f "$PROVISION" ] || die "the provisioning script is missing ($PROVISION); run extras/onion-site.sh again."
+        # The install needs the network (Debian and nginx come from the
+        # internet); from the next start on, it has none.
+        PROVISION_FILES="$PROVISION" mockvps --yes
+        mockvps --stop >/dev/null
+        boot
+        ;;
+    rebuild)
+        [ -f "$PROVISION" ] || die "the provisioning script is missing ($PROVISION); run extras/onion-site.sh again."
+        mockvps --uninstall --yes >/dev/null 2>&1 || true
+        PROVISION_FILES="$PROVISION" mockvps --yes
+        mockvps --stop >/dev/null
+        boot
+        ;;
+    uninstall) mockvps --uninstall --yes ;;
+    *) die "unknown subcommand '${1:-}' (start, stop, status, shell, upload, update, install, rebuild, uninstall)." ;;
+esac

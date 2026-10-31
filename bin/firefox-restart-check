@@ -1,0 +1,13 @@
+#!/bin/sh
+# firefox-restart-check: written by debsway parts/firefox-hardening.sh.
+# Says so when Firefox was updated while running. The running browser
+# keeps the old, unfixed version until it's restarted.
+notified=${XDG_RUNTIME_DIR:-/tmp}/firefox-restart-notified
+for pid in $(pgrep -u "$(id -u)" -x firefox-esr); do
+    exe=$(readlink "/proc/$pid/exe") || continue
+    case $exe in *" (deleted)") ;; *) continue ;; esac
+    grep -qx "$pid" "$notified" 2>/dev/null && continue
+    notify-send -u critical "Firefox was updated" \
+        "Restart Firefox (close it, open it again) to use the fixed version." &&
+        echo "$pid" >>"$notified"
+done
