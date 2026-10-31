@@ -9,7 +9,7 @@
 # as tmux.conf.bak.
 # Usage: bash console-tmux.sh [--remove]
 # status: file:~/.config/tmux/tmux.conf
-# files: bin/sway-status bin/console-click data/tmux.conf data/tmux-console.conf
+# files: bin/sway-status bin/console-click bin/console-font data/tmux.conf data/tmux-console.conf
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
@@ -25,6 +25,7 @@ if [ "${1:-}" = --remove ]; then
         fi
     fi
     remove_bin console-click
+    remove_bin console-font
     apt_purge tmux
     exit
 fi
@@ -33,6 +34,7 @@ say "Installing tmux"
 apt_install tmux
 install_bin sway-status
 install_bin console-click
+install_bin console-font
 mkdir -p "${CONF%/*}"
 if [ -f "$CONF" ] && ! grep -qs "$MARK" "$CONF" && ! cmp -s "$DEBSWAY_DIR/data/tmux.conf" "$CONF"; then
     cp "$CONF" "$CONF.bak"

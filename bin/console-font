@@ -1,0 +1,99 @@
+#!/bin/bash
+# console-font [list | NAME | NUMBER]: written by debsway parts/console-tmux.sh
+# Changes the text size on a text console (console-only mode) at once, and
+# remembers it in ~/.config/debsway/console-font for the next login.
+# With no argument it shows the list and asks which one.
+# Names are a typeface and the height of a character in pixels: dejavu-43,
+# terminus-bold-24. A file name from /usr/share/consolefonts also works.
+dir=/usr/share/consolefonts
+conf="$HOME/.config/debsway/console-font"
+default=Uni3-DejaVu30x16
+
+# name file size
+FONTS=(
+    dejavu-30 Uni3-DejaVu30x16 30x16
+    dejavu-36 Uni3-DejaVu36x20 36x20
+    dejavu-43 Uni3-DejaVu43x24 43x24
+    dejavu-51 Uni3-DejaVu51x28 51x28
+    dejavu-59 Uni3-DejaVu59x32 59x32
+    dejavu-74 Uni3-DejaVu74x40 74x40
+    dejavu-89 Uni3-DejaVu89x48 89x48
+    dejavu-bold-30 Uni3-DejaVuBold30x16 30x16
+    dejavu-bold-36 Uni3-DejaVuBold36x20 36x20
+    dejavu-bold-43 Uni3-DejaVuBold43x24 43x24
+    dejavu-bold-51 Uni3-DejaVuBold51x28 51x28
+    dejavu-bold-59 Uni3-DejaVuBold59x32 59x32
+    terminus-12 Uni3-Terminus12x6 12x6
+    terminus-16 Uni3-Terminus16 16x8
+    terminus-20 Uni3-Terminus20x10 20x10
+    terminus-24 Uni3-Terminus24x12 24x12
+    terminus-28 Uni3-Terminus28x14 28x14
+    terminus-32 Uni3-Terminus32x16 32x16
+    terminus-bold-16 Uni3-TerminusBold16 16x8
+    terminus-bold-20 Uni3-TerminusBold20x10 20x10
+    terminus-bold-24 Uni3-TerminusBold24x12 24x12
+    terminus-bold-28 Uni3-TerminusBold28x14 28x14
+    terminus-bold-32 Uni3-TerminusBold32x16 32x16
+)
+
+current=$(cat "$conf" 2>/dev/null); current=${current:-$default}
+names=() files=() sizes=()
+for ((i = 0; i < ${#FONTS[@]}; i += 3)); do
+    ls "$dir/${FONTS[i+1]}".psf* >/dev/null 2>&1 || continue
+    names+=("${FONTS[i]}"); files+=("${FONTS[i+1]}"); sizes+=("${FONTS[i+2]}")
+done
+
+show() {
+    echo "Console fonts (character size in pixels; bigger is easier to read):"
+    for i in "${!names[@]}"; do
+        mark=" "; [ "${files[i]}" = "$current" ] && mark="*"
+        printf ' %s %2d  %-18s %s\n' "$mark" $((i + 1)) "${names[i]}" "${sizes[i]}"
+    done
+    echo "(* = in use)  Usage: console-font NAME or NUMBER"
+}
+
+apply() {
+    local file=$1 tty
+    if [ -n "${TMUX:-}" ]; then
+        tty=$(tmux display-message -p '#{client_tty}' 2>/dev/null)
+    else
+        tty=$(tty 2>/dev/null)
+    fi
+    mkdir -p "${conf%/*}"
+    echo "$file" >"$conf"
+    case $tty in
+        /dev/tty[0-9]*)
+            if setfont -C "$tty" "$file"; then
+                [ -z "${TMUX:-}" ] || tmux refresh-client 2>/dev/null
+                echo "Console font is now $file."
+            else
+                echo "Could not set the font now; it is saved for your next login." >&2
+                return 1
+            fi ;;
+        *) echo "Saved $file. This is not a text console, so it takes effect at your next console login." ;;
+    esac
+}
+
+pick=${1:-}
+case $pick in
+    list) show; exit ;;
+    -h | --help) echo "usage: console-font [list | NAME | NUMBER]"; exit ;;
+    "")
+        show
+        [ -t 0 ] || exit 0
+        read -r -p "Number or name (Enter to leave it): " pick
+        [ -n "$pick" ] || exit 0 ;;
+esac
+
+file=
+if [[ $pick =~ ^[0-9]+$ ]]; then
+    n=$((10#$pick - 1))
+    [ "$n" -ge 0 ] && [ "$n" -lt "${#names[@]}" ] && file=${files[n]}
+else
+    for i in "${!names[@]}"; do
+        if [ "${names[i]}" = "$pick" ] || [ "${files[i]}" = "$pick" ]; then file=${files[i]}; fi
+    done
+    [ -n "$file" ] || { ls "$dir/$pick".psf* >/dev/null 2>&1 && file=$pick; }
+fi
+[ -n "$file" ] || { echo "console-font: no font '$pick'. Try: console-font list" >&2; exit 1; }
+apply "$file"
