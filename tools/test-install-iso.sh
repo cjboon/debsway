@@ -147,6 +147,29 @@ check "from a DVD every disk counts" grep -qx 'partman-auto/disk /dev/sda' <<<"$
 check "two disks besides the stick: nothing is chosen, the installer asks" test -z "$(disk /dev/sdc1 /dev/sda /dev/nvme0n1 /dev/sdc)"
 check "no disk besides the stick: nothing is chosen" test -z "$(disk /dev/sdb1 /dev/sdb)"
 
+# ---- inside the installer: no cable, no network setup ----
+N=$HERE/data/install-iso-net.sh
+net() { # PORT:CARRIER... (w = wifi): what net.sh sets
+    rm -rf "$T/net"; mkdir -p "$T/net/lo"
+    for p in "$@"; do
+        n=${p%%:*}; c=${p#*:}
+        mkdir -p "$T/net/$n"
+        case $n in w*) mkdir "$T/net/$n/wireless" ;; *) mkdir "$T/net/$n/device" ;; esac
+        [ "$c" = - ] || echo "$c" >"$T/net/$n/carrier"
+    done
+    printf '#!/bin/sh\necho "$@" >>"%s/set"\n' "$T" >"$T/setq"; chmod +x "$T/setq"
+    : >"$T/set"
+    DEBSWAY_NET=$T/net DEBSWAY_SET=$T/setq DEBSWAY_WAIT=1 sh "$N"
+    cat "$T/set"
+}
+check "a cable plugged in: the network is left alone" test -z "$(net eth0:1 wlan0:1)"
+check "wifi only: network setup is switched off" grep -qx 'netcfg/enable false' <<<"$(net wlan0:1)"
+check "...and no mirror is asked for" grep -qx 'apt-setup/use_mirror false' <<<"$(net wlan0:1)"
+check "a wired port with no cable: switched off" grep -qx 'netcfg/enable false' <<<"$(net eth0:0 wlan0:1)"
+check "a wired port that reports no carrier at all: switched off" grep -qx 'netcfg/enable false' <<<"$(net eth0:-)"
+check "no ports at all: switched off" grep -qx 'netcfg/enable false' <<<"$(net)"
+check "net.sh is in the preseed" grep -q 'preseed/early_command string sh /cdrom/debsway-install/net.sh' "$HERE/data/install-iso-preseed.cfg"
+
 # ---- inside the installer: debsway into ~/debsway ----
 L=$T/late.sh
 sed -e "s|/cdrom|$T/cdrom|g" -e "s|/target|$T/target|g" "$HERE/data/install-iso-late.sh" >"$L"

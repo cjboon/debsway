@@ -119,6 +119,7 @@ stage=$work/stage
 mkdir -p "$stage/debsway-install" "$stage/debsway" "$stage/isolinux" "$stage/boot/grub"
 fill_preseed "$DEBSWAY_DIR/data/install-iso-preseed.cfg" "$user" "$locale" "$keymap" "$erase" >"$stage/debsway-install/preseed.cfg"
 cp "$DEBSWAY_DIR/data/install-iso-disk.sh" "$stage/debsway-install/disk.sh"
+cp "$DEBSWAY_DIR/data/install-iso-net.sh" "$stage/debsway-install/net.sh"
 cp "$DEBSWAY_DIR/data/install-iso-late.sh" "$stage/debsway-install/late.sh"
 cp "$DEBSWAY_DIR/data/install-iso-first-login.sh" "$stage/debsway-install/first-login.sh"
 if [ -n "$scripts" ]; then cp -R "$scripts" "$stage/debsway-install/scripts"; note "Your scripts: $scripts -> ~/scripts"; fi
