@@ -5,10 +5,17 @@
 # The Debian CD signing key is pinned in pins.sh (DEBIAN_CD_FPR).
 
 DEBIAN_CD_BASE=https://cdimage.debian.org/debian-cd/current/amd64/iso-dvd
+DEBIAN_LIVE_BASE=https://cdimage.debian.org/debian-cd/current-live/amd64/iso-hybrid
 
 # dvd_name SHA512SUMS: the DVD-1 image's file name in a (verified) list
 dvd_name() {
     sed -nE 's/^[0-9a-f]{128}  (debian-[0-9]+(\.[0-9]+)+-amd64-DVD-1\.iso)$/\1/p' "$1" | head -1
+}
+
+# live_name SHA512SUMS: the live "standard" (text-only) image's file name in a
+# (verified) list
+live_name() {
+    sed -nE 's/^[0-9a-f]{128}  (debian-live-[0-9]+(\.[0-9]+)+-amd64-standard\.iso)$/\1/p' "$1" | head -1
 }
 
 # The kernel arguments that start the automatic install
@@ -73,6 +80,51 @@ isolinux_edit() {
     tmp=$(mktemp)
     awk '$0 == "include gtk.cfg" && !done { print "include debsway.cfg"; done = 1 } { print }' "$menu" >"$tmp" && cat "$tmp" >"$menu"
     grep -vx -e 'default installgui' -e '	menu default' "$gtk" >"$tmp" && cat "$tmp" >"$gtk"
+    rm -f "$tmp"
+}
+
+# --- the same three menu edits for Debian's live "standard" image, whose
+# installer is under /install/gtk and whose menus are laid out differently
+# (live system first; installer entries pulled in from other files) ---
+
+# grub_add_entry_live GRUB.CFG: a first menu entry (so the default) that starts
+# the automatic install. The live entries stay. Fails if the file doesn't look
+# as expected.
+grub_add_entry_live() {
+    local f=$1 tmp
+    grep -q '^menuentry "Live system (amd64)"' "$f" || return 1
+    grep -q '^source[[:space:]]*/boot/grub/install_start.cfg' "$f" || return 1
+    tmp=$(mktemp)
+    awk -v args="$AUTO_ARGS" '
+        !done && /^menuentry / {
+            print "menuentry --hotkey=d '"'"'Automatic install with debsway (asks for your passphrase and password)'"'"' {"
+            print "    set background_color=black"
+            print "    linux    /install/gtk/vmlinuz vga=788 " args " --- quiet"
+            print "    initrd   /install/gtk/initrd.gz"
+            print "}"
+            done = 1
+        }
+        { print }' "$f" >"$tmp" && cat "$tmp" >"$f"
+    rm -f "$tmp"
+}
+
+# isolinux_entry_live: the BIOS menu's entry for it (isolinux/debsway.cfg), the default
+isolinux_entry_live() {
+    printf '%s\n' 'label debsway' \
+        '	menu label Automatic install with ^debsway (asks for your passphrase and password)' \
+        '	menu default' '	kernel /install/gtk/vmlinuz' \
+        "	append vga=788 initrd=/install/gtk/initrd.gz $AUTO_ARGS --- quiet"
+}
+
+# isolinux_edit_live MENU.CFG LIVE.CFG: the BIOS menu includes debsway.cfg
+# before the live entries, and the live system is no longer the default (its
+# entries stay)
+isolinux_edit_live() {
+    local menu=$1 live=$2 tmp
+    grep -qx 'include live.cfg' "$menu" && grep -qx '	menu default' "$live" || return 1
+    tmp=$(mktemp)
+    awk '$0 == "include live.cfg" && !done { print "include debsway.cfg"; done = 1 } { print }' "$menu" >"$tmp" && cat "$tmp" >"$menu"
+    grep -vx -e '	menu default' "$live" >"$tmp" && cat "$tmp" >"$live"
     rm -f "$tmp"
 }
 
