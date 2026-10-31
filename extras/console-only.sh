@@ -3,6 +3,9 @@
 # keys of the sway desktop (parts/console-tmux.sh, always installed), instead of
 # starting sway. Only the login changes: the sway desktop stays installed, and
 # `sway` still starts it by hand. Removing this extra starts sway at login again.
+# Both happen at once: installing it from inside sway ends sway and drops you into
+# tmux; removing it from inside tmux detaches and starts sway (login loop in
+# ~/.profile, lib/core.sh profile_autostart).
 # Usage: bash console-only.sh [--remove]
 # summary: log in to tmux (same bar and keys), not sway
 # status: file:~/.config/tmux/tmux.conf
@@ -12,6 +15,13 @@ need_user
 if [ "${1:-}" = --remove ]; then
     profile_autostart sway
     note "Logging in on tty1 starts sway again."
+    if [ -n "${TMUX:-}" ] && [ -n "${DEBSWAY_LOGIN_LOOP:-}" ]; then
+        note "Leaving tmux for sway in 3 seconds (your tmux windows stay: tmux attach)..."
+        sleep 3
+        tmux detach-client -s "$(tmux display-message -p '#S')"
+    elif [ -n "${TMUX:-}" ]; then
+        note "Log out and in on tty1 to get sway."
+    fi
     exit
 fi
 
@@ -32,3 +42,13 @@ cat <<'EOT'
     click and scroll as in sway. To start sway from the
     console: type  sway.
 EOT
+
+if [ -n "${WAYLAND_DISPLAY:-}" ] && command -v swaymsg >/dev/null; then
+    if [ -n "${DEBSWAY_LOGIN_LOOP:-}" ]; then
+        note "Leaving sway for the console in 3 seconds (programs in sway close)..."
+        sleep 3
+        swaymsg exit
+    else
+        note "Log out of sway (Super+Shift+e) and log in on tty1 to get the console."
+    fi
+fi

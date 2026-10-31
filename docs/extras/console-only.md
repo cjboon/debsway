@@ -8,7 +8,7 @@ A computer with no screen to spare, a slow machine, or a taste for text. The sam
 
 ## The ideas behind it
 
-**tmux** is a program that gives one terminal several windows. Here each tmux window is a "workspace", and the bar on top shows their numbers with the current one highlighted. The tmux config is always installed with the base (`parts/console-tmux.sh`), so this extra only changes what happens at login: the `debsway autostart` block in `~/.profile` (which starts sway on tty1) is swapped for a `debsway console` block (which starts tmux on any text console). Removing the extra swaps it back. A tmux opened in a foot window under sway stays plain: the bar and Alt keys load only when there is no sway session.
+**tmux** is a program that gives one terminal several windows. Here each tmux window is a "workspace", and the bar on top shows their numbers with the current one highlighted. The tmux config is always installed with the base (`parts/console-tmux.sh`), so this extra only changes what a login starts. The `debsway autostart` block in `~/.profile` reads `~/.config/debsway/login` (`sway` or `console`) and starts sway on tty1 or tmux on any text console. It is a loop: when the program ends and that file has changed, it starts the other one, so the switch needs no logout. Installing the extra from inside sway ends sway and drops you into tmux after 3 seconds; removing it from inside tmux detaches and starts sway on tty1. (A session started by an older autostart block, which had no loop, ends at the login prompt instead; log in again.) A tmux opened in a foot window under sway stays plain: the bar and Alt keys load only when there is no sway session.
 
 ## Keys
 
@@ -16,4 +16,4 @@ Alt takes the place of Super: Alt+1 … Alt+0 go to workspaces, Alt+Shift+1 … 
 
 ## What it changes on your computer
 
-- `~/.profile`: the autostart block (sway or tmux). `sway` still starts the desktop by hand.
+- `~/.profile`: the autostart block, and `~/.config/debsway/login` holds the mode. `sway` still starts the desktop by hand.

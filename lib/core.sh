@@ -199,32 +199,50 @@ script_found() {
     done
 }
 
-# profile_autostart sway|console: what a login on a text console (tty1 for sway,
-# any tty for tmux) starts, in ~/.profile. The two never stand together: the
-# console-only extra swaps one for the other (extras/console-only.sh).
+# profile_autostart sway|console: what a login on a text console starts (sway on
+# tty1, or tmux on any tty), kept in ~/.config/debsway/login and acted on by one
+# block in ~/.profile. The block loops: when the program ends it checks the file
+# again, so switching the mode (extras/console-only.sh) can end sway or tmux and
+# start the other without logging out. If the file is unchanged, ending the
+# program logs out, as before. DEBSWAY_LOGIN_LOOP=1 marks a session started by
+# the block (an older block, which exec'd sway, doesn't set it).
 profile_autostart() {
-    local profile="$HOME/.profile"
+    local profile="$HOME/.profile" mode="$HOME/.config/debsway/login"
     touch "$profile"
     sed -i -e '/^# >>> debsway autostart >>>$/,/^# <<< debsway autostart <<<$/d' \
         -e '/^# >>> debsway console >>>$/,/^# <<< debsway console <<<$/d' "$profile"
-    case $1 in
-        sway) cat >>"$profile" <<'BLOCK'
+    mkdir -p "${mode%/*}"
+    echo "$1" >"$mode"
+    cat >>"$profile" <<'BLOCK'
 
 # >>> debsway autostart >>>
-if [ "$(tty)" = /dev/tty1 ] && [ -z "${WAYLAND_DISPLAY:-}" ]; then
-    exec env XDG_CURRENT_DESKTOP=sway sway
-fi
+# What a text console login starts: ~/.config/debsway/login says sway (tty1) or
+# console (tmux, any tty). When it ends and that file has changed, the other starts.
+case "$(tty 2>/dev/null)" in
+    /dev/tty[0-9]*)
+        if [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${TMUX:-}" ]; then
+            export DEBSWAY_LOGIN_LOOP=1
+            while :; do
+                m=$(cat "$HOME/.config/debsway/login" 2>/dev/null); m=${m:-sway}
+                if [ "$m" = console ]; then
+                    tmux new-session -A -s main
+                elif [ "$(tty)" = /dev/tty1 ]; then
+                    env XDG_CURRENT_DESKTOP=sway sway
+                else
+                    break
+                fi
+                n=$(cat "$HOME/.config/debsway/login" 2>/dev/null)
+                [ "${n:-sway}" != "$m" ] || exit
+            done
+        fi ;;
+esac
 # <<< debsway autostart <<<
 BLOCK
-            ;;
-        console) cat >>"$profile" <<'BLOCK'
+}
 
-# >>> debsway console >>>
-case "$(tty 2>/dev/null)" in
-    /dev/tty[0-9]*) [ -n "${TMUX:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ] || exec tmux new-session -A -s main ;;
-esac
-# <<< debsway console <<<
-BLOCK
-            ;;
-    esac
+# login_mode: sway or console, as profile_autostart last set it
+login_mode() {
+    local m
+    m=$(cat "$HOME/.config/debsway/login" 2>/dev/null)
+    echo "${m:-sway}"
 }

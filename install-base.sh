@@ -197,6 +197,6 @@ if [ "$first_run" = 1 ] && [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${DEBSWAY_NO_S
     note "Starting in 5 seconds (Ctrl+C to stay in the text console)..."
     sleep 5
     # the console-only extra may have been picked: then it is tmux that starts
-    if grep -q '>>> debsway console' "$PROFILE"; then exec tmux new-session -A -s main; fi
+    if [ "$(login_mode)" = console ]; then exec tmux new-session -A -s main; fi
     exec env XDG_CURRENT_DESKTOP=sway sway
 fi

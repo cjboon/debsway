@@ -21,13 +21,23 @@ swap() { bash -c ". '$HERE/lib/core.sh'; profile_autostart $1" >/dev/null 2>&1; 
 swap sway
 check "sway autostart is written" grep -q 'debsway autostart >>>' "$HOME/.profile"
 swap console
-check "console-only swaps it for tmux" grep -q 'exec tmux new-session' "$HOME/.profile"
-check "...and the sway block is gone" not grep -q 'exec env XDG_CURRENT_DESKTOP=sway sway' "$HOME/.profile"
 swap console
-check "twice leaves one block" test "$(grep -c 'debsway console >>>' "$HOME/.profile")" = 1
+check "console-only sets the mode to console" grep -qx console "$HOME/.config/debsway/login"
+check "twice leaves one block" test "$(grep -c 'debsway autostart >>>' "$HOME/.profile")" = 1
 swap sway
-check "removing it starts sway again" grep -q 'exec env XDG_CURRENT_DESKTOP=sway sway' "$HOME/.profile"
-check "...and tmux is gone" not grep -q 'exec tmux' "$HOME/.profile"
+check "removing it sets sway again" grep -qx sway "$HOME/.config/debsway/login"
+check "login_mode reads it" test "$(bash -c ". '$HERE/lib/core.sh'; login_mode")" = sway
+# the block's loop: a pretend tmux/sway on a pretend tty; changing the mode while one runs starts the other
+mkdir -p "$T/lb"
+printf '#!/bin/sh\necho /dev/tty1\n' >"$T/lb/tty"
+printf '#!/bin/sh\necho sway >>%s/ran; echo console >%s/home/.config/debsway/login\n' "$T" "$T" >"$T/lb/env"
+printf '#!/bin/sh\necho tmux >>%s/ran\n' "$T" >"$T/lb/tmux"
+chmod +x "$T"/lb/*
+rm -f "$T/ran"
+swap sway
+sed -n '/^case "\$(tty/,/^esac/p' "$HOME/.profile" | sed 's|/dev/tty\[0-9\]\*|*|' >"$T/block.sh"
+PATH=$T/lb:$PATH bash -c 'unset WAYLAND_DISPLAY TMUX; . "$1"' _ "$T/block.sh" >/dev/null 2>&1
+check "ending sway after the mode changed to console starts tmux" test "$(cat "$T/ran")" = "$(printf 'sway\ntmux')"
 
 bar=$(sh "$HERE/bin/sway-status" --tmux)
 check "the tmux bar starts with the debsway menu range" bash -c '[[ $1 == "#[range=user|menu]debsway#[norange]"* ]]' _ "$bar"
