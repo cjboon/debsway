@@ -210,7 +210,7 @@ bash install-base.sh
 Then log out (`exit`) and log in on tty1: sway starts by itself if you
 said yes to that, otherwise type `sway`. The key cheat sheet opens on
 your first login; Super+? brings it back, and so does typing `keys` or
-opening `~/KEYS.txt`. The status bar has a "debsway" at its left: click it for a black-and-gray menu that fills the window area under the bar (arrow keys and Enter, or click; Esc closes every screen) with Help (the sheet), Install apps, Update and Status, and the Wi-Fi name next to it opens nmtui. Scrolling over "vol" or "bright" changes them; clicking "vol" mutes, and clicking "bat" says how long the battery will last.
+opening `~/KEYS.txt`. The status bar has a "debsway" at its left: click it for a black-and-gray menu in a floating window over what you were doing (arrow keys and Enter, or click; Esc closes every screen) with Help (the sheet), Install apps, Update and Status, and the Wi-Fi name next to it opens nmtui. Scrolling over "vol" or "bright" changes them; clicking "vol" mutes, and clicking "bat" says how long the battery will last.
 
 Click the time (or press Super+t) for timers and alarms, with this month's calendar (`cal`, from `ncal`) and today's date: type `10m` or `7:30` and press Enter; Esc, or another click on the time, closes it. The same goes for the debsway menu and the Wi-Fi screen: click again to close. Only one of them is open at a time: clicking another closes it (except the menu while it runs Update or Install apps, which stays). From a terminal: `timer 10m tea`, `timer at 7:30 wake up`, `timer clock` (date in the bar or not). Timers last until you log out; a sleeping laptop does not wake for them.
 

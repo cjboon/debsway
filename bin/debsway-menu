@@ -1,7 +1,7 @@
 #!/bin/bash
 # debsway-menu: written by debsway parts/debsway-menu.sh
 # The menu behind the "debsway" item in the bar. A click opens a black-and-gray
-# terminal that fills the space under the bar, with the choices Help, Terminal,
+# terminal in a floating, centered window, with the choices Help, Terminal,
 # Install apps, Update and Status. Arrow keys (or j/k) and Enter choose; so does a
 # click. Esc closes every screen of it, the install list and the pager
 # included. What you choose runs in that same window, and the window closes

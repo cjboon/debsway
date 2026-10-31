@@ -1,6 +1,6 @@
 #!/bin/bash
 # The "debsway" item at the left of the status bar: click it for a black-and-gray
-# menu, in a window that fills the space under the bar (bin/debsway-menu) with Help (the key cheat sheet),
+# menu, in a floating, centered window (bin/debsway-menu) with Help (the key cheat sheet),
 # Install apps (install-extras.sh), Update (update.sh) and Status (status.sh).
 # Arrow keys and Enter choose, or click; Esc closes. What you choose runs in
 # that same window. Super+? still opens the cheat sheet straight away.
@@ -45,7 +45,7 @@ install_bin keys
 install_bin sway-status
 mkdir -p "${KEYS%/*}"
 install -m 0644 "$DEBSWAY_DIR/data/keys.txt" "$KEYS"
-# An earlier version put a window rule here; the window is sized by sway (tiled, under the bar)
+# An earlier version put a window rule here; the rule now lives in install-base.sh (the popups snippet)
 remove_snippet debsway-menu
 note "Click \"debsway\" in the bar: Help, Install apps, Update, Status."
 note "In a terminal: debsway --help, debsway --update, debsway --apps (man debsway)."

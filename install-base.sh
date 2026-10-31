@@ -76,8 +76,6 @@ put_snippet help <<'EOF'
 # Key cheat sheet on Super+? (debsway install-base.sh)
 bindsym $mod+Shift+slash exec foot --app-id=debsway-keys ~/.local/bin/keys
 bindsym $mod+question exec foot --app-id=debsway-keys ~/.local/bin/keys
-for_window [app_id="debsway-keys"] floating enable, resize set width 72 ppt height 85 ppt
-for_window [app_id="debsway-nmtui"] floating enable, resize set width 60 ppt height 70 ppt
 exec ~/.local/bin/debsway-welcome
 EOF
 note "Super+? shows it (also: type keys, or open ~/KEYS.txt). It opens by itself on your first login."
@@ -86,8 +84,20 @@ note "Super+? shows it (also: type keys, or open ~/KEYS.txt). It opens by itself
 put_snippet timer <<'EOF'
 # Timers and alarms on Super+t (debsway install-base.sh)
 bindsym $mod+t exec foot --app-id=debsway-timer ~/.local/bin/timer
-for_window [app_id="debsway-timer"] floating enable, resize set width 60 ppt height 60 ppt
 EOF
+# All the pop-up windows (key sheet, Wi-Fi, timer, the debsway menu) look and behave alike:
+# floating, centered, over whatever you were doing. focus_follows_mouse is off because
+# with it on, a pointer resting over another window (say a terminal running claude)
+# takes the keyboard back from the pop-up, and Esc lands in that window instead.
+put_snippet popups <<'EOF'
+# Pop-up windows (debsway install-base.sh)
+for_window [app_id="debsway-keys"] floating enable, resize set width 72 ppt height 85 ppt, move position center
+for_window [app_id="debsway-run"] floating enable, resize set width 72 ppt height 85 ppt, move position center
+for_window [app_id="debsway-nmtui"] floating enable, resize set width 60 ppt height 70 ppt, move position center
+for_window [app_id="debsway-timer"] floating enable, resize set width 60 ppt height 60 ppt, move position center
+focus_follows_mouse no
+EOF
+note "Pop-up windows are floating and centered; focus follows clicks, not the mouse pointer."
 note "Super+t, or a click on the time in the bar: timers and alarms (or type: timer 10m tea)."
 
 say "Look"
