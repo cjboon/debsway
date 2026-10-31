@@ -6,7 +6,7 @@
 
 DEBIAN_CD_BASE=https://cdimage.debian.org/debian-cd/current/amd64/iso-cd
 # The kernel arguments that start the automatic install
-AUTO_ARGS="auto=true priority=critical preseed/file=/cdrom/debsway-install/preseed.cfg"
+AUTO_ARGS="auto=true priority=critical netcfg/enable=false preseed/file=/cdrom/debsway-install/preseed.cfg"
 
 # netinst_name SHA512SUMS: the netinst image's file name in a (verified) list
 netinst_name() {
