@@ -12,7 +12,7 @@ A computer with no screen to spare, a slow machine, or a taste for text. The sam
 
 ## Keys
 
-Alt takes the place of Super: Alt+1 … Alt+0 go to workspaces, Alt+Shift+1 … send the pane there (US keyboard), Alt+Enter / Alt+v split, Alt+h j k l or arrows move, Alt+f fullscreen, Alt+Shift+q close, Alt+m the debsway menu, Alt+t timers, Alt+? the key sheet. Click or scroll the bar items as in sway.
+Alt takes the place of Super: Alt+1 … Alt+0 go to workspaces, Alt+Shift+1 … send the pane there (US keyboard), Alt+Enter / Alt+v split, Alt+h j k l or arrows move, Alt+f fullscreen, Alt+Shift+q close, Alt+m the debsway menu, Alt+t timers, Alt+? the key sheet. Alt+w Wi-Fi, Alt+- / Alt+= volume (Alt+Backspace mutes), Alt+, / Alt+. brightness, Alt+b battery time. A real text console sends no mouse, so these keys are how you reach the bar's items; when tmux is used from a terminal program (over ssh, say) the items also click and scroll as in sway.
 
 ## What it changes on your computer
 

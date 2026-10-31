@@ -27,6 +27,8 @@ cat <<'EOT'
       Alt+Enter / Alt+v       split beside / below      Alt+h j k l or arrows: move
       Alt+f                   fullscreen the pane       Alt+Shift+q: close it
       Alt+m                   the debsway menu          Alt+t: timers   Alt+?: keys
-    The bar's items click and scroll as in sway. To start sway from the
+      Alt+w Wi-Fi   Alt+- Alt+= volume (Alt+Backspace mutes)   Alt+, Alt+. brightness   Alt+b battery
+    A text console has no mouse; used from a terminal (ssh), the bar's items also
+    click and scroll as in sway. To start sway from the
     console: type  sway.
 EOT

@@ -44,5 +44,6 @@ PATH=$T/bin:$PATH sh "$HERE/bin/console-click" vol 4 c0
 check "scrolling vol up raises the volume" grep -qx 'volume up' "$T/calls"
 check "the config loads the console file only without sway" grep -q "if-shell '\[ -z \"\$WAYLAND_DISPLAY\" \]' 'source-file ~/.config/tmux/console.conf'" "$HERE/data/tmux.conf"
 check "Alt+3 and Alt+Shift+3 are bound" bash -c 'grep -q "M-3 " "$1" && grep -q "M-#" "$1"' _ "$HERE/data/tmux-console.conf"
+check "Alt+w, volume and brightness keys are bound" bash -c 'grep -q "M-w " "$1" && grep -q "M-= " "$1" && grep -q "M-\. " "$1"' _ "$HERE/data/tmux-console.conf"
 
 [ "$fails" -eq 0 ] || { echo "$fails failed"; exit 1; }
