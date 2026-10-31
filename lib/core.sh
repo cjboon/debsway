@@ -227,7 +227,10 @@ case "$(tty 2>/dev/null)" in
                 if [ "$m" = console ]; then
                     # bigger text on the console; ~/.config/debsway/console-font names another
                     setfont "$(cat "$HOME/.config/debsway/console-font" 2>/dev/null || echo Uni3-DejaVu30x16)" 2>/dev/null
+                    rm -f "$HOME/.config/debsway/console-redraw"
                     tmux new-session -A -s main
+                    # console-font leaves this to say: detached on purpose, come back with the new font
+                    [ ! -e "$HOME/.config/debsway/console-redraw" ] || continue
                 elif [ "$(tty)" = /dev/tty1 ]; then
                     env XDG_CURRENT_DESKTOP=sway sway
                 else

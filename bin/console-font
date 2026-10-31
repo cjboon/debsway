@@ -63,9 +63,14 @@ apply() {
     echo "$file" >"$conf"
     case $tty in
         /dev/tty[0-9]*)
-            if setfont -C "$tty" "$file"; then
+            if setfont -C "$tty" "$file" 2>/dev/null; then
                 [ -z "${TMUX:-}" ] || tmux refresh-client 2>/dev/null
                 echo "Console font is now $file."
+            elif [ -n "${TMUX:-}" ] && [ -n "${DEBSWAY_LOGIN_LOOP:-}" ]; then
+                # the console device is root's, so only the login shell can set the font:
+                # leave tmux for a moment and let ~/.profile set it and reattach
+                touch "${conf%/*}/console-redraw"
+                tmux detach-client
             else
                 echo "Could not set the font now; it is saved for your next login." >&2
                 return 1
