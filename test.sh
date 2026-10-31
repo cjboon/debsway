@@ -385,6 +385,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "Console-only: the autostart swap, the tmux bar and its clicks"
+if out=$(bash tools/test-console.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") console-only checks"
+else
+    bad "console-only checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "Bluetooth's start-off setting and the new extras"
 if out=$(bash tools/test-bluetooth-conf.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") bluetooth setup checks"

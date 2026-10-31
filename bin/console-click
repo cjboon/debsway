@@ -1,0 +1,25 @@
+#!/bin/sh
+# console-click: written by debsway parts/console-tmux.sh
+# What a click or scroll on the tmux bar does (data/tmux.conf calls it), like the
+# same click on sway's bar (bin/sway-status):  console-click PART BUTTON CLIENT
+# PART is the name of the bar item (menu, wifi, vol, bright, bat, timer, date);
+# BUTTON is 1 (click), 4 (wheel up) or 5 (wheel down).
+part=$1 button=$2 client=$3
+pop() { # WIDTH HEIGHT COMMAND...
+    w=$1 h=$2
+    shift 2
+    tmux display-popup -c "$client" -E -w "$w" -h "$h" "$@"
+}
+case "$part:$button" in
+    menu:1) pop 72% 85% "$HOME/.local/bin/debsway-menu --tui" ;;
+    wifi:1)
+        if [ -x "$HOME/.local/bin/nmtui" ]; then pop 60% 70% "$HOME/.local/bin/nmtui"; else pop 60% 70% nmtui; fi ;;
+    vol:1) "$HOME/.local/bin/volume" mute ;;
+    vol:4) "$HOME/.local/bin/volume" up ;;
+    vol:5) "$HOME/.local/bin/volume" down ;;
+    bright:4) "$HOME/.local/bin/brightness" up ;;
+    bright:5) "$HOME/.local/bin/brightness" down ;;
+    date:1 | timer:1) pop 60% 60% "$HOME/.local/bin/timer" ;;
+    bat:1) tmux display-message -c "$client" "$("$HOME/.local/bin/sway-status" --battery)" ;;
+esac
+tmux refresh-client -S -t "$client" 2>/dev/null || true

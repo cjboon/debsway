@@ -198,3 +198,33 @@ script_found() {
         esac
     done
 }
+
+# profile_autostart sway|console: what a login on a text console (tty1 for sway,
+# any tty for tmux) starts, in ~/.profile. The two never stand together: the
+# console-only extra swaps one for the other (extras/console-only.sh).
+profile_autostart() {
+    local profile="$HOME/.profile"
+    touch "$profile"
+    sed -i -e '/^# >>> debsway autostart >>>$/,/^# <<< debsway autostart <<<$/d' \
+        -e '/^# >>> debsway console >>>$/,/^# <<< debsway console <<<$/d' "$profile"
+    case $1 in
+        sway) cat >>"$profile" <<'BLOCK'
+
+# >>> debsway autostart >>>
+if [ "$(tty)" = /dev/tty1 ] && [ -z "${WAYLAND_DISPLAY:-}" ]; then
+    exec env XDG_CURRENT_DESKTOP=sway sway
+fi
+# <<< debsway autostart <<<
+BLOCK
+            ;;
+        console) cat >>"$profile" <<'BLOCK'
+
+# >>> debsway console >>>
+case "$(tty 2>/dev/null)" in
+    /dev/tty[0-9]*) [ -n "${TMUX:-}" ] || [ -n "${WAYLAND_DISPLAY:-}" ] || exec tmux new-session -A -s main ;;
+esac
+# <<< debsway console <<<
+BLOCK
+            ;;
+    esac
+}

@@ -10,11 +10,6 @@
 
 PIDFILE=${XDG_RUNTIME_DIR:-/tmp}/sway-status.pid
 POWER=${DEBSWAY_POWER_DIR:-/sys/class/power_supply}   # (a test can point it elsewhere)
-echo $$ >"$PIDFILE"
-trap 'rm -f "$PIDFILE"' EXIT
-trap 'exit' TERM INT HUP
-trap ':' USR1
-
 wifi() {
     if command -v nmcli >/dev/null; then
         name=$(nmcli -t -f NAME,TYPE connection show --active 2>/dev/null |
@@ -88,6 +83,50 @@ battery_time() {
     echo "No battery found"
 }
 
+# json TEXT: TEXT made safe to put inside a JSON string (a network name can hold quotes)
+json() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+
+# clock_format: the date(1) format for the time, as chosen with `timer clock`
+clock_format() {
+    conf=${XDG_CONFIG_HOME:-$HOME/.config}/debsway/clock
+    case $(sed -n 's/^date=//p' "$conf" 2>/dev/null) in no) echo '%a %-I:%M %p' ;; *) echo '%a %Y-%m-%d %-I:%M %p' ;; esac
+}
+
+# timer_text: the next timer or alarm ("tea 4m"), if there is one
+timer_text() {
+    [ -x "$HOME/.local/bin/timer" ] && "$HOME/.local/bin/timer" next
+}
+
+# block NAME TEXT: one part of the bar, " | TEXT", nothing if TEXT is empty
+block() {
+    [ -n "$2" ] || return 0
+    if [ -n "$TMUX_BAR" ]; then
+        printf ' | #[range=user|%s]%s#[norange]' "$1" "$(printf '%s' "$2" | sed 's/#/##/g')"
+        return 0
+    fi
+    printf ',{"name":"%s","full_text":" | %s","separator":false,"separator_block_width":0}' "$1" "$(json "$2")"
+}
+
+# --battery: the sentence a click on bat shows (console-click uses it)
+if [ "${1:-}" = --battery ]; then
+    echo "Battery $(battery | sed 's/^bat //; s/+$//'): $(battery_time)"
+    exit 0
+fi
+
+# --tmux: the same bar as one line of tmux status text (extras/console-only.sh),
+# each part a click range named like the bar's; then exit
+if [ "${1:-}" = --tmux ]; then
+    TMUX_BAR=1
+    printf '#[range=user|menu]debsway#[norange]%s%s%s%s%s%s' \
+        "$(block wifi "$(wifi)")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
+        "$(block bat "$(battery)")" "$(block timer "$(timer_text)")" "$(block date "$(date +"$(clock_format)")")"
+    exit 0
+fi
+echo $$ >"$PIDFILE"
+trap 'rm -f "$PIDFILE"' EXIT
+trap 'exit' TERM INT HUP
+trap ':' USR1
+
 # Clicks and scrolls arrive on stdin, one line of JSON each (sway puts spaces in it)
 exec 3<&0
 
@@ -155,26 +194,6 @@ trap 'kill $reader 2>/dev/null; rm -f "$PIDFILE"' EXIT
 
 echo '{"version":1,"click_events":true}'
 echo '['
-# json TEXT: TEXT made safe to put inside a JSON string (a network name can hold quotes)
-json() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
-
-# clock_format: the date(1) format for the time, as chosen with `timer clock`
-clock_format() {
-    conf=${XDG_CONFIG_HOME:-$HOME/.config}/debsway/clock
-    case $(sed -n 's/^date=//p' "$conf" 2>/dev/null) in no) echo '%a %-I:%M %p' ;; *) echo '%a %Y-%m-%d %-I:%M %p' ;; esac
-}
-
-# timer_text: the next timer or alarm ("tea 4m"), if there is one
-timer_text() {
-    [ -x "$HOME/.local/bin/timer" ] && "$HOME/.local/bin/timer" next
-}
-
-# block NAME TEXT: one part of the bar, " | TEXT", nothing if TEXT is empty
-block() {
-    [ -n "$2" ] || return 0
-    printf ',{"name":"%s","full_text":" | %s","separator":false,"separator_block_width":0}' "$1" "$(json "$2")"
-}
-
 while :; do
     printf '[{"name":"menu","full_text":"debsway","separator":false,"separator_block_width":0}%s%s%s%s%s%s],\n' \
         "$(block wifi "$(wifi)")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \

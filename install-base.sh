@@ -137,20 +137,13 @@ reload_sway
 
 say "Start sway on tty1 login"
 PROFILE="$HOME/.profile"
-if grep -q '>>> debsway autostart' "$PROFILE" 2>/dev/null; then
+first_run=0
+if grep -q '>>> debsway \(autostart\|console\)' "$PROFILE" 2>/dev/null; then
     note "Already set up in $PROFILE"
-elif ask "Start sway automatically when you log in on tty1?" y; then
-    cat >>"$PROFILE" <<'EOF'
-
-# >>> debsway autostart >>>
-if [ "$(tty)" = /dev/tty1 ] && [ -z "${WAYLAND_DISPLAY:-}" ]; then
-    exec env XDG_CURRENT_DESKTOP=sway sway
-fi
-# <<< debsway autostart <<<
-EOF
-    note "Added to $PROFILE. Other ttys (Ctrl+Alt+F2) still give a plain shell."
 else
-    note "Start it yourself by typing: sway"
+    first_run=1
+    profile_autostart sway
+    note "Added to $PROFILE. Other ttys (Ctrl+Alt+F2) still give a plain shell."
 fi
 # On a plain text console (Ctrl+Alt+F2, or tty1 without autostart) say where the keys are
 if ! grep -q '>>> debsway hint' "$PROFILE" 2>/dev/null; then
@@ -189,10 +182,21 @@ fi
 
 say "Done"
 cat <<'EOF'
-    Log out (exit) and log in on tty1. Super+? lists every key; it also
-    opens by itself the first time. debsway --status shows what's installed;
+    Super+? lists every key; it also opens by itself the first time.
+    debsway --status shows what's installed;
     debsway --apps picks more extras any time (sound, a browser, screenshots,
     USB automount... are there if you didn't pick them now).
     Reboot once: the boot hardening applies after it
     (check with: cat /proc/cmdline).
 EOF
+
+# First run, on a text console with no desktop yet: start sway now instead of
+# making you log out and in. (The boot hardening still waits for a reboot.)
+if [ "$first_run" = 1 ] && [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${DEBSWAY_NO_SWAY:-}" ] &&
+    [ -t 0 ] && case "$(tty 2>/dev/null)" in /dev/tty[0-9]*) true ;; *) false ;; esac; then
+    note "Starting in 5 seconds (Ctrl+C to stay in the text console)..."
+    sleep 5
+    # the console-only extra may have been picked: then it is tmux that starts
+    if grep -q '>>> debsway console' "$PROFILE"; then exec tmux new-session -A -s main; fi
+    exec env XDG_CURRENT_DESKTOP=sway sway
+fi

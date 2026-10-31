@@ -45,6 +45,8 @@ fi
 # The checklist in white on black, to match the terminal it opens in, the
 # chosen line reversed. Your own NEWT_COLORS wins if you set one. The same
 # block as bin/nmtui.
+# A button is drawn in compactbutton colors until Tab reaches it, then in button colors:
+# button is the reversed pair so the chosen one shows.
 # newt (whiptail, nmtui) reads #rrggbb colors only when the terminal says it
 # has 24-bit color (COLORTERM=truecolor); otherwise it ignores them all and
 # draws its own blue and red, the chosen line hard to see. foot has 24-bit
@@ -59,7 +61,7 @@ if [ -z "${NEWT_COLORS:-}" ]; then
         case ${COLORTERM:-} in truecolor | 24bit) ;; *) export COLORTERM=truecolor ;; esac
     fi
     NEWT_COLORS="root=$_w,$_b border=$_w,$_b window=$_w,$_b shadow=$_b,$_b title=$_w,$_b"
-    NEWT_COLORS+=" button=$_w,$_b actbutton=$_b,$_w compactbutton=$_w,$_b"
+    NEWT_COLORS+=" button=$_b,$_w actbutton=$_b,$_w compactbutton=$_w,$_b"
     NEWT_COLORS+=" checkbox=$_w,$_b actcheckbox=$_b,$_w entry=$_w,$_b disentry=$_g,$_b label=$_w,$_b"
     NEWT_COLORS+=" listbox=$_w,$_b actlistbox=$_b,$_w sellistbox=$_w,$_b actsellistbox=$_b,$_w"
     NEWT_COLORS+=" textbox=$_w,$_b acttextbox=$_b,$_w helpline=$_w,$_b roottext=$_w,$_b"

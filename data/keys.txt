@@ -37,6 +37,11 @@
     Super+r                resize mode: arrows or h j k l, Enter when done
     Super+drag             move a window; right-drag resizes it
 
+  TEXT CONSOLE (tmux; the console-only extra starts it at login)
+    Alt+1 … 0              workspace 1 … 10 (Alt+Shift+1 … sends the pane)
+    Alt+m / Alt+t / Alt+?  debsway menu / timers / this sheet
+    Alt+Enter, Alt+v       split beside / below; Alt+h j k l moves; Alt+f fullscreen
+
   WORKSPACES
     Super+1 … 0            go to workspace 1 … 10
     Super+Shift+1 … 0      send the window to workspace 1 … 10
