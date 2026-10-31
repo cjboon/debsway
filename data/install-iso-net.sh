@@ -1,17 +1,18 @@
 #!/bin/sh
-# preseed/early_command for debsway's install ISO (prep/make-install-iso.sh):
-# runs inside the Debian installer before it sets up the network.
+# preseed/include_command for debsway's install ISO (prep/make-install-iso.sh):
+# runs inside the Debian installer before it sets up the network, and its
+# standard output must be empty or the location of a preseed part.
 #
-# If a wired port has a cable plugged in, nothing changes: the installer
+# If a wired port has a cable plugged in, nothing is printed: the installer
 # configures it and uses the mirror. If there is no wired link (a laptop on
-# wifi only), network setup is switched off, so the installer doesn't stop
-# with questions about wifi or "network autoconfiguration failed", and it
-# installs from the ISO alone. wifi.sh sets up wifi after the install, when
-# debsway's own install begins.
-# (DEBSWAY_NET, DEBSWAY_SEED and DEBSWAY_WAIT are for tests.)
+# wifi only), a small preseed part is written that switches network setup
+# off, so the installer doesn't stop with questions about wifi or "network
+# autoconfiguration failed", and it installs from the ISO alone. wifi.sh
+# sets up wifi after the install, when debsway's own install begins.
+# (DEBSWAY_NET, DEBSWAY_INC and DEBSWAY_WAIT are for tests.)
 
 NET=${DEBSWAY_NET:-/sys/class/net}
-SEED=${DEBSWAY_SEED:-debconf-set-selections}
+INC=${DEBSWAY_INC:-/tmp/debsway-net.preseed}
 WAIT=${DEBSWAY_WAIT:-8}
 
 # wired: the names of the ports that are not loopback, wifi or virtual
@@ -45,18 +46,17 @@ while :; do
     [ -n "$ports" ] && sleep 1 || break
 done
 
-# The questions and their templates are not loaded yet (netcfg, apt-setup and
-# pkgsel run later in the menu), so debconf-set would silently not set them.
-# debconf-set-selections registers a dummy template when it has to, and is
-# what the preseed itself goes through.
-seed=$(mktemp)
+# Values set from here through debconf-set-selections don't stick: in the
+# installer's cdebconf only the preseed loader's own context reliably
+# persists the values (its own load of the preseed file does, and other
+# contexts get stomped by competing database snapshots). So give the
+# decision to that context instead of seeding debconf oneself:
+# preseed/include_command takes the location this script prints and the
+# loader fetches and applies the part itself (lib/preseed/preseed.sh).
 {
     printf '%s\n' 'd-i netcfg/enable boolean false' \
         'd-i apt-setup/use_mirror boolean false' \
         'd-i pkgsel/upgrade select none'
-} >"$seed"
-# (debconf-set-selections reads the values from stdin)
-$SEED <"$seed" 2>/dev/null
-rm -f "$seed"
+} >"$INC"
 logger -t debsway "no wired link: network setup skipped (wifi.sh does wifi after the install)" 2>/dev/null || true
-exit 0
+echo "file://$INC"

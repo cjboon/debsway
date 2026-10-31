@@ -150,8 +150,7 @@ check "no disk besides the stick: nothing is chosen" test -z "$(disk /dev/sdb1 /
 
 # ---- inside the installer: no cable, no network setup ----
 N=$HERE/data/install-iso-net.sh
-net() { # PORT:CARRIER... (w = wifi): what net.sh seeds (its fake
-    # debconf-set-selections copies everything it is fed into $T/set)
+net() { # PORT:CARRIER... (w = wifi): what net.sh emits for the installer
     rm -rf "$T/net"; mkdir -p "$T/net/lo"
     for p in "$@"; do
         n=${p%%:*}; c=${p#*:}
@@ -159,19 +158,20 @@ net() { # PORT:CARRIER... (w = wifi): what net.sh seeds (its fake
         case $n in w*) mkdir "$T/net/$n/wireless" ;; *) mkdir "$T/net/$n/device" ;; esac
         [ "$c" = - ] || echo "$c" >"$T/net/$n/carrier"
     done
-    printf '#!/bin/sh\ncat >>"%s/set"\n' "$T" >"$T/seed"; chmod +x "$T/seed"
-    : >"$T/set"
-    DEBSWAY_NET=$T/net DEBSWAY_SEED=$T/seed DEBSWAY_WAIT=1 sh "$N"
-    cat "$T/set"
+    : >"$T/inc"; : >"$T/out"
+    DEBSWAY_NET=$T/net DEBSWAY_INC=$T/inc DEBSWAY_WAIT=1 sh "$N" >"$T/out"
+    cat "$T/inc"; echo "stdout:[$(cat "$T/out")]"
 }
-check "a cable plugged in: the network is left alone" test -z "$(net eth0:1 wlan0:1)"
+check "a cable plugged in: the network is left alone" test "$(net eth0:1 wlan0:1)" = 'stdout:[]'
+check "a cable plugged in: net.sh writes no part and prints nothing" test ! -s "$T/inc" -a ! -s "$T/out"
 check "wifi only: network setup is switched off" grep -qx 'd-i netcfg/enable boolean false' <<<"$(net wlan0:1)"
 check "...and no mirror is asked for" grep -qx 'd-i apt-setup/use_mirror boolean false' <<<"$(net wlan0:1)"
 check "...and no upgrade, which the network would be needed for" grep -qx 'd-i pkgsel/upgrade select none' <<<"$(net wlan0:1)"
 check "a wired port with no cable: switched off" grep -qx 'd-i netcfg/enable boolean false' <<<"$(net eth0:0 wlan0:1)"
 check "a wired port that reports no carrier at all: switched off" grep -qx 'd-i netcfg/enable boolean false' <<<"$(net eth0:-)"
 check "no ports at all: switched off" grep -qx 'd-i netcfg/enable boolean false' <<<"$(net)"
-check "net.sh is in the preseed" grep -q 'preseed/early_command string sh /cdrom/debsway-install/net.sh' "$HERE/data/install-iso-preseed.cfg"
+check "wifi only: net.sh's stdout is exactly the part's location" test "$(cat "$T/out")" = "file://$T/inc"
+check "net.sh is in the preseed" grep -q 'preseed/include_command string sh /cdrom/debsway-install/net.sh' "$HERE/data/install-iso-preseed.cfg"
 check "the installer picks the interface again (auto is netcfg's default too)" \
     grep -q '^d-i netcfg/choose_interface select auto' "$HERE/data/install-iso-preseed.cfg"
 check "the boot line leaves the network to net.sh (nothing is forced off)" \
