@@ -9,7 +9,7 @@
 # as tmux.conf.bak.
 # Usage: bash console-tmux.sh [--remove]
 # status: file:~/.config/tmux/tmux.conf
-# files: bin/sway-status bin/console-click bin/console-font data/tmux.conf data/tmux-console.conf
+# files: bin/sway-status bin/console-click bin/console-font data/tmux.conf data/tmux-console.conf data/keys-console.txt
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
@@ -18,7 +18,7 @@ MARK='Written by debsway parts/console-tmux.sh'
 
 if [ "${1:-}" = --remove ]; then
     if grep -qs "$MARK" "$CONF"; then
-        rm -f "$CONF" "${CONF%/*}/console.conf"
+        rm -f "$CONF" "${CONF%/*}/console.conf" "$HOME/.local/share/debsway/keys-console.txt"
         if [ -f "$CONF.bak" ]; then
             mv "$CONF.bak" "$CONF"
             note "Put your earlier tmux.conf back."
@@ -42,4 +42,7 @@ if [ -f "$CONF" ] && ! grep -qs "$MARK" "$CONF" && ! cmp -s "$DEBSWAY_DIR/data/t
 fi
 cp "$DEBSWAY_DIR/data/tmux.conf" "$CONF"
 cp "$DEBSWAY_DIR/data/tmux-console.conf" "${CONF%/*}/console.conf"
+# the key sheet for a text console (bin/keys picks it when there is no sway)
+mkdir -p "$HOME/.local/share/debsway"
+install -m 0644 "$DEBSWAY_DIR/data/keys-console.txt" "$HOME/.local/share/debsway/keys-console.txt"
 note "Installed $CONF. On a text console tmux has the sway-like bar (Alt+m: the debsway menu); in a foot window it stays plain."

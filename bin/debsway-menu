@@ -1,8 +1,8 @@
 #!/bin/bash
 # debsway-menu: written by debsway parts/debsway-menu.sh
 # The menu behind the "debsway" item in the bar. A click opens a black-and-gray
-# terminal in a floating, centered window, with the choices Help, Terminal,
-# Install apps, Update and Status. Arrow keys (or j/k) and Enter choose; so does a
+# terminal in a floating, centered window, with the choices Help, Terminal (Font size on a
+# text console), Install apps, Update and Status. Arrow keys (or j/k) and Enter choose; so does a
 # click. Esc closes every screen of it, the install list and the pager
 # included. What you choose runs in that same window, and the window closes
 # when it ends (the install and update screens wait for a key first, if they
@@ -208,6 +208,12 @@ if [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null; then
     ids+=(terminal)
     items+=(Terminal)
 fi
+# Text size, on a text console only (console-only mode): there is no Terminal
+# there, and the menu runs in the console itself
+if [ -z "${SWAYSOCK:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ] && [ -x "$HOME/.local/bin/console-font" ]; then
+    ids+=(font)
+    items+=("Font size")
+fi
 if [ -f "$DIR/update.sh" ]; then
     ids+=(apps update status)
     items+=("Install apps" Update Status)
@@ -274,6 +280,16 @@ run_choice() {
         terminal)
             swaymsg exec foot >/dev/null 2>&1
             exit 0 ;;
+        font)
+            # console-font lists the sizes and asks; leave the menu's screen
+            # for it, then come back to the menu
+            screen_off
+            printf '\e[2J\e[1;1H'
+            "$HOME/.local/bin/console-font"
+            printf '\nPress Enter to go back. '
+            IFS= read -r _ </dev/tty || true
+            screen_on
+            settle ;;
         help)
             # the sheet without the lines for things that are not installed
             mapfile -t lines < <("$HOME/.local/bin/keys" --text 2>/dev/null || cat "$KEYS_FILE")

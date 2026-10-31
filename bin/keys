@@ -10,6 +10,13 @@
 #   keys --welcome      the first login: asks which key, then shows the sheet
 SHEET=$HOME/.local/share/debsway/keys.txt
 SWAY_CONFIG=$HOME/.config/sway/config
+# on a text console (the same test as tmux's console.conf) the sheet for tmux
+CONSOLE_SHEET=$HOME/.local/share/debsway/keys-console.txt
+CONSOLE=
+if [ -z "${WAYLAND_DISPLAY:-}" ] && [ -f "$CONSOLE_SHEET" ]; then
+    CONSOLE=1
+    SHEET=$CONSOLE_SHEET
+fi
 
 # mod: Alt or Super, from the set $mod line of your sway config
 mod() {
@@ -98,8 +105,8 @@ shown=$(mktemp) || exit 1
 trap 'rm -f "$shown"' EXIT
 text >"$shown"
 # ~/KEYS.txt follows along (only if it is the link or copy debsway made)
-if [ ! -e "$HOME/KEYS.txt" ] || [ -L "$HOME/KEYS.txt" ] || grep -q 'Super = the Windows' "$HOME/KEYS.txt" 2>/dev/null ||
-    grep -q "Alt = sway's key" "$HOME/KEYS.txt" 2>/dev/null; then
+if [ -z "$CONSOLE" ] && { [ ! -e "$HOME/KEYS.txt" ] || [ -L "$HOME/KEYS.txt" ] || grep -q 'Super = the Windows' "$HOME/KEYS.txt" 2>/dev/null ||
+    grep -q "Alt = sway's key" "$HOME/KEYS.txt" 2>/dev/null; }; then
     rm -f "$HOME/KEYS.txt"
     cp "$shown" "$HOME/KEYS.txt" 2>/dev/null
 fi

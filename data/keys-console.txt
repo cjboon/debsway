@@ -1,0 +1,64 @@
+  KEYS (text console)
+  ──────────────────────────────────────────────────────────────────
+  Press Esc to close this; arrows and Space scroll.
+  Open it again any time: Alt+?, debsway menu (Alt+m) > Help, or type  keys.
+  (The debsway menu: arrows and Enter. Esc closes every screen of it.)
+  Lines for things you have not installed are left out; add them with debsway --apps.
+
+  START HERE
+    Alt+m                  debsway menu: help, update, apps, text size
+    Alt+?                  this page
+    Alt+t                  timers and alarms
+    Alt+Enter              new pane beside this one (Alt+v: below)
+    Alt+Shift+q            close the pane (or type exit)
+    exit                   in the last pane: log out
+
+  PANES (sway's windows)
+    Alt+h j k l            move to the pane left / down / up / right (or Alt+arrows)
+    Alt+f                  fullscreen the pane, again to go back
+    Alt+1 … 0              go to workspace 1 … 10 (tmux windows)
+    Alt+Shift+1 … 0        send the pane to workspace 1 … 10
+
+  BAR ITEMS FROM THE KEYBOARD
+    Alt+w                  Wi-Fi screen
+    Alt+b                  battery time left
+@if volume
+    Alt+- / Alt+=          volume down / up; Alt+Backspace: mute
+@end
+@if brightness
+    Alt+, / Alt+.          brightness down / up
+@end
+
+  TEXT SIZE
+    console-font           list the sizes and pick one (or debsway menu > Font size)
+    console-font dejavu-43   a size by name; it is kept for next login
+
+  TMUX BASICS (tmux is what shows the panes and the bar)
+    Every tmux key is Ctrl+b, let go, then the key:
+    Ctrl+b c               new window (workspace)      Ctrl+b n / p: next / previous
+    Ctrl+b %  /  "         split beside / below
+    Ctrl+b arrows          move between panes          Ctrl+b x: close the pane
+    Ctrl+b z               zoom the pane, again to go back
+    Ctrl+b [               scroll back: arrows or PageUp/PageDown, q to leave
+                           (select with Space, copy with Enter, paste with Ctrl+b ])
+    Ctrl+b d               leave tmux, programs keep running (tmux attach: return)
+    Ctrl+b ?               tmux's own list of keys (q closes it)
+
+  IF YOU GET STUCK
+    Ctrl+c                 stops a program that is running
+    Ctrl+Alt+F2 / F1       another text console / back
+    sway                   type it to start the graphical desktop
+
+  FROM A TERMINAL
+    keys                   this page
+    bash ~/debsway/status.sh          what is installed
+    bash ~/debsway/install-extras.sh  add programs
+@if nmtui
+    nmtui                  pick a Wi-Fi network (or Alt+w)
+@end
+@if powerprofilesctl
+    powerprofilesctl set power-saver | balanced | performance
+@end
+@if volume
+    volume up|down 10      bigger volume steps (volume mute, volume micmute)
+@end
