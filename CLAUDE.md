@@ -1,9 +1,25 @@
 # Working on debsway (notes for Claude)
 
 debsway is shell scripts that turn a bare Debian 13 install into a small sway
-desktop. The owner tests every push on their own machine, so: be plain about what was
-tested here and what wasn't (nothing in this VM has sway, a GPU or the real users), and
-say which user runs which command.
+desktop. Be plain about what was tested and what wasn't, and say which user runs which
+command.
+
+**For now Claude runs on the owner's own PC, not in a VM.** This is the installed
+debsway desktop: sway is running, there is a real GPU and `/dev/kvm`, the extras are
+installed (`~/.local/bin`), and other users exist (e.g. `onion-site`). So:
+
+- Anything you run acts on the owner's real system and session. Don't run install,
+  `--remove`, `update.sh` or `bin/*` commands, change system settings, or stop/start
+  services and VMs unless the owner asks; say the command and let them run it.
+- sudo asks for a password, so it can't run unattended. Never try to get around that.
+- The home folder holds private files (password database, keys, `~/.gnupg`, notes,
+  logs). Read nothing outside `~/debsway` and the scratchpad unless the owner points you
+  to a specific file.
+- `~/debsway` is a git repo tracking `origin/main` (https://github.com/cjboon/debsway.git).
+  There is no `~/.ssh` here; pushing uses the owner's own credential, so the owner pushes.
+  Commit only when the owner asks.
+- The test suite works in a temp folder with a pretend sudo. Still check a test doesn't
+  touch the real home or desktop before running it here.
 
 ## Efficiency
 
@@ -45,10 +61,11 @@ say which user runs which command.
 
 ## Safety
 
-- This VM holds the deploy key `~/.ssh/id_ed25519`. Do not run downloaded binaries or large
-  third-party programs under this account. Read code you fetch before using it, in its own
+- This is the owner's own account, with their private files. Do not run downloaded binaries
+  or large third-party programs under it. Read code you fetch before using it, in its own
   folder in the scratchpad, and say what you found.
-- Work leaves the VM only by commit and push; the owner reviews. Don't send repo content
-  to outside services.
-- Security-relevant claims need a test or a reason. If a path could not be run here (real
-  sway, real sudo, real hardware), say so in the report instead of implying it works.
+- Work leaves this PC only by the owner's commit and push; the owner reviews. Don't send
+  repo content or anything from this machine to outside services.
+- Security-relevant claims need a test or a reason. If a path was not actually run (real
+  sudo, a change you left for the owner to apply), say so in the report instead of
+  implying it works.
