@@ -255,7 +255,8 @@ npm at run time, no outside images or fonts, no email. What it needs goes in
 with `upload`, or comes from Debian during `onion-site update`.
 
 What it can't hide: the site is only up while this computer is on and the VM
-runs (`onion-site start`), and that timing can link it to you; a dedicated
+runs (it starts at every boot; `onion-site stop` and `start` by hand), and that
+timing can link it to you; a dedicated
 machine is the right host for anything serious. A hole in your app gets the
 VM and the site's data, not this computer. Back up `/var/lib/tor/debsway-onion-site`
 (as root) to keep the address; `--remove` asks before deleting it.

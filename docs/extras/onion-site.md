@@ -31,21 +31,23 @@ The most common way an onion site gives away where it runs is its own software r
 5. **Loads a firewall rule for that user** (`data/onion-site-firewall.nft`, run at boot by `debsway-onion-site-firewall.service`). It keeps even the QEMU process off your router, printers, other machines and local services, except two loopback doors: the VM's SSH console (2243) and Tor's SOCKS port (9050, used only for updates). DNS is allowed. The internet is allowed because the first setup needs it.
 6. **Installs the VM engine and the command:** `mockvps-kvm` from `vendor/` into `/usr/local/libexec/onion-site-mockvps-kvm`, the session script, a one-line sudo rule in `/etc/sudoers.d/debsway-onion-site` (checked with `visudo`) that lets you run only that script as `onion-site`, and `~/.local/bin/onion-site`.
 7. **Sets up Tor's onion service** in `/etc/tor/torrc`: port 80 of the onion address leads to `127.0.0.1:18080`, with Tor's defences against floods of visits (and a proof-of-work defence where this Tor has it). The settings are checked before Tor restarts. If private, it makes a client key and shows it once.
-8. **Starts Tor** and waits up to 3 minutes. It saves the address to `~/.local/state/debsway/onion-site-address`.
-9. **Builds the VM** (asks first): this installs Debian and nginx (and gunicorn with Flask) in the VM, takes 5 to 15 minutes and downloads a few hundred MB, without Tor. The time zone in the VM is UTC; nginx shows no version and keeps no access log. After that the VM has no network.
+8. **Starts Tor** (`tor.service` and `tor@default.service`, both enabled, so Tor runs again after a reboot) and waits up to 3 minutes. It saves the address to `~/.local/state/debsway/onion-site-address`.
+9. **Builds the VM** (without asking): this installs Debian and nginx (and gunicorn with Flask) in the VM, takes 5 to 15 minutes and downloads a few hundred MB, without Tor. The time zone in the VM is UTC; nginx shows no version and keeps no access log. After that the VM has no network.
+10. **Starts the site at every boot:** `debsway-onion-site.service` runs the VM as `onion-site` after its firewall rule, and powers it off cleanly at shutdown. The site is up whenever the computer is on.
 
 ## What it changes on your computer
 
 - Packages: those listed above.
 - The user `onion-site` and its home `/home/onion-site` (the VM and the site's data).
-- `/etc/debsway/onion-site.nft`, `/etc/debsway/onion-site.conf`, `/etc/systemd/system/debsway-onion-site-firewall.service` (nft table `inet debsway_onion_site`).
+- `/etc/debsway/onion-site.nft`, `/etc/debsway/onion-site.conf`, `/etc/systemd/system/debsway-onion-site-firewall.service` (nft table `inet debsway_onion_site`), `/etc/systemd/system/debsway-onion-site.service` (the VM at boot).
 - `/usr/local/libexec/onion-site-session`, `onion-site-mockvps-kvm` and the `no-abstract-sockets` helper; `/etc/sudoers.d/debsway-onion-site`.
-- `/etc/tor/torrc` (marked blocks), `/etc/tor/.debsway-onion-site`, `/var/lib/tor/debsway-onion-site/` (the address and keys); `tor@default.service` enabled.
+- `/etc/tor/torrc` (marked blocks), `/etc/tor/.debsway-onion-site`, `/var/lib/tor/debsway-onion-site/` (the address and keys); `tor.service` and `tor@default.service` enabled.
 - `~/.local/bin/onion-site` and `~/.local/state/debsway/onion-site-address`.
 
 ## Using it
 
-- `onion-site start | stop | status`: the site is up only while its VM runs.
+- `onion-site start | stop | status`: the site is up only while its VM runs. It starts by itself at every boot; `stop` takes it down until the next boot or `start`. To keep it from starting at boot: `sudo systemctl disable debsway-onion-site`. `start` and `status` also say when Tor isn't running on this computer, the usual reason the address can't be reached.
+- **Can't reach the address?** Check `onion-site status` (the VM) and `systemctl status tor@default` (Tor). A new address can take a minute or two to be found the first time. A private site opens only with its client key: Tor Browser asks for it (a key icon in the address bar).
 - `onion-site upload static FOLDER`: your files, served as they are. It replaces what was there.
 - `onion-site upload app FOLDER`: your app (Flask: `app.py` with `app = Flask(...)`; otherwise run it on `127.0.0.1:8000` through `onion-site shell`).
 - `onion-site shell`: a shell in the VM as the user `site`.

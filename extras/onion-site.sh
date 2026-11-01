@@ -12,6 +12,9 @@
 #    Tor and remote access), with its defences against floods of visits.
 #  - Public (anyone with the address) or private (only visitors you give a
 #    client key; without one the site can't even be found): you choose.
+#  - The VM starts at every boot (debsway-onion-site.service), so the site is
+#    up whenever this computer is on; onion-site stop takes it down until the
+#    next boot or onion-site start.
 #  - Security updates for the VM: onion-site update, which lends the VM this
 #    computer's Tor for apt, and takes it away again.
 #  - No shared folder: onion-site upload static|app FOLDER sends files in.
@@ -33,6 +36,7 @@ MOCKVPS=/usr/local/libexec/onion-site-mockvps-kvm
 SUDOERS=/etc/sudoers.d/debsway-onion-site
 FIREWALL=/etc/debsway/onion-site.nft
 UNIT=/etc/systemd/system/debsway-onion-site-firewall.service
+VM_UNIT=/etc/systemd/system/debsway-onion-site.service
 SETTINGS=/etc/debsway/onion-site.conf
 PROVISION_DST=$AGENT_HOME/.config/onion-site/provision.sh
 TORRC=/etc/tor/torrc
@@ -74,9 +78,10 @@ if [ "${1:-}" = --remove ]; then
         tor_service_off
     fi
     remove_bin onion-site
+    sudo systemctl disable debsway-onion-site.service >/dev/null 2>&1 || true
     sudo systemctl disable --now debsway-onion-site-firewall.service >/dev/null 2>&1 || true
     sudo nft delete table inet debsway_onion_site 2>/dev/null || true
-    sudo rm -f "$SUDOERS" "$SESSION" "$MOCKVPS" "$FIREWALL" "$UNIT" "$SETTINGS"
+    sudo rm -f "$SUDOERS" "$SESSION" "$MOCKVPS" "$FIREWALL" "$UNIT" "$VM_UNIT" "$SETTINGS"
     remove_no_abstract
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
     sudo rmdir /usr/local/libexec /etc/debsway 2>/dev/null || true
@@ -257,6 +262,7 @@ mkdir -p "${ADDRESS%/*}"
 note "Tor is connected. The site's address: $onion"
 
 say "Building the VM"
+built=true
 if sudo test -s "$AGENT_HOME/vm/onion-site.qcow2"; then
     note "The VM is already built; kept as it is (with the site's files). For a fresh one: onion-site rebuild"
 else
@@ -264,18 +270,39 @@ else
     [ "$app" != python ] || what="nginx and gunicorn"
     note "This installs Debian and $what in the VM; it takes 5-15 minutes and"
     note "downloads a few hundred MB, without Tor. After that the VM has no network."
-    if ask "Build the VM now?" y; then
-        sudo -u "$AGENT" "$SESSION" install || warn "The build didn't finish. Try again with: onion-site rebuild"
-    else
-        note "Build it when you're ready with: onion-site rebuild"
+    sudo -u "$AGENT" "$SESSION" install || { built=false; warn "The build didn't finish. Try again with: onion-site rebuild"; }
+fi
+
+say "Starting the site at every boot"
+# The site is only up while its VM runs: start it with the computer (after its
+# firewall rule, which it needs), and power it off cleanly at shutdown.
+printf '%s\n' '# Written by debsway extras/onion-site.sh' '[Unit]' \
+    "Description=The onion site's VM (debsway)" \
+    'Requires=debsway-onion-site-firewall.service' \
+    'After=debsway-onion-site-firewall.service tor@default.service' '' '[Service]' \
+    'Type=oneshot' 'RemainAfterExit=yes' "User=$AGENT" \
+    "ExecStart=$SESSION start" "ExecStop=$SESSION stop" \
+    'TimeoutStartSec=600' 'TimeoutStopSec=120' '' '[Install]' \
+    'WantedBy=multi-user.target' | sudo tee "$VM_UNIT" >/dev/null
+sudo systemctl daemon-reload
+sudo systemctl enable debsway-onion-site.service >/dev/null 2>&1 ||
+    warn "Couldn't set the site to start at boot; check: systemctl status debsway-onion-site"
+if $built; then
+    # (the build left the VM running; this makes systemd its keeper, for shutdown)
+    sudo systemctl start debsway-onion-site.service ||
+        warn "The site's VM didn't start; check: systemctl status debsway-onion-site"
+    if sudo -u "$AGENT" "$SESSION" status 2>/dev/null | grep -q Running; then
+        note "The VM is running: the site is up. It starts again at every boot."
     fi
 fi
 
 cat <<EOF
 
     The site:  http://$onion   (open it in Tor Browser)
+    A new address can take a minute or two to be found the first time.
 
-    onion-site start | stop | status   the site is up while its VM runs
+    onion-site start | stop | status   the site is up while its VM runs (it
+                                       starts by itself at every boot)
     onion-site upload static FOLDER    your files: they're served as they are
     onion-site upload app FOLDER       your app: $([ "$app" = python ] && echo "a Flask app, app.py with app = Flask(...)" || echo "run it on 127.0.0.1:8000 (onion-site shell)")
     onion-site shell                   a shell in the VM (as the user "site")
@@ -289,8 +316,9 @@ EOF
 if $show_client; then
     cat <<EOF
 
-    CLIENT KEY, shown once and not stored here. Give it to the visitor; Tor
-    Browser asks for it the first time they open the address:
+    CLIENT KEY, shown once and not stored here. This is a private site: Tor
+    Browser can't open it without this key, and asks for it (a key icon in the
+    address bar) the first time the address is opened. Give it to the visitor:
 
       $CLIENT_PRIV
 

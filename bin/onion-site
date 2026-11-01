@@ -44,6 +44,15 @@ esac
 sudo -n -u "$AGENT" -l "$SESSION" >/dev/null 2>&1 ||
     die "the onion site isn't set up. Run: bash ~/debsway/extras/onion-site.sh"
 
+# The site needs both its VM and this computer's tor service; say so when tor
+# isn't running, which is the usual reason the address can't be reached
+if [ "$cmd" = start ] || [ "$cmd" = status ]; then
+    if ! systemctl is-active --quiet tor@default.service 2>/dev/null; then
+        printf 'onion-site: Tor is not running on this computer, so the site cannot be reached.\n' >&2
+        printf '  Start it (and at every boot):  sudo systemctl enable --now tor.service tor@default.service\n' >&2
+    fi
+fi
+
 if [ "$cmd" = upload ]; then
     # No shared folder: the files go to the VM as one stream (owner and
     # permissions of yours aren't carried over)

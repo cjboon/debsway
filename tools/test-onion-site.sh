@@ -27,6 +27,9 @@ cat >"$T/fake/sudo" <<EOF
 case "\$*" in *" -l "*) [ -e "$T/rule" ] ;; *) echo "sudo \$*" >>"$T/calls"; cat >"$T/stdin" ;; esac
 EOF
 chmod +x "$T/fake/sudo"
+# (tor "running", so this machine's own tor service doesn't matter)
+printf '#!/bin/sh\nexit 0\n' >"$T/fake/systemctl"
+chmod +x "$T/fake/sudo" "$T/fake/systemctl"
 os() { PATH="$T/fake:$PATH" HOME="$T/home" XDG_STATE_HOME="$T/state" bash "$HERE/bin/onion-site" "$@"; }
 out=$(os start 2>&1) && unset_ok=false || unset_ok=true
 check "it says how to set it up when it isn't" bash -c '$1 && grep -q "extras/onion-site.sh" <<<"$2"' _ "$unset_ok" "$out"
@@ -167,5 +170,22 @@ check "VM: everything but static files goes to the app on 127.0.0.1:8000" grep -
 check "VM: the Python app is gunicorn on 127.0.0.1:8000, locked down" \
     bash -c 'grep -q "gunicorn --bind 127.0.0.1:8000" "$1" && grep -q "ProtectSystem=strict" "$1" && grep -q "NoNewPrivileges=yes" "$1"' _ "$P"
 check "VM: later, apt goes only through the host's Tor" grep -q 'Acquire::https::Proxy "socks5h://10.0.2.100:9050";' "$P"
+
+# ---- up after a reboot ----
+X=$HERE/extras/onion-site.sh
+check "the VM is built without asking" bash -c '! grep -q "Build the VM now" "$1" && grep -q "\"\$SESSION\" install" "$1"' _ "$X"
+check "a boot service starts the VM, as onion-site, after its firewall rule" \
+    bash -c 'grep -q "\"User=\$AGENT\"" "$1" && grep -q "Requires=debsway-onion-site-firewall.service" "$1" && grep -q "\"ExecStart=\$SESSION start\"" "$1" && grep -q "\"ExecStop=\$SESSION stop\"" "$1"' _ "$X"
+check "...enabled for every boot" grep -q 'systemctl enable debsway-onion-site.service' "$X"
+check "...and taken out by --remove" \
+    bash -c 'sed -n "/--remove ]; then/,/^fi/p" "$1" | grep -q "disable debsway-onion-site.service" && sed -n "/--remove ]; then/,/^fi/p" "$1" | grep -q "\"\$VM_UNIT\""' _ "$X"
+# onion-site start says when Tor isn't running (a pretend systemctl says it isn't)
+printf '#!/bin/sh\nexit 3\n' >"$T/fake/systemctl"
+chmod +x "$T/fake/systemctl"
+out=$(os start 2>&1 </dev/null)
+check "onion-site start says when Tor is off, and how to turn it on" \
+    bash -c 'grep -q "Tor is not running" <<<"$1" && grep -q "enable --now tor.service" <<<"$1"' _ "$out"
+printf '#!/bin/sh\nexit 0\n' >"$T/fake/systemctl"
+check "...and nothing when it runs" bash -c '! grep -q "Tor is not running" <<<"$1"' _ "$(os start 2>&1 </dev/null)"
 
 [ "$fails" -eq 0 ]
