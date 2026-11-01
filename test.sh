@@ -262,6 +262,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "The whonix command (bin/whonix), with a pretend virsh"
+if out=$(bash tools/test-whonix-cmd.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") whonix command checks"
+else
+    bad "whonix command checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "wifi.sh's network scan never hangs, with a pretend iw"
 if out=$(bash tools/test-wifi-scan.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") Wi-Fi scan checks"

@@ -42,7 +42,7 @@ KVM_PKGS=(qemu-system-x86 qemu-system-gui qemu-system-modules-spice qemu-utils
     libvirt-daemon-driver-nodedev libvirt-clients virt-manager
     gir1.2-spiceclientgtk-3.0 passt ovmf swtpm swtpm-tools)
 # Unpacking and editing the images
-TOOL_PKGS=(xz-utils e2fsprogs fdisk)
+TOOL_PKGS=(xz-utils e2fsprogs fdisk acl)
 
 defined() { "${VIRSH[@]}" dominfo "$1" >/dev/null 2>&1; }
 
@@ -205,11 +205,18 @@ fi
 say "Installing KVM and virt-manager"
 apt_install "${KVM_PKGS[@]}" "${TOOL_PKGS[@]}"
 for g in kvm libvirt; do
-    if getent group "$g" >/dev/null && ! id -nG | grep -qw "$g"; then
+    if getent group "$g" >/dev/null && ! id -nG "$(id -un)" | grep -qw "$g"; then
         sudo adduser "$(id -un)" "$g" >/dev/null
-        warn "Added you to the $g group. Log out and back in once for it to apply."
+        note "Added you to the $g group (it applies in full from your next login)."
     fi
 done
+# The VMs need /dev/kvm. The desktop session usually has it already (logind
+# gives the person at the screen access); if not, the new kvm group only counts
+# from the next login, so allow it now for this boot, and whonix works at once.
+if [ -e /dev/kvm ] && [ ! -w /dev/kvm ]; then
+    sudo setfacl -m "u:$(id -un):rw" /dev/kvm 2>/dev/null ||
+        warn "Can't use /dev/kvm yet: log out and back in once, then run: whonix"
+fi
 # From whonix.org/wiki/KVM: no core dumps, and no limits libvirt can't set
 # as a normal user
 if [ ! -f "$HOME/.config/libvirt/qemu.conf" ]; then

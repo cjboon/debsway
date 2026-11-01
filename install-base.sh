@@ -201,6 +201,11 @@ if [ "$first_run" = 1 ] && [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${DEBSWAY_NO_S
     [ -t 0 ] && case "$(tty 2>/dev/null)" in /dev/tty[0-9]*) true ;; *) false ;; esac; then
     note "Starting in 5 seconds (Ctrl+C to stay in the text console)..."
     sleep 5
+    # This login's PATH was set before ~/.local/bin existed (~/.profile adds it
+    # only if it is there), and sway and everything started from it inherit
+    # PATH: without this, the commands debsway installs there (debsway, whonix,
+    # onion-site...) aren't found until you log out and in again
+    case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac
     # the console-only extra may have been picked: then it is tmux that starts
     if [ "$(login_mode)" = console ]; then exec tmux new-session -A -s main; fi
     exec env XDG_CURRENT_DESKTOP=sway sway

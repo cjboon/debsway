@@ -25,7 +25,7 @@ Whonix puts the browser in a separate box that has no way out except through Tor
 ## How it works, step by step
 
 1. **Needs `/dev/kvm`.** If it is missing, the script stops and tells you to turn on virtualization (VT-x or AMD-V) in the firmware settings.
-2. **Installs the tools:** QEMU, libvirt, `virt-manager`, SPICE, `passt`, `ovmf`, `swtpm`, `qemu-utils`, `xz-utils`, `e2fsprogs` and `fdisk` (the list follows Whonix's own KVM instructions for Debian trixie). It adds you to the `kvm` and `libvirt` groups if you are not in them; log out and back in once for that to apply. It writes `~/.config/libvirt/qemu.conf` (no core dumps, no limits that a normal user cannot set), unless that file exists.
+2. **Installs the tools:** QEMU, libvirt, `virt-manager`, SPICE, `passt`, `ovmf`, `swtpm`, `qemu-utils`, `xz-utils`, `e2fsprogs`, `fdisk` and `acl` (the list follows Whonix's own KVM instructions for Debian trixie). It adds you to the `kvm` and `libvirt` groups if you are not in them. You don't have to log out first: your desktop session usually has `/dev/kvm` already, and if it doesn't, the script allows it for this boot (an ACL; `acl` is installed for that), so `whonix` works right away. It writes `~/.config/libvirt/qemu.conf` (no core dumps, no limits that a normal user cannot set), unless that file exists.
 3. **Downloads Whonix** (about 1.9 GB, the LXQt edition). It reads the newest version number from whonix.org's KVM page, downloads the image and its signature, and checks the signature against Whonix's signing key, whose fingerprint is pinned in `pins.sh`. If the check fails, the download is deleted. The file is kept in `offline/whonix/`, so a reinstall does not fetch it again. `bash extras/whonix.sh --fetch` does only this step.
 4. **Unpacks it** and shows you where Whonix's license and disclaimer are. You have to confirm that you read and accept them.
 5. **Asks about a bridge** for the Gateway. If you give one, the script writes it into the Gateway's disk image as `/usr/local/etc/torrc.d/50_user.conf`, so its first connection uses it. If you say you need a bridge but have none yet, it writes `DisableNetwork 1` so Tor stays off until you turn it on in the Gateway (`whonix gateway`). If you say no bridge, nothing is written and the Gateway connects directly at its first boot.
@@ -50,7 +50,8 @@ Everything runs as your user, through `qemu:///session`. There is no root servic
 
 - `whonix` starts both VMs and opens the Workstation's screen.
 - `whonix gateway` starts the Gateway and opens it, for the Tor settings.
-- `whonix stop` shuts both down.
+- `whonix stop` shuts both down. Each VM is asked to shut down first; Whonix's desktop answers that with a shutdown dialog, so a VM still running after 20 seconds is switched off (QEMU closes its disk cleanly, but the system inside doesn't get to shut down, as if its power button were held). Save your work in the Workstation first. `WHONIX_STOP_WAIT=60 whonix stop` waits longer.
+- Started from Super+d, `whonix` shows what went wrong as a notification if a VM can't start.
 - `bash extras/whonix.sh` again: repair, or notes "already installed".
 
 ## What it protects against

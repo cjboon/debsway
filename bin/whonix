@@ -2,14 +2,53 @@
 # whonix: written by debsway extras/whonix.sh
 #   whonix          start both VMs and open the Workstation
 #   whonix gateway  start the Gateway and open it (Tor settings)
-#   whonix stop     shut both down
+#   whonix stop     shut both down. Each is asked to shut down first; Whonix's
+#                   desktop answers that with a dialog, so one still running
+#                   after WHONIX_STOP_WAIT seconds (20) is switched off, as if
+#                   its power button were held. Save your work inside first.
 v="virsh -c qemu:///session"
-up() { [ "$($v domstate "$1" 2>/dev/null)" = running ] || $v start "$1" >/dev/null; }
+
+# Started from Super+d there is no terminal: what went wrong is also shown as a
+# notification, so it doesn't fail without a word
+fail() {
+    echo "whonix: $*" >&2
+    [ -t 2 ] || notify-send -u critical Whonix "$*" 2>/dev/null || true
+    exit 1
+}
+running() { [ "$($v domstate "$1" 2>/dev/null)" = running ]; }
+up() {
+    running "$1" && return 0
+    # (its error message, not its output)
+    # shellcheck disable=SC2069
+    err=$($v start "$1" 2>&1 >/dev/null) || fail "couldn't start $1: $err"
+}
+console() {
+    command -v virt-manager >/dev/null || fail "virt-manager is missing. Run: bash ~/debsway/extras/whonix.sh"
+    exec virt-manager -c qemu:///session --show-domain-console "$1"
+}
+stop() {
+    for vm in Whonix-Workstation Whonix-Gateway; do
+        if running "$vm"; then $v shutdown "$vm" >/dev/null 2>&1 || true; fi
+    done
+    i=0
+    while [ "$i" -lt "${WHONIX_STOP_WAIT:-20}" ] && { running Whonix-Workstation || running Whonix-Gateway; }; do
+        sleep 1
+        i=$((i + 1))
+    done
+    # The Workstation first: the Gateway is its only way out
+    for vm in Whonix-Workstation Whonix-Gateway; do
+        running "$vm" || continue
+        echo "whonix: $vm didn't shut down by itself (its shutdown dialog is open); switching it off." >&2
+        # --graceful: QEMU is asked to end and closes its disk cleanly
+        $v destroy --graceful "$vm" >/dev/null 2>&1 || $v destroy "$vm" >/dev/null 2>&1 ||
+            echo "whonix: couldn't switch $vm off." >&2
+    done
+    true
+}
+
 case "${1:-start}" in
-    start) up Whonix-Gateway && up Whonix-Workstation &&
-        exec virt-manager -c qemu:///session --show-domain-console Whonix-Workstation ;;
-    gateway) up Whonix-Gateway &&
-        exec virt-manager -c qemu:///session --show-domain-console Whonix-Gateway ;;
-    stop) $v shutdown Whonix-Workstation 2>/dev/null; $v shutdown Whonix-Gateway 2>/dev/null; true ;;
+    start) up Whonix-Gateway && up Whonix-Workstation && console Whonix-Workstation ;;
+    gateway) up Whonix-Gateway && console Whonix-Gateway ;;
+    stop) stop ;;
     *) echo "usage: whonix [start|gateway|stop]" >&2; exit 2 ;;
 esac

@@ -86,7 +86,8 @@ Snowflake; the Gateway has no webtunnel client; Whonix 18 connects at first
 boot, and if you need a bridge but have none yet, Tor is kept off until you
 turn it on), and Safest with JavaScript off for the Workstation's Tor
 Browser. Then `whonix` starts both, `whonix gateway` opens the
-Gateway's Tor settings, `whonix stop` shuts both down.
+Gateway's Tor settings, `whonix stop` shuts both down (switching off a VM that
+only opens its shutdown dialog, after 20 seconds: save your work inside first).
 
 **OnionShare.** Debian's package pulls in the system tor service, which
 would connect to Tor directly the moment it's installed, so the script
