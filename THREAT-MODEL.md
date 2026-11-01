@@ -177,6 +177,13 @@ With the extras:
   pick still sees every name, and the name of each site also travels
   unencrypted at the start of most HTTPS connections, so it hides where
   you go from your network less than a VPN or Tor does.
+- **Your network seeing or forging the time** (`parts/clock.sh`). The clock
+  is set over plain NTP from `debian.pool.ntp.org`: your network sees that
+  this computer asks for the time (and so that it runs Debian), and someone
+  on the way could answer with a wrong time, which systemd-timesyncd
+  accepts (it only refuses a time before it was built). A clock pushed far
+  off shows as Tor failing to connect and certificate errors; it can also
+  make an expired signature look current, or a current one look expired.
 - **Being found through your onion site**, if you run one
   (`extras/onion-site.sh`). Its VM has no network, so the site's own software
   can't give away your address, but the site is only up while your computer is

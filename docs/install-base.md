@@ -49,6 +49,7 @@ checked with `sway -C` before it's kept.
 
 | Script | Installs | Sets up |
 |---|---|---|
+| `clock.sh` | systemd-timesyncd | The clock is set over the network (NTP, from `debian.pool.ntp.org`) and kept right; Tor needs a right clock. While the time zone is UTC it asks for yours (Enter keeps UTC), so the bar shows your local time; run it again to change it (`timedatectl list-timezones` lists them) |
 | `unattended-upgrades.sh` | unattended-upgrades | Debian's security fixes install themselves daily, with Debian's default rules; the Mullvad and Claude Code repositories debsway adds are included, any repository you add yourself is left to you. Log: `/var/log/unattended-upgrades/` |
 | `wmenu.sh` | wmenu | The launcher on Super+d, in the bar's black and white, opaque (the bar is see-through) and with a font a little bigger than the bar's so it covers the bar. If a strip of the bar still shows, raise the `12` in the `set $menu` line of `~/.config/sway/config` |
 | `swaylock.sh` | swaylock | Super+Escape locks |

@@ -254,6 +254,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "The clock: NTP and the time zone (parts/clock.sh), with a pretend timedatectl"
+if out=$(bash tools/test-clock.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") clock checks"
+else
+    bad "clock checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "The sshd settings check (lib/net.sh), with sample sshd -T output"
 if out=$(bash tools/test-sshd-check.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") sshd settings checks"
