@@ -78,5 +78,15 @@ check "a signature from an expired key fails" not verify_detached "$FOLD" "$T/ol
 check "a signature from a revoked key fails" not verify_detached "$FREV" "$T/rev.pub" "$T/file.rev.asc" "$T/file"
 check "a clearsigned file from a good key passes" verify_clearsigned "$FGOOD" "$T/good.pub" "$T/sums.good" "$T/out.good"
 check "a clearsigned file from an expired key fails" not verify_clearsigned "$FOLD" "$T/old.pub" "$T/sums.old" "$T/out.old"
+# An old genuine signature (expired key) with a second signature added, from a
+# key slipped into the key file next to the pinned one: only the pinned key may
+# count, so this must fail like the expired signature alone
+cat "$T/old.pub" "$T/good.pub" >"$T/both.pub"
+"${G[@]}" --dearmor -o "$T/old.sig" "$T/file.old.asc"
+"${G[@]}" --dearmor -o "$T/good.sig" "$T/file.good.asc"
+cat "$T/old.sig" "$T/good.sig" >"$T/two.sig"
+check "an extra key in the key file can't vouch for an expired key's signature" \
+    not verify_detached "$FOLD" "$T/both.pub" "$T/two.sig" "$T/file"
+check "...while the pinned key is still found in a file with others" verify_detached "$FGOOD" "$T/both.pub" "$T/file.good.asc" "$T/file"
 
 [ "$fails" -eq 0 ]

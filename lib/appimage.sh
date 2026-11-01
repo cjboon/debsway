@@ -30,23 +30,34 @@ latest_github_tag() {
 
 installed_version() { cat "$OPT/$1/.debsway-version" 2>/dev/null || true; }
 
-# A throwaway keyring holding only the key at URL (or in a local file),
-# checked to be FPR
+# A throwaway keyring holding only the key FPR, taken from the key file at URL
+# (or a local file). Only that key goes in, even when the file holds others: a
+# second key slipped into the file must not make its own signatures count.
 _keyring() {
-    local fpr=$1 url=$2 home
+    local fpr=$1 url=$2 home all
+    all=$(mktemp -d)
     home=$(mktemp -d)
-    chmod 700 "$home"
+    chmod 700 "$all" "$home"
     if [ -f "$url" ]; then
-        cp "$url" "$home/key.asc"
-    elif ! wget -qO "$home/key.asc" "$url"; then
-        rm -rf "$home"
+        cp "$url" "$all/key.asc"
+    elif ! wget -qO "$all/key.asc" "$url"; then
+        rm -rf "$all" "$home"
         warn "Couldn't download the signing key from $url"
         return 1
     fi
-    gpg --homedir "$home" --batch --quiet --import "$home/key.asc" 2>/dev/null || true
+    gpg --homedir "$all" --batch --quiet --import "$all/key.asc" 2>/dev/null || true
+    if ! gpg --homedir "$all" --batch --list-keys "$fpr" >/dev/null 2>&1; then
+        _keyring_done "$all"
+        rm -rf "$home"
+        warn "The key at $url isn't $fpr. Not trusting it."
+        return 1
+    fi
+    gpg --homedir "$all" --batch --export "$fpr" >"$all/pinned.gpg" 2>/dev/null
+    gpg --homedir "$home" --batch --quiet --import "$all/pinned.gpg" 2>/dev/null || true
+    _keyring_done "$all"
     if ! gpg --homedir "$home" --batch --list-keys "$fpr" >/dev/null 2>&1; then
         _keyring_done "$home"
-        warn "The key at $url isn't $fpr. Not trusting it."
+        warn "Couldn't take the key $fpr out of $url. Not trusting it."
         return 1
     fi
     echo "$home"
