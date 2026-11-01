@@ -145,6 +145,7 @@ if [ -n "$tag" ]; then
     [ -r "$conf" ] || die "no settings for the profile $tag ($conf)."
     url=$(sed -n 's/^url=//p' "$conf" | head -1)
     fast=$(sed -n 's/^fast_js=//p' "$conf" | head -1)
+    toolbars=$(sed -n 's/^toolbars=//p' "$conf" | head -1)
     [[ $url =~ ^https?://[A-Za-z0-9.-]+(:[0-9]+)?(/[A-Za-z0-9._~/?#=%+,@-]*)?$ ]] || die "the address in $conf isn't a plain web address."
     {
         echo "// The profile $tag: opens $url on start; keeps its cookies and logins."
@@ -156,7 +157,23 @@ if [ -n "$tag" ]; then
             echo 'user_pref("javascript.options.native_regexp", true);'
             echo 'user_pref("javascript.options.asmjs", true);'
         fi
+        if [ "$toolbars" != shown ]; then
+            # Only the page: no tabs, address bar or bookmarks (userChrome.css
+            # below). Links open in the same tab, so nothing piles up out of sight.
+            echo 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);'
+            echo 'user_pref("browser.toolbars.bookmarks.visibility", "never");'
+            echo 'user_pref("browser.link.open_newwindow", 1);'
+        fi
     } >>"$profile/user.js"
+    # A profile for one site shows just the page, unless its settings say
+    # toolbars=shown. Written at every start, so the setting is what counts.
+    if [ "$toolbars" != shown ]; then
+        mkdir -p "$profile/chrome"
+        printf '%s\n' '/* Written by debsway (firefox-session): this profile shows the page only. */' \
+            '#navigator-toolbox { visibility: collapse !important; }' >"$profile/chrome/userChrome.css"
+    else
+        rm -f "$profile/chrome/userChrome.css"
+    fi
 fi
 
 if [ "$audio" != - ]; then

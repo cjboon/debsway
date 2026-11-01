@@ -5,13 +5,16 @@
 # hacked page in one profile reaches neither your files nor the other profiles.
 # Only the clipboard and ~/Downloads/NAME are shared with you. It needs the
 # sandboxed Firefox (extras/firefox-sandbox.sh), and offers to set that up.
+# The window shows only the page: no tabs, address bar or bookmarks bar.
 #
 #   bash new-profile.sh                       asks for the name and address
-#   bash new-profile.sh NAME URL [--fast-js]  e.g. bash new-profile.sh bank https://mybank.example
+#   bash new-profile.sh NAME URL [--fast-js] [--show-toolbars]
+#                                             e.g. bash new-profile.sh bank https://mybank.example
 #   bash new-profile.sh --remove NAME         removes firefox-NAME; asks whether to delete the profile and its user
 #
 # --fast-js turns the JavaScript JIT back on for this profile (debsway's
 # parts/firefox-hardening.sh turns it off everywhere), for heavy web apps.
+# --show-toolbars keeps Firefox's tabs and address bar for this profile.
 . "$(dirname -- "${BASH_SOURCE[0]}")/../../lib.sh"
 . "$DEBSWAY_DIR/lib/firefox-sandbox.sh"
 . "$DEBSWAY_DIR/lib/firefox-profiles.sh"
@@ -27,10 +30,17 @@ if [ "${1:-}" = --remove ]; then
     exit
 fi
 
-fast=no
+fast=no toolbars=hidden
 if [ $# -ge 2 ]; then
     name=$1 url=$2
-    [ "${3:-}" = --fast-js ] && fast=yes
+    shift 2
+    for opt in "$@"; do
+        case $opt in
+            --fast-js) fast=yes ;;
+            --show-toolbars) toolbars=shown ;;
+            *) die "Usage: bash new-profile.sh NAME URL [--fast-js] [--show-toolbars]" ;;
+        esac
+    done
 else
     note "A name for the profile: lowercase letters, digits and dashes, e.g. bank."
     tty_read name "    name> "
@@ -43,4 +53,4 @@ valid_name "$name" || die "\"$name\" isn't a usable name: lowercase letters, dig
 [[ $url == *:* ]] || url="https://$url"
 valid_url "$url" || die "\"$url\" doesn't look like a web address."
 
-make_profile "$name" "$url" "$fast"
+make_profile "$name" "$url" "$fast" "$toolbars"

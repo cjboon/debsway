@@ -28,6 +28,8 @@ Keeping each important site in its own compartment limits what any one page can 
 
 It also asks "Fast JavaScript for this site?" (default no); `--fast-js` as a third word answers yes. debsway turns off Firefox's JavaScript JIT everywhere, because most serious exploits target it. Heavy web apps like webmail or office suites may feel slow without it, so this turns the JIT back on for that one profile only.
 
+The profile's window shows only the page: Firefox's tabs, address bar and bookmarks bar are hidden (a `userChrome.css` in the profile, written at every start), and links open in the same tab so nothing piles up out of sight. Keys still work: Alt+Left back, Alt+Right forward, F5 reload, Ctrl+W close. `--show-toolbars` at the end keeps the toolbars for that profile (`toolbars=shown` in its settings file, `/etc/debsway/firefox-profiles/NAME.conf`). Without the address bar you can't see which page you are on, which is fine for a profile that only ever opens its one site.
+
 Then it:
 
 1. Checks that the sandboxed Firefox is set up. If not, it offers to run `extras/firefox-sandbox.sh` first, and stops if you say no.

@@ -5,13 +5,15 @@
 # Files written by the scripts here
 OURS='debsway (extras/)?firefox-profiles/[a-z-]+\.sh'
 
-# make_profile NAME URL FAST: a Firefox profile with a locked-down user of its
-# own (fx-NAME), its settings, and the firefox-NAME command. FAST=yes turns the
-# JavaScript JIT back on for this profile only. The user is like the sandboxed
+# make_profile NAME URL FAST [TOOLBARS]: a Firefox profile with a locked-down
+# user of its own (fx-NAME), its settings, and the firefox-NAME command.
+# FAST=yes turns the JavaScript JIT back on for this profile only. TOOLBARS is
+# hidden (the default: the window shows only the page) or shown. The user is like the sandboxed
 # Firefox's (extras/firefox-sandbox.sh): no password, no login, none of your
 # files; only the clipboard and ~/Downloads/NAME are shared with you.
 make_profile() {
-    local name=$1 url=$2 fast=$3 cmd="$BIN/firefox-$1" user=fx-$1 conf
+    local name=$1 url=$2 fast=$3 toolbars=${4:-hidden} cmd="$BIN/firefox-$1" user=fx-$1 conf
+    case $toolbars in hidden | shown) ;; *) die "TOOLBARS is hidden or shown, not \"$toolbars\"." ;; esac
     fx_profile_name_ok "$name" || die "\"$name\" can't be a profile name: lowercase letters, digits and dashes, starting with a letter, at most 28 long (and not esr, restart-check or session)."
     # A firefox-NAME command that isn't ours: stop before any user or rule is made
     if [ -e "$cmd" ] && ! grep -qsE "$OURS" "$cmd"; then
@@ -29,10 +31,14 @@ make_profile() {
     # reads it as the profile's user, who has no way to change it
     conf="$FX_PROFILE_DIR/$name.conf"
     sudo install -d -o root -g root -m 0755 "$FX_PROFILE_DIR"
-    printf '# Written by debsway extras/firefox-profiles/new-profile.sh\nurl=%s\nfast_js=%s\n' "$url" "$fast" |
+    printf '# Written by debsway extras/firefox-profiles/new-profile.sh\nurl=%s\nfast_js=%s\ntoolbars=%s\n' "$url" "$fast" "$toolbars" |
         sudo tee "$conf" >/dev/null
     fx_allow_session "$user"
     note "$name: opens $url$([ "$fast" = yes ] && echo ', fast JavaScript'); runs as $user"
+    if [ "$toolbars" = hidden ]; then
+        note "Its window shows only the page: no tabs or address bar. Keys still work:"
+        note "  Alt+Left back, Alt+Right forward, F5 reload, Ctrl+W close."
+    fi
 
     mkdir -p "$BIN"
     cat >"$cmd" <<EOF

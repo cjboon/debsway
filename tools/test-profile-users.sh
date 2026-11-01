@@ -82,6 +82,18 @@ check "it tells where the downloads go" grep -q 'Downloads/bank' <<<"$out"
 : >"$T/calls"
 run x x 'make_profile shop https://shop.example/ yes' >/dev/null 2>&1
 check "fast JavaScript is written to the settings file" grep -qx 'fast_js=yes' "$T/files/shop.conf"
+check "a profile shows only the page unless asked (toolbars=hidden)" grep -qx 'toolbars=hidden' "$T/files/bank.conf"
+: >"$T/calls"
+run x x 'make_profile mail https://mail.example/ no shown' >/dev/null 2>&1
+check "...--show-toolbars keeps them (toolbars=shown)" grep -qx 'toolbars=shown' "$T/files/mail.conf"
+check "a toolbars value that isn't hidden or shown is refused" not run x x 'make_profile odd https://x.example/ no sideways'
+check "new-profile.sh takes --show-toolbars" grep -q -- '--show-toolbars) toolbars=shown' "$HERE/extras/firefox-profiles/new-profile.sh"
+# the session hides tabs, address bar and bookmarks for a profile, unless toolbars=shown
+FS=$HERE/bin/firefox-session
+check "the session hides the toolbars of a profile with userChrome.css" \
+    bash -c 'grep -q "#navigator-toolbox { visibility: collapse !important; }" "$1" && grep -q "toolkit.legacyUserProfileCustomizations.stylesheets\", true" "$1"' _ "$FS"
+check "...only for a profile, and not when its settings say toolbars=shown" \
+    bash -c 'sed -n "/^if \[ -n \"\$tag\" \]; then/,/^fi/p" "$1" | grep -q "if \[ \"\$toolbars\" != shown \]; then"' _ "$FS"
 
 # names that cannot be a user are refused before anything happens
 : >"$T/calls"

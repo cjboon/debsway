@@ -14,6 +14,11 @@ It asks for a short name (e.g. `bank`) and the site's address, and makes:
   history and settings, which opens that site when it starts, and
 - a command, `firefox-bank`, that starts it. Super+d finds it too.
 
+Its window shows only the page: no tabs, address bar or bookmarks bar, and
+links open in the same tab. The keys still work (Alt+Left back, Alt+Right
+forward, F5 reload, Ctrl+W close). To keep Firefox's toolbars for a profile,
+make it with `--show-toolbars` at the end.
+
 It needs the sandboxed Firefox set up first, and offers to do that.
 
 Or in one go: `bash extras/firefox-profiles/new-profile.sh bank https://mybank.example`.
