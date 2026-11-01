@@ -32,16 +32,29 @@ debian_cd_image_ok() {
         sha512sum -c --quiet - >/dev/null 2>&1
 }
 
-# fill_preseed TEMPLATE USER LOCALE KEYMAP ERASE(true|false): the answers, with
-# the @...@ values in (each already checked by the caller)
+# fill_preseed TEMPLATE USER LOCALE KEYMAP ERASE(true|false) [TIMEZONE]: the
+# answers, with the @...@ values in (each already checked by the caller)
 fill_preseed() {
-    sed -e "s|@USERNAME@|$2|g" -e "s|@LOCALE@|$3|g" -e "s|@KEYMAP@|$4|g" -e "s|@ERASE@|$5|g" "$1"
+    sed -e "s|@USERNAME@|$2|g" -e "s|@LOCALE@|$3|g" -e "s|@KEYMAP@|$4|g" -e "s|@ERASE@|$5|g" \
+        -e "s|@TIMEZONE@|${6:-UTC}|g" "$1"
+}
+
+# this_timezone: the time zone of the computer building the image (UTC if it
+# can't be told). DEBSWAY_ETC is where /etc is, for tests.
+this_timezone() {
+    local etc=${DEBSWAY_ETC:-/etc} tz=
+    if [ -L "$etc/localtime" ]; then tz=$(readlink "$etc/localtime"); tz=${tz#*/zoneinfo/}; fi
+    [ -n "$tz" ] || tz=$(cat "$etc/timezone" 2>/dev/null) || true
+    case $tz in Etc/UTC | Etc/UCT | UCT | Zulu | Etc/Zulu | Universal | Etc/Universal | '') tz=UTC ;; esac
+    if timezone_ok "$tz"; then echo "$tz"; else echo UTC; fi
 }
 
 # user_ok NAME, locale_ok LOCALE, keymap_ok KEYMAP: values safe to put in the answers
 user_ok() { [[ $1 =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] && [ "$1" != root ]; }
 locale_ok() { [[ $1 =~ ^[a-z]{2,3}_[A-Z]{2}\.UTF-8$ ]]; }
 keymap_ok() { [[ $1 =~ ^[a-z]{2,3}(\([a-z0-9_-]+\))?$ ]]; }
+# timezone_ok ZONE: UTC, or Area/City (Area/Sub/City) as tzdata names them
+timezone_ok() { [ "$1" = UTC ] || [[ $1 =~ ^[A-Z][A-Za-z_]+(/[A-Za-z0-9_+-]+){1,2}$ ]]; }
 
 # grub_add_entry GRUB.CFG: a first menu entry (so the default) that starts the
 # automatic, graphical install. The others, rescue mode included, are left as

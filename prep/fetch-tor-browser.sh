@@ -19,7 +19,8 @@ KEY="$OUT/tor-browser-developers.asc"
 ARCH=$(uname -m)
 
 [ "$ARCH" = x86_64 ] || die "Tor Browser for Linux is only built for x86_64."
-command -v gpg >/dev/null || die "gpg is missing. Install it with: sudo apt install gpg"
+# What it needs, installed now if missing
+need_tools gpg:gpg wget:wget
 
 say "Checking the newest Tor Browser"
 version=$(wget -qO- "https://aus1.torproject.org/torbrowser/update_3/release/download-linux-$ARCH.json" |

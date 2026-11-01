@@ -44,18 +44,15 @@ echo changed >>"$T/debian-13.7.0-amd64-DVD-1.iso"
 check "a changed image is refused" not debian_cd_image_ok "$T/SUMS" "$T/debian-13.7.0-amd64-DVD-1.iso" debian-13.7.0-amd64-DVD-1.iso
 check "an image the list doesn't name is refused" not debian_cd_image_ok "$T/SUMS" "$T/debian-13.7.0-amd64-DVD-1.iso.part" debian-14.0.0-amd64-DVD-1.iso
 check "the Debian CD signing key is pinned" test "$DEBIAN_CD_FPR" = DF9B9C49EAA9298432589D76DA87E80D6294BE9B
-check "a missing xorriso is offered, installed the debsway way (a marker package)" \
-    bash -c 'grep -q "ask \"Install it for now (needs your sudo password)?\" y" "$1" && grep -q "^    apt_install xorriso$" "$1"' _ "$HERE/prep/make-install-iso.sh"
-# the clean-up, run on its own: it takes xorriso out only if this run put it in
+check "what it needs (xorriso, wget, gpg, git) is installed at the start if missing" \
+    bash -c 'grep -q "^need_tools .*xorriso:xorriso" "$1" && grep -q "^need_tools .*gpg:gpg" "$1" && ! grep -q "Install it for now" "$1"' _ "$HERE/prep/make-install-iso.sh"
+check "xorriso is part of the base install, so it isn't taken out again" \
+    bash -c '. "$1/packages.sh"; printf "%s\n" "${PKGS[@]}" | grep -qx xorriso && ! grep -q "apt_purge" "$1/prep/make-install-iso.sh"' _ "$HERE"
+# the clean-up, run on its own
 eval "$(sed -n '/^cleanup() {/,/^}/p' "$HERE/prep/make-install-iso.sh")"
-apt_purge() { echo purged >>"$T/purged"; }
-work=$T/work; mkdir -p "$work"; installed_here=true
+work=$T/work; mkdir -p "$work"
 cleanup >/dev/null 2>&1
-check "at the end, xorriso is removed again if this run installed it" grep -qx purged "$T/purged"
-check "...and the temporary folder is gone" test ! -e "$T/work"
-: >"$T/purged"; work=''; installed_here=false
-cleanup >/dev/null 2>&1
-check "an xorriso that was there before stays" test ! -s "$T/purged"
+check "at the end the temporary folder is gone" test ! -e "$T/work"
 check "the clean-up runs whatever happens (on exit)" grep -qx 'trap cleanup EXIT' "$HERE/prep/make-install-iso.sh"
 check "...and the marker is named for the script, so it comes out cleanly" \
     test "$(cd "$HERE" && env -u DEBSWAY_OWNER bash -c '. ./lib.sh; apt_marker' "$HERE/prep/make-install-iso.sh")" = debsway-make-install-iso
@@ -73,6 +70,15 @@ check "no root password: root is locked, your user gets sudo" grep -qx 'd-i pass
 check "the whole disk, encrypted LVM" bash -c 'grep -qx "d-i partman-auto/method string crypto" <<<"$1"' _ "$ans"
 check "the disk is filled with random data first" grep -qx 'd-i partman-crypto/erase_disks boolean true' <<<"$ans"
 check "...unless --no-erase" grep -qx 'd-i partman-crypto/erase_disks boolean false' <(fill_preseed "$HERE/data/install-iso-preseed.cfg" me en_US.UTF-8 us false)
+check "the time zone is the one asked for" grep -qx 'd-i time/zone string Europe/Berlin' <(fill_preseed "$HERE/data/install-iso-preseed.cfg" me de_DE.UTF-8 de true Europe/Berlin)
+check "...UTC when none is given" grep -qx 'd-i time/zone string UTC' <<<"$ans"
+check "...and the clock is kept right over NTP" grep -qx 'd-i clock-setup/ntp boolean true' <<<"$ans"
+for good in UTC Europe/Berlin America/New_York America/Argentina/Buenos_Aires Etc/GMT+5; do check "the time zone '$good' is taken" timezone_ok "$good"; done
+for bad in 'Europe/Berlin;id' 'x|y' '../etc' 'Europe/ Berlin' '' utc; do check "the time zone '$bad' is refused" not timezone_ok "$bad"; done
+mkdir -p "$T/tzetc"; ln -s /usr/share/zoneinfo/Europe/Paris "$T/tzetc/localtime"
+check "the default time zone is this computer's" test "$(DEBSWAY_ETC=$T/tzetc this_timezone)" = Europe/Paris
+rm "$T/tzetc/localtime"; ln -s /usr/share/zoneinfo/Etc/UTC "$T/tzetc/localtime"
+check "...UTC for a computer on UTC" test "$(DEBSWAY_ETC=$T/tzetc this_timezone)" = UTC
 check "only standard system utilities, no desktop" grep -qx 'tasksel tasksel/first multiselect standard' <<<"$ans"
 check "no popularity contest" grep -qx 'popularity-contest popularity-contest/participate boolean false' <<<"$ans"
 check "packages come over https" grep -qx 'd-i mirror/protocol string https' <<<"$ans"

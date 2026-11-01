@@ -32,16 +32,19 @@
 # Whonix downloads; not offline/install-iso or offline/tails).
 #
 #   bash prep/make-install-iso.sh [--user NAME] [--keymap us] [--locale en_US.UTF-8]
-#                                 [--no-erase] [--live] [--scripts FOLDER] [--out FILE]
+#                                 [--timezone Area/City] [--no-erase] [--live]
+#                                 [--scripts FOLDER] [--out FILE]
 #   --user     the user to make (default: yours, $(id -un))
 #   --keymap   the keyboard layout (default: us); see the README on passphrases
+#   --timezone the clock's time zone, like Europe/Berlin (default: this
+#              computer's; the clock shows local time, kept right over NTP)
 #   --live     start from Debian's live "standard" image instead of DVD-1
 #   --scripts  a folder of your own, copied to ~/scripts in the new system
 # Then it offers to write the image to a USB stick (as tails-usb does: only USB
 # sticks, you type its name, and it reads it back to check).
-# It runs as you; sudo is asked for only to install xorriso if it is missing
-# (it offers to, and removes it again at the end, whether the build worked or
-# not; one you had before stays) and to write a stick.
+# It runs as you; sudo is asked for only to install what it needs and is
+# missing (xorriso, wget, gpg, git; xorriso is part of debsway's base install)
+# and to write a stick.
 # Test it in a VM first if you can (the end of this script says how).
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/appimage.sh"
@@ -49,48 +52,33 @@
 . "$DEBSWAY_DIR/lib/tails.sh"
 not_root
 
-user=$(id -un) keymap=us locale=en_US.UTF-8 erase=true live=false scripts='' out='' choice=''
+user=$(id -un) keymap=us locale=en_US.UTF-8 timezone=$(this_timezone) erase=true live=false scripts='' out='' choice=''
 while [ $# -gt 0 ]; do
     case $1 in
         --user) user=${2:-}; shift 2 ;;
         --keymap) keymap=${2:-}; shift 2 ;;
         --locale) locale=${2:-}; shift 2 ;;
+        --timezone) timezone=${2:-}; shift 2 ;;
         --no-erase) erase=false; shift ;;
         --live) live=true; shift ;;
         --scripts) scripts=${2:-}; shift 2 ;;
         --out) out=${2:-}; shift 2 ;;
-        *) die "Usage: bash prep/make-install-iso.sh [--user NAME] [--keymap us] [--locale en_US.UTF-8] [--no-erase] [--live] [--scripts FOLDER] [--out FILE]" ;;
+        *) die "Usage: bash prep/make-install-iso.sh [--user NAME] [--keymap us] [--locale en_US.UTF-8] [--timezone Area/City] [--no-erase] [--live] [--scripts FOLDER] [--out FILE]" ;;
     esac
 done
 user_ok "$user" || die "\"$user\" can't be a user name (lowercase letters, digits, _ and -, starting with a letter; not root)."
 keymap_ok "$keymap" || die "\"$keymap\" doesn't look like a keyboard layout (us, de, fr, gb...)."
 locale_ok "$locale" || die "\"$locale\" doesn't look like a locale (en_US.UTF-8, de_DE.UTF-8...)."
+timezone_ok "$timezone" || die "\"$timezone\" isn't a time zone (like Europe/Berlin or America/New_York; see: timedatectl list-timezones)."
 [ -z "$scripts" ] || [ -d "$scripts" ] || die "No folder $scripts."
-for c in wget gpg sha512sum md5sum git; do
-    command -v "$c" >/dev/null || die "$c is missing. Install it with: sudo apt install $([ "$c" = md5sum ] || [ "$c" = sha512sum ] && echo coreutils || echo "$c")"
-done
-# At the end, whatever happens: the temporary folder goes, and so does
-# xorriso if this run installed it (a marker package, so apt takes out just
-# what came with it)
-work='' installed_here=false
+# What it needs, installed now if missing (xorriso builds the image)
+need_tools wget:wget gpg:gpg sha512sum:coreutils md5sum:coreutils git:git xorriso:xorriso
+# At the end, whatever happens: the temporary folder goes
+work=''
 cleanup() {
     [ -z "$work" ] || rm -rf "$work"
-    if $installed_here; then
-        note "Removing xorriso again (it was only needed to build the image)."
-        apt_purge >/dev/null 2>&1 || warn "Couldn't remove it; do it yourself with: sudo apt purge $(apt_marker)"
-    fi
 }
 trap cleanup EXIT
-
-# xorriso builds the image: the only step here that needs sudo, besides writing
-# a stick at the end
-if ! command -v xorriso >/dev/null; then
-    note "xorriso, which builds the image, isn't installed. It is removed again at the end."
-    ask "Install it for now (needs your sudo password)?" y ||
-        die "Nothing was built. Install it yourself with: sudo apt install xorriso"
-    installed_here=true
-    apt_install xorriso
-fi
 
 SAVED=$DEBSWAY_DIR/offline/install-iso
 mkdir -p "$SAVED"
@@ -145,7 +133,7 @@ fi
 say "What goes on it"
 stage=$work/stage
 mkdir -p "$stage/debsway-install" "$stage/debsway" "$stage/isolinux" "$stage/boot/grub"
-fill_preseed "$DEBSWAY_DIR/data/install-iso-preseed.cfg" "$user" "$locale" "$keymap" "$erase" >"$stage/debsway-install/preseed.cfg"
+fill_preseed "$DEBSWAY_DIR/data/install-iso-preseed.cfg" "$user" "$locale" "$keymap" "$erase" "$timezone" >"$stage/debsway-install/preseed.cfg"
 cp "$DEBSWAY_DIR/data/install-iso-disk.sh" "$stage/debsway-install/disk.sh"
 cp "$DEBSWAY_DIR/data/install-iso-net.sh" "$stage/debsway-install/net.sh"
 cp "$DEBSWAY_DIR/data/install-iso-late.sh" "$stage/debsway-install/late.sh"
@@ -158,7 +146,7 @@ if [ -d "$DEBSWAY_DIR/offline" ]; then
     mkdir -p "$stage/debsway/offline"
     (cd "$DEBSWAY_DIR/offline" && find . -mindepth 1 -maxdepth 1 ! -name install-iso ! -name tails -exec cp -R {} "$stage/debsway/offline/" \;)
 fi
-note "debsway $(git -C "$DEBSWAY_DIR" describe --always --dirty 2>/dev/null), user $user, keyboard $keymap, $locale, $([ "$erase" = true ] && echo "the disk filled with random data first" || echo "no random fill")"
+note "debsway $(git -C "$DEBSWAY_DIR" describe --always --dirty 2>/dev/null), user $user, keyboard $keymap, $locale, time zone $timezone, $([ "$erase" = true ] && echo "the disk filled with random data first" || echo "no random fill")"
 [ -z "$(git -C "$DEBSWAY_DIR" status --porcelain 2>/dev/null)" ] ||
     warn "debsway has changes that aren't committed; only the last commit goes on the image."
 
@@ -202,9 +190,9 @@ cat <<EOF
 
     Try it in a throwaway VM first, if you can (QEMU; nothing on this computer
     is touched; it asks the same three questions):
-      qemu-img create -f qcow2 /tmp/test-disk.qcow2 20G
+      qemu-img create -f qcow2 ~/test-disk.qcow2 20G
       qemu-system-x86_64 -enable-kvm -m 2048 -cdrom $out \\
-          -drive file=/tmp/test-disk.qcow2,if=virtio -boot d
+          -drive file=$HOME/test-disk.qcow2,if=virtio -boot d
 
 EOF
 if ask "Write it to a USB stick now?" n; then

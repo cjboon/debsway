@@ -137,8 +137,11 @@ disks?", which names the disk it erases (the stick itself is never offered).
 At the first login on the console it asks once "Set it up now?": Enter runs
 `bash ~/debsway/start.sh` (the usual introduction and questions), n leaves it
 for later. Options: `--user NAME`,
-`--keymap de`, `--locale de_DE.UTF-8`, `--no-erase` (skip filling the disk with
-random data), `--scripts FOLDER` (your own files, to `~/scripts`). Try the image
+`--keymap de`, `--locale de_DE.UTF-8`, `--timezone Europe/Berlin` (the clock's
+time zone; by default the one of the computer building the image), `--no-erase`
+(skip filling the disk with random data), `--scripts FOLDER` (your own files, to
+`~/scripts`). What it needs to build the image (xorriso, wget, gpg, git) it
+installs first if it is missing. Try the image
 in a VM first: `bash tools/try-install-iso.sh` starts it the way a laptop would
 (UEFI, the image as a USB stick, an empty 20 GB disk), says what to check, then
 starts the installed system; `--two-disks` checks that it asks which disk,

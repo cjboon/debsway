@@ -112,6 +112,26 @@ apt_install() {
     if [ ${#add[@]} -gt 0 ]; then $SUDO apt-mark auto "${add[@]}" >/dev/null; fi
 }
 
+# need_tools WHAT:PACKAGE...: what a script needs before it starts. WHAT is a
+# command (gpgv) or a file (/usr/share/keyrings/debian-archive-keyring.gpg);
+# the PACKAGEs of the missing ones are installed now, through the script's
+# marker package (apt_install), instead of the script stopping half way with
+# "install it yourself". Asks for the sudo password only if something is missing.
+need_tools() {
+    local t what pkg missing=()
+    for t in "$@"; do
+        what=${t%:*} pkg=${t##*:}
+        case $what in
+            /*) [ -e "$what" ] && continue ;;
+            *) command -v "$what" >/dev/null && continue ;;
+        esac
+        case " ${missing[*]} " in *" $pkg "*) ;; *) missing+=("$pkg") ;; esac
+    done
+    [ ${#missing[@]} -gt 0 ] || return 0
+    say "Installing what this needs first: ${missing[*]}"
+    apt_install "${missing[@]}"
+}
+
 # apt_purge PACKAGE...: removes what the running script installed with
 # apt_install, except what other debsway scripts still need. PACKAGEs are
 # used only when this script installed its packages before markers existed.

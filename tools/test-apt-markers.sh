@@ -184,4 +184,15 @@ apt_install newname >/dev/null
 check "dropping works even when nothing new is asked for" test "$(tr -d ',\n' <"$ST/pkg/debsway-epsilon.deps")" = newname
 check "and the marker was rebuilt for it" test "$(count '^apt-get install')" -gt "$n"
 
+# need_tools: only the packages of what is missing, each once, through apt_install
+(
+    apt_install() { printf '%s\n' "$*" >"$ST/need"; }
+    : >"$ST/need"
+    need_tools bash:bash "$ST:nothing" >/dev/null 2>&1
+    [ ! -s "$ST/need" ] || exit 1
+    need_tools no-such-cmd-a:pkg-a no-such-cmd-b:pkg-a "$ST/no-such-file:pkg-b" bash:bash >/dev/null 2>&1
+    [ "$(cat "$ST/need")" = "pkg-a pkg-b" ]
+)
+check "need_tools installs only what is missing (commands and files), each package once" test $? -eq 0
+
 [ "$fails" -eq 0 ]

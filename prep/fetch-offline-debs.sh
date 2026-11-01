@@ -19,6 +19,10 @@
 . "$DEBSWAY_DIR/lib/offline.sh"
 
 OUT="$DEBSWAY_DIR/offline/debs"
+# What it needs, installed now if missing: gpgv and Debian's keyring check the
+# signed lists, apt-ftparchive (apt-utils) makes the folder a local apt repo
+need_tools gpgv:gpgv apt-ftparchive:apt-utils wget:wget xz:xz-utils \
+    /usr/share/keyrings/debian-archive-keyring.pgp:debian-archive-keyring
 # Debian's firmware package for each kernel driver family
 ALL_FIRMWARE=(firmware-iwlwifi firmware-realtek firmware-atheros firmware-brcm80211
     firmware-mediatek firmware-libertas firmware-ti-connectivity firmware-misc-nonfree)
@@ -39,7 +43,6 @@ firmware_for_driver() {
 # against them
 authenticate_debs() {
     local sums
-    command -v gpgv >/dev/null || die "gpgv is missing. Install it with: sudo apt install gpgv"
     say "Saving Debian's signed package lists"
     fetch_offline_lists "$OUT/verify"
     sums=$(mktemp)
@@ -80,9 +83,6 @@ mapfile -t PKGS < <(printf '%s\n' "${PKGS[@]}" | awk '!seen[$0]++')
 [ "$(dpkg --print-architecture)" = amd64 ] || warn "This machine isn't amd64; the packages won't match."
 . /etc/os-release
 [ "${VERSION_CODENAME:-}" = "$DEBIAN_RELEASE" ] || warn "This machine isn't $DEBIAN_RELEASE; the packages may not install."
-
-command -v apt-ftparchive >/dev/null ||
-    die "apt-ftparchive is missing. Install it with: sudo apt install apt-utils"
 
 say "Resolving dependencies"
 # Everything they could ever need; on the new system apt only installs
