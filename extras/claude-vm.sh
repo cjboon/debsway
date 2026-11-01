@@ -154,17 +154,13 @@ if sudo test -s "$AGENT_HOME/vm/$AGENT.qcow2"; then
     note "The VM is already built; kept as it is. For a fresh one: claude-vm rebuild"
 else
     note "This installs Debian and Claude Code inside the guest; it takes 5-15 minutes"
-    note "and downloads a few hundred MB. You can do it later with: claude-vm rebuild"
-    if ask "Build the VM now?" y; then
-        if sudo -u "$AGENT" "$SESSION" install; then
-            say "The VM is ready"
-            note "Its ssh public key (add it on your git host so the agent can push):"
-            sudo -u "$AGENT" "$SESSION" pubkey 2>/dev/null | sed 's/^/        /' || true
-        else
-            warn "The build didn't finish. Try again with: claude-vm rebuild"
-        fi
+    note "and downloads a few hundred MB."
+    if sudo -u "$AGENT" "$SESSION" install; then
+        say "The VM is ready"
+        note "Its ssh public key (add it on your git host so the agent can push):"
+        sudo -u "$AGENT" "$SESSION" pubkey 2>/dev/null | sed 's/^/        /' || true
     else
-        note "Skipped. Build it when you're ready with: claude-vm rebuild"
+        warn "The build didn't finish. Try again with: claude-vm rebuild"
     fi
 fi
 
