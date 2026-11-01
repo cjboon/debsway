@@ -188,6 +188,25 @@ system_tor_wanted() {
     return 1
 }
 
+# tor_service_on: the system tor service runs now and at every boot. Debian
+# starts tor@default at boot only as part of tor.service (tor's systemd
+# generator puts it in tor.service.wants), so enabling tor@default alone is
+# not enough: tor.service has to be enabled too. It isn't, after OnionShare
+# masked it, or when tor was installed while it was masked (as these scripts
+# do, to hold tor until its settings are in), and then Tor is gone after the
+# next reboot. TOR_SINCE is when it was (re)started, for tor_connected.
+tor_service_on() {
+    sudo systemctl unmask tor.service tor@default.service >/dev/null
+    sudo systemctl enable tor.service tor@default.service >/dev/null 2>&1 || true
+    TOR_SINCE=$(date '+%Y-%m-%d %H:%M:%S')
+    sudo systemctl restart tor@default.service
+}
+
+# tor_service_off: stopped, and not started at boot
+tor_service_off() {
+    sudo systemctl disable --now tor@default.service tor.service >/dev/null 2>&1 || true
+}
+
 # onion_add_client SVC_DIR: a client key for the onion service in SVC_DIR
 # (Tor's client authorization). Its public half goes to Tor here, as
 # SVC_DIR/authorized_clients/client-DATE.auth; the private half is left in

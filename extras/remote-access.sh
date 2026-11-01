@@ -43,7 +43,7 @@ if [ "${1:-}" = --remove ]; then
     if system_tor_wanted .debsway-remote-access; then
         sudo systemctl restart tor@default.service >/dev/null 2>&1 || true
     else
-        sudo systemctl disable --now tor@default.service >/dev/null 2>&1 || true
+        tor_service_off
     fi
     # Takes sshd back off 127.0.0.1 if it stays installed (a bare restart is fine)
     if is_installed openssh-server; then sudo systemctl restart ssh.service >/dev/null 2>&1 || true; fi
@@ -196,13 +196,10 @@ else
 fi
 
 say "Starting Tor"
-sudo systemctl unmask tor.service tor@default.service >/dev/null
-sudo systemctl enable tor@default.service >/dev/null 2>&1
-since=$(date '+%Y-%m-%d %H:%M:%S')
-sudo systemctl restart tor@default.service
+tor_service_on
 connected=false
 for i in $(seq 90); do
-    if tor_connected "$since" && sudo test -s "$SVC_DIR/hostname"; then connected=true; break; fi
+    if tor_connected "$TOR_SINCE" && sudo test -s "$SVC_DIR/hostname"; then connected=true; break; fi
     [ $((i % 10)) -ne 0 ] || note "Waiting for Tor ($((i * 2))s)..."
     sleep 2
 done

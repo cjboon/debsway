@@ -57,7 +57,7 @@ if [ "${1:-}" = --remove ]; then
     if system_tor_wanted .debsway-apt-tor; then
         sudo systemctl restart tor@default.service >/dev/null 2>&1 || true
     else
-        sudo systemctl disable --now tor@default.service >/dev/null 2>&1 || true
+        tor_service_off
     fi
     sudo rm -f "$MARK"
     apt_purge tor obfs4proxy snowflake-client apt-transport-tor
@@ -100,11 +100,10 @@ fi
 printf '%s\n' 'Written by debsway parts/apt-tor.sh: the system tor service is used for apt.' | sudo tee "$MARK" >/dev/null
 
 say "Starting Tor"
-sudo systemctl unmask tor.service tor@default.service >/dev/null
-sudo systemctl enable --now tor@default.service >/dev/null
+tor_service_on
 connected=false
 for i in $(seq 90); do
-    if tor_connected; then connected=true; break; fi
+    if tor_connected "$TOR_SINCE"; then connected=true; break; fi
     [ $((i % 10)) -ne 0 ] || note "Waiting for Tor ($((i * 2))s)..."
     sleep 2
 done

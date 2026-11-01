@@ -45,6 +45,15 @@ for f in extras/onionshare.sh parts/apt-tor.sh extras/remote-access.sh; do
     check "$f doesn't decide about the tor service from one mark alone" \
         bash -c '! grep -nE "(if|&&|\|\|) \[ !? ?-[ef] (\"\\\$APT_TOR_MARK\"|/etc/tor/\.debsway-)" "$1"' _ "$HERE/$f"
 done
+# At boot Debian starts tor@default only through tor.service: a script that
+# enables tor@default alone leaves Tor off after the next reboot
+check "tor_service_on enables tor.service, not just tor@default" \
+    bash -c 'sed -n "/^tor_service_on() {/,/^}/p" "$1" | grep -q "systemctl enable tor.service tor@default.service"' _ "$HERE/lib/tor.sh"
+for f in parts/apt-tor.sh extras/remote-access.sh extras/onion-site.sh; do
+    check "$f starts Tor with tor_service_on (so it also runs after a reboot)" grep -qx 'tor_service_on' "$HERE/$f"
+    check "$f doesn't enable or disable tor@default by itself" \
+        bash -c '! grep -nE "systemctl (enable|disable)[^#]*tor@default" "$1"' _ "$HERE/$f"
+done
 # Tor Browser's AppArmor fix: taken out again on --remove, and the profile read
 # again, so the loaded rules lose it now rather than at the next reboot
 check "tor-browser.sh reloads Tor's AppArmor profile after taking its lines out" \
