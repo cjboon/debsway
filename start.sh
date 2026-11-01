@@ -22,7 +22,8 @@ if [ "${1:-}" = --unmount ]; then
     if command -v sudo >/dev/null; then
         umount_cmd=(sudo umount "$mnt")
     else
-        umount_cmd=(su -c "umount $mnt")
+        # (quoted for root's shell: a mount point can have spaces, or worse)
+        umount_cmd=(su -c "umount $(printf '%q' "$mnt")")
     fi
     if "${umount_cmd[@]}"; then
         note "The stick is unmounted: you can unplug it."
