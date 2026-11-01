@@ -55,6 +55,20 @@ nm_write_wifi() {
     } | $SUDO install -D -m 0600 /dev/stdin "/etc/NetworkManager/system-connections/debsway-$hex.nmconnection"
 }
 
+# ssh_pubkey_ok LINE: one ssh public key, as the .pub file holds it: a key type,
+# the key, maybe a comment. Nothing in front (an authorized_keys line can start
+# with options such as command= or permitopen=, which a pasted line must not
+# smuggle in), and ssh-keygen must be able to read it.
+ssh_pubkey_ok() {
+    local tmp rc=0
+    [[ $1 =~ ^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp(256|384|521)|sk-ssh-ed25519@openssh\.com|sk-ecdsa-sha2-nistp256@openssh\.com)\ [A-Za-z0-9+/]+={0,3}(\ [^[:cntrl:]]*)?$ ]] || return 1
+    tmp=$(mktemp)
+    printf '%s\n' "$1" >"$tmp"
+    ssh-keygen -l -f "$tmp" >/dev/null 2>&1 || rc=1
+    rm -f "$tmp"
+    return "$rc"
+}
+
 # sshd_problems USER: reads `sshd -T` (what sshd will really do) on stdin and
 # prints one line for each setting that is not what extras/remote-access.sh
 # wants: key login only, no root, USER only, and listening on 127.0.0.1 only.

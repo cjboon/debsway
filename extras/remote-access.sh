@@ -69,23 +69,43 @@ if [ -n "${SSH_CONNECTION:-}" ]; then
     ask "Go on?" n || die "Stopped before changing anything."
 fi
 AUTH_KEYS="$HOME/.ssh/authorized_keys"
+no_key=false
 if ! grep -qE '^(ssh-|ecdsa-|sk-)' "$AUTH_KEYS" 2>/dev/null; then
     say "Your ssh key"
     note "ssh here accepts keys only, no passwords. On the computer you'll connect from, run:"
     note "  ssh-keygen -t ed25519      then show the public half:  cat ~/.ssh/id_ed25519.pub"
     note "and paste that one line (it starts with ssh-ed25519)."
-    tty_read pubkey "    public key> "
-    pubkey=${pubkey%$'\r'}
-    [ -n "$pubkey" ] || die "No key given. Run this again when you have one."
-    keytmp=$(mktemp)
-    printf '%s\n' "$pubkey" >"$keytmp"
-    ssh-keygen -l -f "$keytmp" >/dev/null 2>&1 || { rm -f "$keytmp"; die "That doesn't look like an ssh public key."; }
-    rm -f "$keytmp"
-    mkdir -p "$HOME/.ssh"
-    chmod 700 "$HOME/.ssh"
-    printf '%s\n' "$pubkey" >>"$AUTH_KEYS"
-    chmod 600 "$AUTH_KEYS"
-    note "Added it to $AUTH_KEYS"
+    tries=0
+    while :; do
+        tries=$((tries + 1))
+        tty_read pubkey "    public key> "
+        pubkey=${pubkey%$'\r'}
+        if [ -n "$pubkey" ] && ssh_pubkey_ok "$pubkey"; then
+            mkdir -p "$HOME/.ssh"
+            chmod 700 "$HOME/.ssh"
+            printf '%s\n' "$pubkey" >>"$AUTH_KEYS"
+            chmod 600 "$AUTH_KEYS"
+            note "Added it to $AUTH_KEYS"
+            break
+        fi
+        if [ -n "$pubkey" ]; then
+            warn "That isn't an ssh public key. It is one line that starts with ssh-ed25519 (or"
+            warn "ssh-rsa, ecdsa-...), from the file ending in .pub: not the private key, and nothing in front."
+        fi
+        note "What now?"
+        note "  1) paste it again"
+        note "  2) go on without a key: everything is set up, but nobody can log in until"
+        note "     you add one (this says how at the end)"
+        note "  3) stop here: nothing has been changed"
+        tty_read choice "Which (1-3)? "
+        case $choice in
+            2) no_key=true; break ;;
+            3) die "Stopped; nothing was changed. Run this again when you have the key: bash $DEBSWAY_DIR/extras/remote-access.sh" ;;
+        esac
+        # (no terminal to answer on, or nothing that works after a few rounds)
+        [ "$tries" -lt 5 ] && [ -n "$choice$pubkey" ] ||
+            die "No key given; nothing was changed. Run this again when you have it: bash $DEBSWAY_DIR/extras/remote-access.sh"
+    done
 fi
 
 new_install=false
@@ -243,6 +263,20 @@ else
 
     Connect from a computer set up with its client key:  ssh debsway
     (Run this again to authorize another computer.)
+EOF
+fi
+if $no_key; then
+    cat <<EOF
+
+    NO KEY YET: nobody can log in until you add the public key of the computer
+    you'll connect from. On that computer:
+      ssh-keygen -t ed25519            (once; Enter takes the defaults)
+      cat ~/.ssh/id_ed25519.pub        (one line, starting with ssh-ed25519)
+    Then, on this computer, either run this again (it asks for the key, and
+    keeps the address and client key you already have):
+      bash $DEBSWAY_DIR/extras/remote-access.sh
+    or add the line yourself:
+      echo 'ssh-ed25519 AAAA... name' >>~/.ssh/authorized_keys
 EOF
 fi
 cat <<'EOF'

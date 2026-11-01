@@ -16,6 +16,7 @@ good=$'port 22\nlistenaddress 127.0.0.1:22\npermitrootlogin no\npasswordauthenti
 good+=$'allowtcpforwarding no\nallowstreamlocalforwarding no\ngatewayports no\nallowagentforwarding no\nx11forwarding no\npermittunnel no\npermituserenvironment no\nmaxauthtries 3\n'
 problems() { printf '%s' "$1" | sshd_problems alice; }
 has() { problems "$1" | grep -q "$2"; }
+not() { ! "$@"; }
 
 check "the settings debsway writes pass" test -z "$(problems "$good")"
 check "password login still on is caught" has "${good/passwordauthentication no/passwordauthentication yes}" 'PasswordAuthentication is yes'
@@ -41,5 +42,23 @@ conf=$(sed -n '/^sudo tee "$SSHD_CONF" >\/dev\/null <<EOF$/,/^EOF$/p' "$DEBSWAY_
     sed -e 's/\$USER/alice/' -e 's/^ListenAddress 127.0.0.1$/ListenAddress 127.0.0.1:22/' | awk '{ print tolower($1), $2 }')
 check "the settings remote-access.sh writes pass the check" test -z "$(problems "port 22"$'\n'"$conf"$'\n')"
 check "...and include every new one" bash -c 'for k in allowtcpforwarding allowstreamlocalforwarding gatewayports allowagentforwarding x11forwarding permittunnel permituserenvironment maxauthtries logingracetime; do grep -q "^$k " <<<"$1" || exit 1; done' _ "$conf"
+
+
+# ---- the public key remote-access.sh takes from you (ssh_pubkey_ok) ----
+if command -v ssh-keygen >/dev/null; then
+    K=$(mktemp -d)
+    ssh-keygen -q -t ed25519 -N '' -C 'me@laptop' -f "$K/id" >/dev/null 2>&1
+    pub=$(cat "$K/id.pub")
+    check "a real public key is taken" ssh_pubkey_ok "$pub"
+    check "...without its comment too" ssh_pubkey_ok "${pub% *}"
+    check "options in front (command=, permitopen=) are refused" not ssh_pubkey_ok "command=\"sh\" $pub"
+    check "the private key is refused" not ssh_pubkey_ok "$(head -1 "$K/id")"
+    check "a key with a character changed is refused" not ssh_pubkey_ok "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIxxx"
+    check "some text is refused" not ssh_pubkey_ok "hello there"
+    check "two keys in one line are refused" not ssh_pubkey_ok "$pub"$'\n'"$pub"
+    rm -rf "$K"
+fi
+check "remote-access.sh checks the key with ssh_pubkey_ok, and offers a way on without one" \
+    bash -c 'grep -q "ssh_pubkey_ok \"\$pubkey\"" "$1" && grep -q "go on without a key" "$1" && grep -q "NO KEY YET" "$1"' _ "$DEBSWAY_DIR/extras/remote-access.sh"
 
 [ "$fails" -eq 0 ]
