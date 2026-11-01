@@ -44,6 +44,10 @@ for name in "${DNS_PROVIDERS[@]}"; do
     check "$name: listens on 127.0.0.1 only" bash -c '[ "$(grep -c "^ *interface:" <<<"$1")" = 1 ] && grep -qx "    interface: 127.0.0.1" <<<"$1"' _ "$conf"
     check "$name: no failing open on a bad DNSSEC signature" grep -qx "    val-permissive-mode: no" <<<"$conf"
 done
+# A first run has no settings file yet: asking which resolver is in use must
+# not end the script (it did, silently, right after "Which resolver")
+check "first run, no settings yet: dns_current gives nothing and the script goes on" \
+    bash -c 'set -euo pipefail; . "$1/lib.sh"; . "$1/lib/secure-dns.sh"; c=$(dns_current); [ -z "$c" ] && echo on' _ "$HERE"
 if dns_unbound_conf nobody >/dev/null 2>&1; then unknown=false; else unknown=true; fi
 check "an unknown resolver gives no settings" $unknown
 check "Mullvad's public DNS (gone 2026-11-02) isn't offered" bash -c '! grep -qi mullvad <<<"$1"' _ "$(for n in "${DNS_PROVIDERS[@]}"; do dns_pin "$n"; done)"

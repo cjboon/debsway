@@ -63,9 +63,11 @@ EOF
     done
 }
 
-# dns_current: the resolver in use (from SECURE_DNS_CONF), or nothing
+# dns_current: the resolver in use (from SECURE_DNS_CONF), or nothing. Always
+# succeeds: on a first run there is no file, and under pipefail sed's error
+# would end the script that asked (current=$(dns_current)) without a word.
 dns_current() {
-    sed -n 's/^# provider: //p' "${DEBSWAY_ETC:-/etc}/unbound/unbound.conf.d/debsway-secure-dns.conf" 2>/dev/null | head -1
+    { sed -n 's/^# provider: //p' "${DEBSWAY_ETC:-/etc}/unbound/unbound.conf.d/debsway-secure-dns.conf" 2>/dev/null || true; } | head -1
 }
 
 # dns_status: one line for status.sh
