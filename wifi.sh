@@ -291,20 +291,24 @@ pick_backend() {
 
 # ----------------------------------------------------------- scan + prompt
 
+# Every scan has a time limit: right after a boot (the install stick's first
+# login) a driver can start a scan and never report it finished, and "iw scan"
+# then waits for ever at "Scanning for networks". (DEBSWAY_SCAN_TIMEOUT: tests)
+SCAN_TIMEOUT=${DEBSWAY_SCAN_TIMEOUT:-20}
 scan_ssids() {
     case $BACKEND in
         nm)
-            nmcli --escape no -t -f SSID device wifi list ifname "$IF" --rescan yes 2>/dev/null ;;
+            timeout "$SCAN_TIMEOUT" nmcli --escape no -t -f SSID device wifi list ifname "$IF" --rescan yes 2>/dev/null ;;
         iwd)
-            iwctl station "$IF" scan >/dev/null 2>&1 || true
+            timeout "$SCAN_TIMEOUT" iwctl station "$IF" scan >/dev/null 2>&1 || true
             sleep 4
-            iwctl station "$IF" get-networks 2>/dev/null |
+            timeout "$SCAN_TIMEOUT" iwctl station "$IF" get-networks 2>/dev/null |
                 sed 's/\x1b\[[0-9;]*m//g' |
                 grep -vE '^[[:space:]]*$|^[[:space:]-]+$|Available networks|Network name' |
                 sed -E 's/^[[:space:]>]+//; s/[[:space:]]+(psk|open|8021x|wep)[[:space:]]+[*]*[[:space:]]*$//' ;;
         *)
             if command -v iw >/dev/null; then
-                iw dev "$IF" scan 2>/dev/null |
+                timeout "$SCAN_TIMEOUT" iw dev "$IF" scan 2>/dev/null |
                     awk '/^[[:space:]]*signal:/ { s = $2 }
                          /^[[:space:]]*SSID: / { sub(/^[[:space:]]*SSID: /, ""); print s "\t" $0 }' |
                     sort -t "$(printf '\t')" -k1,1 -gr | cut -f2-
@@ -316,6 +320,13 @@ ask_network() {
     local ssids=() i choice
     say "Scanning for networks"
     mapfile -t ssids < <(scan_ssids || true)
+    if [ ${#ssids[@]} -eq 0 ]; then
+        # The first scan after a boot often finds nothing (the card is still
+        # waking up, or the scan was cut off): one more, after a moment
+        sleep 3
+        ip link set "$IF" up 2>/dev/null || true
+        mapfile -t ssids < <(scan_ssids || true)
+    fi
     if [ ${#ssids[@]} -gt 0 ]; then
         for i in "${!ssids[@]}"; do printf '  %2d) %s\n' $((i + 1)) "${ssids[i]}"; done
     else

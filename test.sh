@@ -262,6 +262,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "wifi.sh's network scan never hangs, with a pretend iw"
+if out=$(bash tools/test-wifi-scan.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") Wi-Fi scan checks"
+else
+    bad "Wi-Fi scan checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "The sshd settings check (lib/net.sh), with sample sshd -T output"
 if out=$(bash tools/test-sshd-check.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") sshd settings checks"
