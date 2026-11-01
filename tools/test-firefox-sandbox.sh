@@ -188,13 +188,13 @@ check "the session shares at its start, every 2 seconds while Firefox runs, and 
     bash -c 'grep -qx "share_downloads" "$1" && grep -qF "while kill -0 \"\$pid\" 2>/dev/null; do sleep 2; share_downloads; done &" "$1" && sed -n "/^cleanup() {/,/^}/p" "$1" | grep -q share_downloads' _ "$S"
 
 # 10. One Firefox extra: this one also installs Firefox ESR run as you
-# (firefox-esr), its hardening and the incognito offer (extras/firefox.sh is gone)
+# (firefox-esr), its hardening and incognito (extras/firefox.sh is gone)
 X=$HERE/extras/firefox-sandbox.sh
 order() { python3 -I -c 'import sys; s = open(sys.argv[1]).read(); assert s.index(sys.argv[2]) < s.index(sys.argv[3])' "$X" "$1" "$2"; }
 check "the plain Firefox extra is gone; this is the only one" bash -c '[ ! -e "$1/extras/firefox.sh" ]' _ "$HERE"
 check "it sets up Firefox's hardening for every profile" grep -qx 'bash "$DEBSWAY_DIR/parts/firefox-hardening.sh"' "$X"
-check "it offers incognito (and keeps one that is there)" \
-    grep -qF 'if [ -x /usr/local/bin/incognito ] || ask "Set it up too?" y; then' "$X"
+check "it sets up incognito too, without asking" \
+    bash -c 'grep -qx "bash \"\$DEBSWAY_DIR/parts/incognito.sh\" ||" "$1" && ! grep -q "Set it up too" "$1"' _ "$X"
 check "it takes over the old Firefox extra's marker after installing its own (Firefox stays)" \
     order 'apt_install firefox-esr' 'DEBSWAY_OWNER=firefox apt_purge'
 remove=$(sed -n '/^if \[ "${1:-}" = --remove \]/,/^fi$/p' "$X")

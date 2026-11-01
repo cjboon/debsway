@@ -22,7 +22,7 @@
 #    of their own like this one (fx-NAME).
 #  - It sets up Firefox ESR the debsway way for every profile (video codecs,
 #    uBlock Origin, HTTPS-Only Mode, the JavaScript JIT off, a restart notice:
-#    parts/firefox-hardening.sh), and offers incognito, a throwaway Firefox
+#    parts/firefox-hardening.sh), and sets up incognito too, a throwaway Firefox
 #    in a locked-down user of its own with nothing kept (parts/incognito.sh).
 # There is no KeePassXC browser add-on (debsway's KeePassXC is the minimal
 # build without it): copy and paste a password; the clipboard is shared.
@@ -156,11 +156,8 @@ note "Links from other programs now open in the sandboxed Firefox."
 say "incognito"
 note "incognito opens a throwaway Firefox as a separate, locked-down user, with"
 note "its own clipboard, no shared folders, sound and video, and nothing kept."
-if [ -x /usr/local/bin/incognito ] || ask "Set it up too?" y; then
-    bash "$DEBSWAY_DIR/parts/incognito.sh"
-else
-    note "Later: bash ~/debsway/parts/incognito.sh"
-fi
+bash "$DEBSWAY_DIR/parts/incognito.sh" ||
+    warn "incognito didn't finish setting up; run it again with: bash ~/debsway/parts/incognito.sh"
 
 note "Run it with: firefox   (or Super+d). firefox-esr runs Firefox as you instead."
 note "It cannot reach your router or local services; to allow that for a while:"

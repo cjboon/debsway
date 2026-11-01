@@ -301,8 +301,8 @@ that's useful.
 ## Firefox (`extras/firefox-sandbox.sh`)
 
 Installs Firefox ESR with the video codecs and uBlock Origin, runs the
-hardening below, runs it as its own locked-down user (`firefox`), and offers
-`incognito`. `firefox-esr` still runs the same Firefox as you, for the odd
+hardening below, runs it as its own locked-down user (`firefox`), and sets up
+`incognito` too. `firefox-esr` still runs the same Firefox as you, for the odd
 page the sandbox's firewall blocks (your router's, say).
 `bash extras/firefox-sandbox.sh --remove` takes all of it out again (it asks
 about incognito; your profiles stay).
