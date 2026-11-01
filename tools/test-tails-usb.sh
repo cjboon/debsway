@@ -98,6 +98,8 @@ E=$HERE/extras/tails-usb.sh
 check "the stick is chosen by typing its name" grep -q 'Type its name, $name, to go on' "$E"
 check "a stick under 8 GB is refused" grep -q 'MIN_STICK=$((7500 \* 1000 \* 1000))' "$E"
 check "a download that fails the checks is deleted" grep -q 'rm -f "$img.part" "$sig"' "$E"
+check "setting it up doesn't offer to make a stick; it says how to use tails-usb" \
+    bash -c 'sed -n "/^    \"\")/,/;;/p" "$1" | { s=$(cat); ! grep -q "ask " <<<"$s" && ! grep -q make_stick <<<"$s" && grep -q "Run in a terminal:  tails-usb" <<<"$s"; }' _ "$E"
 check "the Tails key is pinned" bash -c '. "$1/pins.sh"; [ "$TAILS_FPR" = A490D0F4D311A4153E2BB7CADBB802B258ACD84F ]' _ "$HERE"
 
 [ "$fails" -eq 0 ]

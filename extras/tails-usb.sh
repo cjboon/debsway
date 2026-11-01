@@ -15,7 +15,7 @@
 #    type the stick's name, writes Tails onto it, and reads it back to check;
 #  - says how to start and use it (docs/extras/tails-usb.md has more).
 # Writing a stick erases everything on it, Persistent Storage included.
-# Usage: bash tails-usb.sh            set up tails-usb, and offer to make a stick
+# Usage: bash tails-usb.sh            set up tails-usb, and say how to use it
 #        bash tails-usb.sh --make     make a stick (what tails-usb runs)
 #        bash tails-usb.sh --remove
 # summary: Tails on a USB stick, downloaded and checked
@@ -169,7 +169,21 @@ case ${1:-} in
         make_stick ;;
     "")
         setup
-        note "Make a Tails stick any time with: tails-usb"
-        if ask "Make one now?" n; then make_stick; fi ;;
+        cat <<'EOF'
+
+    tails-usb is set up. To make a Tails stick:
+
+    1. Have a USB stick of 8 GB or more. Everything on it is erased.
+    2. Run in a terminal:  tails-usb   (or Super+d, then tails-usb)
+    3. It downloads the newest Tails (through Tor if Tor runs here, else it
+       asks first), checks its signature, and keeps the checked copy for the
+       next stick.
+    4. Plug the stick in when it asks, pick it from the list, and type its
+       name to confirm. It writes Tails and reads it back to check.
+    5. When it is done it says how to start the computer from the stick.
+
+    More: docs/extras/tails-usb.md in the debsway folder.
+EOF
+        pause_if_asked ;;
     *) die "Usage: bash extras/tails-usb.sh [--make | --remove]" ;;
 esac
