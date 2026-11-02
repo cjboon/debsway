@@ -83,6 +83,12 @@ TUTA_KEY_SHA256=9566e054634a75f540b64db71b92b040bc77f9a3954d737cb01c4630c1225127
 TUTA_KEY_URL=https://raw.githubusercontent.com/tutao/tutanota/master/tutao-pub.pem
 TUTA_DESKTOP_URL=https://app.tuta.com/desktop
 
+# Signal Desktop's apt repo (extras/signal.sh). Open Whisper Systems'
+# repository key (2017, no expiry date).
+# checked: 2026-11-02  updates.signal.org's keys.asc; keyserver.ubuntu.com; keys.openpgp.org
+SIGNAL_FPR=DBA36B5181D0C816F630E889D980A17457F6FB06
+SIGNAL_KEY_URL=https://updates.signal.org/desktop/apt/keys.asc
+
 # Mullvad apt repo (extras/mullvad-vpn.sh, extras/mullvad-browser-regular.sh).
 # Mullvad (code signing) <admin@mullvad.net>.
 # checked: 2026-10-26  mullvad.net/en/help/verifying-signatures; the repo's keyring

@@ -2,8 +2,8 @@
 # debsway-menu: written by debsway parts/debsway-menu.sh
 # The menu behind the "debsway" item in the bar. A click opens a black-and-gray
 # terminal in a floating, centered window, with the choices Help, Terminal (Font size on a
-# text console), Web browser, Text editor, File manager, Password manager, Mail and
-# Claude (each when installed), Back up now (with the backup extra), Install apps,
+# text console), Web browser, Text editor, File manager, Password manager, Mail,
+# Signal, SimpleX and Claude (each when installed), Back up now (with the backup extra), Install apps,
 # Update and Status, then the switches: Wi-Fi, Bluetooth, Microphone, Webcam and
 # Vault, when there is one. Arrow keys (or j/k) and Enter choose; so does a
 # click. Esc closes every screen of it, the install list and the pager
@@ -231,7 +231,7 @@ text_editor() {
 }
 # app NAME...: the first of these commands that is installed, from APPS (where
 # debsway and Debian put them; DEBSWAY_MENU_APPS: a test's own list)
-APPS=${DEBSWAY_MENU_APPS-/usr/bin/thunar /usr/bin/keepassxc $HOME/.local/bin/tuta $HOME/.local/bin/claude-vm $HOME/.local/bin/claude $HOME/.local/bin/claude-regular $HOME/.local/bin/vault $HOME/.local/bin/backup}
+APPS=${DEBSWAY_MENU_APPS-/usr/bin/thunar /usr/bin/keepassxc $HOME/.local/bin/tuta /usr/bin/signal-desktop $HOME/.local/bin/simplex $HOME/.local/bin/claude-vm $HOME/.local/bin/claude $HOME/.local/bin/claude-regular $HOME/.local/bin/vault $HOME/.local/bin/backup}
 app() {
     local want c
     for want; do
@@ -257,9 +257,12 @@ if [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null; then
     if [ -n "$BROWSER" ]; then ids+=(browser); items+=("Web browser"); fi
     if [ -n "$EDITOR_CMD" ]; then ids+=(editor); items+=("Text editor"); fi
     FILES_CMD=$(app thunar) PASSWORDS_CMD=$(app keepassxc) MAIL_CMD=$(app tuta) CLAUDE_CMD=$(claude_cmd)
+    SIGNAL_CMD=$(app signal-desktop) SIMPLEX_CMD=$(app simplex)
     if [ -n "$FILES_CMD" ]; then ids+=(files); items+=("File manager"); fi
     if [ -n "$PASSWORDS_CMD" ]; then ids+=(passwords); items+=("Password manager"); fi
     if [ -n "$MAIL_CMD" ]; then ids+=(mail); items+=(Mail); fi
+    if [ -n "$SIGNAL_CMD" ]; then ids+=(signal); items+=(Signal); fi
+    if [ -n "$SIMPLEX_CMD" ]; then ids+=(simplex); items+=(SimpleX); fi
     if [ -n "$CLAUDE_CMD" ]; then ids+=(claude); items+=(Claude); fi
 fi
 BACKUP_CMD=$(app backup) VAULT_CMD=$(app vault)
@@ -346,11 +349,12 @@ run_choice() {
         browser)
             swaymsg exec "$BROWSER" >/dev/null 2>&1
             exit 0 ;;
-        files | passwords | mail | claude)
+        files | passwords | mail | signal | simplex | claude)
             local cmd
             case ${ids[sel]} in
                 files) cmd=$FILES_CMD ;; passwords) cmd=$PASSWORDS_CMD ;;
-                mail) cmd=$MAIL_CMD ;; claude) cmd=$CLAUDE_CMD ;;
+                mail) cmd=$MAIL_CMD ;; signal) cmd=$SIGNAL_CMD ;;
+                simplex) cmd=$SIMPLEX_CMD ;; claude) cmd=$CLAUDE_CMD ;;
             esac
             swaymsg exec "$cmd" >/dev/null 2>&1
             exit 0 ;;

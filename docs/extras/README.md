@@ -69,6 +69,7 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 
 ## Messaging and sharing
 
+- [Signal Desktop](signal.md)
 - [SimpleX Chat, a private messenger](simplex-chat.md)
 - [Tuta Mail, encrypted email](tutamail.md)
 - [Metadata Cleaner, to strip hidden data from files](metadata-cleaner.md)

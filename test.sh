@@ -318,6 +318,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "Signal (extras/signal.sh): the pinned key, no setuid sandbox helper"
+if out=$(bash tools/test-signal.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") Signal checks"
+else
+    bad "Signal checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "The whonix command (bin/whonix), with a pretend virsh"
 if out=$(bash tools/test-whonix-cmd.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") whonix command checks"
@@ -633,6 +641,7 @@ if online; then
     check_key "SimpleX" "$SIMPLEX_FPR" "$SIMPLEX_KEY_URL"
     check_key "Sparrow" "$SPARROW_FPR" "$SPARROW_KEY_URL"
     check_key "Mullvad" "$MULLVAD_FPR" "$MULLVAD_KEY_URL"
+    check_key "Signal" "$SIGNAL_FPR" "$SIGNAL_KEY_URL"
     check_key "Tails" "$TAILS_FPR" "$TAILS_KEY_URL"
     check_key "Debian CD" "$DEBIAN_CD_FPR" "$DEBIAN_CD_KEY_URL"
     check_key "yt-dlp" "$YTDLP_FPR" "$YTDLP_KEY_URL"

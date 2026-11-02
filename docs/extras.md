@@ -43,6 +43,7 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `sparrow-wallet.sh` | Sparrow Bitcoin wallet, the signed official .deb. Command: `sparrow` |
 | `electrum.sh` | Electrum Bitcoin wallet, from Debian |
 | `feather-wallet.sh` | Feather Monero wallet, the signed official AppImage. Command: `feather` |
+| `signal.sh` | Signal Desktop, from Signal's signed apt repo (updated by unattended-upgrades), linked to your phone's Signal; its sandbox helper isn't setuid root. Command: `signal-desktop`. See [extras/signal.md](extras/signal.md) |
 | `simplex-chat.sh` | SimpleX Chat desktop, the signed official AppImage. Command: `simplex` |
 | `tutamail.sh` | Tuta Mail desktop (Tuta, end-to-end encrypted email), the official AppImage, installed only if it is signed by Tuta's pinned code-signing key and is no older than the one you have. Runs on Wayland with Electron's sandbox on. Command: `tuta`. See [extras/tutamail.md](extras/tutamail.md) |
 | `seahorse.sh` | Seahorse and the GNOME keyring, unlocked by your login password (edits `/etc/pam.d/login`; `--remove` takes the lines out) |
