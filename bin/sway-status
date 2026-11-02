@@ -154,7 +154,10 @@ open_or_close() {
         [ "$oc_other" != debsway-run ] || ! menu_busy || continue
         swaymsg -q "[app_id=\"$oc_other\"] kill" >/dev/null 2>&1 || true
     done
-    "$@" >/dev/null 2>&1 &
+    # In a session of its own: sway restarts swaybar on every reload, and
+    # swaybar then stops this script's whole process group. A window left in
+    # it (the menu removing an extra that reloads sway) would be killed too.
+    setsid -f "$@" >/dev/null 2>&1
 }
 while read -r event <&3; do
     case $(printf '%s' "$event" | tr -d ' ') in

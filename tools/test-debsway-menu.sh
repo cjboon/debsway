@@ -498,6 +498,8 @@ oc() { # APP-ID: runs open_or_close as the bar would; what happened is in $T/oc/
     : >"$T/oc/sway"; rm -f "$T/oc/ran"
     PATH="$T/oc/bin:$PATH" XDG_RUNTIME_DIR="$T/oc/xdg" sh -c 'eval "$(sed -n "/^menu_busy() {/,/^}/p; /^open_or_close() {/,/^}/p" "$1")"; open_or_close "$2" touch "$3"; wait' \
         _ "$HERE/bin/sway-status" "$1" "$T/oc/ran"
+    # (the window is started on its own, so give it a moment)
+    for _ in 1 2 3 4 5 6 7 8 9 10; do [ ! -e "$T/oc/ran" ] || break; /bin/sleep 0.1; done
 }
 rm -f "$T/oc/open"; oc debsway-timer
 check "bar: a click with nothing open opens the window" test -e "$T/oc/ran"
@@ -522,6 +524,15 @@ echo $$ >"$T/oc/xdg/debsway-menu-busy"; oc debsway-timer
 # shellcheck disable=SC2016  # expanded by the inner shell, on purpose
 check "...but not a debsway menu that is running Update" bash -c '! grep -q "debsway-run" "$1/sway" && [ -e "$1/ran" ]' _ "$T/oc"
 rm -f "$T/oc/xdg/debsway-menu-busy"
+# sway restarts swaybar on every reload, and swaybar stops the status script's
+# whole process group: a window started in it would be killed mid-way
+rm -f "$T/oc/open" "$T/oc/sid"
+PATH="$T/oc/bin:$PATH" XDG_RUNTIME_DIR="$T/oc/xdg" sh -c 'eval "$(sed -n "/^menu_busy() {/,/^}/p; /^open_or_close() {/,/^}/p" "$1")"; open_or_close debsway-timer sh -c "echo \$\$ \$(ps -o sid= -p \$\$) >\"\$1\"" _ "$2"; wait' \
+    _ "$HERE/bin/sway-status" "$T/oc/sid"
+for _ in 1 2 3 4 5 6 7 8 9 10; do [ ! -s "$T/oc/sid" ] || break; /bin/sleep 0.1; done
+# shellcheck disable=SC2016  # expanded by the inner shell, on purpose
+check "a window from the bar has a session of its own (a sway reload, which restarts the bar, doesn't close it)" \
+    bash -c 'read -r pid sid <"$1" && [ "$pid" = "$sid" ]' _ "$T/oc/sid"
 # shellcheck disable=SC2016  # expanded by the inner shell or Python, on purpose
 check "the time, the Wi-Fi name and debsway in the bar each open or close their window" bash -c '
     grep -qF "open_or_close debsway-timer foot -o colors.alpha=0.85 --app-id=debsway-timer" "$1" &&
