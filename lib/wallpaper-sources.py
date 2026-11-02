@@ -7,6 +7,9 @@ Saves pictures that make good wallpapers into DEST, named SOURCE_ID.jpg (or
   hubble  ESA/Hubble's pictures of the week, in ESA's wallpaper size (CC BY 4.0)
   webb    ESA/Webb's pictures of the month, the same way (CC BY 4.0)
   earth   NASA Earth Observatory's images of the day (public domain)
+  wild    Wikimedia Commons' featured pictures of wild animals, chosen by its
+          community: only free licences (CC0, public domain, CC BY, CC BY-SA),
+          each photographer credited; farm animals, pets and artworks skipped
 Every picture is at least 1920x1080 and landscape, read from the file itself,
 a real JPEG or PNG of at most 40 MB; NASA's also need a credit that names no
 other copyright holder. Only https, and only these sources' own hosts, also
@@ -30,6 +33,7 @@ HOSTS = {
     "esahubble.org", "cdn.esahubble.org",
     "esawebb.org", "cdn.esawebb.org",
     "earthobservatory.nasa.gov", "science.nasa.gov", "assets.science.nasa.gov",
+    "commons.wikimedia.org", "upload.wikimedia.org", "thumb.wikimedia.org",
 }
 MIN_W, MIN_H = 1920, 1080
 MIN_RATIO, MAX_RATIO = 1.3, 2.4
@@ -48,6 +52,22 @@ ESA = {
     "webb": ("https://esawebb.org/images/potm/feed/", "cdn.esawebb.org", "ESA/Webb"),
 }
 EARTH_FEED = "https://earthobservatory.nasa.gov/feeds/image-of-the-day.rss"
+COMMONS_API = "https://commons.wikimedia.org/w/api.php"
+# Commons' featured pictures of wild animals, by group (insects and spiders
+# left out: not everyone wants one on their screen)
+WILD_GROUPS = ["Carnivora", "Primates", "Cetacea", "Elephantidae", "Perissodactyla",
+               "Artiodactyla", "Marsupialia", "Rodentia", "birds", "reptiles",
+               "amphibians", "fish"]
+WILD_PER_GROUP = 4      # at most this many from one group, for variety
+# titles of farm animals, pets, artworks and remains: not animals in nature
+NOT_WILD = re.compile(r"\b(cows?|cattle|calf|calves|ox|oxen|donkeys?|horses?|mules?|ponies|pony|"
+                      r"sheep|goats?|pigs?|piglets?|dogs?|puppy|puppies|cats?|kittens?|chickens?|hens?|"
+                      r"rooster|domestic|farm|livestock|zoo|museum|mosaic|painting|sculpture|statue|"
+                      r"fountain|drawing|illustration|engraving|plate|stamp|skeleton|skull|bones?|"
+                      r"fossils?|taxiderm\w*|dead|carcass|market|google art project)\b", re.I)
+FREE_LICENCE = re.compile(r"^(cc0|pd|pd-.*|cc-by-[0-9.]+|cc-by-sa-[0-9.]+)$")
+# Wikimedia asks programs to say who they are, with a way to reach the maker
+WIKIMEDIA_AGENT = "debsway-wallpapers/1.0 (https://github.com/cjboon/debsway)"
 
 
 class HttpsOnly(urllib.request.HTTPRedirectHandler):
@@ -74,7 +94,8 @@ def fetch(url, limit):
     # (a path with letters like ’ in it, as Earth Observatory's have)
     u = urllib.parse.urlsplit(url)
     url = urllib.parse.urlunsplit(u._replace(path=urllib.parse.quote(u.path, safe="/%:@")))
-    req = urllib.request.Request(url, headers={"User-Agent": "debsway-wallpapers"})
+    agent = WIKIMEDIA_AGENT if u.hostname.endswith(".wikimedia.org") else "debsway-wallpapers"
+    req = urllib.request.Request(url, headers={"User-Agent": agent})
     with OPENER.open(req, timeout=60) as r:
         data = r.read(limit + 1)
     if len(data) > limit:
@@ -230,12 +251,67 @@ def earth():
             yield (pid, url, tag(item, "title"), "%s. %s" % (credit, tag(item, "link")))
 
 
-SOURCES = {"nasa": nasa, "hubble": lambda: esa("hubble"), "webb": lambda: esa("webb"), "earth": earth}
+def wild_why_not(title, info):
+    """None if a Commons picture suits, else why not. INFO is its imageinfo."""
+    meta = info.get("extmetadata", {})
+    if not FREE_LICENCE.match(str(meta.get("License", {}).get("value", ""))):
+        return "not a free licence"
+    if NOT_WILD.search(title):
+        return "not a wild animal in nature"
+    if info.get("mime") not in ("image/jpeg", "image/png"):
+        return "not a JPEG or PNG"
+    try:
+        return size_ok(int(info.get("thumbwidth") or info["width"]), int(info.get("thumbheight") or info["height"]))
+    except (KeyError, TypeError, ValueError):
+        return "no size"
+
+
+def wild():
+    """Commons' featured pictures of wild animals, at 2560 wide (Wikimedia
+    makes that copy; the originals can be 13,000 wide)."""
+    for group in WILD_GROUPS:
+        try:
+            url = COMMONS_API + "?" + urllib.parse.urlencode({
+                "action": "query", "format": "json", "generator": "search",
+                "gsrsearch": 'deepcat:"Featured pictures of %s" filetype:bitmap' % group,
+                "gsrnamespace": 6, "gsrlimit": 30, "gsrsort": "random",
+                "prop": "imageinfo", "iiprop": "url|size|mime|extmetadata",
+                "iiextmetadatafilter": "License|LicenseShortName|Artist", "iiurlwidth": 2560})
+            pages = json.loads(fetch(url, FEED_BYTES)).get("query", {}).get("pages", {})
+        except (OSError, ValueError) as e:
+            print("Commons search for %s failed: %s" % (group, e), file=sys.stderr)
+            continue
+        given = 0
+        for p in pages.values():
+            if given >= WILD_PER_GROUP:
+                break
+            try:
+                title = str(p["title"])
+                info = p["imageinfo"][0]
+            except (KeyError, IndexError, TypeError):
+                continue
+            if wild_why_not(title, info):
+                continue
+            url = info.get("thumburl") or info.get("url", "")
+            if not allowed(url):
+                continue
+            name = title.split(":", 1)[-1].rsplit(".", 1)[0]
+            meta = info.get("extmetadata", {})
+            artist = clean(re.sub(r"<[^>]*>", "", str(meta.get("Artist", {}).get("value", "")))) or "unknown"
+            licence = clean(meta.get("LicenseShortName", {}).get("value", ""))
+            given += 1
+            yield (re.sub(r"[^A-Za-z0-9_.-]", "_", name)[:80].strip("._") or "picture", url, name,
+                   "%s (%s), Wikimedia Commons. https://commons.wikimedia.org/wiki/%s"
+                   % (artist, licence, urllib.parse.quote(title.replace(" ", "_"))))
+
+
+SOURCES = {"nasa": nasa, "hubble": lambda: esa("hubble"), "webb": lambda: esa("webb"),
+           "earth": earth, "wild": wild}
 
 
 def main():
     if len(sys.argv) not in (3, 4) or sys.argv[2] not in SOURCES:
-        sys.exit("usage: wallpaper-sources.py DEST nasa|hubble|webb|earth [COUNT]")
+        sys.exit("usage: wallpaper-sources.py DEST nasa|hubble|webb|earth|wild [COUNT]")
     dest, source = sys.argv[1], sys.argv[2]
     want = int(sys.argv[3]) if len(sys.argv) == 4 else 12
     os.makedirs(dest, exist_ok=True)

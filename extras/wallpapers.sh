@@ -8,12 +8,13 @@
 #             installed, no package script, no sudo.
 #   nasa_*    NASA's image library            hubble_*  ESA/Hubble
 #   webb_*    ESA/Webb                        earth_*   NASA Earth Observatory
+#   wild_*    wild animals: Wikimedia Commons' featured photos, free licences
 #             (lib/wallpaper-sources.py: https only, to each source's own
 #             hosts; at least 1920x1080, landscape; credits in CREDITS.txt)
 #   personal/ yours, e.g. pictures from an image search; never touched.
 # A list asks which sources. Run it again to top each one up.
 # Usage: bash wallpapers.sh [--remove | --manual]
-# summary: Wallpapers: NASA, Hubble, Webb, Budgie and more
+# summary: Wallpapers: space, Earth and wild animals
 # security: some
 # status: file:~/Pictures/Wallpapers/.debsway-wallpapers
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
@@ -31,6 +32,7 @@ SOURCES=(
     "hubble|ESA/Hubble's pictures of the week (about 15 MB)|12"
     "webb|ESA/Webb's pictures of the month (about 15 MB)|12"
     "earth|NASA Earth Observatory's images of the day (up to 200 MB)|10"
+    "wild|Wild animals: Wikimedia Commons' featured photos (about 120 MB)|32"
 )
 # pictures in Budgie's package smaller than this are icons, not wallpapers
 MIN_BYTES=100000
@@ -66,6 +68,9 @@ Each picture is named after where it came from:
   hubble_   ESA/Hubble.  webb_  ESA/Webb. Free to use (CC BY 4.0): to share
             one, credit it as CREDITS.txt says.
   earth_    NASA Earth Observatory. Public domain.
+  wild_     Wild animals: Wikimedia Commons' featured photos, chosen by its
+            community. Free licences (mostly CC BY-SA): to share one, credit
+            the photographer CREDITS.txt names.
   budgie_   Budgie's photos, from Debian. Free licences: budgie_LICENCE.txt.
 CREDITS.txt names each one's title, credit and page.
 

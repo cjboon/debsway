@@ -149,9 +149,9 @@ W=$H/Pictures/Wallpapers
 xw
 rc=$?
 check "without a terminal: every source, Budgie's with apt-get download" \
-    bash -c 'grep -q "download.* budgie-backgrounds$" "$1" && for s in "nasa 24" "hubble 12" "webb 12" "earth 10"; do grep -q "python3 -I .*/lib/wallpaper-sources.py $2 $s$" "$1" || exit 1; done' _ "$T/apt" "$W"
+    bash -c 'grep -q "download.* budgie-backgrounds$" "$1" && for s in "nasa 24" "hubble 12" "webb 12" "earth 10" "wild 32"; do grep -q "python3 -I .*/lib/wallpaper-sources.py $2 $s$" "$1" || exit 1; done' _ "$T/apt" "$W"
 check "...all in one folder, named after the source" \
-    bash -c 'for f in budgie_big.png nasa_A1.jpg hubble_A1.jpg webb_B2.jpg earth_B2.jpg; do [ -f "$1/$f" ] || exit 1; done' _ "$W"
+    bash -c 'for f in budgie_big.png nasa_A1.jpg hubble_A1.jpg webb_B2.jpg earth_B2.jpg wild_A1.jpg; do [ -f "$1/$f" ] || exit 1; done' _ "$W"
 check "...Budgie's licence next to them" grep -q CC-BY-SA "$W/budgie_LICENCE.txt"
 check "...icons (small pictures) and SVGs stay out" bash -c '[ ! -e "$1/budgie_icon.png" ] && [ -z "$(find "$1" -name "*.svg")" ]' _ "$W"
 check "...no links come out (a .png pointing at /etc/passwd)" bash -c '[ ! -e "$1/budgie_link.png" ] && [ -z "$(find "$1" -type l)" ]' _ "$W"
@@ -187,7 +187,7 @@ check "...no sudo there either" test ! -e "$T/sudo"
 
 # ---- lib/wallpaper-sources.py's rules, offline (no connection is made)
 cat >"$T/rules.py" <<'PY'
-import importlib.util, struct, sys, urllib.error
+import importlib.util, json, struct, sys, urllib.error
 spec = importlib.util.spec_from_file_location("ws", sys.argv[1])
 n = importlib.util.module_from_spec(spec); spec.loader.exec_module(n)
 for good in ("https://images-assets.nasa.gov/x", "https://cdn.esahubble.org/x",
@@ -250,6 +250,27 @@ n.fetch = lambda url, limit: ('<item><title>Canyon</title><link>https://science.
 got = list(n.earth())
 assert [g[0] for g in got] == ["canyon_oli_lrg"], got
 assert got[0][1] == "https://assets.science.nasa.gov/content/dam/eo/canyon_oli_lrg.jpg"
+# Commons' wild animals: free licences only, no farm animals or artworks,
+# landscape, links only to Wikimedia's hosts, each photographer credited
+def info(lic="cc-by-sa-4.0", w=3840, h=2560, url="https://upload.wikimedia.org/a/Fox.jpg", artist="<a href='x'>Jo</a>"):
+    return {"thumburl": url, "thumbwidth": w, "thumbheight": h, "mime": "image/jpeg",
+            "extmetadata": {"License": {"value": lic}, "LicenseShortName": {"value": "CC BY-SA 4.0"},
+                            "Artist": {"value": artist}}}
+assert n.wild_why_not("File:Red fox in snow.jpg", info()) is None
+assert n.wild_why_not("File:Fox.jpg", info(lic="cc0")) is None and n.wild_why_not("File:Fox.jpg", info(lic="pd")) is None
+assert "licence" in n.wild_why_not("File:Fox.jpg", info(lic="cc-by-nc-4.0"))
+assert "licence" in n.wild_why_not("File:Fox.jpg", info(lic=""))
+for t in ("File:Cow on a hill.jpg", "File:Horse mosaic - Google Art Project.jpg", "File:Tiger skull.jpg", "File:Lion at the zoo.jpg"):
+    assert "wild" in n.wild_why_not(t, info()), t
+assert "landscape" in n.wild_why_not("File:Fox.jpg", info(w=2560, h=3840))
+pages = {"1": {"title": "File:Red fox (Vulpes vulpes).jpg", "imageinfo": [info()]},
+         "2": {"title": "File:Cow.jpg", "imageinfo": [info()]},
+         "3": {"title": "File:Owl.jpg", "imageinfo": [info(url="https://evil.example/Owl.jpg")]}}
+n.fetch = lambda url, limit: json.dumps({"query": {"pages": pages}}).encode()
+n.WILD_GROUPS = ["birds"]
+got = list(n.wild())
+assert [g[0] for g in got] == ["Red_fox__Vulpes_vulpes"], got
+assert got[0][1] == "https://upload.wikimedia.org/a/Fox.jpg" and got[0][3].startswith("Jo (CC BY-SA 4.0), Wikimedia Commons."), got
 PY
 check "the sources: only https, only their own hosts, also after a redirect; sizes, credits and feeds read right" \
     python3 -I -B "$T/rules.py" "$HERE/lib/wallpaper-sources.py"
