@@ -1,0 +1,38 @@
+#!/bin/bash
+# Light or dark: debsway's colors from one place (bin/theme). Dark is the
+# default and looks as debsway always has; "theme light" (or the debsway
+# menu's Theme line) switches to warm light backgrounds and dark text: the
+# bar, the plain background with no wallpaper, foot, the debsway menu and its
+# lists, nmtui, the launcher, the power menu, notifications and the lock
+# screen. The text console (tmux) stays dark. The colors are
+# data/themes/dark and data/themes/light.
+# Usage: bash theme.sh [--remove]
+# status: bin:theme
+# files: data/themes/dark data/themes/light
+. "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+need_user
+
+THEMES="$HOME/.local/share/debsway/themes"
+
+if [ "${1:-}" = --remove ]; then
+    # back to dark first, so nothing stays light without a way to switch it
+    if [ -x "$BIN/theme" ]; then "$BIN/theme" dark >/dev/null 2>&1 || true; fi
+    remove_snippet theme
+    remove_bin theme
+    rm -rf "$THEMES"
+    note "debsway's colors are dark again; your choice in ~/.config/debsway/theme stays."
+    exit
+fi
+
+say "Light or dark (theme)"
+install_bin theme
+mkdir -p "$THEMES"
+install -m 0644 "$DEBSWAY_DIR/data/themes/dark" "$DEBSWAY_DIR/data/themes/light" "$THEMES/"
+ensure_sway_config
+# the colors of the theme chosen (dark if none), written again, and checked
+"$BIN/theme" apply
+check_sway_config || {
+    remove_snippet theme
+    die "sway rejected the theme's colors, so they were taken out."
+}
+note "$("$BIN/theme"). Switch: theme light, theme dark, or the debsway menu's Theme line."

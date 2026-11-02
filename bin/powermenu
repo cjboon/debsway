@@ -2,9 +2,15 @@
 # powermenu: written by debsway parts/power-menu.sh
 # Lock, suspend, log out, reboot or power off, picked from a small menu.
 # Escape closes it without doing anything.
-choice=$(printf '%s\n' Lock Suspend "Log out" Reboot "Power off" | wmenu -p "Power:") || exit 0
+# the theme's menu colors (bin/theme), else black and white
+bg=$("$HOME/.local/bin/theme" get WMENU_BG 2>/dev/null) || bg=000000
+fg=$("$HOME/.local/bin/theme" get WMENU_TEXT 2>/dev/null) || fg=ffffff
+choice=$(printf '%s\n' Lock Suspend "Log out" Reboot "Power off" |
+    wmenu -p "Power:" -f 'monospace 12' -N "$bg" -n "$fg" -M "$bg" -m "$fg" -S "$fg" -s "$bg") || exit 0
+# shellcheck disable=SC2046  # the lock color: one word, checked (no inner quotes: sway's copy can't have them)
 case $choice in
-    Lock) exec swaylock -f -c 000000 ;;
+    # the same as LOCK_CMD in lib/sway.sh (test.sh checks)
+    Lock) exec swaylock -f -c $(~/.local/bin/theme get LOCK 2>/dev/null || echo 000000) ;;
     Suspend) exec systemctl suspend ;;
     "Log out") exec swaymsg exit ;;
     Reboot) exec systemctl reboot ;;

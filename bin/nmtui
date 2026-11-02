@@ -20,6 +20,10 @@ if [ -z "${NEWT_COLORS:-}" ]; then
         _w=white _b=black _g=gray _bg=black
     else
         _w='#ffffff' _b='#000000' _g='#aaaaaa' _bg=default
+        # the light theme: dark text (bin/theme; theme env prints only checked colors)
+        eval "$("$HOME/.local/bin/theme" env 2>/dev/null | grep -E "^NEWT_(TEXT|REVERSED|DIM)='[0-9a-f]{6}'\$")"
+        [ -z "${NEWT_TEXT:-}" ] || _w="#$NEWT_TEXT" _b="#$NEWT_REVERSED" _g="#$NEWT_DIM"
+        unset NEWT_TEXT NEWT_REVERSED NEWT_DIM
         # S-Lang (newt's) clears the screen in white on black before newt's
         # colors start; this makes that the terminal's own colors too
         [ -n "${COLORFGBG:-}" ] || export COLORFGBG="default;default"

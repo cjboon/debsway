@@ -6,7 +6,9 @@ SWAY_CONFIG="$HOME/.config/sway/config"
 SWAY_SNIPPETS="$HOME/.config/sway/config.d"
 SWAY_INCLUDE="include $SWAY_SNIPPETS/*.conf"
 # The one definition of how debsway locks the screen
-LOCK_CMD='swaylock -f -c 000000'
+# (the lock screen's color from the theme, bin/theme; black if it can't say)
+# shellcheck disable=SC2016  # expanded where it runs; one word: a checked color
+LOCK_CMD='swaylock -f -c $(~/.local/bin/theme get LOCK 2>/dev/null || echo 000000)'
 
 # The launcher on Super+d (parts/wmenu.sh) is wmenu-run. wmenu has no height
 # setting: its height follows its font. So the launcher gets a font a little

@@ -6,7 +6,7 @@
 # bin/wallpaper does the work; "wallpaper status" says which picture is used.
 # Super+] and Super+[ step through ~/Pictures/Wallpapers as the wallpaper,
 # Super+Shift+w lists it by name (wmenu); the one chosen stays. Super+\
-# goes back to no wallpaper (sway's own background).
+# goes back to no wallpaper (the theme's plain background, parts/theme.sh).
 # (extras/wallpapers.sh fills ~/Pictures/Wallpapers with pictures to pick from.)
 # Usage: bash wallpaper.sh [--remove]
 # status: bin:wallpaper

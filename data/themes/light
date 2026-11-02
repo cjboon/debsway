@@ -1,0 +1,25 @@
+# debsway's light theme: warm light backgrounds, dark text. Read by bin/theme,
+# which accepts only NAME=colour lines (see data/themes/dark, same names).
+DESKTOP_BG=f2efe9
+BAR_BG=f2efe9b3
+BAR_TEXT=2b2b2b
+BAR_INACTIVE_TEXT=8a8680
+LOCK=f2efe9
+NOTIFY_BG=f2efe9f0
+NOTIFY_TEXT=2b2b2b
+NOTIFY_BORDER=a09a90
+WMENU_BG=f2efe9
+WMENU_TEXT=2b2b2b
+MENU_FG=2b2b2b
+MENU_BG=f2efe9
+MENU_REGULAR=f2efe9 5a5a5a 4a4a4a 404040 606060 505050 464646 2b2b2b
+MENU_BRIGHT=9a958c 555555 3a3a3a 333333 606060 505050 2b2b2b 000000
+NEWT_TEXT=2b2b2b
+NEWT_REVERSED=f2efe9
+NEWT_DIM=8a8680
+FOOT_FG=2b2b2b
+FOOT_BG=f2efe9
+FOOT_REGULAR=e4dfd5 c4362f 4f8a10 9a6e00 2a6fc4 b0428a 1f8a80 5a5752
+FOOT_BRIGHT=c9c2b4 d9453d 5c9c1a b08400 3b82d9 c4529c 2a9d92 2b2b2b
+FOOT_SEL_FG=2b2b2b
+FOOT_SEL_BG=d6cfc0

@@ -1,0 +1,133 @@
+#!/bin/bash
+# theme: written by debsway parts/theme.sh
+# debsway's colors, light or dark, from one place:
+#   theme                 which theme is set (dark unless you chose light)
+#   theme light | dark    switch to it (the debsway menu's Theme line too)
+#   theme toggle          the other one
+#   theme get NAME        one of its colors (e.g. LOCK), for the lock screen
+#   theme env             all of them as NAME='value' lines, for debsway's
+#                         commands (debsway-menu, nmtui, powermenu, wallpaper)
+#   theme apply           write the current theme's colors again
+# Switching writes the bar's colors and the plain background (no wallpaper)
+# in a sway snippet, foot's [colors], mako's colors and the launcher's
+# (Super+d), then reloads sway. Windows open now keep their colors until they
+# open again. The text console (tmux) stays dark. Only debsway's own files are
+# changed: a foot.ini or mako config you wrote yourself is left alone.
+# The colors are data/themes/dark and light, read strictly: NAME=colour lines
+# (rrggbb or rrggbbaa), lists of them, nothing else.
+set -uo pipefail
+
+STATE=${XDG_CONFIG_HOME:-$HOME/.config}/debsway/theme
+THEMES=$HOME/.local/share/debsway/themes
+SWAY_CONF=$HOME/.config/sway/config
+SNIPPET=$HOME/.config/sway/config.d/theme.conf
+FOOT=$HOME/.config/foot/foot.ini
+MAKO=$HOME/.config/mako/config
+NEEDED=(DESKTOP_BG BAR_BG BAR_TEXT BAR_INACTIVE_TEXT LOCK NOTIFY_BG NOTIFY_TEXT NOTIFY_BORDER
+    WMENU_BG WMENU_TEXT MENU_FG MENU_BG MENU_REGULAR MENU_BRIGHT NEWT_TEXT NEWT_REVERSED NEWT_DIM
+    FOOT_FG FOOT_BG FOOT_REGULAR FOOT_BRIGHT FOOT_SEL_FG FOOT_SEL_BG)
+declare -A C
+
+die() { echo "theme: $*" >&2; exit 1; }
+
+# current: the theme set (dark if none, or if the file says something else)
+current() {
+    local t
+    t=$(head -c 16 "$STATE" 2>/dev/null)
+    case $t in light | dark) echo "$t" ;; *) echo dark ;; esac
+}
+
+# load NAME: its colors into C; fails on a missing file, a line that isn't a
+# color, or a color missing
+load() {
+    local f=$THEMES/$1 line key val k
+    [ -f "$f" ] || return 1
+    while IFS= read -r line || [ -n "$line" ]; do
+        case $line in '' | '#'*) continue ;; esac
+        [[ $line =~ ^([A-Z_]+)=([0-9a-fA-F]{6}([0-9a-fA-F]{2})?( [0-9a-fA-F]{6}([0-9a-fA-F]{2})?)*)$ ]] || return 1
+        key=${BASH_REMATCH[1]} val=${BASH_REMATCH[2]}
+        C[$key]=${val,,}
+    done <"$f"
+    for k in "${NEEDED[@]}"; do [ -n "${C[$k]:-}" ] || return 1; done
+    for k in MENU_REGULAR MENU_BRIGHT FOOT_REGULAR FOOT_BRIGHT; do
+        [ "$(wc -w <<<"${C[$k]}")" = 8 ] || return 1
+    done
+}
+
+# snippet: the bar's colors and the plain background, for sway
+snippet() {
+    cat <<EOF
+# debsway's theme ($1): written by bin/theme; "theme light" or "theme dark" rewrites it
+output * bg #${C[DESKTOP_BG]} solid_color
+bar bar-0 colors {
+    background #${C[BAR_BG]}
+    statusline #${C[BAR_TEXT]}
+    inactive_workspace #00000000 #00000000 #${C[BAR_INACTIVE_TEXT]}
+}
+EOF
+}
+
+# foot_colors: foot.ini's [colors] section
+foot_colors() {
+    local i=0 c
+    printf '[colors]\nalpha=1.0\nforeground=%s\nbackground=%s\n' "${C[FOOT_FG]}" "${C[FOOT_BG]}"
+    for c in ${C[FOOT_REGULAR]}; do printf 'regular%d=%s\n' "$i" "$c"; i=$((i + 1)); done
+    i=0
+    for c in ${C[FOOT_BRIGHT]}; do printf 'bright%d=%s\n' "$i" "$c"; i=$((i + 1)); done
+    printf 'selection-foreground=%s\nselection-background=%s\n' "${C[FOOT_SEL_FG]}" "${C[FOOT_SEL_BG]}"
+}
+
+# apply: the current theme's colors into debsway's files, then sway reloads
+apply() {
+    local t tmp
+    t=$(current)
+    load "$t" || die "the $t theme's colors ($THEMES/$t) can't be read; run bash ~/debsway/parts/theme.sh"
+    mkdir -p "${SNIPPET%/*}"
+    snippet "$t" >"$SNIPPET.new" && mv -f "$SNIPPET.new" "$SNIPPET"
+    # foot: only debsway's foot.ini; its [colors] section, up to the next section
+    if grep -qs 'Written by debsway' "$FOOT"; then
+        tmp=$(mktemp)
+        awk -v colors="$(foot_colors)" '
+            /^\[colors\]/ { print colors; skip = 1; next }
+            /^\[/ { skip = 0 }
+            !skip { print }' "$FOOT" >"$tmp" && cat "$tmp" >"$FOOT"
+        rm -f "$tmp"
+    fi
+    # mako: only debsway's config
+    if grep -qsxF '# Written by debsway parts/mako.sh' "$MAKO"; then
+        sed -i -E '/^(background-color|text-color|border-color)=/d' "$MAKO"
+        printf 'background-color=#%s\ntext-color=#%s\nborder-color=#%s\n' \
+            "${C[NOTIFY_BG]}" "${C[NOTIFY_TEXT]}" "${C[NOTIFY_BORDER]}" >>"$MAKO"
+        if pgrep -x mako >/dev/null; then makoctl reload >/dev/null 2>&1 || true; fi
+    fi
+    # the launcher (Super+d): only the line debsway styled (lib/sway.sh)
+    if [ -f "$SWAY_CONF" ]; then
+        sed -i -E "s/^(set \\\$menu wmenu-run -f 'monospace 12') -N [0-9a-f]{6} -n [0-9a-f]{6} -M [0-9a-f]{6} -m [0-9a-f]{6} -S [0-9a-f]{6} -s [0-9a-f]{6}\$/\\1 -N ${C[WMENU_BG]} -n ${C[WMENU_TEXT]} -M ${C[WMENU_BG]} -m ${C[WMENU_TEXT]} -S ${C[WMENU_TEXT]} -s ${C[WMENU_BG]}/" "$SWAY_CONF"
+    fi
+    if [ -n "${SWAYSOCK:-}" ]; then swaymsg -q reload 2>/dev/null || true; fi
+}
+
+case ${1:-} in
+    "" | status)
+        echo "Theme: $(current)" ;;
+    light | dark)
+        load "$1" || die "the $1 theme's colors ($THEMES/$1) can't be read; run bash ~/debsway/parts/theme.sh"
+        mkdir -p "${STATE%/*}"
+        echo "$1" >"$STATE"
+        apply
+        if command -v notify-send >/dev/null; then notify-send -t 3000 Theme "${1^}: new windows open in it" 2>/dev/null || true; fi ;;
+    toggle)
+        if [ "$(current)" = dark ]; then exec "$0" light; else exec "$0" dark; fi ;;
+    get)
+        # one color, or nothing and failure: never an empty or odd value (the
+        # lock screen falls back to black on failure)
+        [[ ${2:-} =~ ^[A-Z_]+$ ]] || exit 2
+        load "$(current)" || exit 1
+        [ -n "${C[$2]:-}" ] || exit 1
+        echo "${C[$2]}" ;;
+    env)
+        load "$(current)" || exit 1
+        for k in "${NEEDED[@]}"; do printf "%s='%s'\n" "$k" "${C[$k]}"; done ;;
+    apply) apply ;;
+    *) echo "usage: theme [light | dark | toggle | get NAME | env | apply]" >&2; exit 2 ;;
+esac

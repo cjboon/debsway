@@ -42,5 +42,7 @@ if [ -s "$FONT_CHOICE" ]; then
         *) sed -i "s|^font=.*|font=$font|" "$CONF" && note "Your text size: $font (console-font)" ;;
     esac
 fi
+# The theme chosen (light or dark: parts/theme.sh) keeps its colors here too
+if [ -x "$BIN/theme" ]; then "$BIN/theme" apply >/dev/null 2>&1 || warn "Couldn't put the theme's colors in $CONF (theme apply)"; fi
 foot -C -c "$CONF" || warn "foot reports a problem in $CONF"
 note "Installed $CONF. New terminals use it (Super+Enter)."

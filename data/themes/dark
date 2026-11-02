@@ -1,0 +1,34 @@
+# debsway's dark theme (the default): read by bin/theme, which accepts only
+# NAME=colour lines (rrggbb, or rrggbbaa where it says so), a list of them, or
+# a number for ALPHA. Light is data/themes/light, with the same names.
+# The plain background when no wallpaper is up
+DESKTOP_BG=000000
+# The bar: background (rrggbbaa: see-through), text, inactive workspaces' text
+BAR_BG=00000080
+BAR_TEXT=ffffff
+BAR_INACTIVE_TEXT=5c5c5c
+# The lock screen
+LOCK=000000
+# Notifications (mako): background (rrggbbaa), text, border
+NOTIFY_BG=285577ff
+NOTIFY_TEXT=ffffff
+NOTIFY_BORDER=4c7899
+# Menus (wmenu: the launcher, power menu, wallpaper list): background, text
+WMENU_BG=000000
+WMENU_TEXT=ffffff
+# The debsway menu, the cheat sheet, the timer: all gray
+MENU_FG=d0d0d0
+MENU_BG=000000
+MENU_REGULAR=000000 9a9a9a b8b8b8 c8c8c8 8a8a8a a8a8a8 bcbcbc d0d0d0
+MENU_BRIGHT=606060 aaaaaa d8d8d8 e0e0e0 9a9a9a b8b8b8 d0d0d0 ffffff
+# nmtui: text, the reversed line's text, dimmed
+NEWT_TEXT=ffffff
+NEWT_REVERSED=000000
+NEWT_DIM=aaaaaa
+# foot, the terminal
+FOOT_FG=dcdcdc
+FOOT_BG=000000
+FOOT_REGULAR=184956 fa5750 75b938 dbb32d 4695f7 f275be 41c7b9 72898f
+FOOT_BRIGHT=2d5b69 ff665c 84c747 ebc13d 58a3ff ff84cd 53d6c7 cad8d9
+FOOT_SEL_FG=cad8d9
+FOOT_SEL_BG=184956

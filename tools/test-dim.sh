@@ -99,7 +99,7 @@ chmod +x "$T/idleconf/debsway/on-lock.d/a"
 lockcmd=$(sed -n '/^timeout$/{n;/^1800$/{n;p}}' "$T/swayidle-args")
 sleepcmd=$(sed -n '/^before-sleep$/{n;p}' "$T/swayidle-args")
 # shellcheck disable=SC2016  # the inner shell expands its own variables
-check "...running the on-lock programs first, then swaylock" bash -c '[[ $1 == *"on-lock.d"*"; swaylock -f -c 000000" ]] && [ "$1" = "$2" ]' _ "$lockcmd" "$sleepcmd"
+check "...running the on-lock programs first, then swaylock" bash -c '[[ $1 == *"on-lock.d"*"; swaylock -f -c \$(~/.local/bin/theme get LOCK 2>/dev/null || echo 000000)" ]] && [ "$1" = "$2" ]' _ "$lockcmd" "$sleepcmd"
 PATH="$T/idlebin:$PATH" sh -c "${lockcmd%; swaylock*}"
 check "...each executable one, once (not the others)" test "$(cat "$T/hook-ran")" = ran
 check "...and turns the screen off 5 minutes after the lock (2100 s)" grep -q 'timeout 2100 swaymsg' <<<"$args"

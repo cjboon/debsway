@@ -25,7 +25,8 @@ dim=$((lock - 30))
 off=$((lock + 300))
 DIM=$HOME/.local/bin/dim-warning
 # the same as LOCK_CMD in lib/sway.sh (test.sh checks)
-LOCK='swaylock -f -c 000000'
+# shellcheck disable=SC2016  # expanded where it runs; one word: a checked color
+LOCK='swaylock -f -c $(~/.local/bin/theme get LOCK 2>/dev/null || echo 000000)'
 hooks=${XDG_CONFIG_HOME:-$HOME/.config}/debsway/on-lock.d
 case $hooks in *"'"*) HOOKS=: ;; *) HOOKS="for h in '$hooks'/*; do [ -x \"\$h\" ] && timeout 10 \"\$h\"; done" ;; esac
 exec swayidle -w \

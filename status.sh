@@ -112,6 +112,13 @@ else
     echo "  only when you lock it (bash parts/swayidle.sh locks it after 30 minutes idle)"
 fi
 
+echo "Theme:"
+if [ -x "$HOME/.local/bin/theme" ]; then
+    "$HOME/.local/bin/theme" | sed 's/^Theme: /  /; s/$/ (switch: theme light, theme dark, or the debsway menu)/'
+else
+    echo "  dark (bash parts/theme.sh: theme light or dark)"
+fi
+
 echo "Wallpaper:"
 if [ -x "$HOME/.local/bin/wallpaper" ]; then
     "$HOME/.local/bin/wallpaper" status | sed 's/^Wallpaper: //; s/^/  /'

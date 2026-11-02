@@ -14,7 +14,8 @@ case ${1:-} in
     close)
         # the same as LOCK_CMD in lib/sway.sh (test.sh checks); -f returns once it is locked
         if command -v swaylock >/dev/null && ! pgrep -x swaylock >/dev/null; then
-            swaylock -f -c 000000
+            # shellcheck disable=SC2046  # one word: a checked color (no inner quotes: sway's copy can't have them)
+            swaylock -f -c $(~/.local/bin/theme get LOCK 2>/dev/null || echo 000000)
         fi
         for p in $(panels); do swaymsg output "$p" power off >/dev/null; done
         ;;

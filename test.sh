@@ -380,6 +380,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "Light or dark (bin/theme, data/themes), in a temp home with pretend swaymsg and makoctl"
+if out=$(bash tools/test-theme.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") theme checks"
+else
+    bad "theme checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "w3m keeps cookies only while it is open (bin/w3m), with a pretend w3m"
 if out=$(bash tools/test-w3m.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") w3m checks"

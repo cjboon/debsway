@@ -18,19 +18,24 @@ DIR=${DEBSWAY_DIR:-$HOME/debsway}
 KEYS_FILE=$HOME/.local/share/debsway/keys.txt
 [ -f "$KEYS_FILE" ] || KEYS_FILE=$DIR/data/keys.txt
 
-# The terminal's colors, all gray: black screen, light gray text. The eight
-# normal and eight bright colors programs ask for (red warnings, green
-# headings...) come out as shades, so nothing is colored.
+# The terminal's colors, all gray: black screen, light gray text (in the light
+# theme the other way round: bin/theme). The eight normal and eight bright
+# colors programs ask for (red warnings, green headings...) come out as
+# shades, so nothing is colored.
 gray_options() {
-    local i=0 c
-    printf '%s\n' -o colors.foreground=d0d0d0 -o colors.background=000000 \
-        -o colors.selection-foreground=000000 -o colors.selection-background=d0d0d0 -o colors.alpha=0.85
-    for c in 000000 9a9a9a b8b8b8 c8c8c8 8a8a8a a8a8a8 bcbcbc d0d0d0; do
+    local i=0 c MENU_FG=d0d0d0 MENU_BG=000000
+    local MENU_REGULAR="000000 9a9a9a b8b8b8 c8c8c8 8a8a8a a8a8a8 bcbcbc d0d0d0"
+    local MENU_BRIGHT="606060 aaaaaa d8d8d8 e0e0e0 9a9a9a b8b8b8 d0d0d0 ffffff"
+    # (theme env prints only checked colors: NAME='rrggbb ...')
+    eval "$("$HOME/.local/bin/theme" env 2>/dev/null | grep -E "^MENU_(FG|BG|REGULAR|BRIGHT)='[0-9a-f ]+'\$")"
+    printf '%s\n' -o "colors.foreground=$MENU_FG" -o "colors.background=$MENU_BG" \
+        -o "colors.selection-foreground=$MENU_BG" -o "colors.selection-background=$MENU_FG" -o colors.alpha=0.85
+    for c in $MENU_REGULAR; do
         printf '%s\n' -o "colors.regular$i=$c"
         i=$((i + 1))
     done
     i=0
-    for c in 606060 aaaaaa d8d8d8 e0e0e0 9a9a9a b8b8b8 d0d0d0 ffffff; do
+    for c in $MENU_BRIGHT; do
         printf '%s\n' -o "colors.bright$i=$c"
         i=$((i + 1))
     done
@@ -290,11 +295,20 @@ fixed=${#ids[@]}
 for r in "${radio_ids[@]}"; do ids+=("$r"); items+=(""); done
 # The vault is a switch too: it shows whether it is open
 if [ -n "$VAULT_CMD" ]; then ids+=(vault); items+=(""); fi
+# So is the theme (light or dark), inside sway: the console stays dark
+THEME_CMD=$(app theme)
+if [ -n "$THEME_CMD" ] && [ -n "${SWAYSOCK:-}${WAYLAND_DISPLAY:-}" ]; then ids+=(theme); items+=(""); fi
 n=${#ids[@]}
 
 # radio_label NAME: what the entry shows, e.g. "Wi-Fi: on"
 radio_label() {
     local name state
+    if [ "$1" = theme ]; then
+        state=$("$THEME_CMD" 2>/dev/null)
+        state=${state#Theme: }
+        printf 'Theme: %s' "${state^}"
+        return
+    fi
     if [ "$1" = vault ]; then
         state=$("$VAULT_CMD" status 2>/dev/null)
         printf 'Vault: %s' "${state%% *}"
@@ -346,6 +360,11 @@ run_choice() {
     case ${ids[sel]} in
         wifi | bluetooth | mic | camera)
             "$RADIOS" "${ids[sel]}" toggle >/dev/null 2>&1
+            refresh_items
+            return 0 ;;
+        theme)
+            # (this window keeps its colors; the next ones open in the new theme)
+            "$THEME_CMD" toggle >/dev/null 2>&1
             refresh_items
             return 0 ;;
         terminal)
