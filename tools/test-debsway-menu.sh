@@ -524,6 +524,26 @@ echo $$ >"$T/oc/xdg/debsway-menu-busy"; oc debsway-timer
 # shellcheck disable=SC2016  # expanded by the inner shell, on purpose
 check "...but not a debsway menu that is running Update" bash -c '! grep -q "debsway-run" "$1/sway" && [ -e "$1/ran" ]' _ "$T/oc"
 rm -f "$T/oc/xdg/debsway-menu-busy"
+# Super+m: sway-status --menu, as a click on "debsway" in the bar
+mkdir -p "$T/oc/home/.local/bin"
+printf '#!/bin/sh\ntouch "%s/oc/menu-ran"\n' "$T" >"$T/oc/home/.local/bin/debsway-menu"
+chmod +x "$T/oc/home/.local/bin/debsway-menu"
+echo 4242 >"$T/oc/xdg/sway-status.pid"
+rm -f "$T/oc/open" "$T/oc/menu-ran"; : >"$T/oc/sway"
+timeout 5 env PATH="$T/oc/bin:$PATH" HOME="$T/oc/home" XDG_RUNTIME_DIR="$T/oc/xdg" sh "$HERE/bin/sway-status" --menu </dev/null >/dev/null 2>&1
+for _ in 1 2 3 4 5 6 7 8 9 10; do [ ! -e "$T/oc/menu-ran" ] || break; /bin/sleep 0.1; done
+check "Super+m (sway-status --menu) opens the debsway menu" test -e "$T/oc/menu-ran"
+check "...and leaves the running bar's PID file alone" test "$(cat "$T/oc/xdg/sway-status.pid")" = 4242
+touch "$T/oc/open"; rm -f "$T/oc/menu-ran"; : >"$T/oc/sway"
+timeout 5 env PATH="$T/oc/bin:$PATH" HOME="$T/oc/home" XDG_RUNTIME_DIR="$T/oc/xdg" sh "$HERE/bin/sway-status" --menu </dev/null >/dev/null 2>&1
+/bin/sleep 0.3
+# shellcheck disable=SC2016  # expanded by the inner shell, on purpose
+check "...pressed again while it's open: closes it, opens nothing" \
+    bash -c 'grep -qx -- "-q \[app_id=\"debsway-run\"\] kill" "$1/sway" && [ ! -e "$1/menu-ran" ]' _ "$T/oc"
+rm -f "$T/oc/open" "$T/oc/xdg/sway-status.pid"
+# shellcheck disable=SC2016  # $mod is sway's, not the shell's
+check "sway binds Super+m to it" grep -qx 'bindsym $mod+m exec ~/.local/bin/sway-status --menu' "$HERE/install-base.sh"
+check "the cheat sheet lists Super+m" grep -q 'Super+m .*debsway menu' "$HERE/data/keys.txt"
 # sway restarts swaybar on every reload, and swaybar stops the status script's
 # whole process group: a window started in it would be killed mid-way
 rm -f "$T/oc/open" "$T/oc/sid"

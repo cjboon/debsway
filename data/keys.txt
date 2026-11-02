@@ -13,6 +13,7 @@
                            firefox, incognito, keepassxc, sparrow
     Super+Shift+q          close the window
     Super+?                this page
+    Super+m                the debsway menu (or click debsway in the bar)
 
   IN THE TERMINAL (foot)
     Ctrl+Shift+c / v       copy / paste (Ctrl+c stops a program)

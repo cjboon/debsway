@@ -81,6 +81,8 @@ put_snippet help <<'EOF'
 # Key cheat sheet on Super+? (debsway install-base.sh)
 bindsym $mod+Shift+slash exec foot -o colors.alpha=0.85 --app-id=debsway-keys ~/.local/bin/keys
 bindsym $mod+question exec foot -o colors.alpha=0.85 --app-id=debsway-keys ~/.local/bin/keys
+# The debsway menu on Super+m, as a click on "debsway" in the bar: again closes it
+bindsym $mod+m exec ~/.local/bin/sway-status --menu
 exec ~/.local/bin/debsway-welcome
 EOF
 note "Super+? shows it (also: type keys, or open ~/KEYS.txt). It opens by itself on your first login."

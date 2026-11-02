@@ -122,14 +122,6 @@ if [ "${1:-}" = --tmux ]; then
         "$(block bat "$(battery)")" "$(block timer "$(timer_text)")" "$(block date "$(date +"$(clock_format)")")"
     exit 0
 fi
-echo $$ >"$PIDFILE"
-trap 'rm -f "$PIDFILE"' EXIT
-trap 'exit' TERM INT HUP
-trap ':' USR1
-
-# Clicks and scrolls arrive on stdin, one line of JSON each (sway puts spaces in it)
-exec 3<&0
-
 # open_or_close APP-ID COMMAND...: a click on the bar opens that window, and a
 # click while it is open closes it (sway's kill fails when no window has that
 # app id). The debsway menu's window is left open while it runs Update or
@@ -159,6 +151,23 @@ open_or_close() {
     # it (the menu removing an extra that reloads sway) would be killed too.
     setsid -f "$@" >/dev/null 2>&1
 }
+# Super+m (install-base.sh): the same as a click on "debsway", from a key;
+# it ends here, before anything the running bar owns (its PID file)
+if [ "${1:-}" = --menu ]; then
+    if [ -x "$HOME/.local/bin/debsway-menu" ]; then
+        open_or_close debsway-run "$HOME/.local/bin/debsway-menu"
+    fi
+    exit 0
+fi
+
+echo $$ >"$PIDFILE"
+trap 'rm -f "$PIDFILE"' EXIT
+trap 'exit' TERM INT HUP
+trap ':' USR1
+
+# Clicks and scrolls arrive on stdin, one line of JSON each (sway puts spaces in it)
+exec 3<&0
+
 while read -r event <&3; do
     case $(printf '%s' "$event" | tr -d ' ') in
         *'"name":"menu"'*'"button":1,'*)
