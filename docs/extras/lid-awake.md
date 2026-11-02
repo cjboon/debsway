@@ -1,59 +1,58 @@
-# Closing the lid locks but doesn't suspend (`extras/lid-awake.sh`)
+# The lid locks, but doesn't suspend (`extras/lid-awake.sh`)
 
-Normally, closing a laptop's lid puts it to sleep (suspend). This extra changes that: closing the lid locks the screen and turns the laptop's own panel off, but the computer keeps running, so downloads, the network and the timer's alarms carry on. Opening the lid turns the panel back on.
+## SYNOPSIS
 
-## The problem it solves
+```
+bash ~/debsway/extras/lid-awake.sh            set it up
+bash ~/debsway/extras/lid-awake.sh --remove   closing the lid suspends again
+bash ~/debsway/extras/lid-awake.sh --manual   print the manual steps below
 
-Debian's default is to suspend when you close the lid. That stops downloads, drops the network and silences alarms set with `timer`. If you want a laptop to keep working with the lid shut, for example while it downloads something or runs an alarm, you need to tell the system not to sleep.
+close the lid     the screen locks and the laptop's panel goes off; everything keeps running
+open the lid      the panel comes back on (unlock as usual)
+Super+Shift+Escape   power it off before you pack it in a bag
+```
 
-## The ideas behind it
+Debian suspends a laptop when its lid closes. With this, closing the lid
+locks the screen (swaylock, part of the base install) and turns the laptop's
+own panel off, while the network, downloads and the timer's alarms keep going;
+an external screen stays on. systemd-logind is told to ignore the lid, also
+when plugged in or docked (`data/lid-logind.conf`), and sway reacts to it
+instead, through `bin/lid`.
 
-**Suspend.** Sleep mode: the computer powers down almost everything but keeps your session in memory. Nothing runs while it sleeps.
+## LIMITS
 
-**systemd-logind.** The part of the system that watches the lid switch, the power button and logins. It decides what happens when the lid closes. `HandleLidSwitch` is its setting for that.
+- A laptop left on in a closed bag gets warm and empties its battery.
+- It's still on, so the disk's key is in memory: shut it down before leaving it anywhere.
+- The screen lock is only as good as your password.
 
-**A lid switch in sway.** sway can react to the lid by itself. Here it runs the `lid` command.
+## MANUAL INSTALL
 
-**Locking.** `swaylock` (from the base) covers the screen and asks for your password. It is the base's lock program.
+```
+# systemd-logind ignores the lid (on battery, plugged in and docked)
+sudo install -D -o root -g root -m 0644 @DEBSWAY_DIR@/data/lid-logind.conf /etc/systemd/logind.conf.d/60-debsway-lid.conf
+# logind reads it again on a HUP signal (a restart could end your session)
+sudo systemctl kill -s HUP systemd-logind
 
-**Panel.** The laptop's own screen (named `eDP`, `LVDS` or `DSI` by sway). An external screen is not touched.
+# The lid command sway runs: lock and panel off, or panel on
+install -D -m 0755 @DEBSWAY_DIR@/bin/lid ~/.local/bin/lid
+# sway runs it when the lid closes or opens, also while locked
+mkdir -p ~/.config/sway/config.d
+cat >~/.config/sway/config.d/lid.conf <<'EOF'
+bindswitch --reload --locked lid:on exec ~/.local/bin/lid close
+bindswitch --reload --locked lid:off exec ~/.local/bin/lid open
+EOF
+# sway must accept it (this prints no [ERROR] lines), then reads it
+sway -C -c ~/.config/sway/config 2>&1 | grep ERROR
+swaymsg reload
+```
 
-## How it works, step by step
+To undo:
 
-1. **Warns if there is no battery,** since this is meant for laptops, then goes on.
-2. **Tells logind to ignore the lid.** It installs `data/lid-logind.conf` as `/etc/systemd/logind.conf.d/60-debsway-lid.conf`, with `HandleLidSwitch=ignore`, `HandleLidSwitchExternalPower=ignore` and `HandleLidSwitchDocked=ignore`: on battery, plugged in or docked. logind reads it again after a hang-up signal (`SIGHUP`), because a restart could end your session.
-3. **Installs the `lid` command** in `~/.local/bin` and adds two lines to sway's config (`~/.config/sway/config.d/lid.conf`): when the lid closes, run `lid close`; when it opens, run `lid open`. The `--locked` flag makes it work while the screen is already locked, and `--reload` right after a sway reload.
-4. **Warns if `swaylock` is missing,** since then closing the lid only turns the panel off.
-
-What `lid close` does: if `swaylock` is installed and not already running, it starts it (`swaylock -f -c 000000`, a black screen), then turns off every panel. `lid open` turns the panels on again.
-
-## What it changes on your computer
-
-- `/etc/systemd/logind.conf.d/60-debsway-lid.conf`.
-- `~/.local/bin/lid`.
-- `~/.config/sway/config.d/lid.conf` (a snippet; the script calls it `lid`).
-- No packages, no firewall rules, no users.
-
-## Using it
-
-- Close the lid: the screen locks and the panel goes dark. The laptop keeps running.
-- Open it: the panel comes back (you still need your password).
-- `lid close` and `lid open` do the same by hand.
-- Before putting the laptop in a bag, power it off: Super+Shift+Escape opens the power menu.
-
-## What it protects against
-
-- **Someone opening the lid and using your session.** It is locked.
-- **Losing work and alarms to sleep.** The computer stays awake.
-
-## What it doesn't protect against
-
-- **A running laptop being treated as asleep.** It is on, not asleep: the disk key is in memory (`THREAT-MODEL.md`). Shut down before leaving it somewhere or crossing a border.
-- **Heat and battery drain** in a closed bag. A closed, running laptop gets warm and its battery runs down.
-- **Physical access.** The lock screen is not a defence against someone with the laptop and time.
-- **The screen being locked only if `swaylock` is installed.**
-- **An external screen,** which stays on and unlocked-visible until the lock covers it (the lock applies to the session).
-
-## Removing it
-
-`bash extras/lid-awake.sh --remove` deletes the logind file, tells logind to reload, removes the sway snippet and the `lid` command. Closing the lid suspends again, which is Debian's default.
+```
+# logind suspends on the lid again
+sudo rm /etc/systemd/logind.conf.d/60-debsway-lid.conf
+sudo systemctl kill -s HUP systemd-logind
+# sway no longer reacts to the lid
+rm ~/.config/sway/config.d/lid.conf ~/.local/bin/lid
+swaymsg reload
+```

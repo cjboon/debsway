@@ -13,10 +13,11 @@
 #  - A webcam often holds a microphone too: switched off, that goes as well.
 # Like the microphone switch, a program running as you could switch it on the
 # same way; a cover over the lens is the stronger kind. See THREAT-MODEL.md.
-# Usage: bash webcam.sh [--remove]
+# Usage: bash webcam.sh [--remove | --manual]
 # summary: Webcam off at start; switch it from the menu
 # status: file:/usr/local/libexec/debsway-camera
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 HELPER=/usr/local/libexec/debsway-camera

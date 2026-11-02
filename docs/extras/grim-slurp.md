@@ -1,51 +1,61 @@
 # Screenshots (`extras/grim-slurp.sh`)
 
-You get a `screenshot` command and keys for it. Print takes a picture of the whole screen, Shift+Print lets you drag a box, and Ctrl+Print puts a dragged box on the clipboard.
+## SYNOPSIS
 
-## The problem it solves
+```
+bash ~/debsway/extras/grim-slurp.sh            install it
+bash ~/debsway/extras/grim-slurp.sh --remove   remove it
+bash ~/debsway/extras/grim-slurp.sh --manual   print the manual steps below
 
-sway has no screenshot tool. This adds a small one, using the Wayland programs `grim` (takes the picture) and `slurp` (lets you drag a region).
+Print        or Super+Shift+p   the whole screen, to ~/Pictures
+Shift+Print  or Super+Shift+s   drag a region, to ~/Pictures
+Ctrl+Print   or Super+Shift+x   drag a region, to the clipboard
+screenshot full|region|clip     the same from a terminal
+```
 
-## The ideas behind it
+Screenshots for sway: grim takes them and slurp lets you drag a region, both
+from Debian. A small `screenshot` command (`bin/screenshot`, in
+`~/.local/bin`) names the file by date in `~/Pictures`, or puts the picture on
+the clipboard (that needs `parts/wl-clipboard.sh`, which the base install
+has). sway gets the keys above, with Super+Shift ones for keyboards without a
+Print key.
 
-**Wayland** is the window system sway uses. For safety, ordinary programs cannot capture the screen on it, so a screenshot tool has to ask sway directly. **The clipboard** is the temporary place copy and paste use; `wl-copy` (from the `wl-clipboard` package, set up elsewhere by `parts/wl-clipboard.sh`) is how a picture is put there.
+## LIMITS
 
-## How it works, step by step
+- A screenshot of a seed, a password or a chat stays in `~/Pictures` until you delete it.
+- Any window can be captured, `incognito` included.
+- Anything running as you can read `~/Pictures`.
 
-1. `apt_install grim slurp`.
-2. `install_bin screenshot` copies `bin/screenshot` to `~/.local/bin/screenshot`.
-3. `put_snippet screenshots` writes `~/.config/sway/config.d/screenshots.conf`. sway checks it, and the old file is put back if sway rejects it. The stock Print binding in the sway config is removed so the two do not clash.
+## MANUAL INSTALL
 
-What `screenshot` does:
-- `full`: `grim` saves the whole screen to `~/Pictures/screenshot-DATE_TIME.png`, making the folder if needed.
-- `region`: `slurp` lets you drag; `grim` saves that box. Escape cancels, and nothing is saved.
-- `clip`: the box goes to the clipboard through `wl-copy`. If `wl-copy` is not installed, it saves a file instead.
+```
+# grim takes the picture, slurp picks the region
+sudo apt install --no-install-recommends grim slurp
+# The screenshot command
+install -D -m 0755 @DEBSWAY_DIR@/bin/screenshot ~/.local/bin/screenshot
+# The keys, in a file sway's config includes (~/.config/sway/config.d/*.conf)
+mkdir -p ~/.config/sway/config.d
+cat >~/.config/sway/config.d/screenshots.conf <<'EOF'
+bindsym Print exec ~/.local/bin/screenshot full
+bindsym Shift+Print exec ~/.local/bin/screenshot region
+bindsym Ctrl+Print exec ~/.local/bin/screenshot clip
+bindsym $mod+Shift+p exec ~/.local/bin/screenshot full
+bindsym $mod+Shift+s exec ~/.local/bin/screenshot region
+bindsym $mod+Shift+x exec ~/.local/bin/screenshot clip
+EOF
+# sway must accept it (this prints no [ERROR] lines), then reads it
+sway -C -c ~/.config/sway/config 2>&1 | grep ERROR
+swaymsg reload
+```
 
-## What it changes on your computer
+To undo:
 
-- Packages `grim` and `slurp`.
-- `~/.local/bin/screenshot`.
-- `~/.config/sway/config.d/screenshots.conf`, with these keys:
-  - Print or Super+Shift+p: whole screen
-  - Shift+Print or Super+Shift+s: drag a region
-  - Ctrl+Print or Super+Shift+x: drag a region to the clipboard
-- `~/Pictures/` when you take the first shot.
-
-## Using it
-
-- `screenshot full`, `screenshot region`, `screenshot clip`: the same from a terminal.
-- Print and the Super+Shift keys, as above. Keyboards without a Print key use the Super+Shift ones.
-
-## What it protects against
-
-Nothing. It is a convenience. One thing to know: a screenshot records everything visible on the screen, including passwords or private windows.
-
-## What it doesn't protect against
-
-- **Sensitive content on the screen.** A screenshot of a wallet seed or a chat can be found later in `~/Pictures`. Delete it when done.
-- **Windows meant to stay private.** `THREAT-MODEL.md` notes that the `incognito` window is visible to your screenshots, as any window is.
-- **Anything running as you**, which can read `~/Pictures`.
-
-## Removing it
-
-`bash extras/grim-slurp.sh --remove` deletes the sway snippet, the `screenshot` command and the two packages. It leaves the pictures in `~/Pictures`.
+```
+# The keys
+rm ~/.config/sway/config.d/screenshots.conf
+swaymsg reload
+# The command
+rm ~/.local/bin/screenshot
+# grim and slurp
+sudo apt purge grim slurp
+```

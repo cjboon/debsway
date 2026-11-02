@@ -1,54 +1,64 @@
-# A webcam switch (`extras/webcam.sh`)
+# The webcam switch (`extras/webcam.sh`)
 
-Your webcam starts switched off at every boot and whenever one is plugged in, and the debsway menu gets a Webcam line to switch it on and off. Off means the camera is disconnected, as if it were unplugged, so no program can open it.
+## SYNOPSIS
 
-## The problem it solves
+```
+bash ~/debsway/extras/webcam.sh            set it up (the webcam is off at every boot and when plugged in)
+bash ~/debsway/extras/webcam.sh --remove   take it out (the webcam is on again)
+bash ~/debsway/extras/webcam.sh --manual   print the manual steps below
 
-On a normal Linux desktop the person at the screen can use the webcam, and so can any program running as them, at any time. A camera you only need for the odd video call is better off until you ask for it.
+debsway --camera on|off     switch it (or the debsway menu > Webcam)
+```
 
-## The ideas behind it
+A USB camera (most laptops' built-in ones, and plugged-in ones) starts
+switched off at every boot and whenever one is plugged in. Off means its USB
+device is disconnected, as if unplugged, so no program can open it at all;
+a webcam's own microphone goes with it. The root helper `bin/debsway-camera`,
+installed as `/usr/local/libexec/debsway-camera`, does it by writing the
+kernel's `authorized` switch of the camera's USB device. A rule in
+`/etc/sudoers.d` lets your user run it with `on` or `off` and nothing else, so
+the debsway menu needs no password, and a udev rule
+(`data/webcam-off.rules`) switches each camera off as it appears.
 
-**USB.** Almost every laptop's built-in camera, and every plug-in webcam, is a USB device, even when it sits inside the lid.
+## LIMITS
 
-**The kernel's "authorized" switch.** Each USB device has a file, `/sys/bus/usb/devices/DEVICE/authorized`. Writing 0 there makes the kernel disconnect the device, as if it were unplugged; writing 1 connects it again. Only root may write it.
+- A program running as you can switch it on the same way you do; a cover over the lens is stronger.
+- A camera that isn't on USB (some new laptops' MIPI cameras) isn't seen.
+- The laptop's own microphone isn't affected (`debsway --mic off` mutes that).
 
-**Finding the camera.** A camera is a USB device with a *video interface* (USB class 0x0e). Once disconnected, a device no longer lists its interfaces, so the helper reads the device's raw descriptors (the description every USB device gives of itself) to find it again.
+## MANUAL INSTALL
 
-**A sudoers rule.** Your user may run exactly two commands as root without a password: `debsway-camera on` and `debsway-camera off`. Nothing else.
+```
+# The root helper that switches the camera's USB device
+sudo install -d -o root -g root -m 0755 /usr/local/libexec
+sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/debsway-camera /usr/local/libexec/debsway-camera
+# The switch the debsway menu uses (debsway --camera calls it)
+install -D -m 0755 @DEBSWAY_DIR@/bin/radios ~/.local/bin/radios
 
-**A udev rule.** udev is the part of the system that reacts when a device appears. The rule runs the helper when a whole USB device is added (at boot, or when you plug one in), and a camera is switched off then. Switching a camera on doesn't count as a new device, so it stays on until the next boot or until it is plugged in again.
+# Your user may run the helper with "on" or "off" and nothing else, as root,
+# without a password. visudo checks the rule before it goes in: never put a
+# rule in /etc/sudoers.d that visudo hasn't passed.
+printf '%s ALL=(root) NOPASSWD: /usr/local/libexec/debsway-camera on, /usr/local/libexec/debsway-camera off\n' "$(id -un)" >/tmp/debsway-camera
+sudo visudo -cf /tmp/debsway-camera
+sudo install -o root -g root -m 0440 /tmp/debsway-camera /etc/sudoers.d/debsway-camera
+rm /tmp/debsway-camera
 
-## How it works, step by step
+# Off whenever a USB device is added (at boot too)
+sudo install -o root -g root -m 0644 @DEBSWAY_DIR@/data/webcam-off.rules /etc/udev/rules.d/90-debsway-webcam.rules
+sudo udevadm control --reload-rules
+# Is there a camera? Then switch it off now
+/usr/local/libexec/debsway-camera status
+sudo /usr/local/libexec/debsway-camera off
+```
 
-1. It installs `bin/debsway-camera` as `/usr/local/libexec/debsway-camera`, owned by root, and `radios` (which the menu uses for its switches) in `~/.local/bin`.
-2. It writes the sudoers rule `/etc/sudoers.d/debsway-camera`, checked with `visudo` first.
-3. It installs the udev rule `/etc/udev/rules.d/90-debsway-webcam.rules` and reloads udev's rules.
-4. It switches a camera that is there now off.
+To undo:
 
-## What it changes on your computer
-
-- `/usr/local/libexec/debsway-camera`, `/etc/sudoers.d/debsway-camera`, `/etc/udev/rules.d/90-debsway-webcam.rules`.
-- `~/.local/bin/radios`.
-- No packages.
-
-## Using it
-
-- The debsway menu: **Webcam: on/off**, shown when a USB camera is found. Choose it to switch.
-- `debsway --camera on`, `debsway --camera off`, `debsway --camera` (whether it is on).
-
-## What it protects against
-
-- **A program, or a website in a browser running as you, using the camera without you switching it on first.** While it is off the camera isn't there at all.
-- **Forgetting to switch it off:** it is off again at every boot.
-
-## What it doesn't protect against
-
-- **A program running as you switching it on.** It can run the same helper, as the menu does. A cover over the lens is the stronger kind, as the hardware switch is for the microphone.
-- **A camera that isn't on USB.** Some new laptops have MIPI cameras (often not working on Linux anyway); they aren't seen or switched.
-- **Root.** Anything with root can switch it on.
-
-A webcam often holds a microphone as well: switched off, that goes too. The laptop's own microphone isn't part of the camera, and has its own switch (Microphone in the menu, with the sound extra).
-
-## Removing it
-
-`bash extras/webcam.sh --remove` switches the camera on again, removes the udev rule, the sudoers rule and the helper. `radios` stays, since the menu uses it.
+```
+# No longer switched off when it appears
+sudo rm /etc/udev/rules.d/90-debsway-webcam.rules
+sudo udevadm control --reload-rules
+# On again, as it was
+sudo /usr/local/libexec/debsway-camera on
+# The sudo rule and the helper
+sudo rm /etc/sudoers.d/debsway-camera /usr/local/libexec/debsway-camera
+```

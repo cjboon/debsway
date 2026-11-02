@@ -2,10 +2,11 @@
 # Automount USB drives, including LUKS-encrypted ones. udiskie's own
 # password prompt needs GTK, so this installs a small one of its own:
 # wmenu in password mode if wmenu is installed, else a floating foot window.
-# Usage: bash udiskie.sh [--remove]
+# Usage: bash udiskie.sh [--remove | --manual]
 # summary: USB drives mount by themselves (noexec), LUKS too
 # status: apt:udiskie
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 ASKPASS="$BIN/luks-askpass"

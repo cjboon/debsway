@@ -75,6 +75,14 @@ cd ~ && rm -rf ~/tuta-download
 tuta
 ```
 
-To undo: `rm -rf ~/.local/opt/tuta ~/.local/bin/tuta`, then remove the
-libraries above with `sudo apt purge` if nothing else uses them. The app's
-data stays in `~/.config/tutanota-desktop`.
+To undo (the app's data stays in `~/.config/tutanota-desktop`):
+
+```
+# The app and its command
+rm -rf ~/.local/opt/tuta ~/.local/bin/tuta
+# The libraries: other programs use many of them, so don't purge them (that
+# would remove those programs too). Marked "automatic", autoremove takes out
+# only the ones nothing needs.
+sudo apt-mark auto @LIBS@
+sudo apt autoremove --purge
+```

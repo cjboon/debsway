@@ -5,10 +5,11 @@
 # zathura starts inside bubblewrap (bin/media-sandbox, the same sandbox as imv
 # and mpv): it sees only the files you open, read-only, has no network and an
 # empty home. DEBSWAY_NO_SANDBOX=1 runs it without. Made the default for PDFs.
-# Usage: bash pdf-viewer.sh [--remove]
+# Usage: bash pdf-viewer.sh [--remove | --manual]
 # summary: zathura PDF viewer, in a sandbox
 # status: apt:zathura apt:zathura-pdf-poppler bin:zathura
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 if [ "${1:-}" = --remove ]; then

@@ -35,5 +35,10 @@ sudo apt install --no-install-recommends w3m
 w3m https://www.debian.org
 ```
 
-To undo: `sudo apt purge w3m && sudo apt autoremove --purge`. Your settings
-and cookies stay in `~/.w3m`.
+To undo (your settings and cookies stay in `~/.w3m`):
+
+```
+# Remove w3m and what only it needed
+sudo apt purge w3m
+sudo apt autoremove --purge
+```

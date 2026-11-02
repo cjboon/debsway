@@ -2,11 +2,12 @@
 # Mullvad VPN, from Mullvad's own apt repository: the "mullvad" command,
 # the background service it talks to, and the graphical app. You need a
 # Mullvad account number (mullvad.net, can be paid anonymously).
-# Usage: bash mullvad-vpn.sh [--remove]
+# Usage: bash mullvad-vpn.sh [--remove | --manual]
 # summary: Mullvad VPN app and command
 # status: apt:mullvad-vpn
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/mullvad-repo.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 if [ "${1:-}" = --remove ]; then

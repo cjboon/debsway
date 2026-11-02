@@ -1,10 +1,11 @@
 #!/bin/bash
 # Programs for zip, 7z, bzip2 and zstd files (Debian's tar, gzip and xz are
 # already there): unzip, zip, 7zip, bzip2 and zstd, all command-line.
-# Usage: bash archive-tools.sh [--remove]
+# Usage: bash archive-tools.sh [--remove | --manual]
 # summary: unzip, zip, 7z, bzip2 and zstd for archives
 # status: apt:unzip apt:zip apt:7zip apt:bzip2 apt:zstd
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 if [ "${1:-}" = --remove ]; then

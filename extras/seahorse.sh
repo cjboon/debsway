@@ -2,10 +2,11 @@
 # Seahorse ("Passwords and Keys") with the GNOME keyring it manages.
 # The keyring is unlocked with your login password when you log in on
 # the console, so apps that store secrets (like gh) don't ask again.
-# Usage: bash seahorse.sh [--remove]
+# Usage: bash seahorse.sh [--remove | --manual]
 # summary: Passwords and Keys, keyring unlocked at login
 # status: apt:seahorse
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 PAM=/etc/pam.d/login

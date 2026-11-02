@@ -7,10 +7,11 @@
 # qtwayland5 lets it run on Wayland without XWayland. Running this on a
 # computer that has the full build (keepassxc-full, with webext-keepassxc-browser)
 # switches it to the minimal one.
-# Usage: bash keepassxc.sh [--remove]
+# Usage: bash keepassxc.sh [--remove | --manual]
 # summary: KeePassXC password manager (no browser add-on)
 # status: apt:keepassxc-full apt:keepassxc-minimal apt:keepassxc
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 if [ "${1:-}" = --remove ]; then

@@ -17,6 +17,10 @@ encrypted DNS; the others are still the longer, older kind):
 
 Installed by hand, an extra has no debsway marker package, so its `--remove`
 doesn't know what to take out: undo it with the steps at the end of its page.
+`apt purge` also removes every package that depends on what you purge, so the
+undo steps purge only the extra's own programs and mark shared ones
+"automatic" (`apt-mark auto`), for `apt autoremove` to take out only if
+nothing needs them. Either way, read the list apt shows before you say yes.
 
 
 ## Browsing

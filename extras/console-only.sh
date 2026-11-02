@@ -6,10 +6,11 @@
 # Both happen at once: installing it from inside sway ends sway and drops you into
 # tmux; removing it from inside tmux detaches and starts sway (login loop in
 # ~/.profile, lib/core.sh profile_autostart).
-# Usage: bash console-only.sh [--remove]
+# Usage: bash console-only.sh [--remove | --manual]
 # summary: log in to tmux (same bar and keys), not sway
 # status: file:~/.config/tmux/tmux.conf
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 if [ "${1:-}" = --remove ]; then

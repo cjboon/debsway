@@ -8,11 +8,12 @@
 # Pair a device: debsway --bluetooth on, then  bluetoothctl  and type:
 #   scan on          (wait until the device shows up)
 #   pair AA:BB:...   trust AA:BB:...   connect AA:BB:...
-# Usage: bash bluetooth.sh [--remove]
+# Usage: bash bluetooth.sh [--remove | --manual]
 # summary: Bluetooth (off at start; switch it from the menu)
 # status: apt:bluez
 # files: bin/radios
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 CONF=/etc/bluetooth/main.conf

@@ -1,57 +1,60 @@
 # Mullvad Browser (`extras/mullvad-browser.sh`)
 
-Mullvad Browser is a web browser made by the Tor Project and Mullvad. It has Tor Browser's protections against tracking and fingerprinting but does not use Tor. It is meant to be used together with a VPN, and it forgets everything when you close it.
+## SYNOPSIS
 
-## The problem it solves
+```
+bash ~/debsway/extras/mullvad-browser.sh            install it
+bash ~/debsway/extras/mullvad-browser.sh --remove   remove it (and Mullvad's repository, if Mullvad VPN isn't installed)
+bash ~/debsway/extras/mullvad-browser.sh --manual   print the manual steps below
 
-Websites can often recognise you without any cookie, from small details of your browser and computer: screen size, installed fonts, how it draws things. This is called fingerprinting. A VPN changes your address, but does nothing about fingerprints. Mullvad Browser is built so that all its users look alike, which makes you harder to pick out.
+mullvad-browser                                     start it (or Super+d); connect a VPN first
+```
 
-## The ideas behind it
+Mullvad Browser is made by the Tor Project and Mullvad: Tor Browser's
+protections against tracking and fingerprinting, without Tor. It is meant for
+use with a VPN, and forgets everything when closed. It comes from Mullvad's
+own apt repository, whose signing key must be exactly the one pinned in
+`pins.sh` (`MULLVAD_FPR`), and unattended-upgrades is told to install its
+updates. It runs on X11, so XWayland is installed.
 
-**Fingerprinting.** Imagine many people each describing their coat: colour, length, buttons. Together the details single you out. A browser that makes everyone wear the same grey coat is harder to track.
+## LIMITS
 
-**Tor Browser without Tor.** Tor Browser is a modified Firefox. Mullvad Browser keeps the anti-tracking changes, but sends traffic by your normal connection. The address sites see is whatever your connection (or your VPN) shows.
+- It doesn't hide your address: without a VPN, sites see it and your network sees where you go.
+- It isn't Tor, and hiding your address doesn't hide who you are to a site you log in to.
+- It runs as you, with no sandbox from debsway (the sandboxed Firefox and `incognito` are that).
+- It keeps its own DNS over HTTPS, which `extras/secure-dns.sh` can't stop.
 
-**A VPN.** An encrypted tunnel to a company's server, so sites see the server's address instead of yours. See `docs/extras/mullvad-vpn.md`. This browser does not hide your address by itself. The script says so at the end.
+## MANUAL INSTALL
 
-**An apt repository.** A website `apt` installs packages from. This browser comes from Mullvad's repository, whose signing key debsway accepts only if its fingerprint matches the one pinned in `pins.sh`.
+```
+# Mullvad's signing key. Check it is exactly the pinned one: this must
+# print one "pub" key with the fingerprint @MULLVAD_FPR@
+wget -O /tmp/mullvad-keyring.asc @MULLVAD_KEY_URL@
+gpg --show-keys --with-fingerprint /tmp/mullvad-keyring.asc
+sudo install -D -m 0644 /tmp/mullvad-keyring.asc /usr/share/keyrings/mullvad-keyring.asc
+rm /tmp/mullvad-keyring.asc
 
-**X11 and XWayland.** The browser is built on Tor Browser, which runs on X11 (an older window system). XWayland lets X11 programs run under sway.
+# The repository, trusted with that key only
+echo "deb [signed-by=/usr/share/keyrings/mullvad-keyring.asc arch=$(dpkg --print-architecture)] https://repository.mullvad.net/deb/stable stable main" |
+    sudo tee /etc/apt/sources.list.d/mullvad.list
 
-## How it works, step by step
+# Let unattended-upgrades install its updates too (it takes only Debian's otherwise)
+echo 'Unattended-Upgrade::Origins-Pattern:: "site=repository.mullvad.net";' |
+    sudo tee /etc/apt/apt.conf.d/52debsway-mullvad
 
-1. **Adds Mullvad's apt repository** (the same one the VPN uses): fetches the key, checks the fingerprint (`MULLVAD_FPR` in `pins.sh`), writes the key to `/usr/share/keyrings/mullvad-keyring.asc` and `/etc/apt/sources.list.d/mullvad.list`, and allows unattended upgrades for that repository.
-2. **Installs XWayland.** Log out and back in once after the first X11 app, because sway only notices XWayland when it starts.
-3. **Installs the `mullvad-browser` package** and tells you to run `mullvad-browser`.
+# XWayland (it runs on X11) and the browser
+sudo apt update
+sudo apt install --no-install-recommends xwayland mullvad-browser
+# If XWayland was new: log out and back in once, so sway starts it
+```
 
-The script writes no browser settings of its own. Whatever the package does is how the browser behaves.
+To undo:
 
-## What it changes on your computer
-
-- Mullvad's key `/usr/share/keyrings/mullvad-keyring.asc` and `/etc/apt/sources.list.d/mullvad.list`.
-- An unattended-upgrades allowance for `repository.mullvad.net`, so updates install themselves.
-- Packages: `mullvad-browser`, and XWayland.
-- No files in `~/.local/bin`, no firewall rules, no users.
-
-## Using it
-
-- `mullvad-browser` (or Super+d) starts it.
-- Connect a VPN first if you want your address hidden, for example `mullvad connect` with `extras/mullvad-vpn.sh`.
-
-## What it protects against
-
-- **Tracking by fingerprint and cookies,** to the degree Tor Browser's design provides, because the browser tries to look the same for everyone and forgets everything on close.
-- **Tampered packages,** because the repository key is pinned.
-
-## What it doesn't protect against
-
-- **Your address.** It does not hide it. Without a VPN, sites see your real address and your network sees where you go.
-- **Being identified while logged in.** Hiding your address does not hide who you are to a site you have logged into (`THREAT-MODEL.md`).
-- **The rest of your computer.** It runs as you, with no sandbox from debsway. For that, `extras/firefox-sandbox.sh` and the `incognito` it offers exist.
-- **DNS over HTTPS.** The browser keeps its own DNS over HTTPS (sending name look-ups, encrypted, to a provider it chooses), which `extras/secure-dns.sh` cannot stop with a firewall rule (`docs/extras.md`).
-- **It is not Tor.** There is no three-relay hiding.
-- **A determined, well-funded attacker.**
-
-## Removing it
-
-`bash extras/mullvad-browser.sh --remove` uninstalls `mullvad-browser` and, if Mullvad VPN is not installed either, removes Mullvad's apt repository and key. XWayland and anything in your home folder are not touched by the script (the browser forgets its data on close anyway).
+```
+# Remove the browser
+sudo apt purge mullvad-browser
+# Only if Mullvad VPN isn't installed either: the repository, its key and the update rule
+sudo rm /etc/apt/sources.list.d/mullvad.list /usr/share/keyrings/mullvad-keyring.asc
+sudo rm /etc/apt/apt.conf.d/52debsway-mullvad
+sudo apt update
+```

@@ -1,38 +1,34 @@
-# Colour emoji (`extras/emoji-font.sh`)
+# Color emoji (`extras/emoji-font.sh`)
 
-You get a font with colour emoji, so the small pictures in messages and web pages show up instead of empty boxes.
+## SYNOPSIS
 
-## The problem it solves
+```
+bash ~/debsway/extras/emoji-font.sh            install it
+bash ~/debsway/extras/emoji-font.sh --remove   remove it
+bash ~/debsway/extras/emoji-font.sh --manual   print the manual steps below
 
-Emoji are characters, like letters. If no installed font has a picture for one, the computer shows an empty box. A minimal install has no such font.
+(nothing to run: restart Firefox and foot, and emoji show in color)
+```
 
-## The ideas behind it
+Without a color emoji font, emoji show up as empty boxes in Firefox, foot and
+every other program. This installs Google's Noto Color Emoji font from
+Debian's archive, so they show as pictures everywhere. It changes no settings.
 
-**A font** is a set of shapes for characters. **Emoji** are characters sent as codes, and each font draws them its own way. The font here is `fonts-noto-color-emoji`, Google's Noto Color Emoji set, from Debian.
+## LIMITS
 
-## How it works, step by step
+- It's only a font: nothing to do with security or privacy.
 
-1. `apt_install fonts-noto-color-emoji` installs it under the marker package `debsway-emoji-font`.
-2. It tells you to restart Firefox and `foot` (the terminal) so they notice the new font.
+## MANUAL INSTALL
 
-The script sets nothing else.
+```
+# The font, from Debian
+sudo apt install --no-install-recommends fonts-noto-color-emoji
+# Programs read fonts when they start: close and reopen Firefox and foot
+```
 
-## What it changes on your computer
+To undo:
 
-- Package `fonts-noto-color-emoji`. Nothing else.
-
-## Using it
-
-Nothing to run. After a restart of Firefox and `foot`, emoji appear in colour wherever you read them.
-
-## What it protects against
-
-Nothing. It is a convenience.
-
-## What it doesn't protect against
-
-Nothing here is a protection, so there is nothing to fall short. The package comes through apt, which checks Debian's signature, and a font can be a vehicle for bugs like any file a program parses.
-
-## Removing it
-
-`bash extras/emoji-font.sh --remove` removes the font package. Emoji go back to empty boxes. Nothing else changes.
+```
+# Remove the font
+sudo apt purge fonts-noto-color-emoji
+```

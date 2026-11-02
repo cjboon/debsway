@@ -6,10 +6,11 @@
 # The microphone is muted at every login (bin/radios), so it is off until you
 # switch it on: debsway menu > Microphone, debsway --mic on, or the mic key.
 # That is muting in software; see man debsway.
-# Usage: bash pipewire-audio.sh [--remove]
+# Usage: bash pipewire-audio.sh [--remove | --manual]
 # summary: Sound: PipeWire, volume keys, microphone mute
 # status: apt:pipewire-audio
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 if [ "${1:-}" = --remove ]; then

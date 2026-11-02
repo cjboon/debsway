@@ -4,10 +4,11 @@
 # in, so imv and mpv start inside bubblewrap (bin/media-sandbox): they see
 # only the files you open, read-only, have no network (except mpv for a
 # URL) and an empty home. DEBSWAY_NO_SANDBOX=1 runs one without it.
-# Usage: bash media.sh [--remove]
+# Usage: bash media.sh [--remove | --manual]
 # summary: imv and mpv, each in a sandbox
 # status: apt:imv apt:mpv bin:imv bin:mpv bin:media-sandbox
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 if [ "${1:-}" = --remove ]; then

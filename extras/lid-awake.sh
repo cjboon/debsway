@@ -9,10 +9,11 @@
 #    power it off (Super+Shift+Escape) before you pack it.
 #  - It is still on, so the disk key is in memory: shut down before leaving it
 #    somewhere (see THREAT-MODEL.md).
-# Usage: bash lid-awake.sh [--remove]
+# Usage: bash lid-awake.sh [--remove | --manual]
 # summary: Closing the lid locks, but doesn't suspend
 # status: file:/etc/systemd/logind.conf.d/60-debsway-lid.conf
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 CONF=/etc/systemd/logind.conf.d/60-debsway-lid.conf

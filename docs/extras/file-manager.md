@@ -1,48 +1,51 @@
-# Thunar, a file manager (`extras/file-manager.sh`)
+# Thunar file manager (`extras/file-manager.sh`)
 
-You get Thunar, a light graphical program for browsing, copying and deleting files and folders, with a Trash and picture thumbnails. It becomes the program that opens folders.
+## SYNOPSIS
 
-## The problem it solves
+```
+bash ~/debsway/extras/file-manager.sh            install it
+bash ~/debsway/extras/file-manager.sh --remove   remove it
+bash ~/debsway/extras/file-manager.sh --manual   print the manual steps below
 
-sway has no built-in file browser. Without one, you work in the terminal with commands like `ls` and `cp`. Thunar gives you windows and icons, and also catches "open containing folder" in Firefox.
+thunar                 open your home folder (or Super+d, then thunar)
+thunar ~/Downloads     open a folder
+  Ctrl+L type a path   Ctrl+H hidden files   Ctrl+T new tab   F2 rename
+  Delete to Trash   Shift+Delete delete for good   Alt+Up parent folder
+```
 
-## The ideas behind it
+Thunar is a light graphical file manager from Xfce, from Debian. It is GTK, so
+it runs natively on Wayland. gvfs gives it the Trash, and tumbler draws
+thumbnails. It is made the default for folders, so "open containing folder" in
+Firefox opens it. USB drives are mounted by udiskie (`extras/udiskie.sh`), so
+Thunar's own volume manager isn't needed.
 
-**A file manager** shows folders as windows you click through, like the Finder on a Mac or Explorer on Windows. **The Trash** is a holding folder, so a deleted file can be brought back. **Thumbnails** are small previews of images. In this setup, `gvfs` provides the Trash and `tumbler` draws the thumbnails. Thunar is a GTK program, so it runs directly on Wayland, sway's window system.
+## LIMITS
 
-USB sticks are already mounted by `udiskie` (`extras/udiskie.sh`), so Thunar does not need its own volume manager.
+- It runs as you with all your files; it adds no isolation.
+- tumbler reads the files in a folder you open to draw previews, unsandboxed: be careful opening folders of files you don't trust.
+- Emptying the Trash doesn't make the data unrecoverable.
 
-## How it works, step by step
+## MANUAL INSTALL
 
-1. `apt_install thunar gvfs tumbler` installs three packages under the marker package `debsway-file-manager`.
-2. `set_default_app thunar.desktop inode/directory` writes a line into `~/.config/mimeapps.list`. That file records which program opens which kind of file, and `inode/directory` is the type "folder".
-3. It prints a short list of keys.
+```
+# Thunar, the Trash (gvfs) and thumbnails (tumbler)
+sudo apt install --no-install-recommends thunar gvfs tumbler
+# Make it the default for folders (in ~/.config/mimeapps.list, under
+# [Default Applications], replacing an older default)
+mkdir -p ~/.config && touch ~/.config/mimeapps.list
+grep -qx '\[Default Applications\]' ~/.config/mimeapps.list || echo '[Default Applications]' >>~/.config/mimeapps.list
+sed -i '/^inode\/directory=/d; /^\[Default Applications\]$/a inode/directory=thunar.desktop' ~/.config/mimeapps.list
+```
 
-## What it changes on your computer
+To undo:
 
-- Packages: `thunar`, `gvfs`, `tumbler` and their dependencies.
-- `~/.config/mimeapps.list`: `inode/directory=thunar.desktop`.
-- Nothing in `~/.local/bin`, and no sway key bindings.
-
-## Using it
-
-- `thunar`: open your home folder (or Super+d, then `thunar`).
-- `thunar ~/Downloads`: open a given folder.
-- Ctrl+L: type a path. Ctrl+H: show hidden files. Ctrl+T: new tab.
-- F2: rename. Delete: move to Trash. Shift+Delete: delete for good.
-- Alt+Up: parent folder. Ctrl+1, 2, 3: icon, list or compact view.
-
-## What it protects against
-
-Nothing. It is a convenience. One safety detail is that Delete moves files to the Trash rather than erasing them. Shift+Delete erases them for good.
-
-## What it doesn't protect against
-
-- **Anything running as you.** Thunar runs as you with all your files. It adds no isolation.
-- **Thumbnails of untrusted files.** `tumbler` reads image and document files to draw previews, so opening a folder holding files you do not trust makes a program parse them. debsway does not sandbox it. This is general, not something the script claims to fix.
-- **Secure erasure.** Emptying the Trash does not make the data unrecoverable.
-- **Untrusted USB sticks.** `THREAT-MODEL.md` says to avoid plugging in sticks you do not trust.
-
-## Removing it
-
-`bash extras/file-manager.sh --remove` removes `thunar` and `tumbler` (and, through the marker package, `gvfs` and anything else only this script needed), and deletes the lines in `~/.config/mimeapps.list` that point at `thunar.desktop`. Your files are untouched.
+```
+# Thunar; the thumbnailer and the Trash (gvfs) are marked "automatic" instead
+# of purged, since other programs can need them: autoremove takes them out
+# only if nothing does
+sudo apt purge thunar
+sudo apt-mark auto tumbler gvfs
+sudo apt autoremove --purge
+# Forget it as the default for folders
+sed -i '/=thunar\.desktop$/d' ~/.config/mimeapps.list
+```

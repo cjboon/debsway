@@ -7,10 +7,11 @@
 # numbers, matching braces highlighted and a line at column 80. They are set
 # again only when debsway's settings change, so running this again doesn't
 # undo changes you made in Mousepad.
-# Usage: bash mousepad.sh [--remove]
+# Usage: bash mousepad.sh [--remove | --manual]
 # summary: Mousepad text editor
 # status: apt:mousepad
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 APP=org.xfce.mousepad.desktop

@@ -1,62 +1,61 @@
-# Bluetooth, off until you want it (`extras/bluetooth.sh`)
+# Bluetooth (`extras/bluetooth.sh`)
 
-This installs Bluetooth support for headphones, keyboards, mice and a phone's connection, but sets the Bluetooth adapter to start switched off at every boot. You switch it on when you need it and off when you are done.
+## SYNOPSIS
 
-## The problem it solves
+```
+bash ~/debsway/extras/bluetooth.sh            install it (the adapter is off at every boot)
+bash ~/debsway/extras/bluetooth.sh --remove   remove it
+bash ~/debsway/extras/bluetooth.sh --manual   print the manual steps below
 
-A Bluetooth radio that is on is a radio that other devices can try to talk to. Most of the time you do not need it. Many systems turn it on by default and leave it on. debsway turns it off by default so that nothing is listening when you are not using it.
+debsway --bluetooth on|off     switch the adapter (or the debsway menu > Bluetooth)
+bluetoothctl                   pair a device: type
+  scan on                      (wait until the device shows up)
+  pair AA:BB:...   trust AA:BB:...   connect AA:BB:...
+```
 
-## The ideas behind it
+Bluetooth for headphones, keyboards, mice and a phone's connection: bluez
+from Debian (its `bluetoothctl` pairs devices in a terminal), rfkill to switch
+the radio, and, if sound is set up (`extras/pipewire-audio.sh`), the part of
+PipeWire that plays sound over Bluetooth. The adapter starts switched off at
+every boot (`AutoEnable=false` in `/etc/bluetooth/main.conf`), so no radio
+listens while you aren't using it; switch it on from the debsway menu, and off
+again when you are done.
 
-**Bluetooth.** A short-range radio link for small devices. Before two devices talk, they have to be paired: they exchange keys once and agree to trust each other.
+## LIMITS
 
-**bluez.** Linux's Bluetooth software. `bluetoothctl` is its text tool for scanning and pairing.
+- While it's on, devices nearby can see this computer and try to talk to it, and Bluetooth has had serious bugs.
+- A paired device you trust can connect again whenever the adapter is on.
+- Bluetooth keyboards and headphones can be listened to from nearby, more easily than a cable.
 
-**An adapter.** The Bluetooth chip or USB stick. It can be powered on or off.
+## MANUAL INSTALL
 
-**rfkill.** The kernel's switch for radios. When rfkill blocks Bluetooth, the radio is really off, not just ignored by a program. A hardware switch on a laptop can also block it.
+```
+# bluez, and rfkill to switch the radio
+sudo apt install --no-install-recommends bluez rfkill
+# Only with sound set up: PipeWire's Bluetooth sound
+sudo apt install --no-install-recommends libspa-0.2-bluetooth
+# The switch the debsway menu uses (debsway --bluetooth calls it)
+install -D -m 0755 @DEBSWAY_DIR@/bin/radios ~/.local/bin/radios
 
-**AutoEnable.** A bluez setting that decides whether the adapter powers on by itself when the service starts. The script sets it to `false`.
+# Off at every boot: set AutoEnable=false (add a [Policy] section with it if
+# the file has no AutoEnable line), then check it shows "AutoEnable=false"
+sudo sed -i -E 's/^[#[:space:]]*AutoEnable=.*/AutoEnable=false/' /etc/bluetooth/main.conf
+grep -q '^AutoEnable=' /etc/bluetooth/main.conf || printf '\n[Policy]\nAutoEnable=false\n' | sudo tee -a /etc/bluetooth/main.conf
+grep -n '^AutoEnable' /etc/bluetooth/main.conf
 
-**PipeWire.** The sound system, if you installed sound (`extras/pipewire-audio.sh`). It needs an extra module to play sound over Bluetooth.
+# The service, and the radio off now too
+sudo systemctl enable --now bluetooth.service
+~/.local/bin/radios bluetooth off
+```
 
-## How it works, step by step
+To undo:
 
-1. Warns you if there is no Bluetooth adapter, then goes on anyway (a USB adapter works once plugged in).
-2. Installs `bluez` and `rfkill`. If `pipewire-audio` is installed, it also installs `libspa-0.2-bluetooth` for sound over Bluetooth.
-3. Installs `~/.local/bin/radios`, the command behind the debsway menu's switches and `debsway --bluetooth`.
-4. Edits a copy of `/etc/bluetooth/main.conf` to set `AutoEnable=false # debsway` and installs it. If an `AutoEnable` line exists, it is changed; otherwise a `[Policy]` section with it is added.
-5. Enables and starts `bluetooth.service`.
-6. Switches Bluetooth off right away (not only at the next boot), using `radios bluetooth off`.
-
-## What it changes on your computer
-
-- Packages: `bluez`, `rfkill`, and `libspa-0.2-bluetooth` when sound is set up.
-- `/etc/bluetooth/main.conf`: `AutoEnable=false`, marked `# debsway`.
-- `bluetooth.service` enabled and started.
-- `~/.local/bin/radios`.
-- No firewall rules, no users.
-
-## Using it
-
-- `debsway --bluetooth on` (or debsway menu > Bluetooth) switches the radio on; `debsway --bluetooth off` switches it off.
-- `radios bluetooth status|on|off|toggle` does the same directly, and `radios list` shows what is on.
-- To pair, switch it on, then run `bluetoothctl` and type: `scan on` (wait for the device to show up), then `pair AA:BB:...`, `trust AA:BB:...`, `connect AA:BB:...`.
-- Turning off runs `bluetoothctl power off` and then rfkill block.
-
-## What it protects against
-
-- **A radio listening when you are not using it.** It starts off at every boot (`THREAT-MODEL.md`).
-- **Attacks on Bluetooth while it is switched off.** At boot the adapter only stays powered down (bluez's `AutoEnable=false`); switched off from the debsway menu or with `debsway --bluetooth off`, the radio itself is blocked (rfkill), which is off, not just quiet.
-
-## What it doesn't protect against
-
-- **Attacks while it is on.** Bluetooth software has had serious bugs. Keep it on only while you need it.
-- **Programs running as you,** which could use the switch to turn it on.
-- **Bluetooth tracking by device address** while on. The script does not change that.
-- **Eavesdropping or pairing weaknesses** in the devices themselves, such as old keyboards.
-- **Anything about sound privacy.** This extra does not touch the microphone setting; that is a separate software switch (`debsway --mic`).
-
-## Removing it
-
-`bash extras/bluetooth.sh --remove` puts bluez's own setting back (the line the script wrote is changed to `#AutoEnable=true`), then uninstalls `bluez`, `libspa-0.2-bluetooth` and (unless another script needs it) `rfkill`. It does not remove `~/.local/bin/radios`, which the debsway menu also uses.
+```
+# Back to Debian's default (the adapter on at boot)
+sudo sed -i 's/^AutoEnable=false$/#AutoEnable=true/' /etc/bluetooth/main.conf
+# bluez and PipeWire's Bluetooth part (marked "automatic" instead of purged:
+# autoremove takes it out only if nothing needs it)
+sudo apt purge bluez
+sudo apt-mark auto libspa-0.2-bluetooth
+sudo apt autoremove --purge
+```

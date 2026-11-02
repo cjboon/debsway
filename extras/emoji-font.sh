@@ -1,10 +1,11 @@
 #!/bin/bash
 # Color emoji in Firefox, foot and everywhere else. Without it, emoji
 # show up as empty boxes.
-# Usage: bash emoji-font.sh [--remove]
+# Usage: bash emoji-font.sh [--remove | --manual]
 # summary: Color emoji instead of empty boxes
 # status: apt:fonts-noto-color-emoji
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 if [ "${1:-}" = --remove ]; then

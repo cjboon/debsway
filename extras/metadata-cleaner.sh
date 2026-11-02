@@ -4,10 +4,11 @@
 # photos, PDFs, office documents, audio and video, before you share them.
 # It is built on mat2, which comes with it and gives the mat2 command.
 # From Debian.
-# Usage: bash metadata-cleaner.sh [--remove]
+# Usage: bash metadata-cleaner.sh [--remove | --manual]
 # summary: Metadata Cleaner (and the mat2 command)
 # status: apt:metadata-cleaner apt:mat2
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 if [ "${1:-}" = --remove ]; then

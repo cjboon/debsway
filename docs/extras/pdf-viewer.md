@@ -1,34 +1,60 @@
-# PDF viewer in a sandbox (`extras/pdf-viewer.sh`)
+# zathura PDF viewer, in a sandbox (`extras/pdf-viewer.sh`)
 
-You get `zathura`, a small keyboard-driven PDF viewer. It is started inside the same kind of sandbox as `imv` and `mpv`: it sees only the files you name, read-only, with an empty home folder and no network.
+## SYNOPSIS
 
-## The problem it solves
+```
+bash ~/debsway/extras/pdf-viewer.sh            install it
+bash ~/debsway/extras/pdf-viewer.sh --remove   remove it
+bash ~/debsway/extras/pdf-viewer.sh --manual   print the manual steps below
 
-Nothing else on a fresh debsway opens a PDF (Firefox can, if you installed it). A PDF is a complicated file that a viewer must interpret, and crafted ones are a common way to attack a computer. A viewer that runs as you with all your files can be turned into a thief; one in a sandbox can only see the one file it was given.
+zathura paper.pdf              open a PDF, in its sandbox
+zathura -P 5 paper.pdf         open at page 5
+  j/k scroll   Space/b page down/up   gg/G first/last page   5G page 5
+  +/- zoom   a fit page   s fit width   / search (n next)   Tab contents   q quit
+DEBSWAY_NO_SANDBOX=1 zathura paper.pdf    without the sandbox
+```
 
-## The ideas behind it
+zathura is a small, keyboard-driven PDF viewer from Debian, made the default
+for PDFs. A PDF is a complicated file that the viewer has to interpret, and
+crafted ones are a common way in, so the `zathura` command debsway installs
+(`bin/zathura`) starts it inside bubblewrap (`bin/media-sandbox`, the same
+sandbox as imv and mpv): it sees only the files you name, read-only, its own
+empty home, no network, and a restricted Wayland socket (`bin/wayland-restrict`)
+without sway's screen-reading or typing protocols.
 
-See [media.md](media.md) for the sandbox ideas: bubblewrap, read-only, and the restricted Wayland socket. `zathura` is started through the same `media-sandbox` command; the PDF reading itself is done by `zathura-pdf-poppler`, a plugin.
+## LIMITS
 
-## How it works, step by step
+- `/usr/bin/zathura`, or a launcher that uses that path, skips the sandbox; so does `DEBSWAY_NO_SANDBOX=1`.
+- The sandbox shares your kernel: a kernel bug could still get out.
+- It can still show you a misleading page; a link you follow opens outside the sandbox.
 
-1. `apt_install zathura zathura-pdf-poppler bubblewrap python3`.
-2. Puts `wayland-restrict`, `media-sandbox` and a short `zathura` wrapper in `~/.local/bin`.
-3. Makes zathura the default for PDFs (`~/.config/mimeapps.list`).
-4. Prints key hints.
+## MANUAL INSTALL
 
-Running `zathura paper.pdf` then goes through `media-sandbox`, which shows the program `/usr`, `/etc` and `/sys` read-only, a blank home and `/tmp`, the restricted window socket, and `paper.pdf` read-only. Your `~/.config/zathura` is shown read-only if it exists. It has no network and no sound.
+```
+# zathura with its PDF plugin, bubblewrap for the sandbox, python3 for wayland-restrict
+sudo apt install --no-install-recommends zathura zathura-pdf-poppler bubblewrap python3
+# The restricted Wayland socket, the sandbox, and the zathura command that uses it
+install -D -m 0755 @DEBSWAY_DIR@/bin/wayland-restrict ~/.local/bin/wayland-restrict
+install -D -m 0755 @DEBSWAY_DIR@/bin/media-sandbox ~/.local/bin/media-sandbox
+install -D -m 0755 @DEBSWAY_DIR@/bin/zathura ~/.local/bin/zathura
+# Make it the default for PDFs (in ~/.config/mimeapps.list, under
+# [Default Applications], replacing an older default)
+mkdir -p ~/.config && touch ~/.config/mimeapps.list
+grep -qx '\[Default Applications\]' ~/.config/mimeapps.list || echo '[Default Applications]' >>~/.config/mimeapps.list
+sed -i '/^application\/pdf=/d; /^\[Default Applications\]$/a application/pdf=org.pwmt.zathura.desktop' ~/.config/mimeapps.list
+```
 
-## What it changes on your computer
+To undo:
 
-- Packages: `zathura`, `zathura-pdf-poppler`, `bubblewrap`, `python3`.
-- `~/.local/bin/zathura`, `media-sandbox` and `wayland-restrict`.
-- The default PDF application in `~/.config/mimeapps.list`.
-
-## Using it
-
-`zathura paper.pdf`; j/k scroll, Space / b page down / up, J / K next / previous page, `5G` page 5, `+` / `-` zoom, `a` fit page, `s` fit width, `/` search, Tab table of contents, q quit. `DEBSWAY_NO_SANDBOX=1 zathura file.pdf` runs without the sandbox.
-
-## Removing it
-
-`bash extras/pdf-viewer.sh --remove`. The sandbox files stay while the media extra (imv, mpv) is installed.
+```
+# The zathura command, and the default for PDFs
+rm ~/.local/bin/zathura
+sed -i '/=org\.pwmt\.zathura\.desktop$/d' ~/.config/mimeapps.list
+# Only if neither the media extra (imv, mpv) nor incognito uses them: the sandbox and the socket
+rm ~/.local/bin/media-sandbox ~/.local/bin/wayland-restrict
+# zathura; bubblewrap is marked "automatic" instead of purged, since other
+# programs can need it: autoremove takes it out only if nothing does
+sudo apt purge zathura zathura-pdf-poppler
+sudo apt-mark auto bubblewrap
+sudo apt autoremove --purge
+```

@@ -1,68 +1,70 @@
-# USB drives that mount by themselves, safely (`extras/udiskie.sh`)
+# USB drives mount by themselves (`extras/udiskie.sh`)
 
-You get USB drives and cards that appear under `/media/YOU/` as soon as you plug them in, without typing a command. They are mounted so that nothing on them can run by itself. Encrypted (LUKS) drives ask for their passphrase in a small prompt.
+## SYNOPSIS
 
-## The problem it solves
+```
+bash ~/debsway/extras/udiskie.sh            install it
+bash ~/debsway/extras/udiskie.sh --remove   remove it (cryptsetup stays: the system disk needs it)
+bash ~/debsway/extras/udiskie.sh --manual   print the manual steps below
 
-On a minimal desktop, a USB stick does nothing when you plug it in: you must mount it by hand with a root command. Making it automatic is easy, but it also means a stranger's stick is opened the moment it goes in. A stick can hold programs, special files that act like devices, and files with extra powers. None of that should run from a stick you do not know.
+plug in a stick          it appears in /media/$USER/NAME (an encrypted one asks for its passphrase)
+udiskie-umount -a        unmount every drive before you pull it out
+```
 
-## The ideas behind it
+USB drives mount by themselves when you plug them in, under
+`/media/$USER/`, and LUKS-encrypted ones ask for their passphrase: udiskie
+and udisks2 from Debian, with polkitd so your user may mount without sudo.
+udiskie's own prompt needs GTK, so debsway gives it a small one,
+`bin/luks-askpass` (wmenu in password mode, or a floating foot window).
+A stranger's stick is mounted the moment it is plugged in, so every drive is
+mounted `nosuid,nodev,noexec`: nothing on it can run as a program (the debsway
+stick still works, since its scripts run as `bash x.sh`).
 
-**Mounting.** Linux makes a drive's contents visible by attaching it to a folder. That attaching is called mounting. Unmounting detaches it safely, before you unplug it.
+## LIMITS
 
-**udisks2 and udiskie.** `udisks2` is the system service that mounts drives. `udiskie` is a small program running in your sway session that notices a new drive and asks udisks2 to mount it. `polkitd` is the part that lets you mount without sudo.
+- Mounting reads the stick's file system, so a stick crafted against the kernel's file system code can still do harm the moment it is plugged in: don't plug in sticks you don't trust.
+- A USB device can pretend to be a keyboard; that has nothing to do with mounting.
+- noexec doesn't stop you running a script on it with `bash` yourself.
 
-**Mount options.** Switches set when mounting. debsway sets three:
-- `nosuid`: files on the drive cannot gain extra powers (setuid files run as their owner, often root).
-- `nodev`: special device files on the drive are ignored.
-- `noexec`: programs on the drive cannot be started directly.
+## MANUAL INSTALL
 
-**LUKS.** The standard Linux disk encryption. A LUKS drive is unreadable until you give its passphrase. `cryptsetup` is the tool that unlocks it.
+```
+# udiskie, udisks2, cryptsetup for encrypted sticks, polkitd so you may mount
+# without sudo, and notifications for it
+sudo apt install --no-install-recommends udiskie udisks2 cryptsetup polkitd gir1.2-notify-0.7
+# The passphrase prompt
+install -D -m 0755 @DEBSWAY_DIR@/bin/luks-askpass ~/.local/bin/luks-askpass
+# Every drive mounts so that nothing on it can run
+mkdir -p ~/.config/udiskie
+printf '%s\n' 'mount_options:' '  - options: [nosuid, nodev, noexec]' >~/.config/udiskie/config.yml
+# sway starts udiskie at login, with that prompt (the path must be absolute)
+mkdir -p ~/.config/sway/config.d
+cat >~/.config/sway/config.d/automount.conf <<EOF
+exec udiskie --no-tray --no-file-manager --password-prompt '$HOME/.local/bin/luks-askpass {device_presentation}'
+for_window [app_id="luks-askpass"] floating enable
+EOF
+# sway must accept it (this prints no [ERROR] lines), then reads it
+sway -C -c ~/.config/sway/config 2>&1 | grep ERROR
+swaymsg reload
+# Start it now too (exec lines run only when sway starts)
+swaymsg exec "udiskie --no-tray --no-file-manager --password-prompt '$HOME/.local/bin/luks-askpass {device_presentation}'"
+```
 
-**A password prompt.** udiskie's own prompt needs GTK, a toolkit debsway does not install, so debsway adds a small one: `luks-askpass`.
+To undo:
 
-## How it works, step by step
-
-When you run `bash extras/udiskie.sh`:
-
-1. It installs `udiskie`, `udisks2`, `cryptsetup`, `polkitd` and `gir1.2-notify-0.7` (so mount messages can show as notifications when `mako` is installed).
-2. It installs `luks-askpass` into `~/.local/bin`. It shows a prompt with `wmenu` in password mode if `wmenu` is installed, otherwise a floating `foot` window that does not echo what you type.
-3. It writes `~/.config/udiskie/config.yml` with `mount_options: [nosuid, nodev, noexec]`, unless you already have that file, which it keeps. The comment in it says to delete `noexec` to run programs from a stick.
-4. It writes a sway snippet `~/.config/sway/config.d/automount.conf`. It starts `udiskie --no-tray --no-file-manager` with `luks-askpass` as the password prompt every time sway starts, and makes the prompt window floating. The snippet is checked with sway, and the old one put back if sway rejects it.
-5. If sway is running and udiskie is not, it starts it now.
-
-When you plug a drive in, udiskie mounts it under `/media/YOU/NAME` with those options. For a LUKS drive, it asks for the passphrase first.
-
-## What it changes on your computer
-
-- Packages: `udiskie`, `udisks2`, `cryptsetup`, `polkitd`, `gir1.2-notify-0.7`.
-- `~/.local/bin/luks-askpass`.
-- `~/.config/udiskie/config.yml` (if it did not exist).
-- `~/.config/sway/config.d/automount.conf`.
-- A running `udiskie` process.
-
-## Using it
-
-- Plug the drive in: it mounts by itself under `/media/YOU/`.
-- `udiskie-umount /media/YOU/NAME`: unmount one drive before you unplug it.
-- `udiskie-umount -a`: unmount all.
-- `udiskie-info -a`: show what udiskie sees, if a stick does not mount.
-- To run a program from a stick, run it as `bash x.sh`, or delete `noexec` from `~/.config/udiskie/config.yml` and restart udiskie.
-
-## What it protects against
-
-- **A stranger's stick running something.** With `nosuid`, `nodev` and `noexec`, nothing on a stick can run from it by itself.
-- **Typing root commands for each stick.** polkit lets you mount as yourself.
-- **A password shown on screen.** The LUKS prompt hides what you type.
-
-## What it doesn't protect against
-
-- **Flaws in how the kernel reads a filesystem.** The drive is mounted the moment it is plugged in, so the kernel reads whatever the stick contains. A badly made or malicious stick can attack that code. Do not plug in sticks you do not trust.
-- **Files you open.** A document, image or script that you open or run from the stick yourself can still be harmful. `noexec` does not stop `bash script.sh` or an interpreter.
-- **Unplugging without unmounting.** That can damage the drive's files.
-- **Reading your unencrypted drive if someone takes it.** Use LUKS for sensitive data.
-- **Mounts made by other programs.** The options apply to udiskie's mounts.
-
-## Removing it
-
-`bash extras/udiskie.sh --remove` removes the sway snippet, stops the running `udiskie`, deletes `luks-askpass`, and deletes `~/.config/udiskie/config.yml` only if it still carries debsway's mark. It then purges `udiskie`, `udisks2` and `gir1.2-notify-0.7` unless another extra needs them. `cryptsetup` is kept (marked as manually installed), because an encrypted system disk needs it to boot. Your drives and their files are untouched.
+```
+# Stop it, and sway no longer starts it
+rm ~/.config/sway/config.d/automount.conf
+swaymsg reload
+pkill -x udiskie
+# The prompt and the mount options
+rm ~/.local/bin/luks-askpass ~/.config/udiskie/config.yml
+# cryptsetup must stay (the encrypted system disk needs it)
+sudo apt-mark manual cryptsetup
+# udiskie; udisks2 and the notification library are marked "automatic" instead
+# of purged, since other programs can need them: autoremove takes them out
+# only if nothing does
+sudo apt purge udiskie
+sudo apt-mark auto udisks2 gir1.2-notify-0.7
+sudo apt autoremove --purge
+```

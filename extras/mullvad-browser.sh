@@ -4,11 +4,12 @@
 # fingerprinting but without Tor. Meant for use with a VPN (Mullvad's or
 # another), and it forgets everything when closed. It's built on Tor
 # Browser, which runs on X11, so XWayland is installed.
-# Usage: bash mullvad-browser.sh [--remove]
+# Usage: bash mullvad-browser.sh [--remove | --manual]
 # summary: Mullvad Browser (Tor Browser's privacy, no Tor)
 # status: apt:mullvad-browser
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/mullvad-repo.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 if [ "${1:-}" = --remove ]; then

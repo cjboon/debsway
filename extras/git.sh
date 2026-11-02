@@ -2,10 +2,11 @@
 # git, and optionally the GitHub command line tool (gh), from Debian.
 # Asks for the name and email to put on your commits, and offers to log
 # in to GitHub.
-# Usage: bash git.sh [--remove]
+# Usage: bash git.sh [--remove | --manual]
 # summary: git, and optionally GitHub's gh
 # status: apt:git apt:gh
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 if [ "${1:-}" = --remove ]; then

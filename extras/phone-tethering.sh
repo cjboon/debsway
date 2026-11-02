@@ -6,10 +6,11 @@
 # Hotspot. A new wired connection then appears. (A phone's Wi-Fi hotspot is just
 # a Wi-Fi network: pick it in nmtui, nothing to install.) To use only the phone,
 # switch Wi-Fi off first: debsway menu > Wi-Fi, or  debsway --wifi off
-# Usage: bash phone-tethering.sh [--remove]
+# Usage: bash phone-tethering.sh [--remove | --manual]
 # summary: Phone tethering over USB (iPhone and Android)
 # status: apt:usbmuxd
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 if [ "${1:-}" = --remove ]; then

@@ -1,19 +1,57 @@
-# Console-only (`extras/console-only.sh`)
+# Console-only: tmux instead of sway (`extras/console-only.sh`)
 
-You log in on a text console straight into tmux, with a bar and keys like the sway desktop's, instead of starting sway.
+## SYNOPSIS
 
-## The problem it solves
+```
+bash ~/debsway/extras/console-only.sh            log in to tmux from now on (from sway, it leaves sway)
+bash ~/debsway/extras/console-only.sh --remove   log in to sway again (from tmux, it starts sway)
+bash ~/debsway/extras/console-only.sh --manual   print the manual steps below
 
-A computer with no screen to spare, a slow machine, or a taste for text. The same bar (workspace numbers, debsway menu, wifi, volume, brightness, battery, timer, date) and the same habits (workspaces on number keys) work without a desktop.
+Alt+1 ... Alt+0      workspace 1 ... 10 (Alt+Shift+1 ... sends the pane)
+Alt+Enter / Alt+v    split beside / below     Alt+h j k l or arrows: move
+Alt+f fullscreen the pane   Alt+Shift+q close it   Alt+m the debsway menu
+Alt+t timers   Alt+? keys   Alt+w Wi-Fi   Alt+- Alt+= volume   Alt+, Alt+. brightness
+sway                 start the desktop by hand
+```
 
-## The ideas behind it
+A login on a text console then goes straight into tmux, with the bar and keys
+of the sway desktop (Alt where sway uses Super), instead of starting sway.
+Only the login changes: sway stays installed. The tmux look comes with the
+base install (`parts/console-tmux.sh`), and the login loop debsway put in
+`~/.profile` starts whatever `~/.config/debsway/login` names: `sway` or
+`console`. When that file changes while one is running, the loop starts the
+other.
 
-**tmux** is a program that gives one terminal several windows. Here each tmux window is a "workspace", and the bar on top shows their numbers with the current one highlighted. The tmux config is always installed with the base (`parts/console-tmux.sh`), so this extra only changes what a login starts. The `debsway autostart` block in `~/.profile` reads `~/.config/debsway/login` (`sway` or `console`) and starts sway on tty1 or tmux on any text console. It is a loop: when the program ends and that file has changed, it starts the other one, so the switch needs no logout. Installing the extra from inside sway ends sway and drops you into tmux after 3 seconds; removing it from inside tmux detaches and starts sway on tty1. (A session started by an older autostart block, which had no loop, ends at the login prompt instead; log in again.) A tmux opened in a foot window under sway stays plain: the bar and Alt keys load only when there is no sway session.
+## LIMITS
 
-## Keys
+- A text console has no mouse (over ssh, the bar's items still click).
+- Programs that need a graphical window won't open until you start sway.
 
-Alt takes the place of Super: Alt+1 … Alt+0 go to workspaces, Alt+Shift+1 … send the pane there (US keyboard), Alt+Enter / Alt+v split, Alt+h j k l or arrows move, Alt+f fullscreen, Alt+Shift+q close, Alt+m the debsway menu (it has a Font size entry for the text size), Alt+t timers, Alt+? the key sheet. Alt+w Wi-Fi, Alt+- / Alt+= volume (Alt+Backspace mutes), Alt+, / Alt+. brightness, Alt+b battery time. A real text console sends no mouse, so these keys are how you reach the bar's items; when tmux is used from a terminal program (over ssh, say) the items also click and scroll as in sway.
+## MANUAL INSTALL
 
-## What it changes on your computer
+```
+# The tmux look, if it isn't there yet (the base install has it):
+# tmux, the bar's helpers and the config
+sudo apt install --no-install-recommends tmux
+for c in sway-status console-click console-font; do install -D -m 0755 @DEBSWAY_DIR@/bin/$c ~/.local/bin/$c; done
+mkdir -p ~/.config/tmux ~/.local/share/debsway
+cp @DEBSWAY_DIR@/data/tmux.conf ~/.config/tmux/tmux.conf
+cp @DEBSWAY_DIR@/data/tmux-console.conf ~/.config/tmux/console.conf
+install -m 0644 @DEBSWAY_DIR@/data/keys-console.txt ~/.local/share/debsway/keys-console.txt
 
-- `~/.profile`: the autostart block (it also sets the console font to Terminus 28x14 (`terminus-28`); to change it, type `console-font`: it lists the sizes, you type a number or a name such as `dejavu-43` or `terminus-bold-24`, and the text changes at once and is remembered in `~/.config/debsway/console-font`; `console-font list` only shows the list), and `~/.config/debsway/login` holds the mode. `sway` still starts the desktop by hand.
+# Log in to tmux: the login loop in ~/.profile reads this file
+# (it must have the "debsway autostart" block: grep shows it)
+grep -n 'debsway autostart' ~/.profile
+mkdir -p ~/.config/debsway
+echo console >~/.config/debsway/login
+# From inside sway, leaving it now starts tmux
+swaymsg exit
+```
+
+To undo:
+
+```
+# Log in to sway again; from inside tmux, detaching starts it
+echo sway >~/.config/debsway/login
+tmux detach-client
+```

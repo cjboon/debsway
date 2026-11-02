@@ -101,8 +101,21 @@ sudo systemctl enable --now debsway-secure-dns-firewall.service
 getent hosts deb.debian.org
 ```
 
-To undo: `sudo systemctl disable --now debsway-secure-dns-firewall.service`,
-delete that unit file, `/etc/debsway/secure-dns.nft`, the NetworkManager and
-dhclient files above and the `nohook` line in `/etc/dhcpcd.conf`, put
-`/etc/resolv.conf.debsway-secure-dns.bak` back as `/etc/resolv.conf`, delete
-Unbound's settings file, then `sudo apt purge unbound dns-root-data`.
+To undo:
+
+```
+# The firewall rule off, and its unit and rule file gone
+sudo systemctl disable --now debsway-secure-dns-firewall.service
+sudo rm /etc/systemd/system/debsway-secure-dns-firewall.service /etc/debsway/secure-dns.nft
+sudo systemctl daemon-reload
+# NetworkManager, dhclient and dhcpcd may write /etc/resolv.conf again
+sudo rm /etc/NetworkManager/conf.d/90-debsway-secure-dns.conf /etc/dhcp/dhclient-enter-hooks.d/debsway-secure-dns
+sudo sed -i '/^nohook resolv.conf$/d' /etc/dhcpcd.conf
+sudo nmcli general reload conf
+# The old /etc/resolv.conf back
+sudo mv /etc/resolv.conf.debsway-secure-dns.bak /etc/resolv.conf
+# Unbound's settings, then Unbound
+sudo rm /etc/unbound/unbound.conf.d/debsway-secure-dns.conf
+sudo apt purge unbound dns-root-data
+sudo apt autoremove --purge
+```
