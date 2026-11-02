@@ -15,6 +15,9 @@
 #   bash install-extras.sh --install F   installs the names in file F (no list)
 #   bash install-extras.sh --remove      a list of what is installed; removes what
 #                                        you check (each extra's --remove), after asking
+# ~/.config/debsway/preselect (one name a line, left by the install stick, e.g.
+# make-install-iso.sh --simplesway) ticks those in the first list shown; it
+# is then deleted, so later lists start empty again.
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
 . "$DEBSWAY_DIR/lib/checklist.sh"
 
@@ -55,6 +58,7 @@ if [ "${1:-}" = --list ]; then
 fi
 
 mode=both file=
+PRESELECT=$HOME/.config/debsway/preselect
 # What the list says, and its buttons (--remove changes them)
 TITLE="Optional extras" OK=Install CANCEL="No extras"
 TEXT="Arrow keys or the wheel move; Space or a click checks a box.\n* = already installed (checking it runs it again, to repair or update).\nInstall puts the checked ones in; No extras finishes without any."
@@ -88,7 +92,11 @@ checklist_items() {
             last=$tier
         fi
         if [ "$installed" = 1 ] && [ "$mode" != remove ]; then summary="* $summary"; else summary="  $summary"; fi
-        ITEMS+=("$name" "$summary" OFF)
+        if [ "$mode" != remove ] && grep -qxF -- "$name" "$PRESELECT" 2>/dev/null; then
+            ITEMS+=("$name" "$summary" ON)
+        else
+            ITEMS+=("$name" "$summary" OFF)
+        fi
     done
 }
 
@@ -131,6 +139,8 @@ else
     else
         pick_with_numbers
     fi
+    # ticked once, by the stick: from now on the list starts empty
+    [ "$mode" = remove ] || rm -f "$PRESELECT"
 fi
 
 if [ "$mode" = choose ]; then

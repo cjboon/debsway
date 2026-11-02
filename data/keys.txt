@@ -45,9 +45,11 @@
     Alt+, / Alt+.          brightness down / up
     Alt+Enter, Alt+v       split beside / below; Alt+h j k l moves; Alt+f fullscreen
 
+@unless ~/.config/sway/config.d/one-workspace.conf
   WORKSPACES
     Super+1 … 0            go to workspace 1 … 10
     Super+Shift+1 … 0      send the window to workspace 1 … 10
+@end
 
   SCREEN AND SOUND
 @if brightness
@@ -119,11 +121,11 @@
 @if brightness
     brightness up 10       bigger brightness steps
 @end
-@if udiskie-umount
-    udiskie-umount -a      unmount all USB drives before unplugging
 @if usb
     usb                    USB sticks: usb mount, usb unmount (then pull it out)
 @end
+@if udiskie-umount
+    udiskie-umount -a      unmount all USB drives before unplugging
 @end
 @if volume
     volume up|down 10      bigger volume steps (volume mute, volume micmute)

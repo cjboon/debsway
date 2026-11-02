@@ -34,6 +34,13 @@ if [ -f /cdrom/debsway-install/autologin.conf ]; then
     cp /cdrom/debsway-install/autologin.conf /target/etc/systemd/system/getty@tty1.service.d/50-debsway-autologin.conf
     chmod 644 /target/etc/systemd/system/getty@tty1.service.d/50-debsway-autologin.conf
 fi
+# Extras ticked in the first install list (make-install-iso.sh --simplesway)
+if [ -f /cdrom/debsway-install/preselect ]; then
+    mkdir -p "/target/home/$user/.config/debsway"
+    cp /cdrom/debsway-install/preselect "/target/home/$user/.config/debsway/preselect"
+    chmod 644 "/target/home/$user/.config/debsway/preselect"
+    in-target chown -R "$user:$user" "/home/$user/.config"
+fi
 # The user's own extra scripts, if the ISO has any
 if [ -d /cdrom/debsway-install/scripts ]; then
     rm -rf "/target/home/$user/scripts"

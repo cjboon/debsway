@@ -33,6 +33,7 @@ mod() {
 text() {
     awk -v mod="$(mod)" '
         /^@if / { skip = (system("command -v " $2 " >/dev/null 2>&1") != 0); next }
+        /^@unless / { f = $2; sub(/^~/, ENVIRON["HOME"], f); skip = (system("test -e \"" f "\"") == 0); next }
         /^@end/ { skip = 0; next }
         skip { next }
         mod == "Alt" {

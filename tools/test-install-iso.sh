@@ -128,6 +128,8 @@ check "...unless --no-erase" grep -qx 'd-i partman-crypto/erase_disks boolean fa
 check "--noencrypt: plain partitions, no encryption" grep -qx 'd-i partman-auto/method string regular' <(fill_preseed "$HERE/data/install-iso-preseed.cfg" me en_US.UTF-8 us true UTC regular)
 check "...asked for, after a warning, and not the default" \
     bash -c 'grep -q "^        --noencrypt) encrypt=false; shift ;;$" "$1" && grep -q "ask \"Build an image that installs without disk encryption?\" n" "$1"' _ "$HERE/prep/make-install-iso.sh"
+check "--simplesway: the image carries the extras to tick" \
+    grep -q 'if \$simplesway; then echo one-workspace >"\$stage/debsway-install/preselect"; fi' "$HERE/prep/make-install-iso.sh"
 check "--autologin: the image carries the autologin rule for the user" \
     grep -q 'if \$autologin; then autologin_conf "\$user" >"\$stage/debsway-install/autologin.conf"; fi' "$HERE/prep/make-install-iso.sh"
 check "the autologin rule logs that user in on tty1, with login -f" \
@@ -324,6 +326,13 @@ chmod -R a-w "$T/cdrom"
 PATH="$T/fake:$PATH" sh "$L" me
 check "with --autologin, the rule goes into the new system's tty1" \
     cmp "$T/cdrom/debsway-install/autologin.conf" "$T/target/etc/systemd/system/getty@tty1.service.d/50-debsway-autologin.conf"
+check "without --simplesway, nothing is ticked for the first install list" test ! -e "$T/target/home/me/.config/debsway/preselect"
+chmod -R u+w "$T/cdrom"
+echo one-workspace >"$T/cdrom/debsway-install/preselect"
+chmod -R a-w "$T/cdrom"
+PATH="$T/fake:$PATH" sh "$L" me
+check "with --simplesway, the first install list gets one-workspace ticked, owned by the user" \
+    bash -c 'grep -qx one-workspace "$1/.config/debsway/preselect" && grep -qx "in-target chown -R me:me /home/me/.config" "$2"' _ "$T/target/home/me" "$T/intarget"
 chmod -R u+w "$T/cdrom"
 
 # ---- the first login: asks once, on the console ----

@@ -35,7 +35,7 @@
 #
 #   bash prep/make-install-iso.sh [--user NAME] [--keymap us] [--locale en_US.UTF-8]
 #                                 [--timezone Area/City] [--no-erase] [--noencrypt]
-#                                 [--autologin] [--scripts FOLDER] [--out FILE]
+#                                 [--autologin] [--simplesway] [--scripts FOLDER] [--out FILE]
 #   --user     the user to make (default: yours, $(id -un))
 #   --keymap   the keyboard layout (default: us); see the README on passphrases
 #   --timezone the clock's time zone, like Europe/Berlin (default: this
@@ -44,6 +44,8 @@
 #              holding the laptop (or its disk) can read everything on it
 #   --autologin  tty1 logs you in without your password, so it starts straight
 #              into sway (extras/autologin.sh does the same on an installed system)
+#   --simplesway  one workspace: the first login's install list starts with
+#              one-workspace ticked (no workspace keys or buttons; untick it there)
 #   --scripts  a folder of your own, copied to ~/scripts in the new system
 # Then it offers to write the image to a USB stick (as tails-usb does: only USB
 # sticks, you type its name, and it reads it back to check).
@@ -59,7 +61,7 @@
 . "$DEBSWAY_DIR/lib/tails.sh"
 not_root
 
-user=$(id -un) keymap=us locale=en_US.UTF-8 timezone=$(this_timezone) erase=true encrypt=true autologin=false scripts='' out='' choice=''
+user=$(id -un) keymap=us locale=en_US.UTF-8 timezone=$(this_timezone) erase=true encrypt=true autologin=false simplesway=false scripts='' out='' choice=''
 while [ $# -gt 0 ]; do
     case $1 in
         --user) user=${2:-}; shift 2 ;;
@@ -69,11 +71,12 @@ while [ $# -gt 0 ]; do
         --no-erase) erase=false; shift ;;
         --noencrypt) encrypt=false; shift ;;
         --autologin) autologin=true; shift ;;
+        --simplesway) simplesway=true; shift ;;
         # (the live image is the only one now; kept so old commands still work)
         --live) shift ;;
         --scripts) scripts=${2:-}; shift 2 ;;
         --out) out=${2:-}; shift 2 ;;
-        *) die "Usage: bash prep/make-install-iso.sh [--user NAME] [--keymap us] [--locale en_US.UTF-8] [--timezone Area/City] [--no-erase] [--noencrypt] [--autologin] [--scripts FOLDER] [--out FILE]" ;;
+        *) die "Usage: bash prep/make-install-iso.sh [--user NAME] [--keymap us] [--locale en_US.UTF-8] [--timezone Area/City] [--no-erase] [--noencrypt] [--autologin] [--simplesway] [--scripts FOLDER] [--out FILE]" ;;
     esac
 done
 user_ok "$user" || die "\"$user\" can't be a user name (lowercase letters, digits, _ and -, starting with a letter; not root)."
@@ -160,6 +163,8 @@ fill_preseed "$DEBSWAY_DIR/data/install-iso-preseed.cfg" "$user" "$locale" "$key
     "$($encrypt && echo crypto || echo regular)" >"$stage/debsway-install/preseed.cfg"
 # late.sh installs it if it is there
 if $autologin; then autologin_conf "$user" >"$stage/debsway-install/autologin.conf"; fi
+# the first install list starts with these ticked (late.sh puts it in ~/.config/debsway)
+if $simplesway; then echo one-workspace >"$stage/debsway-install/preselect"; fi
 cp "$DEBSWAY_DIR/data/install-iso-disk.sh" "$stage/debsway-install/disk.sh"
 cp "$DEBSWAY_DIR/data/install-iso-net.sh" "$stage/debsway-install/net.sh"
 cp "$DEBSWAY_DIR/data/install-iso-late.sh" "$stage/debsway-install/late.sh"
@@ -172,7 +177,7 @@ if [ -d "$DEBSWAY_DIR/offline" ]; then
     mkdir -p "$stage/debsway/offline"
     (cd "$DEBSWAY_DIR/offline" && find . -mindepth 1 -maxdepth 1 ! -name install-iso ! -name tails -exec cp -R {} "$stage/debsway/offline/" \;)
 fi
-note "debsway $(git -C "$DEBSWAY_DIR" describe --always --dirty 2>/dev/null), user $user, keyboard $keymap, $locale, time zone $timezone, $($encrypt || echo "NOT encrypted, ")$($encrypt && [ "$erase" = true ] && echo "the disk filled with random data first" || echo "no random fill")$($autologin && echo ", logged in on tty1 without a password")"
+note "debsway $(git -C "$DEBSWAY_DIR" describe --always --dirty 2>/dev/null), user $user, keyboard $keymap, $locale, time zone $timezone, $($encrypt || echo "NOT encrypted, ")$($encrypt && [ "$erase" = true ] && echo "the disk filled with random data first" || echo "no random fill")$($autologin && echo ", logged in on tty1 without a password")$($simplesway && echo ", one workspace")"
 [ -z "$(git -C "$DEBSWAY_DIR" status --porcelain 2>/dev/null)" ] ||
     warn "debsway has changes that aren't committed; only the last commit goes on the image."
 

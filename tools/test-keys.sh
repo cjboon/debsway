@@ -39,13 +39,20 @@ check "...but screenshots still do not" not grep -q 'Print  ' <<<"$out"
 have screenshot
 check "with screenshot installed the Print key appears" grep -q 'Print  ' <(keys --text)
 
+# "@unless FILE": hidden once FILE is there (the one-workspace extra's snippet)
+check "the workspace keys are on the sheet" grep -q 'go to workspace 1' <(keys --text)
+mkdir -p "$T/home/.config/sway/config.d"; : >"$T/home/.config/sway/config.d/one-workspace.conf"
+check "...but not with one workspace" not grep -q 'go to workspace 1' <(keys --text)
+check "...and the rest of the sheet still is" grep -q 'Super+Escape' <(keys --text)
+rm "$T/home/.config/sway/config.d/one-workspace.conf"
+
 # every marker in the real sheet is closed and names a command
-check "every @if has an @end" test "$(grep -c '^@if ' "$HERE/data/keys.txt")" = "$(grep -c '^@end' "$HERE/data/keys.txt")"
+check "every @if and @unless has an @end" test "$(grep -cE '^@(if|unless) ' "$HERE/data/keys.txt")" = "$(grep -c '^@end' "$HERE/data/keys.txt")"
 check "no @if is nested or left open" python3 -I -c '
 import sys
 depth = 0
 for line in open(sys.argv[1]):
-    if line.startswith("@if "):
+    if line.startswith(("@if ", "@unless ")):
         assert depth == 0 and len(line.split()) == 2, line
         depth = 1
     elif line.startswith("@end"):
