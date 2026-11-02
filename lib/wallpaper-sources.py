@@ -343,12 +343,14 @@ def main():
             credits.append("%s: %s. Credit: %s" % (name, clean(title), credit))
             print(name, flush=True)
             have += 1
+            # on the screen as it goes: each picture takes a few lookups
+            print("    %d/%d %s" % (have, want, clean(title)[:70]), file=sys.stderr, flush=True)
     except (OSError, ValueError) as e:
         print("%s: %s" % (source, e), file=sys.stderr)
     if credits:
         with open(os.path.join(dest, "CREDITS.txt"), "a") as f:
             f.write("\n".join(credits) + "\n")
-    print("%s: %d pictures" % (source, have), file=sys.stderr)
+    print("    %s: %d pictures" % (source, have), file=sys.stderr)
     if have == 0:
         sys.exit(1)
 

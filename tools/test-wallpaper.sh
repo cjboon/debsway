@@ -271,6 +271,21 @@ n.WILD_GROUPS = ["birds"]
 got = list(n.wild())
 assert [g[0] for g in got] == ["Red_fox__Vulpes_vulpes"], got
 assert got[0][1] == "https://upload.wikimedia.org/a/Fox.jpg" and got[0][3].startswith("Jo (CC BY-SA 4.0), Wikimedia Commons."), got
+# a whole run, with a pretend source: each picture is said on the screen as
+# it arrives (a run takes minutes), its name alone goes to the list
+import contextlib, io, os, tempfile
+jpeg = b"\xff\xd8" + app0 + sof
+n.SOURCES["wild"] = lambda: iter([("Fox", "https://upload.wikimedia.org/f.jpg", "Red fox", "Jo"),
+                                  ("Owl", "https://upload.wikimedia.org/o.jpg", "Owl", "Jo")])
+n.fetch = lambda url, limit: jpeg
+d = tempfile.mkdtemp()
+sys.argv = ["x", d, "wild", "2"]
+out, err = io.StringIO(), io.StringIO()
+with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+    n.main()
+assert out.getvalue().split() == ["wild_Fox.jpg", "wild_Owl.jpg"], out.getvalue()
+assert "1/2 Red fox" in err.getvalue() and "2/2 Owl" in err.getvalue(), err.getvalue()
+assert sorted(os.listdir(d)) == ["CREDITS.txt", "wild_Fox.jpg", "wild_Owl.jpg"], os.listdir(d)
 PY
 check "the sources: only https, only their own hosts, also after a redirect; sizes, credits and feeds read right" \
     python3 -I -B "$T/rules.py" "$HERE/lib/wallpaper-sources.py"
