@@ -24,7 +24,7 @@ KEYS_FILE=$HOME/.local/share/debsway/keys.txt
 gray_options() {
     local i=0 c
     printf '%s\n' -o colors.foreground=d0d0d0 -o colors.background=000000 \
-        -o colors.selection-foreground=000000 -o colors.selection-background=d0d0d0 -o colors.alpha=1.0
+        -o colors.selection-foreground=000000 -o colors.selection-background=d0d0d0 -o colors.alpha=0.85
     for c in 000000 9a9a9a b8b8b8 c8c8c8 8a8a8a a8a8a8 bcbcbc d0d0d0; do
         printf '%s\n' -o "colors.regular$i=$c"
         i=$((i + 1))

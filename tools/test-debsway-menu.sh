@@ -517,8 +517,8 @@ check "...but not a debsway menu that is running Update" bash -c '! grep -q "deb
 rm -f "$T/oc/xdg/debsway-menu-busy"
 # shellcheck disable=SC2016  # expanded by the inner shell or Python, on purpose
 check "the time, the Wi-Fi name and debsway in the bar each open or close their window" bash -c '
-    grep -qF "open_or_close debsway-timer foot --app-id=debsway-timer" "$1" &&
-    grep -qF "open_or_close debsway-nmtui foot --app-id=debsway-nmtui" "$1" &&
+    grep -qF "open_or_close debsway-timer foot -o colors.alpha=0.85 --app-id=debsway-timer" "$1" &&
+    grep -qF "open_or_close debsway-nmtui foot -o colors.alpha=0.85 --app-id=debsway-nmtui" "$1" &&
     grep -qF "open_or_close debsway-run \"\$HOME/.local/bin/debsway-menu\"" "$1"' _ "$HERE/bin/sway-status"
 # shellcheck disable=SC2016  # expanded by the inner shell or Python, on purpose
 check "the menu marks itself busy before Update or Install apps, and unmarks after" \

@@ -164,16 +164,16 @@ while read -r event <&3; do
             if [ -x "$HOME/.local/bin/debsway-menu" ]; then
                 open_or_close debsway-run "$HOME/.local/bin/debsway-menu"
             else
-                open_or_close debsway-keys foot --app-id=debsway-keys "$HOME/.local/bin/keys"
+                open_or_close debsway-keys foot -o colors.alpha=0.85 --app-id=debsway-keys "$HOME/.local/bin/keys"
             fi ;;
         *'"name":"wifi"'*'"button":1,'*)
             # nmtui measures its window once at the start, so wait for sway to size it
             # (the debsway wrapper if there is one: nmtui in the debsway colors)
             # shellcheck disable=SC2016  # expanded by the inner sh, on purpose
             if [ -x "$HOME/.local/bin/nmtui" ]; then
-                open_or_close debsway-nmtui foot --app-id=debsway-nmtui sh -c 'sleep 0.5; exec "$HOME/.local/bin/nmtui"'
+                open_or_close debsway-nmtui foot -o colors.alpha=0.85 --app-id=debsway-nmtui sh -c 'sleep 0.5; exec "$HOME/.local/bin/nmtui"'
             elif command -v nmtui >/dev/null; then
-                open_or_close debsway-nmtui foot --app-id=debsway-nmtui sh -c 'sleep 0.5; exec nmtui'
+                open_or_close debsway-nmtui foot -o colors.alpha=0.85 --app-id=debsway-nmtui sh -c 'sleep 0.5; exec nmtui'
             fi ;;
         # the scroll wheel is button 4 (up) and 5 (down); the volume and brightness
         # commands also tell this script to redraw
@@ -183,7 +183,7 @@ while read -r event <&3; do
         *'"name":"bright"'*'"button":4,'*) "$HOME/.local/bin/brightness" up ;;
         *'"name":"bright"'*'"button":5,'*) "$HOME/.local/bin/brightness" down ;;
         *'"name":"date"'*'"button":1,'* | *'"name":"timer"'*'"button":1,'*)
-            open_or_close debsway-timer foot --app-id=debsway-timer "$HOME/.local/bin/timer" ;;
+            open_or_close debsway-timer foot -o colors.alpha=0.85 --app-id=debsway-timer "$HOME/.local/bin/timer" ;;
         *'"name":"bat"'*'"button":1,'*)
             command -v notify-send >/dev/null &&
                 notify-send -a debsway -t 8000 "Battery $(battery | sed 's/^bat //; s/+$//')" "$(battery_time)" ;;

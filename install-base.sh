@@ -79,8 +79,8 @@ install_bin timer
 # Shift+slash is ? on a US keyboard; "question" follows the layout on others
 put_snippet help <<'EOF'
 # Key cheat sheet on Super+? (debsway install-base.sh)
-bindsym $mod+Shift+slash exec foot --app-id=debsway-keys ~/.local/bin/keys
-bindsym $mod+question exec foot --app-id=debsway-keys ~/.local/bin/keys
+bindsym $mod+Shift+slash exec foot -o colors.alpha=0.85 --app-id=debsway-keys ~/.local/bin/keys
+bindsym $mod+question exec foot -o colors.alpha=0.85 --app-id=debsway-keys ~/.local/bin/keys
 exec ~/.local/bin/debsway-welcome
 EOF
 note "Super+? shows it (also: type keys, or open ~/KEYS.txt). It opens by itself on your first login."
@@ -88,7 +88,7 @@ note "Super+? shows it (also: type keys, or open ~/KEYS.txt). It opens by itself
 # Super+t, or a click on the time in the bar (bin/sway-status), opens the timer menu
 put_snippet timer <<'EOF'
 # Timers and alarms on Super+t (debsway install-base.sh)
-bindsym $mod+t exec foot --app-id=debsway-timer ~/.local/bin/timer
+bindsym $mod+t exec foot -o colors.alpha=0.85 --app-id=debsway-timer ~/.local/bin/timer
 EOF
 # All the pop-up windows (key sheet, Wi-Fi, timer, the debsway menu) look and behave alike:
 # floating, centered, over whatever you were doing. focus_follows_mouse is off because

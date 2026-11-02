@@ -5,4 +5,4 @@
 marker=${XDG_STATE_HOME:-$HOME/.local/state}/debsway/welcome-seen
 [ -e "$marker" ] && exit 0
 mkdir -p "${marker%/*}" && touch "$marker"
-exec foot --app-id=debsway-keys "$HOME/.local/bin/keys" --welcome
+exec foot -o colors.alpha=0.85 --app-id=debsway-keys "$HOME/.local/bin/keys" --welcome

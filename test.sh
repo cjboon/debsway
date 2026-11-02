@@ -115,6 +115,12 @@ done
 for f in bin/powermenu bin/debsway-idle bin/lid; do
     grep -qF "$LOCK_CMD" "$f" || bad "$f's lock command differs from LOCK_CMD in lib/sway.sh"
 done
+# The pop-up windows (key sheet, Wi-Fi, timer, the debsway menu) are all as
+# see-through as the bar: every foot that opens one has the same alpha
+for line in $(grep -rhoE 'foot [^"]*--app-id=debsway-(keys|nmtui|timer)' bin install-base.sh | tr ' ' '#'); do
+    [[ $line == *colors.alpha=0.85* ]] || bad "a pop-up window isn't see-through like the others: ${line//#/ }"
+done
+grep -q 'colors.alpha=0.85' bin/debsway-menu || bad "the debsway menu's window isn't see-through like the others"
 # Every sysctl key in the hardening file exists on this kernel
 while read -r key _; do
     [ -e "/proc/sys/${key//.//}" ] || meh "sysctl $key doesn't exist on this kernel (data/sysctl-hardening.conf)"
