@@ -134,7 +134,8 @@ need_tools() {
 
 # apt_purge PACKAGE...: removes what the running script installed with
 # apt_install, except what other debsway scripts still need. PACKAGEs are
-# used only when this script installed its packages before markers existed.
+# used only when this script has no marker: it installed its packages before
+# markers existed, or an earlier --remove purged the marker and was cut off.
 apt_purge() {
     local marker p other pkgs=() left=()
     marker=$(apt_marker)
@@ -164,6 +165,10 @@ apt_purge() {
     for p in "$@"; do
         is_installed "$p" || continue
         other=$(apt_needed_by_marker "$p")
+        # apt purges whatever depends on a package along with it (purging
+        # openssl takes ca-certificates, and with it every https download):
+        # keep one that an installed package outside this list depends on
+        [ -n "$other" ] || other=$(apt_installed_dependent "$p" "$@")
         if [ -n "$other" ]; then
             note "Keeping $p: $other needs it."
         else
@@ -176,6 +181,20 @@ apt_purge() {
     elif [ $# -eq 0 ]; then
         note "No packages were recorded for this script, so none are removed."
     fi
+}
+
+# apt_installed_dependent PACKAGE [IGNORE...]: the first installed package,
+# other than the IGNOREd ones, that depends on PACKAGE
+apt_installed_dependent() {
+    local p=$1 d i
+    shift
+    while read -r d; do
+        d=${d#|}
+        for i in "$@"; do [ "$d" != "$i" ] || continue 2; done
+        echo "$d"
+        return 0
+    done < <(apt-cache rdepends --installed --no-recommends --no-suggests --no-conflicts \
+        --no-breaks --no-replaces --no-enhances "$p" 2>/dev/null | tail -n +3)
 }
 
 # apt_needed_by_marker PACKAGE: the first installed marker that depends on it

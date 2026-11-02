@@ -167,6 +167,16 @@ export DEBSWAY_OWNER=delta
 apt_purge oldpkg sharedpkg >/dev/null
 check "an old package is purged by name" bash -c "! [ -f '$ST/pkg/oldpkg' ]"
 check "unless another script's marker needs it" installed sharedpkg
+# a --remove cut off after its marker was purged: the next run has only the
+# names, and openssl among them must not take ca-certificates with it
+fake_install openssl manual ""
+fake_install ca-certificates manual "openssl"
+fake_install tor manual ""
+fake_install torsocks manual "tor"
+apt_purge tor torsocks openssl >/dev/null
+check "no marker: a named package something else installed depends on stays (openssl for ca-certificates)" installed openssl
+check "...and what depends on it too" installed ca-certificates
+check "...one only the other named packages depend on goes (tor, for torsocks)" bash -c "! [ -f '$ST/pkg/tor' ] && ! [ -f '$ST/pkg/torsocks' ]"
 fake_install untouched manual ""
 apt_purge >/dev/null
 check "with nothing recorded and no names, nothing is removed" installed untouched
