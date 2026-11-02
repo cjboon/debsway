@@ -19,7 +19,8 @@ the radio, and, if sound is set up (`extras/pipewire-audio.sh`), the part of
 PipeWire that plays sound over Bluetooth. The adapter starts switched off at
 every boot (`AutoEnable=false` in `/etc/bluetooth/main.conf`), so no radio
 listens while you aren't using it; switch it on from the debsway menu, and off
-again when you are done.
+again when you are done. Without this extra the menu has no Bluetooth switch,
+and removing it leaves the radio blocked.
 
 ## LIMITS
 
@@ -51,6 +52,8 @@ sudo systemctl enable --now bluetooth.service
 To undo:
 
 ```
+# The radio blocked, as nothing will switch it once bluez is gone
+rfkill block bluetooth
 # Back to Debian's default (the adapter on at boot)
 sudo sed -i 's/^AutoEnable=false$/#AutoEnable=true/' /etc/bluetooth/main.conf
 # bluez and PipeWire's Bluetooth part (marked "automatic" instead of purged:

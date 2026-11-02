@@ -24,7 +24,9 @@ usage() { echo "usage: radios list | radios wifi|bluetooth|mic|camera [status|on
 exists() {
     case $1 in
         wifi) command -v rfkill >/dev/null && { compgen -G "$SYS/class/net/*/wireless" || compgen -G "$SYS/class/ieee80211/*"; } >/dev/null ;;
-        bluetooth) command -v rfkill >/dev/null && compgen -G "$SYS/class/bluetooth/*" >/dev/null ;;
+        # Bluetooth only with bluez (extras/bluetooth.sh): without it the switch
+        # would only free the radio, and say "on" with nothing working
+        bluetooth) command -v rfkill >/dev/null && command -v bluetoothctl >/dev/null && compgen -G "$SYS/class/bluetooth/*" >/dev/null ;;
         mic) command -v wpctl >/dev/null && wpctl get-volume "$SOURCE" >/dev/null 2>&1 ;;
         camera) [ -x "$CAMERA" ] && [ "$("$CAMERA" status 2>/dev/null)" != none ] ;;
         *) return 1 ;;
@@ -87,6 +89,10 @@ case $cmd in
         if [ "${3:-}" = --wait ] || [ "$action" = --wait ] || [ "${4:-}" = --wait ]; then
             for _ in $(seq 20); do exists "$cmd" && break; sleep 1; done
             [ "$action" != --wait ] || action=status
+        fi
+        if [ "$cmd" = bluetooth ] && ! command -v bluetoothctl >/dev/null && compgen -G "$SYS/class/bluetooth/*" >/dev/null; then
+            echo "radios: Bluetooth isn't installed. Install it: bash ~/debsway/extras/bluetooth.sh" >&2
+            exit 1
         fi
         exists "$cmd" || { echo "radios: no $cmd on this computer." >&2; exit 1; }
         case $action in

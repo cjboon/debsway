@@ -27,6 +27,9 @@ if [ "${1:-}" = --remove ]; then
         sudo install -m 0644 "$tmp" "$CONF"
         rm -f "$tmp"
     fi
+    # With bluez gone nothing switches the radio any more: leave it blocked
+    # (rfkill keeps that across boots)
+    if command -v rfkill >/dev/null; then rfkill block bluetooth 2>/dev/null || true; fi
     apt_purge bluez libspa-0.2-bluetooth
     exit
 fi
