@@ -1,0 +1,5 @@
+#!/bin/sh
+# mousepad: written by debsway extras/mousepad.sh
+# Mousepad with dark menus and toolbar, to go with its black page
+# (GTK's own Adwaita theme, dark variant; only for Mousepad).
+exec env GTK_THEME=Adwaita:dark /usr/bin/mousepad "$@"

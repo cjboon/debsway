@@ -1,6 +1,6 @@
 # Mousepad, a plain text editor (`extras/mousepad.sh`)
 
-You get Mousepad, a simple graphical editor for plain text. It opens text files by default, and the first time it is installed it also gets a set look: dark colours, large type, line numbers.
+You get Mousepad, a simple graphical editor for plain text. It opens text files by default, and it gets a set look: white text on black in the terminal's colours, with dark menus, the terminal's font at 14 pt, line numbers, matching braces highlighted, a line at column 80 and tabs of 4 spaces.
 
 ## The problem it solves
 
@@ -12,17 +12,20 @@ Editing a config file or a note needs an editor. A terminal editor takes time to
 
 ## How it works, step by step
 
-1. `apt_install mousepad` installs the editor under the marker package `debsway-mousepad`.
+1. `apt_install mousepad libglib2.0-bin` installs the editor and `gsettings` (which sets its preferences) under the marker package `debsway-mousepad`. Before, `gsettings` wasn't installed with it, so on a debsway system the look was skipped with only a warning.
 2. It makes Mousepad the default for `text/plain`, `text/markdown`, `text/x-log` and `application/x-shellscript` (shell scripts).
-3. If the file `~/.local/state/debsway/mousepad-settings` does not exist, it applies the settings in `data/mousepad.settings` with `gsettings set`: solarized-dark colours, `Monospace 16` font, tabs 4 wide made of spaces, matching braces, line numbers and a right margin line. If it succeeds, it writes the date into that file.
-4. If the file exists, it leaves your settings alone. If Mousepad's settings cannot be found, it skips the look with a warning. If only some failed, it warns and retries next run.
+3. It installs `~/.local/bin/mousepad` (`bin/mousepad`), which starts Mousepad with GTK's dark theme (`GTK_THEME=Adwaita:dark`), so the menus and toolbar are dark too. Only Mousepad is affected.
+4. It installs debsway's colour scheme, `data/mousepad-dark.xml`, as `~/.local/share/gtksourceview-4/styles/debsway-dark.xml`: black page, light grey text, the terminal's colours (`data/foot.ini`) for code.
+5. It applies `data/mousepad.settings` with `gsettings set`: that scheme, `DejaVu Sans Mono 14`, tabs 4 wide made of spaces, automatic indenting, matching braces, line numbers and a line at column 80. If it succeeds, it writes a fingerprint (SHA-256) of the settings and the scheme into `~/.local/state/debsway/mousepad-settings`.
+6. Run again, it sets them only if debsway's settings or scheme changed since, so your own changes in Mousepad stay. If Mousepad's settings cannot be found, it warns, sets nothing and tries again on the next run.
 
 ## What it changes on your computer
 
-- Package `mousepad`.
+- Packages `mousepad` and `libglib2.0-bin`.
+- `~/.local/bin/mousepad` and `~/.local/share/gtksourceview-4/styles/debsway-dark.xml`.
 - `~/.config/mimeapps.list`: the four types above.
 - Mousepad's gsettings under `org.xfce.mousepad.preferences.view`.
-- `~/.local/state/debsway/mousepad-settings`: a marker recording the date the look was applied.
+- `~/.local/state/debsway/mousepad-settings`: a marker recording which settings were applied.
 
 ## Using it
 
@@ -31,7 +34,7 @@ Editing a config file or a note needs an editor. A terminal editor takes time to
 
 ## What it protects against
 
-Nothing. It is a convenience. The one detail: re-running the script does not undo changes you made inside Mousepad.
+Nothing. It is a convenience. The one detail: re-running the script does not undo changes you made inside Mousepad, unless debsway's own settings changed since.
 
 ## What it doesn't protect against
 
@@ -40,4 +43,4 @@ Nothing. It is a convenience. The one detail: re-running the script does not und
 
 ## Removing it
 
-`bash extras/mousepad.sh --remove` removes the `mousepad` package, the default-application lines pointing at it, and the marker file in `~/.local/state/debsway`. It leaves your Mousepad settings as they are. `gsettings reset -r org.xfce.mousepad.preferences` clears them. Your files are untouched.
+`bash extras/mousepad.sh --remove` removes the `mousepad` package (and `libglib2.0-bin` if nothing else needs it), the default-application lines pointing at it, the `mousepad` command and colour scheme debsway wrote, and the marker file in `~/.local/state/debsway`. It leaves your Mousepad settings as they are. `gsettings reset -r org.xfce.mousepad.preferences` clears them. Your files are untouched.
