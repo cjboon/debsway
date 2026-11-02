@@ -39,9 +39,9 @@ desktop/   Put a JPEG or PNG here and it becomes your wallpaper at the next
 Wallpapers/ (one folder up) is to choose from: Super+] and Super+[ step
 through it on the desktop itself, and Super+Shift+w (or "wallpaper pick")
 lists it by name. The one you stop on is copied here as chosen.jpg, so it
-stays. bash ~/debsway/extras/wallpapers.sh fills it with space, Earth and
-wild animal pictures (NASA, Hubble, Webb, Earth Observatory, Wikimedia
-Commons, Budgie); pictures of your own can go there too.
+stays. bash ~/debsway/extras/wallpapers.sh fills it with space and Earth
+pictures (NASA, Webb, Earth Observatory) and Budgie's photos, or just sets
+it up for pictures of your own.
 EOF
 fi
 # exec_always: at every start and every reload, so a new picture shows on

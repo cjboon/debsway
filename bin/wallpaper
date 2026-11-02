@@ -65,14 +65,14 @@ collection() {
 }
 
 # label FILE: what to call it: its title from CREDITS.txt, after its source
-# ("Hubble: A neighbouring vista of stellar birth"), else its tidied file name
+# ("Webb: Stars brewing in a nebulous cauldron"), else its tidied file name
 label() {
     local base=${1##*/} src="" title
     title=$(awk -v b="$base: " 'index($0, b) == 1 { print substr($0, length(b) + 1); exit }' "$COLL/CREDITS.txt" 2>/dev/null)
     title=${title%%. Credit:*}
     case $base in
-        nasa_*) src=NASA ;; hubble_*) src=Hubble ;; webb_*) src=Webb ;;
-        earth_*) src="Earth Observatory" ;; wild_*) src=Wild ;; budgie_*) src=Budgie ;;
+        nasa_*) src=NASA ;; webb_*) src=Webb ;;
+        earth_*) src="Earth Observatory" ;; budgie_*) src=Budgie ;;
     esac
     if [ -z "$title" ]; then
         title=${base%.*}

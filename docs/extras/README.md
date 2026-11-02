@@ -74,7 +74,7 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 - [SimpleX Chat, a private messenger](simplex-chat.md)
 - [Tuta Mail, encrypted email](tutamail.md)
 - [Metadata Cleaner, to strip hidden data from files](metadata-cleaner.md)
-- [Wallpapers to pick from: space, Earth and wild animals](wallpapers.md)
+- [Wallpapers to pick from: NASA, Webb, Earth Observatory, Budgie, or your own](wallpapers.md)
 
 ## Devices and hardware
 

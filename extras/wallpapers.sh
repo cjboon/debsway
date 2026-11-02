@@ -6,15 +6,15 @@
 #             (apt-get download: checked against Debian's signed lists, through
 #             Tor if apt goes through Tor) and its pictures unpacked: nothing
 #             installed, no package script, no sudo.
-#   nasa_*    NASA's image library            hubble_*  ESA/Hubble
-#   webb_*    ESA/Webb                        earth_*   NASA Earth Observatory
-#   wild_*    wild animals: Wikimedia Commons' featured photos, free licences
+#   nasa_*    NASA's image library            webb_*    ESA/Webb
+#   earth_*   NASA Earth Observatory
 #             (lib/wallpaper-sources.py: https only, to each source's own
 #             hosts; at least 1920x1080, landscape; credits in CREDITS.txt)
 # Your own pictures can go there too: --remove takes out only what it downloaded.
-# A list asks which sources. Run it again to top each one up.
+# A list asks which sources, or none ("I'll find my own": the folder and its
+# README are still set up). Run it again to top each one up.
 # Usage: bash wallpapers.sh [--remove | --manual]
-# summary: Wallpapers: space, Earth and wild animals
+# summary: Wallpapers to pick from: NASA, Webb, Budgie
 # security: some
 # status: file:~/Pictures/Wallpapers/.debsway-wallpapers
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
@@ -29,10 +29,8 @@ LIST="$DEST/.debsway-wallpapers"
 SOURCES=(
     "budgie|Budgie's photos, from Debian's budgie-backgrounds (11 MB)|"
     "nasa|NASA's image library: space and Earth (about 60 MB)|24"
-    "hubble|ESA/Hubble's pictures of the week (about 15 MB)|12"
     "webb|ESA/Webb's pictures of the month (about 15 MB)|12"
     "earth|NASA Earth Observatory's images of the day (up to 200 MB)|10"
-    "wild|Wild animals: Wikimedia Commons' featured photos (about 120 MB)|32"
 )
 # pictures in Budgie's package smaller than this are icons, not wallpapers
 MIN_BYTES=100000
@@ -66,12 +64,9 @@ desktop itself, and "wallpaper pick" lists them by name. (Or copy one into
 
 Each picture is named after where it came from:
   nasa_     NASA's image library. NASA's own pictures are public domain.
-  hubble_   ESA/Hubble.  webb_  ESA/Webb. Free to use (CC BY 4.0): to share
-            one, credit it as CREDITS.txt says.
+  webb_     ESA/Webb. Free to use (CC BY 4.0): to share one, credit it as
+            CREDITS.txt says.
   earth_    NASA Earth Observatory. Public domain.
-  wild_     Wild animals: Wikimedia Commons' featured photos, chosen by its
-            community. Free licences (mostly CC BY-SA): to share one, credit
-            the photographer CREDITS.txt names.
   budgie_   Budgie's photos, from Debian. Free licences: budgie_LICENCE.txt.
 CREDITS.txt names each one's title, credit and page.
 
@@ -96,9 +91,12 @@ if [ -t 0 ] && [ -t 1 ]; then
         IFS='|' read -r name what _ <<<"$s"
         ITEMS+=("$name" "$what" ON)
     done
+    # ticked, nothing is downloaded, whatever else is ticked
+    ITEMS+=(none "No wallpapers downloaded, I'll find my own" OFF)
     CL_TITLE="Wallpapers" CL_OK=Download CL_CANCEL=Cancel
     CL_TEXT="Which sources? The pictures all go in ~/Pictures/Wallpapers, named after their source.\nYour own pictures can go there too: nothing of yours is changed or removed."
     checklist || { note "Nothing downloaded."; exit 0; }
+    if printf '%s\n' "${chosen[@]}" | grep -qx none; then chosen=(); fi
 else
     for s in "${SOURCES[@]}"; do chosen+=("${s%%|*}"); done
 fi
@@ -106,7 +104,11 @@ fi
 mkdir -p "$DEST"
 touch "$LIST"
 readme
-[ ${#chosen[@]} -gt 0 ] || { note "Nothing chosen, nothing downloaded."; exit 0; }
+if [ ${#chosen[@]} -eq 0 ]; then
+    note "Nothing downloaded. Put pictures (JPEG or PNG) in $DEST, then"
+    note "Super+] and Super+[ step through them, and Super+Shift+w lists them."
+    exit 0
+fi
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
