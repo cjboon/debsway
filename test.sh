@@ -372,6 +372,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "Your wallpaper (bin/wallpaper) and Debian's collections (extras/wallpapers.sh)"
+if out=$(bash tools/test-wallpaper.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") wallpaper checks"
+else
+    bad "wallpaper checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "status.sh's screen lock line, with and without swaylock"
 if out=$(bash tools/test-status.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") status checks"

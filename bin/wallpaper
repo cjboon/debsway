@@ -1,0 +1,76 @@
+#!/bin/bash
+# wallpaper: written by debsway parts/wallpaper.sh
+# Your own picture on the desktop: the newest JPEG or PNG in
+# ~/Pictures/debsway/desktop becomes the wallpaper; with none there, nothing
+# changes (your sway config's "output * bg" line, or sway's plain background).
+# sway runs it at every start and reload (parts/wallpaper.sh).
+#   wallpaper           put the picture up (or nothing, if there is none)
+#   wallpaper status    which picture is used, and which files aren't, and why
+set -uo pipefail
+
+DIR=${DEBSWAY_WALLPAPER_DIR:-$HOME/Pictures/debsway/desktop}
+CACHE=${XDG_CACHE_HOME:-$HOME/.cache}/debsway
+MAX_BYTES=$((50 * 1024 * 1024))
+
+# why_not FILE: empty if FILE can be the wallpaper, else the reason
+why_not() {
+    local f=$1 magic
+    case ${f,,} in
+        *.jpg | *.jpeg | *.png) ;;
+        *) echo "not a .jpg, .jpeg or .png"; return ;;
+    esac
+    [ -f "$f" ] && [ -r "$f" ] || { echo "can't be read"; return; }
+    [ "$(stat -L -c %s -- "$f")" -le "$MAX_BYTES" ] || { echo "bigger than 50 MB"; return; }
+    # what the file really is, by its first bytes, not its name
+    magic=$(head -c 8 -- "$f" | od -An -tx1 | tr -d ' \n')
+    case $magic in
+        89504e470d0a1a0a) ;;
+        ffd8ff*) ;;
+        *) echo "not really a JPEG or PNG picture" ;;
+    esac
+}
+
+# newest: the newest picture in DIR that can be used
+newest() {
+    local f best=
+    for f in "$DIR"/*; do
+        [ -e "$f" ] || continue
+        [ -z "$(why_not "$f")" ] || continue
+        if [ -z "$best" ] || [ "$f" -nt "$best" ]; then best=$f; fi
+    done
+    [ -n "$best" ] && echo "$best"
+}
+
+case ${1:-} in
+    status)
+        if pic=$(newest); then
+            echo "Wallpaper: ${pic##*/} (from $DIR)"
+        else
+            echo "Wallpaper: the default (no picture in $DIR)"
+        fi
+        for f in "$DIR"/*; do
+            [ -e "$f" ] || continue
+            why=$(why_not "$f")
+            # (names printed without control characters: a file name can hold escape codes)
+            if [ -n "$why" ]; then printf '  not used: %s: %s\n' "${f##*/}" "$why" | tr -d '\000-\010\013-\037\177'; fi
+        done
+        exit 0 ;;
+    "") ;;
+    *) echo "usage: wallpaper [status]" >&2; exit 2 ;;
+esac
+
+pic=$(newest) || exit 0
+# sway reads the path inside a command line, where a quote or a ; in a file
+# name would end it: hand sway a link with a name made of digits only. The
+# name changes with the picture, so sway starts the new one.
+case $CACHE in *[\"\'\\\;]* | *$'\n'*) echo "wallpaper: can't use the folder $CACHE (odd characters in its name)" >&2; exit 1 ;; esac
+mkdir -p "$CACHE"
+ext=${pic##*.}
+ext=${ext,,}
+[ "$ext" = jpeg ] && ext=jpg
+link="$CACHE/wallpaper-$(stat -L -c '%i-%Y' -- "$pic").$ext"
+for old in "$CACHE"/wallpaper-*; do
+    [ "$old" = "$link" ] || rm -f -- "$old"
+done
+ln -sfn -- "$pic" "$link"
+swaymsg -q "output * bg \"$link\" fill"

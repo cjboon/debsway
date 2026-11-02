@@ -13,6 +13,6 @@ PKGS=(sway foot libgl1-mesa-dri gpg age diceware)
 # end: moving Wi-Fi over to it briefly drops the connection. random-mac
 # needs it.
 PARTS=(core-commands clock no-live-extras unattended-upgrades wmenu swaylock swayidle brightnessctl
-    wl-clipboard mako foot-config ufw power-profiles-daemon
+    wl-clipboard mako foot-config wallpaper ufw power-profiles-daemon
     power-menu debsway-menu console-tmux needrestart sysctl-hardening module-blacklist boot-hardening
     network-manager random-mac usb)

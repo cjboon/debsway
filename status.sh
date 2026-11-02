@@ -112,6 +112,13 @@ else
     echo "  only when you lock it (bash parts/swayidle.sh locks it after 30 minutes idle)"
 fi
 
+echo "Wallpaper:"
+if [ -x "$HOME/.local/bin/wallpaper" ]; then
+    "$HOME/.local/bin/wallpaper" status | sed 's/^Wallpaper: //; s/^/  /'
+else
+    echo "  sway's own setting (bash parts/wallpaper.sh: your picture from ~/Pictures/debsway/desktop)"
+fi
+
 echo "sway snippets in $SWAY_SNIPPETS:"
 shopt -s nullglob
 snippets=("$SWAY_SNIPPETS"/*.conf)
