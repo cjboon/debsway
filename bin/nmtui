@@ -12,20 +12,26 @@
 # color, so it is said for it. The Linux console has none and gets color
 # names (its black is black; foot's "black" is a dark teal). Every one of
 # newt's color sets is given: one left out stays red.
+# In foot the black behind it is "default", the terminal's own background:
+# foot makes only that one see-through (the bar's windows are, colors.alpha),
+# and an explicit #000000 is drawn solid black over it.
 if [ -z "${NEWT_COLORS:-}" ]; then
     if [ "${TERM:-}" = linux ]; then
-        _w=white _b=black _g=gray
+        _w=white _b=black _g=gray _bg=black
     else
-        _w='#ffffff' _b='#000000' _g='#aaaaaa'
+        _w='#ffffff' _b='#000000' _g='#aaaaaa' _bg=default
+        # S-Lang (newt's) clears the screen in white on black before newt's
+        # colors start; this makes that the terminal's own colors too
+        [ -n "${COLORFGBG:-}" ] || export COLORFGBG="default;default"
         case ${COLORTERM:-} in truecolor | 24bit) ;; *) export COLORTERM=truecolor ;; esac
     fi
-    NEWT_COLORS="root=$_w,$_b border=$_w,$_b window=$_w,$_b shadow=$_b,$_b title=$_w,$_b"
-    NEWT_COLORS+=" button=$_b,$_w actbutton=$_b,$_w compactbutton=$_w,$_b"
-    NEWT_COLORS+=" checkbox=$_w,$_b actcheckbox=$_b,$_w entry=$_w,$_b disentry=$_g,$_b label=$_w,$_b"
-    NEWT_COLORS+=" listbox=$_w,$_b actlistbox=$_b,$_w sellistbox=$_w,$_b actsellistbox=$_b,$_w"
-    NEWT_COLORS+=" textbox=$_w,$_b acttextbox=$_b,$_w helpline=$_w,$_b roottext=$_w,$_b"
-    NEWT_COLORS+=" emptyscale=$_w,$_b fullscale=$_b,$_w"
-    unset _w _b _g
+    NEWT_COLORS="root=$_w,$_bg border=$_w,$_bg window=$_w,$_bg shadow=$_b,$_bg title=$_w,$_bg"
+    NEWT_COLORS+=" button=$_b,$_w actbutton=$_b,$_w compactbutton=$_w,$_bg"
+    NEWT_COLORS+=" checkbox=$_w,$_bg actcheckbox=$_b,$_w entry=$_w,$_bg disentry=$_g,$_bg label=$_w,$_bg"
+    NEWT_COLORS+=" listbox=$_w,$_bg actlistbox=$_b,$_w sellistbox=$_w,$_bg actsellistbox=$_b,$_w"
+    NEWT_COLORS+=" textbox=$_w,$_bg acttextbox=$_b,$_w helpline=$_w,$_bg roottext=$_w,$_bg"
+    NEWT_COLORS+=" emptyscale=$_w,$_bg fullscale=$_b,$_w"
+    unset _w _b _g _bg
 fi
 export NEWT_COLORS
 exec "${DEBSWAY_NMTUI:-/usr/bin/nmtui}" "$@"

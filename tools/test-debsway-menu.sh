@@ -408,7 +408,7 @@ check "nmtui has its color block (the install list draws itself now, lib/checkli
 printf '#!/bin/sh\necho "colors=$NEWT_COLORS"\necho "colorterm=${COLORTERM:-}"\necho "args=$*"\n' >"$T/fake/nmtui"
 chmod +x "$T/fake/nmtui"
 nm=$(env -u NEWT_COLORS -u COLORTERM TERM=foot DEBSWAY_NMTUI="$T/fake/nmtui" bash "$HERE/bin/nmtui" connect X)
-check "the nmtui wrapper sets debsway's colors: in foot, exact white on black" grep -q 'colors=root=#ffffff,#000000' <<<"$nm"
+check "the nmtui wrapper sets debsway's colors: in foot, exact white on foot's own (see-through) black" grep -q 'colors=root=#ffffff,default ' <<<"$nm"
 check "...telling newt the terminal has 24-bit color, or it ignores them (and draws blue and red)" grep -qx 'colorterm=truecolor' <<<"$nm"
 check "...and passes its arguments on" grep -qx 'args=connect X' <<<"$nm"
 nm=$(env -u NEWT_COLORS -u COLORTERM TERM=linux DEBSWAY_NMTUI="$T/fake/nmtui" bash "$HERE/bin/nmtui")
@@ -441,14 +441,19 @@ def run(term):
             out += d
     os.kill(pid, 9); os.waitpid(pid, 0)
     return set(re.findall(rb"\x1b\[([0-9;]*)m", out))
-bw = {b"", b"1", b"30", b"37", b"40", b"47", b"38;2;0;0;0", b"38;2;255;255;255", b"48;2;0;0;0", b"48;2;255;255;255"}
+bw = {b"", b"1", b"30", b"37", b"39", b"40", b"47", b"49", b"38;2;0;0;0", b"38;2;255;255;255", b"48;2;0;0;0", b"48;2;255;255;255"}
 for term, white_bg in (("foot", b"48;2;255;255;255"), ("linux", b"47")):
     c = run(term)
     print(term, "bw" if c and c <= bw else sorted(c - bw), "reversed" if white_bg in c else "flat")
+    # in foot, black behind the text is foot's own background (49), which its
+    # alpha makes see-through; an explicit black (48;2;0;0;0, 40) is solid
+    if term == "foot":
+        print("foot", "solid-black" if (b"48;2;0;0;0" in c or b"40" in c) else "see-through")
 PY
     wt=$(python3 -I "$T/wt.py" "$HERE/bin/nmtui" 2>&1)
     check "the real whiptail in foot: only black and white, the chosen line reversed" grep -qx 'foot bw reversed' <<<"$wt"
     check "...and at the console" grep -qx 'linux bw reversed' <<<"$wt"
+    check "...in foot no black is drawn solid: the background is foot's own, see-through like the bar's windows" grep -qx 'foot see-through' <<<"$wt"
 fi
 
 # the introduction (prep/intro.sh, start.sh's first screen) says what to press
