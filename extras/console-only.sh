@@ -19,8 +19,10 @@ need_user
 MARK=$HOME/.config/debsway/console-only
 
 if [ "${1:-}" = --remove ]; then
-    rm -f "$MARK"
+    # sway first, the mark last: a removal cut off half way still shows as
+    # set up, and --remove again finishes it (it once left the login on tmux)
     profile_autostart sway
+    rm -f "$MARK"
     note "Logging in on tty1 starts sway again."
     if [ -n "${TMUX:-}" ] && [ -n "${DEBSWAY_LOGIN_LOOP:-}" ]; then
         note "Leaving tmux for sway in 3 seconds (your tmux windows stay: tmux attach)..."

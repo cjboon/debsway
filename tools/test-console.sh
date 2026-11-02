@@ -77,6 +77,10 @@ co
 check "run again (as update.sh does) from a sway started by hand: sway stays" not grep -q 'swaymsg exit' "$T/sway-calls"
 co --remove
 check "--remove: no longer counted as set up, and the login is sway" bash -c '[ -z "$1" ] && grep -qx sway "$2"' _ "$(found)" "$HOME/.config/debsway/login"
+# a removal cut off half way once left the login on tmux, the extra counted as
+# gone: the login goes back to sway first, the mark last
+check "...the login goes back to sway before the mark goes (cut off, --remove again finishes it)" \
+    python3 -I -c 'import sys; s = open(sys.argv[1]).read(); r = s.index("= --remove ]"); a = s.index("profile_autostart sway", r); m = s.index("rm -f \"$MARK\"", r); assert a < m' "$HERE/extras/console-only.sh"
 
 bar=$(sh "$HERE/bin/sway-status" --tmux)
 check "the tmux bar starts with the debsway menu range" bash -c '[[ $1 == "#[range=user|menu]debsway#[norange]"* ]]' _ "$bar"
