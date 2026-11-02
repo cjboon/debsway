@@ -21,7 +21,7 @@ if [ "${1:-}" = --remove ]; then
     remove_bin radios
     remove_bin debsway
     rm -f "$MAN"
-    # rfkill goes too, unless the Bluetooth extra still needs it
+    # rfkill and dialog go too, unless another script still needs them
     apt_purge
     # The bar keeps its "debsway" label; a click then opens the key cheat sheet
     # directly.
@@ -34,7 +34,10 @@ install_bin debsway-menu
 # Wi-Fi and Bluetooth are switched with rfkill, which Debian doesn't install by
 # itself; without it the menu has no Wi-Fi or Bluetooth line. It needs no sudo:
 # udev gives the user at the screen /dev/rfkill.
-apt_install rfkill
+# dialog: draws the Install apps list so that a click checks a box (whiptail,
+# which Debian has, takes no clicks). A small program from Debian, run only as
+# you while the list is open: no network, no service, nothing setuid.
+apt_install rfkill dialog
 install_bin radios
 # the debsway command and man debsway (man-db finds ~/.local/share/man from ~/.local/bin)
 install_bin debsway
