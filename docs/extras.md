@@ -38,6 +38,7 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `electrum.sh` | Electrum Bitcoin wallet, from Debian |
 | `feather-wallet.sh` | Feather Monero wallet, the signed official AppImage. Command: `feather` |
 | `simplex-chat.sh` | SimpleX Chat desktop, the signed official AppImage. Command: `simplex` |
+| `tutamail.sh` | Tuta Mail desktop (Tuta, end-to-end encrypted email), the official AppImage, installed only if it is signed by Tuta's pinned code-signing key and is no older than the one you have. Runs on Wayland with Electron's sandbox on. Command: `tuta`. See [extras/tutamail.md](extras/tutamail.md) |
 | `seahorse.sh` | Seahorse and the GNOME keyring, unlocked by your login password (edits `/etc/pam.d/login`; `--remove` takes the lines out) |
 | `backup.sh` | Encrypted backups of your home folder with restic, and a `backup` command. Prints examples |
 | `metadata-cleaner.sh` | Metadata Cleaner, the graphical program Tails ships, and the `mat2` command: removes hidden metadata from photos, PDFs and documents before you share them. Prints examples |
@@ -49,14 +50,17 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 
 Programs from Mullvad's and Anthropic's apt repositories are updated by
 unattended-upgrades along with Debian's; the apps downloaded straight from
-their makers (the Feather and SimpleX AppImages, Sparrow's .deb) are updated
+their makers (the Feather, SimpleX and Tuta AppImages, Sparrow's .deb) are updated
 by running their script again, and `bash test.sh` tells you when a newer
 release is out.
 
 Downloads from outside Debian are checked against the keys in
 `pins.sh`: the key is fetched into a throwaway keyring and refused
 unless its fingerprint matches, then the release's signed checksum list
-is checked, then the download against that list. AppImages are unpacked
+is checked, then the download against that list. Tuta signs its AppImage
+with openssl instead: the key is shipped as `data/tuta-pub.pem`, refused
+unless its SHA-256 is the one pinned, and must have signed the AppImage
+itself. AppImages are unpacked
 into `~/.local/opt/NAME/`, so no FUSE is needed.
 
 Apps that only run on X11 (Tor Browser, Mullvad Browser, Sparrow,

@@ -51,6 +51,7 @@ doesn't, and how to remove it. The short list of all of them is in
 ## Messaging and sharing
 
 - [SimpleX Chat, a private messenger](simplex-chat.md)
+- [Tuta Mail, encrypted email](tutamail.md)
 - [Metadata Cleaner, to strip hidden data from files](metadata-cleaner.md)
 
 ## Devices and hardware

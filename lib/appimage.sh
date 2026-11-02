@@ -108,9 +108,25 @@ check_sha256() {
         { warn "Checksum mismatch for $2."; return 1; }
 }
 
-# install_appimage NAME FILE VERSION: unpack FILE into ~/.local/opt/NAME
+# verify_rsa_sha512 KEY_SHA256 KEY.pem SIG DATA: SIG is an RSA signature
+# (SHA-512) of DATA by the public key in KEY.pem, which must be the pinned one:
+# KEY_SHA256 is the SHA-256 of the key itself (DER), as pins.sh records it.
+# For makers who sign with openssl rather than gpg (Tuta).
+verify_rsa_sha512() {
+    local have
+    have=$(openssl pkey -pubin -in "$2" -outform DER 2>/dev/null | sha256sum | cut -d' ' -f1)
+    if [ "$have" != "$1" ]; then
+        warn "The key in $2 isn't the pinned one ($1). Not trusting it."
+        return 1
+    fi
+    openssl dgst -sha512 -verify "$2" -signature "$3" "$4" 2>/dev/null | grep -qx 'Verified OK'
+}
+
+# install_appimage NAME FILE VERSION [CHECK]: unpack FILE into ~/.local/opt/NAME.
+# CHECK, if given, is run with the unpacked folder before it replaces the old
+# one; if it fails nothing is installed.
 install_appimage() {
-    local name=$1 file=$2 version=$3 dest="$OPT/$1" work
+    local name=$1 file=$2 version=$3 check=${4:-} dest="$OPT/$1" work
     mkdir -p "$OPT"
     work=$(mktemp -d "$OPT/.unpack.XXXXXX")
     chmod +x "$file"
@@ -118,6 +134,10 @@ install_appimage() {
         [ ! -x "$work/squashfs-root/AppRun" ]; then
         rm -rf "$work"
         die "Couldn't unpack $file."
+    fi
+    if [ -n "$check" ] && ! "$check" "$work/squashfs-root"; then
+        rm -rf "$work"
+        die "Not installing $name."
     fi
     echo "$version" >"$work/squashfs-root/.debsway-version"
     rm -rf "$dest.old"
