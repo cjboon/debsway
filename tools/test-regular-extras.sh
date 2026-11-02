@@ -121,6 +121,12 @@ check "...and doesn't install it for this script" not grep -q webext-ublock "$T/
 check "...the JIT back on there (for this profile only)" grep -qx 'user_pref("javascript.options.ion", true);' "$P/user.js"
 check "...the command, runs Firefox as you in that profile" grep -q 'exec /usr/bin/firefox-esr --profile "\$HOME/.mozilla/firefox/debsway-regular"' "$H/.local/bin/firefox-regular"
 check "...and the menu entry" test -f "$H/.local/share/applications/debsway-firefox-regular.desktop"
+check "...and a firefox-esr command (what Super+d offers) that opens the same profile" \
+    grep -q 'exec /usr/bin/firefox-esr --profile "\$HOME/.mozilla/firefox/debsway-regular" "\$@"' "$H/.local/bin/firefox-esr"
+mkdir -p "$T/ff"; printf '#!/bin/sh\necho "$@"\n' >"$T/ff/firefox-esr"; chmod +x "$T/ff/firefox-esr"
+ffargs() { sed "s|/usr/bin/firefox-esr|$T/ff/firefox-esr|g" "$H/.local/bin/firefox-esr" | HOME=$H sh -s -- "$@"; }
+check "...for a link too" test "$(ffargs https://x.example)" = "--profile $H/.mozilla/firefox/debsway-regular https://x.example"
+check "...but a profile you name is the one it opens" test "$(ffargs -P work)" = "-P work"
 check "...nothing system-wide written (the sandbox, hardening, incognito untouched)" not grep -qE '/etc/|/usr/local' "$T/calls"
 check "no default browser yet: Enter makes it the default" grep -qx 'x-scheme-handler/https=debsway-firefox-regular.desktop' "$MIME"
 printf '[Default Applications]\nx-scheme-handler/http=debsway-firefox.desktop\nx-scheme-handler/https=debsway-firefox.desktop\n' >"$MIME"
@@ -137,7 +143,7 @@ run firefox-regular.sh '' '' n
 check "a user.js you wrote yourself stays" grep -qx 'user_pref("my.own", 1);' "$P/user.js"
 printf '[Default Applications]\nx-scheme-handler/https=debsway-firefox.desktop\ntext/html=debsway-firefox-regular.desktop\n' >"$MIME"
 run firefox-regular.sh --remove ''
-check "--remove: the command and menu entry go" bash -c '[ ! -e "$1/.local/bin/firefox-regular" ] && [ ! -e "$1/.local/share/applications/debsway-firefox-regular.desktop" ]' _ "$H"
+check "--remove: the commands and menu entry go" bash -c '[ ! -e "$1/.local/bin/firefox-regular" ] && [ ! -e "$1/.local/bin/firefox-esr" ] && [ ! -e "$1/.local/share/applications/debsway-firefox-regular.desktop" ]' _ "$H"
 check "...its defaults go, the sandboxed Firefox's stay" bash -c '! grep -q firefox-regular "$1" && grep -qx "x-scheme-handler/https=debsway-firefox.desktop" "$1"' _ "$MIME"
 check "...the profile stays unless you say so" test -d "$P"
 

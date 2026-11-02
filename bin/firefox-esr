@@ -1,0 +1,10 @@
+#!/bin/sh
+# firefox-esr: written by debsway extras/firefox-regular.sh
+# Firefox ESR, opening your firefox-regular profile (~/.mozilla/firefox/debsway-regular),
+# so that firefox-esr from Super+d is the same Firefox as firefox-regular. Given a
+# profile of its own (--profile, -P, -p, --ProfileManager) it opens that one.
+# /usr/bin/firefox-esr is Debian's, with its default profile.
+for a in "$@"; do
+    case $a in --profile | -profile | -P | -p | --ProfileManager | -ProfileManager | -P?*) exec /usr/bin/firefox-esr "$@" ;; esac
+done
+exec /usr/bin/firefox-esr --profile "$HOME/.mozilla/firefox/debsway-regular" "$@"

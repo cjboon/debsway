@@ -9,8 +9,9 @@
 # (default no). Without it, the profile doesn't load Debian's shared copy, which
 # every other profile still gets.
 # It doesn't touch the sandboxed Firefox, incognito or the per-site profiles:
-# nothing system-wide is written, only this profile, a firefox-regular command
-# and a menu entry. Where Firefox's hardening is set up (with the sandboxed
+# nothing system-wide is written, only this profile, a firefox-regular command,
+# a firefox-esr command in ~/.local/bin that opens this profile too (so the
+# firefox-esr Super+d offers is the same Firefox), and a menu entry. Where Firefox's hardening is set up (with the sandboxed
 # Firefox) and you chose uBlock, its medium mode applies here too: ublock-allow
 # lets a site through. It offers to open links from other programs.
 # It runs as you, so a hacked page can reach your files: the sandboxed Firefox
@@ -31,6 +32,7 @@ MIME=$HOME/.config/mimeapps.list
 
 if [ "${1:-}" = --remove ]; then
     remove_bin firefox-regular
+    remove_bin firefox-esr
     rm -f "$DESKTOP"
     # links go back to whatever opened them before (the sandboxed Firefox, if set up)
     unset_default_app "$APP"
@@ -77,6 +79,8 @@ else
     } | install -m 0600 /dev/stdin "$PROFILE/user.js"
 fi
 install_bin firefox-regular
+# firefox-esr from Super+d opens this profile too (/usr/bin/firefox-esr still the default one)
+install_bin firefox-esr
 install -D -m 0644 "$DEBSWAY_DIR/data/$APP" "$DESKTOP"
 
 say "Links from other programs"

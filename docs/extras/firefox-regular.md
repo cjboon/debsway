@@ -8,6 +8,7 @@ bash ~/debsway/extras/firefox-regular.sh --remove   remove it (asks before delet
 bash ~/debsway/extras/firefox-regular.sh --manual   print the manual steps below
 
 firefox-regular [URL]     Firefox as you, with friendly defaults (or Super+d)
+firefox-esr [URL]         the same profile (Super+d offers it first); -P NAME opens another
 ublock-allow example.com  with uBlock and Firefox's hardening, if a site breaks
 ```
 
@@ -20,7 +21,10 @@ no telemetry, studies, sponsored tiles or Pocket. uBlock Origin, which blocks
 ads and trackers, is your choice (default no): without it, this profile
 doesn't load Debian's copy, which is shared by every Firefox profile and stays
 in the others. It writes nothing system-wide, only that profile, a
-`firefox-regular` command and a menu entry, so the sandboxed Firefox,
+`firefox-regular` command, a `firefox-esr` command in `~/.local/bin` that
+opens the same profile (so the `firefox-esr` Super+d offers is this Firefox
+too; `/usr/bin/firefox-esr` still opens Firefox's default profile) and a menu
+entry, so the sandboxed Firefox,
 incognito and the per-site profiles are untouched and keep their own rules.
 With uBlock, where Firefox's hardening is set up (it comes with the sandboxed
 Firefox), uBlock's medium mode applies here too.
@@ -31,7 +35,8 @@ Firefox), uBlock's medium mode applies here too.
 - Its downloads land where you choose, with your rights: be careful what you open.
 - It's your network and your address, as with any browser.
 - Without uBlock, ads and the trackers in them load (Firefox's own tracking protection still blocks the known ones).
-- `firefox-esr` with no `--profile` still opens Firefox's default profile, without these defaults.
+- `/usr/bin/firefox-esr`, or a launcher using that path, opens Firefox's default profile, without these defaults.
+- `firefox` (with the sandboxed Firefox installed) is the sandboxed one, a separate profile on purpose.
 
 ## MANUAL INSTALL
 
@@ -47,6 +52,8 @@ install -m 0600 @DEBSWAY_DIR@/data/firefox-regular-user.js ~/.mozilla/firefox/de
 echo 'user_pref("extensions.enabledScopes", 5);' >>~/.mozilla/firefox/debsway-regular/user.js
 # The command, and the menu entry Super+d and links use
 install -D -m 0755 @DEBSWAY_DIR@/bin/firefox-regular ~/.local/bin/firefox-regular
+# firefox-esr, before /usr/bin in your PATH, opening this profile too
+install -D -m 0755 @DEBSWAY_DIR@/bin/firefox-esr ~/.local/bin/firefox-esr
 install -D -m 0644 @DEBSWAY_DIR@/data/debsway-firefox-regular.desktop ~/.local/share/applications/debsway-firefox-regular.desktop
 # Open links from other programs in it (in ~/.config/mimeapps.list, under
 # [Default Applications], replacing an older default)
@@ -63,7 +70,7 @@ To undo:
 ```
 # Links no longer open in it, and its command and menu entry go
 sed -i '/=debsway-firefox-regular\.desktop$/d' ~/.config/mimeapps.list
-rm ~/.local/bin/firefox-regular ~/.local/share/applications/debsway-firefox-regular.desktop
+rm ~/.local/bin/firefox-regular ~/.local/bin/firefox-esr ~/.local/share/applications/debsway-firefox-regular.desktop
 # Its profile: your logins, history and bookmarks in it (only if you want them gone)
 rm -rf ~/.mozilla/firefox/debsway-regular
 # Firefox, if nothing else (the sandboxed Firefox, incognito) uses it: marked
