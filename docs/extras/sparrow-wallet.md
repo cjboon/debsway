@@ -1,68 +1,82 @@
-# Sparrow, a Bitcoin wallet with extra privacy tools (`extras/sparrow-wallet.sh`)
+# Sparrow Wallet (`extras/sparrow-wallet.sh`)
 
-You get Sparrow, a Bitcoin wallet with finer control over which coins you spend, built-in Tor support and good support for hardware wallets. It comes from Sparrow's official download, and debsway checks a digital signature before installing it. The command is `sparrow`.
+## SYNOPSIS
 
-## The problem it solves
+```
+bash ~/debsway/extras/sparrow-wallet.sh            install it, or update to the newest release
+bash ~/debsway/extras/sparrow-wallet.sh --remove   remove it (wallets in ~/.sparrow stay)
+bash ~/debsway/extras/sparrow-wallet.sh --manual   print the manual steps below
 
-Sparrow is not in Debian's archive, so apt cannot fetch it. You would have to download a file from the internet and install it as root. If that file were swapped on the way, you would be giving a stranger's program full control of your computer. This script downloads it and proves it came from the developer first.
+sparrow                                            start it (or Super+d, then sparrow)
+bash ~/debsway/test.sh                             says when a newer release is out
+```
 
-## The ideas behind it
+Sparrow is a Bitcoin wallet with better privacy tools than Electrum (coin
+control, built-in Tor) and good hardware wallet support. debsway installs the
+official .deb from its GitHub releases only if it matches the release's list
+of SHA-256 checksums (its manifest), signed by Craig Raw's key, pinned in
+`pins.sh` (`SPARROW_FPR`). The package puts Sparrow in `/opt`, so a `sparrow`
+command is added to `~/.local/bin`. It is a JavaFX program, which is X11-only,
+so XWayland is installed. Wallets live in `~/.sparrow`.
 
-**A Bitcoin wallet and a seed.** A wallet holds secret keys that prove which Bitcoin entries are yours. A seed is a list of words from which all those keys can be rebuilt. Whoever has the words has the money, and if you lose them, nobody can recover it. Keep them on paper, somewhere safe.
+## LIMITS
 
-**Coin control** means choosing which individual coins a payment spends, instead of letting the wallet pick. It matters for privacy, because coins spent together are visible together in the public record.
+- It runs as you: anything that can read your files can read `~/.sparrow`.
+- It isn't updated by apt (it isn't from a repository): run the script again.
+- A public server sees your wallet's addresses; Sparrow's Tor setting hides your address from it, your own node is the most private.
 
-**A hardware wallet** is a small device that holds your keys and signs payments itself, so the keys never touch the computer. Sparrow can work with these.
+## MANUAL INSTALL
 
-**A digital signature** is a mathematical seal that only the holder of a secret key can make, and anyone with the matching public key can check. If the file is changed by even one letter, the check fails. It works like a wax seal on a letter.
+```
+# XWayland (JavaFX is X11-only), and gpg to check the signature
+sudo apt install --no-install-recommends xwayland gpg
+# If XWayland was new: log out and back in once, so sway starts it
 
-**A fingerprint** is a short code that identifies a public key. debsway keeps Craig Raw's fingerprint in `pins.sh` (`SPARROW_FPR`). It downloads his key, and refuses it unless its fingerprint is exactly that. This stops someone handing you a different key.
+# A folder of its own for the download
+mkdir -p ~/sparrow-download && cd ~/sparrow-download
+# The newest version: the tag in the "Location:" line (e.g. 2.3.0)
+wget --max-redirect=0 -S -O /dev/null https://github.com/sparrowwallet/sparrow/releases/latest 2>&1 | grep -i location
+VER=2.3.0
+URL=https://github.com/sparrowwallet/sparrow/releases/download/$VER
 
-**A checksum** (SHA-256) is a short code worked out from a file's contents. The developer publishes a signed list of them (the "manifest"). If your download gives the same code, it is the file the developer listed.
+# The .deb, the manifest and its signature
+wget $URL/sparrowwallet_$VER-1_amd64.deb $URL/sparrow-$VER-manifest.txt $URL/sparrow-$VER-manifest.txt.asc
 
-**XWayland.** Sparrow is a Java program with a JavaFX window, which only knows the older X11 window system. sway uses Wayland, so XWayland, a translation layer, runs X11 programs inside it.
+# Craig Raw's key, in a keyring of its own. This must show the fingerprint
+# @SPARROW_FPR@
+mkdir -m 700 gpg
+wget -O sparrow.asc @SPARROW_KEY_URL@
+gpg --homedir gpg --import sparrow.asc
+gpg --homedir gpg --fingerprint @SPARROW_FPR@
+# The manifest is signed by it: this must say "Good signature" with
+# "Primary key fingerprint" @SPARROW_FPR@. Stop here if not.
+gpg --homedir gpg --verify sparrow-$VER-manifest.txt.asc sparrow-$VER-manifest.txt
 
-## How it works, step by step
+# The .deb is the one in the manifest: this must print "OK"
+awk -v n="sparrowwallet_$VER-1_amd64.deb" '$2 == n || $2 == "*" n { print $1 "  " n }' sparrow-$VER-manifest.txt | sha256sum -c
 
-1. It asks GitHub what the newest Sparrow version is, and refuses to go on unless the answer looks like a version number (such as `2.0.0`).
-2. If that version is already installed as a complete package, it says so and skips ahead to the command.
-3. Otherwise it downloads three files into a temporary folder: the `.deb` package, the manifest, and the manifest's signature (`.asc`).
-4. `verify_detached` (in `lib/appimage.sh`) fetches Craig Raw's key from keybase into a throwaway keyring, checks its fingerprint, and checks the manifest's signature. A valid signature from any other key does not count.
-5. `check_sha256` compares the package's checksum with the line for it in the signed manifest. A mismatch stops the install.
-6. It installs XWayland if missing (`need_xwayland`). On a fresh install you must log out and back in once, so sway notices it.
-7. It makes the folder `/usr/share/desktop-directories`, because the package's install script fails without it, then installs the `.deb` with apt.
-8. `install_bin sparrow` copies `bin/sparrow` to `~/.local/bin/sparrow`, a one-line launcher for `/opt/sparrowwallet/bin/Sparrow`.
+# Its install script needs this folder, which a sway-only system lacks
+sudo mkdir -p /usr/share/desktop-directories
+# Install it (apt reads the file as its own user, so it must be readable)
+chmod 755 . && chmod 644 sparrowwallet_$VER-1_amd64.deb
+sudo apt install ./sparrowwallet_$VER-1_amd64.deb
 
-On first start Sparrow asks which server to use. A public server sees your wallet's addresses. Sparrow's Tor (proxy) setting hides your IP address from it. Your own Bitcoin node is the most private choice.
+# A sparrow command, since the package puts it in /opt
+install -D -m 0755 @DEBSWAY_DIR@/bin/sparrow ~/.local/bin/sparrow
 
-## What it changes on your computer
+# The download isn't needed any more
+cd ~ && rm -rf ~/sparrow-download
+sparrow
+```
 
-- Package `sparrowwallet`, in `/opt/sparrowwallet`, plus `xwayland` if it was missing. Both are recorded under the marker package `debsway-sparrow-wallet`.
-- `/usr/share/desktop-directories` (an empty folder).
-- `~/.local/bin/sparrow`.
-- Later, when you use it, your wallets in `~/.sparrow`.
+To undo (your wallets stay in `~/.sparrow`; back them up before deleting anything):
 
-## Using it
-
-- `sparrow` or Super+d, then `sparrow`: start the wallet.
-- `bash extras/sparrow-wallet.sh` again: install a newer release if there is one.
-- `bash test.sh` tells you when a newer release exists.
-
-## What it protects against
-
-- **A swapped or corrupted download.** The package must match a list signed by the pinned key before it is installed as root.
-- **A fake key.** The key is accepted only if its fingerprint is the pinned one.
-- **Your IP address being seen by the server**, if you turn on Sparrow's Tor setting. That is Sparrow's feature. The script does not switch it on.
-
-## What it doesn't protect against
-
-- **Anything running as you.** debsway does not sandbox your user, and `~/.sparrow` is readable by any program you run (`THREAT-MODEL.md`).
-- **A bug in Sparrow itself.** The signature proves who published it, not that it is free of bugs or honest.
-- **Automatic updates.** This package does not update itself through apt. You must run the script again.
-- **A compromised developer key or release.** debsway only trusts the pinned key.
-- **A public server learning your addresses**, unless you use your own node.
-- **A lost seed.**
-
-## Removing it
-
-`bash extras/sparrow-wallet.sh --remove` recreates `/usr/share/desktop-directories` (the package's removal script needs it), purges `sparrowwallet`, removes `~/.local/bin/sparrow`, and lets apt remove what only it needed. It keeps `~/.sparrow`, with your wallets. Back them up before deleting anything.
+```
+# Its removal script needs the same folder
+sudo mkdir -p /usr/share/desktop-directories
+sudo apt purge sparrowwallet
+rm ~/.local/bin/sparrow
+# XWayland, marked "automatic": autoremove takes it out only if nothing needs it
+sudo apt-mark auto xwayland
+sudo apt autoremove --purge
+```

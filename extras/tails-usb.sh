@@ -18,11 +18,13 @@
 # Usage: bash tails-usb.sh            set up tails-usb, and say how to use it
 #        bash tails-usb.sh --make     make a stick (what tails-usb runs)
 #        bash tails-usb.sh --remove
+#        bash tails-usb.sh --manual   the steps to make a stick by hand
 # summary: Tails on a USB stick, downloaded and checked
 # status: bin:tails-usb
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/appimage.sh"
 . "$DEBSWAY_DIR/lib/tails.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 MIN_STICK=$((7500 * 1000 * 1000))   # Tails asks for 8 GB; sticks sold as 8 GB hold a little less

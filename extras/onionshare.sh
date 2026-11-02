@@ -10,10 +10,11 @@
 # your own obfs4 lines, or Snowflake; OnionShare can't use webtunnel or
 # meek on Debian). The choice is written into OnionShare's settings before
 # its first start, so its first connection goes through the bridge.
-# Usage: bash onionshare.sh [--remove]
+# Usage: bash onionshare.sh [--remove | --manual]
 # summary: Share files, sites and chat over Tor
 # status: apt:onionshare-cli apt:onionshare
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 SETTINGS="$HOME/.config/onionshare/onionshare.json"

@@ -1,77 +1,70 @@
-# Encrypted backups of your home folder (`extras/backup.sh`)
+# Encrypted backups (`extras/backup.sh`)
 
-You get a `backup` command that saves your home folder to a USB drive or any folder you choose, encrypted with a password. Each backup stores only what changed since the last one. It uses restic, a backup program from Debian.
+## SYNOPSIS
 
-## The problem it solves
+```
+bash ~/debsway/extras/backup.sh            set it up (asks where backups go, and the password)
+bash ~/debsway/extras/backup.sh --remove   remove it (the backups themselves stay)
+bash ~/debsway/extras/backup.sh --manual   print the manual steps below
 
-Disks die, laptops get lost or stolen, and files get deleted by mistake. Without a copy elsewhere, they are gone. A backup on the same disk does not help, and an unencrypted backup on a USB stick gives your files to whoever finds the stick.
+backup                         back up your home folder now
+backup snapshots               list your backups
+backup ls latest               the files in the newest backup
+backup restore latest --target ~/restored [--include ~/.electrum]
+                               get everything (or one folder) back, into ~/restored
+backup diff ID1 ID2            what changed between two backups
+backup check                   make sure the backup isn't damaged
+backup forget --keep-last 10 --prune   keep only the 10 newest
+```
 
-## The ideas behind it
+Encrypted backups of your home folder with restic, from Debian, to a folder
+you choose, best on a USB drive. Everything in a backup is encrypted with a
+password restic asks for each time, which is never written down (for
+unattended backups, the settings can hold a command that prints it), and each
+backup stores only what changed since the last. Caches, the Trash, VM disks
+and debsway's offline downloads are left out (`~/.config/debsway/backup-excludes`,
+yours to edit). The `backup` command (`bin/backup`) runs restic on your
+backup; restored files keep their full path, e.g. `~/restored/home/you/.electrum`.
 
-**A backup.** A second copy of your files kept somewhere else, so you can get them back.
+## LIMITS
 
-**restic and a repository.** restic is the program. The folder where it keeps the backup is called the repository. It is not a plain copy of your files: restic cuts them into pieces and stores the pieces.
+- Without the password the backup can't be opened, and your KeePassXC database is inside it: keep the password somewhere safe outside this laptop.
+- A backup on a drive that stays plugged in can be lost with the laptop; keep one away from it.
+- Nothing runs by itself: you run `backup`.
+- Anything running as you can read your files before they're backed up, and the password command's output.
 
-**Encryption.** Scrambling data so it can only be read with the right password. Everything in the repository is encrypted, so the USB stick alone reveals nothing. The password is never written down by debsway.
+## MANUAL INSTALL
 
-**A snapshot.** Each run of `backup` creates one snapshot, a record of what your files looked like at that moment. Because unchanged pieces are shared, many snapshots take little extra space.
+```
+# restic, from Debian
+sudo apt install --no-install-recommends restic
 
-**Excludes.** Things deliberately left out: caches, the trash, and things that can be downloaded again.
+# Where backups go: a folder on a USB drive (plug it in first)
+REPO=/media/$USER/NAME/debsway-backup
+mkdir -p "$REPO"
+# A new, encrypted backup there: choose a strong password, and keep it
+# somewhere safe outside this laptop (on paper, too)
+restic -r "$REPO" init
 
-**A password command (optional).** A command that prints the password, so backups can run without you typing it. debsway stores the command, never the password.
+# The settings the backup command reads (add a line
+# PASSWORD_COMMAND=... with a command that prints the password, for backups
+# that run without you)
+mkdir -p ~/.config/debsway
+printf 'BACKUP_REPO=%s\n' "$REPO" >~/.config/debsway/backup.conf
+# What is left out, one pattern per line
+printf '%s\n' "$HOME/.cache" "$HOME/.local/share/Trash" "$HOME/.local/share/libvirt/images" \
+    "$HOME/vpskvm" "@DEBSWAY_DIR@/offline" >~/.config/debsway/backup-excludes
 
-## How it works, step by step
+# The backup command
+install -D -m 0755 @DEBSWAY_DIR@/bin/backup ~/.local/bin/backup
+backup
+```
 
-When you run `bash extras/backup.sh`:
+To undo (your backups themselves stay where they are):
 
-1. It installs `restic`.
-2. It asks where backups should go, a folder on a USB drive is best. If a drive is mounted under `/media/YOU/`, it offers a `debsway-backup` folder on it. You must give a full path.
-3. If the folder does not already hold a restic repository, it creates one with `restic init`. restic asks you for a password twice. The script warns you to choose a strong one and keep it somewhere safe outside the laptop (on paper too). Without it the backup cannot be opened, and your KeePassXC database is inside the backup.
-4. It asks for an optional password command. If you leave it empty, restic asks for the password each time.
-5. It writes `~/.config/debsway/backup.conf` (the repository, and the password command if you gave one) and, if missing, `~/.config/debsway/backup-excludes`, which lists `~/.cache`, `~/.local/share/Trash`, the VM disks (`~/.local/share/libvirt/images` for Whonix, `~/vpskvm` for mockvps-kvm) and debsway's `offline` folder. You can edit that file, one pattern per line; running the script again only adds lines that are new in debsway's list, so what you took out stays out.
-6. It installs the `backup` command in `~/.local/bin` and prints examples.
-
-When you run `backup` with no arguments, it checks the repository is there ("Is the drive plugged in?"), then runs `restic backup` on your whole home folder, skipping the excludes and any folder marked as a cache (`--exclude-caches`). With any arguments, it passes them straight to restic.
-
-## What it changes on your computer
-
-- Package: `restic`.
-- `~/.local/bin/backup`.
-- `~/.config/debsway/backup.conf` and `backup-excludes`.
-- A new repository in the folder you chose.
-
-No user, service or timer is added. A timer would be something you set up yourself with the password command.
-
-## Using it
-
-- `backup`: back up your home folder now.
-- `backup snapshots`: list your backups.
-- `backup ls latest`: list the files in the newest one.
-- `backup restore latest --target ~/restored`: get everything back into `~/restored`. Restored files keep their full path, such as `~/restored/home/you/.electrum`; look there and copy back what you need.
-- `backup restore latest --target ~/restored --include ~/.electrum`: one folder only.
-- `backup diff ID1 ID2`: what changed between two snapshots.
-- `backup check`: check that the backup is not damaged.
-- `backup forget --keep-last 10 --prune`: keep only the 10 newest.
-
-Each command asks for the password unless you set a password command.
-
-## What it protects against
-
-- **A dead, lost or stolen disk or laptop.** Your files are on the other drive.
-- **Mistakes.** You can bring back an older version of a file or folder.
-- **Someone reading the backup drive.** Everything in it is encrypted.
-- **Damage to the backup going unnoticed**, if you run `backup check`.
-
-## What it doesn't protect against
-
-- **Losing the password.** Nothing can open the backup without it.
-- **Keeping the drive plugged in.** A backup you leave connected next to the laptop is lost in the same fire or theft, and a program running as you could damage it. Keep it elsewhere.
-- **A stored password command.** If you set one, any program running as you could run the same command. The password itself is not stored.
-- **Things not in your home folder.** The sandboxed Firefox profiles (`/var/lib/debsway-firefox`, `/var/lib/debsway-fx`), the Claude Code agent's home, and system settings are not backed up.
-- **Things you exclude**, such as the caches and VM disks.
-- **A compromised computer.** Malware running as you could read the files before they are encrypted.
-- **Automatic backups.** Nothing runs on a schedule unless you set it up.
-
-## Removing it
-
-`bash extras/backup.sh --remove` deletes the `backup` command, `~/.config/debsway/backup.conf` and `backup-excludes`, and removes `restic` unless another extra needs it. Your backups themselves are left where they are; you can open them later with restic and your password.
+```
+# The command and its settings
+rm ~/.local/bin/backup ~/.config/debsway/backup.conf ~/.config/debsway/backup-excludes
+# restic
+sudo apt purge restic
+```

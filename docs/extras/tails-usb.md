@@ -1,37 +1,89 @@
 # Tails on a USB stick (`extras/tails-usb.sh`)
 
-Tails is a whole operating system that runs from a USB stick, sends everything through Tor and forgets everything when you shut it down. This extra gives you a command, `tails-usb`, that downloads the newest Tails, checks it, and writes it to a USB stick you choose.
+## SYNOPSIS
 
-## The problem it solves
+```
+bash ~/debsway/extras/tails-usb.sh            set up the tails-usb command, and say how to use it
+bash ~/debsway/extras/tails-usb.sh --remove   remove it (offers to delete the saved image)
+bash ~/debsway/extras/tails-usb.sh --manual   print the manual steps below
 
-Making a Tails stick by hand means downloading a 2 GB file, checking its signature with gpg, and writing it with `dd`. The easy mistakes are skipping the check and writing to the wrong disk. `tails-usb` does the check every time and only offers USB sticks.
+tails-usb          download (or reuse) the newest Tails, check it, write it to a stick you pick
+```
 
-## How it works, step by step
+Tails is a whole operating system that runs from a USB stick, sends
+everything through Tor and forgets everything when you shut it down. The
+`tails-usb` command (`bin/tails-usb`) finds the newest Tails in Tails' own
+release file and downloads the USB image, through Tor when the system tor
+service runs here (apt over Tor, remote access, the onion site), so your
+network can't see you fetch it. It uses the image only if it is signed by the
+Tails signing key, pinned in `pins.sh` (`TAILS_FPR`), and is exactly the image
+the release file names for the newest version, so an older signed Tails can't
+be slipped in. The verified copy is kept in `offline/tails` for the next stick.
+It lists only USB sticks, never the disk this system runs from, asks you to
+type the stick's name, writes Tails onto it and reads it back to check.
+Writing a stick erases everything on it, Persistent Storage included.
 
-1. It reads Tails' own release file (tails.net) for the newest version, its image address, SHA-256 and size.
-2. It downloads the image, its signature and the Tails signing key. When the system tor service runs here (apt over Tor, remote access, the onion site), it downloads through Tor (`torsocks`), so your network can't see you fetch Tails; otherwise it asks before downloading directly.
-3. It uses the image only if the signature is good and made by the Tails signing key (fingerprint pinned in `pins.sh`, `TAILS_FPR`), **and** the image is exactly the one the release file names (size and SHA-256). The second check stops an older, genuinely signed Tails with known holes from being slipped in. A download that fails is deleted.
-4. It keeps the newest checked copy in `offline/tails/` and checks it again before each use, so the next stick needs no download.
-5. It lists only USB disks: never the disk the system runs from, never one holding `/`, `/boot`, `/home` or swap. You pick one and type its name to confirm. Sticks under 8 GB are refused. Mounted partitions on it are unmounted.
-6. It writes the image, flushes the stick's cache, reads it back and compares, so a failed write or a faulty stick is caught.
+## LIMITS
 
-## Using it
+- Without Tor here, your network sees you download Tails (not what you do with it later).
+- Tails protects what you do while running it, not this computer.
+- A stick left with someone can be swapped or changed: keep it with you, and remake it from a checked image if in doubt.
 
-- `tails-usb`: make a stick (everything on it is erased, Persistent Storage included).
-- Start the computer from the stick through its boot menu (often F12, F9, F10, F11 or Esc; on a Mac hold Option), connect to Tor in the Tor Connection window (with a bridge if needed), and shut down from the menu when done. Tails' own guide: https://tails.net/doc/
+## MANUAL INSTALL
 
-## What it protects against
+These are the steps tails-usb takes to make a stick.
 
-- A tampered or swapped download, and an outdated image passed off as the newest.
-- Writing to the wrong disk: only USB disks are offered, and you type the name.
-- Your network seeing you download Tails, when Tor runs here.
+```
+# wget and gpg to download and check it; torsocks to download through Tor
+# (only if the system tor service runs here); python3 reads the release file
+sudo apt install --no-install-recommends wget gpg python3 torsocks util-linux
+# A folder of its own
+mkdir -p ~/tails-download && cd ~/tails-download
 
-## What it doesn't protect against
+# Tails' release file: the newest version, the image's address, its SHA-256 and size
+# (put "torsocks" in front of each wget to download through Tor)
+wget -O latest.json @TAILS_LATEST_URL@
+python3 -c 'import json; f=[p for p in json.load(open("latest.json"))["installations"][0]["installation-paths"] if p["type"]=="img"][0]["target-files"][0]; print(f["url"], f["sha256"], f["size"])'
+V=7.2
 
-- Anything about how you use Tails afterwards: see Tails' documentation and `docs/opsec.md`.
-- A compromised Tails release or signing key; debsway trusts the pinned key.
-- Without Tor set up here, your network sees the download from tails.net.
+# The signing key, the signature and the image
+wget -O tails-signing.key @TAILS_KEY_URL@
+wget @TAILS_SIG_BASE@/tails-amd64-$V.img.sig
+wget https://download.tails.net/tails/stable/tails-amd64-$V/tails-amd64-$V.img
 
-## Removing it
+# The key, in a keyring of its own. This must show the fingerprint @TAILS_FPR@
+mkdir -m 700 gpg
+gpg --homedir gpg --import tails-signing.key
+gpg --homedir gpg --fingerprint @TAILS_FPR@
+# The image is signed by it: this must say "Good signature" with
+# "Primary key fingerprint" @TAILS_FPR@. Stop here if not.
+gpg --homedir gpg --verify tails-amd64-$V.img.sig tails-amd64-$V.img
+# And it is the image the release file names: the SHA-256 the python line
+# printed goes here, and this must print "OK"
+echo "SHA256-FROM-ABOVE  tails-amd64-$V.img" | sha256sum -c
 
-`bash extras/tails-usb.sh --remove` removes the `tails-usb` command and `torsocks` (unless something else needs it) and asks whether to delete the saved image in `offline/tails/`. Sticks you made keep working; Tails updates itself.
+# The stick: find it by its size and name (TRAN usb). Make very sure it is
+# the stick and not your disk: everything on it is erased.
+lsblk -d -o NAME,SIZE,TRAN,MODEL
+DEV=/dev/sdX
+# Unmount anything mounted from it, then write Tails onto it
+for p in $(lsblk -lnpo NAME,MOUNTPOINTS $DEV | awk 'NF > 1 { print $1 }'); do sudo umount $p; done
+sudo dd if=tails-amd64-$V.img of=$DEV bs=16M conv=fsync status=progress
+sync
+# Read it back: the two hashes must be the same
+sha256sum tails-amd64-$V.img
+sudo head -c $(stat -c %s tails-amd64-$V.img) $DEV | sha256sum
+```
+
+Then shut down, start the computer from the stick (its boot menu key is
+often F12, F9 or Esc), and choose Tails.
+
+To undo:
+
+```
+# The downloads
+rm -rf ~/tails-download
+# torsocks, marked "automatic": autoremove takes it out only if nothing needs it
+sudo apt-mark auto torsocks
+sudo apt autoremove --purge
+```

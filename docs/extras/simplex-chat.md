@@ -1,63 +1,85 @@
-# SimpleX Chat, a private messenger (`extras/simplex-chat.sh`)
+# SimpleX Chat (`extras/simplex-chat.sh`)
 
-You get the SimpleX Chat desktop app, an end-to-end encrypted messenger, as the official AppImage from GitHub. debsway installs it only after checking a digital signature and a checksum. The command is `simplex`.
+## SYNOPSIS
 
-## The problem it solves
+```
+bash ~/debsway/extras/simplex-chat.sh            install it, or update to the newest release
+bash ~/debsway/extras/simplex-chat.sh --remove   remove it (your chats stay)
+bash ~/debsway/extras/simplex-chat.sh --manual   print the manual steps below
 
-SimpleX is not in Debian's archive. It is a large single file (about 350 MB), released on GitHub. Downloading and running it by hand means trusting that nobody swapped it. This script checks the file against the developers' signed list first.
+simplex                                          start it (or Super+d, then simplex)
+bash ~/debsway/test.sh                           says when a newer release is out
+```
 
-## The ideas behind it
+SimpleX Chat is an end-to-end encrypted messenger without user accounts or
+phone numbers. debsway installs the official desktop AppImage from GitHub
+(about 350 MB) only if it matches the list of SHA-256 checksums signed by
+SimpleX's release key (`build@simplex.chat`, pinned in `pins.sh` as
+`SIMPLEX_FPR`). It is unpacked into `~/.local/opt/simplex` (no FUSE needed),
+and `simplex` starts it. It is a Java program, and Java's windows are X11, so
+XWayland is installed, with the system libraries its Java and media code use.
 
-**A messenger with end-to-end encryption** scrambles a message on your device so only the person you send it to can read it, and not the servers in between. SimpleX describes itself as a messenger without user accounts or phone numbers. The script itself does not set up, change or verify any of that. It only installs the app.
+## LIMITS
 
-**An AppImage** is a program packed into one file. debsway runs the file's own `--appimage-extract` option and keeps the result in `~/.local/opt/simplex`, so FUSE (a helper some AppImages need) is not needed.
+- It runs as you: anything that can read your files can read your chats.
+- It isn't updated by apt: run the script again (`test.sh` says when).
+- Your network sees that you connect; nothing here sets up Tor for it.
 
-**A signature** is a mathematical seal made with a developer's secret key. A changed file fails the check. Think of a wax seal on a letter.
+## MANUAL INSTALL
 
-**A fingerprint** identifies a public key by a short code. debsway pins SimpleX's release key (`build@simplex.chat`, `SIMPLEX_FPR` in `pins.sh`), downloads it and accepts it only if the fingerprint matches.
+```
+# XWayland (Java's windows are X11), gpg to check the signature, and the
+# libraries its Java and media code use
+sudo apt install --no-install-recommends xwayland gpg @LIBS@
+# If XWayland was new: log out and back in once, so sway starts it
 
-**A checksum** (SHA-256) is a short code worked out from a file's contents. SimpleX publishes a signed list of them in `_sha256sums`.
+# A folder of its own for the download
+mkdir -p ~/simplex-download && cd ~/simplex-download
+# The newest release: the tag in the "Location:" line (e.g. v6.4.5)
+wget --max-redirect=0 -S -O /dev/null https://github.com/simplex-chat/simplex-chat/releases/latest 2>&1 | grep -i location
+TAG=v6.4.5
+URL=https://github.com/simplex-chat/simplex-chat/releases/download/$TAG
 
-**XWayland.** The app is a Java program, and Java's windows use the older X11 system. sway uses Wayland, so XWayland translates.
+# The checksum list, its signature and the AppImage
+wget $URL/_sha256sums $URL/_sha256sums.asc $URL/simplex-desktop-x86_64.AppImage
 
-## How it works, step by step
+# SimpleX's key, in a keyring of its own. This must show the fingerprint
+# @SIMPLEX_FPR@
+mkdir -m 700 gpg
+wget -O simplex.asc @SIMPLEX_KEY_URL@
+gpg --homedir gpg --import simplex.asc
+gpg --homedir gpg --fingerprint @SIMPLEX_FPR@
+# The list is signed by it: this must say "Good signature" with
+# "Primary key fingerprint" @SIMPLEX_FPR@. Stop here if not.
+gpg --homedir gpg --verify _sha256sums.asc _sha256sums
 
-1. XWayland is installed if missing (`need_xwayland`). If it is new, log out and back in once so sway notices it. `gpg` is installed if missing.
-2. It installs a list of system libraries that the app's bundled Java and media code use (`libx11-6`, `libasound2t64`, `libgl1`, `libusb-1.0-0` and others; the full list is `LIBS` in the script).
-3. It reads the newest release tag from GitHub (`simplex-chat/simplex-chat`).
-4. If that tag is already recorded in `~/.local/opt/simplex/.debsway-version`, it skips the download and goes to step 9.
-5. Otherwise it downloads `_sha256sums`, `_sha256sums.asc` and `simplex-desktop-x86_64.AppImage`.
-6. `verify_detached` checks the key's fingerprint and then the signature on `_sha256sums`.
-7. `check_sha256` checks the AppImage against its line in that list (named as `TAG/simplex-desktop-x86_64.AppImage`). Failure stops the install.
-8. `install_appimage` unpacks it into `~/.local/opt/simplex`, replacing the older version.
-9. `write_launcher` writes `~/.local/bin/simplex`, which runs the unpacked `AppRun` start script.
+# The AppImage is the one in the list (named TAG/NAME there): this must print "OK"
+awk -v n="$TAG/simplex-desktop-x86_64.AppImage" '$2 == n { print $1 "  simplex-desktop-x86_64.AppImage" }' _sha256sums | sha256sum -c
 
-## What it changes on your computer
+# Unpack it (no FUSE needed) and put it in place, replacing an older copy
+chmod +x simplex-desktop-x86_64.AppImage
+./simplex-desktop-x86_64.AppImage --appimage-extract >/dev/null
+mkdir -p ~/.local/opt && rm -rf ~/.local/opt/simplex
+mv squashfs-root ~/.local/opt/simplex
 
-- Packages: `xwayland`, `gpg` if missing, and the libraries listed above, under the marker package `debsway-simplex-chat`.
-- `~/.local/opt/simplex/` with a `.debsway-version` file.
-- `~/.local/bin/simplex`.
-- Later, your chats and profile data, which the app creates itself.
+# The command, running its AppRun start script
+mkdir -p ~/.local/bin
+printf '%s\n' '#!/bin/sh' 'dir="$HOME/.local/opt/simplex"' \
+    'exec env APPDIR="$dir" "$dir/AppRun" "$@"' >~/.local/bin/simplex
+chmod +x ~/.local/bin/simplex
 
-## Using it
+# The download isn't needed any more
+cd ~ && rm -rf ~/simplex-download
+simplex
+```
 
-- `simplex` or Super+d, then `simplex`: start the app.
-- `bash extras/simplex-chat.sh` again: update to the newest release.
-- `bash test.sh` tells you when a newer release is out.
+To undo (your chats and profile stay):
 
-## What it protects against
-
-- **A swapped or corrupted download.** Nothing is unpacked until the signature and the checksum both pass.
-- **A fake key.** The key must have the pinned fingerprint.
-
-## What it doesn't protect against
-
-- **Anything running as you.** The app and your other programs share one user. Anything that can read your files can read your chats (`THREAT-MODEL.md`).
-- **Automatic updates.** AppImages are not updated by apt. `THREAT-MODEL.md` names SimpleX as one to update by running the script again.
-- **Hiding your network address.** The script configures no Tor or VPN for the app. Your network sees that you are connecting, as for any app.
-- **Bugs in the app**, or a compromised release key.
-- **Someone with your unlocked laptop.**
-
-## Removing it
-
-`bash extras/simplex-chat.sh --remove` deletes `~/.local/opt/simplex` and `~/.local/bin/simplex` (only if debsway wrote it), then removes the packages this script added that nothing else needs. Your chats and profile data are left in place.
+```
+# The app and its command
+rm -rf ~/.local/opt/simplex ~/.local/bin/simplex
+# XWayland and the libraries: other programs use many of them, so they are
+# marked "automatic" for autoremove to take out only if nothing needs them
+sudo apt-mark auto xwayland @LIBS@
+sudo apt autoremove --purge
+```

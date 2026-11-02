@@ -3,11 +3,12 @@
 # Re-run to update to the newest release. The download must match the
 # hash list signed by Feather's key (FEATHER_FPR in pins.sh).
 # Feather forces X11 itself (QT_QPA_PLATFORM=xcb), so XWayland is installed.
-# Usage: bash feather-wallet.sh [--remove]
+# Usage: bash feather-wallet.sh [--remove | --manual]
 # summary: Feather Monero wallet (signed AppImage)
 # status: opt:feather
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/appimage.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 NAME=feather

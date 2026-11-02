@@ -3,10 +3,11 @@
 # QEMU/KVM, log in with ssh, throw it away with one command. The script
 # itself is vendor/mockvps-kvm/mockvps-kvm.sh (see its README.md); this
 # installs what it needs and a mockvps-kvm command.
-# Usage: bash mockvps-kvm.sh [--remove]
+# Usage: bash mockvps-kvm.sh [--remove | --manual]
 # summary: Disposable Debian VM for trying out server setups
 # status: bin:mockvps-kvm
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 SCRIPT="$DEBSWAY_DIR/vendor/mockvps-kvm/mockvps-kvm.sh"

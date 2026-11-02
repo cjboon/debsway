@@ -3,12 +3,11 @@
 # update to the newest release. The download must match the hash list
 # signed by SimpleX's release key (build@simplex.chat, SIMPLEX_FPR in pins.sh).
 # It's a Java app, and Java's GUI is X11-only, so XWayland is installed.
-# Usage: bash simplex-chat.sh [--remove]
+# Usage: bash simplex-chat.sh [--remove | --manual]
 # summary: SimpleX Chat desktop (signed AppImage)
 # status: opt:simplex
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/appimage.sh"
-need_user
 
 NAME=simplex
 FPR=$SIMPLEX_FPR
@@ -19,6 +18,9 @@ ASSET=simplex-desktop-x86_64.AppImage
 LIBS=(libx11-6 libx11-xcb1 libxext6 libxi6 libxrender1 libxtst6 libxcb1 libxcb-dri3-0
     libasound2t64 libjack-jackd2-0 libusb-1.0-0 libgl1 libegl1 libgbm1 libdrm2
     libfontconfig1 libfreetype6 libharfbuzz0b libfribidi0 libglib2.0-0t64 libwayland-client0)
+
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
+need_user
 
 if [ "${1:-}" = --remove ]; then
     remove_appimage "$NAME"

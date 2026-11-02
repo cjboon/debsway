@@ -5,11 +5,12 @@
 # signed list of SHA-256 sums, from Craig Raw's key. Sparrow is a JavaFX
 # app, which is X11-only, so XWayland is installed.
 # Running it again installs a newer release if there is one.
-# Usage: bash sparrow-wallet.sh [--remove]
+# Usage: bash sparrow-wallet.sh [--remove | --manual]
 # summary: Sparrow Bitcoin wallet (signed .deb)
 # status: apt:sparrowwallet
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/appimage.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 # Craig Raw's key: SPARROW_FPR and SPARROW_KEY_URL in pins.sh

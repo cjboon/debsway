@@ -7,10 +7,11 @@
 # For backups that run without you (a timer, a script), the config can hold
 # a command that prints the password, e.g. one that asks a password manager;
 # the password itself is never written down.
-# Usage: bash backup.sh [--remove]
+# Usage: bash backup.sh [--remove | --manual]
 # summary: Encrypted backups of your home folder (restic)
 # status: apt:restic
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 CONF_DIR="$HOME/.config/debsway"
