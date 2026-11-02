@@ -144,6 +144,8 @@ if __name__ == "__main__":
         "up-wraps": ["\x1b[A", "\r"],
         "click-update": [click_on("Update")],
         "click-outside": ["\x1b[<0;1;1M\x1b[<0;1;1m", "q"],
+        # pasted text shaped like a mouse report: its row is a command
+        "click-crafted": ["\x1b[<0;5;a[$(cd;touch pasted-ran)]M", "q"],
         "esc": ["\x1b"],
         "help-esc": ["\r", "\x1b"],
         "help-q": ["\r", "q"],
@@ -303,6 +305,11 @@ check "a click on Update runs update.sh" grep -qxF "$T/debsway|update.sh|pause=1
 
 menu click-outside
 check "a click outside the entries runs nothing" test ! -s "$T/ran"
+
+rm -f "$T/home/pasted-ran"
+menu click-crafted
+# shellcheck disable=SC2016  # the inner shell expands them
+check "a mouse report that isn't numbers (pasted text) runs nothing" bash -c '[ ! -e "$1/pasted-ran" ] && [ ! -s "$2" ]' _ "$T/home" "$T/ran"
 
 menu esc
 check "Esc closes the menu" grep -q 'STATUS 0' <<<"$out"

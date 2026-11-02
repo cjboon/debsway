@@ -51,8 +51,11 @@ cl_key() {
                         if [ "$c" = M ] || [ "$c" = m ]; then break; fi
                         report+=$c
                     done
-                    IFS=';' read -r btn CL_X CL_Y <<<"$report"
                     CL_KEY=other
+                    # three numbers, or nothing: bash arithmetic on CL_Y would
+                    # run whatever else came in (pasted text can look like this)
+                    [[ $report =~ ^[0-9]{1,4}\;[0-9]{1,4}\;[0-9]{1,4}$ ]] || return 0
+                    IFS=';' read -r btn CL_X CL_Y <<<"$report"
                     if [ "$c" = M ]; then
                         case $btn in
                             0) CL_KEY=click ;;

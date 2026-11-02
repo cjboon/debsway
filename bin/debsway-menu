@@ -130,8 +130,11 @@ read_key() {
                         if [ "$c" = M ] || [ "$c" = m ]; then break; fi
                         report+=$c
                     done
-                    IFS=';' read -r btn CX CY <<<"$report"
                     KEY=other
+                    # three numbers, or nothing: bash arithmetic on CY would
+                    # run whatever else came in (pasted text can look like this)
+                    [[ $report =~ ^[0-9]{1,4}\;[0-9]{1,4}\;[0-9]{1,4}$ ]] || return 0
+                    IFS=';' read -r btn CX CY <<<"$report"
                     if [ "$c" = M ]; then
                         case $btn in
                             0) KEY=click ;;

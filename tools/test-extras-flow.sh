@@ -121,6 +121,9 @@ check "a click on No extras: nothing" test "$(pick click:delta 'click:No extras'
 check "the wheel moves down, and stops at the last line" test "$(pick '\x1b[<65;5;5M' '\x1b[<65;5;5M' '\x1b[<65;5;5M' '\x1b[<65;5;5M' '\x1b[<65;5;5M' ' ' '\r')" = alpha
 check "...and up" test "$(pick '\x1b[<65;5;5M' '\x1b[<65;5;5M' '\x1b[<64;5;5M' ' ' '\r')" = beta
 check "a click on a heading checks nothing" test "$(pick 'click:SOMEWHAT SECURE' '\r')" = ""
+# shellcheck disable=SC2016  # its own shell would expand it, if the report reached arithmetic
+pick "\x1b[<0;5;a[\$(cd;touch pasted-ran)]M" '\r' >/dev/null
+check "a mouse report that isn't numbers (pasted text) runs nothing" test ! -e "$HOME/pasted-ran"
 # ticked by the install stick (~/.config/debsway/preselect): in the first list only
 mkdir -p "$HOME/.config/debsway"
 echo beta >"$HOME/.config/debsway/preselect"
