@@ -100,7 +100,10 @@ done
 $found || echo "  (none)"
 
 echo "Screen lock:"
-if [ -x "$HOME/.local/bin/debsway-idle" ] && [ -f "$SWAY_SNIPPETS/idle.conf" ]; then
+# Without swaylock nothing locks, whatever the idle settings say
+if ! command -v swaylock >/dev/null; then
+    echo "  NONE: swaylock isn't installed, so the screen never locks (put it back: bash parts/swaylock.sh)"
+elif [ -x "$HOME/.local/bin/debsway-idle" ] && [ -f "$SWAY_SNIPPETS/idle.conf" ]; then
     echo "  after $("$HOME/.local/bin/debsway-idle" --minutes) minutes idle (change it: timer lock MINUTES)"
 elif [ -f "$SWAY_SNIPPETS/idle.conf" ]; then
     echo "  after 5 minutes idle (to change it with timer lock: bash parts/swayidle.sh again)"
