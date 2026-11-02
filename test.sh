@@ -294,6 +294,22 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "Firefox and Claude Code as you (extras/*-regular.sh), next to the sandboxed ones"
+if out=$(bash tools/test-regular-extras.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") regular extras checks"
+else
+    bad "regular extras checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "Autologin on tty1 (extras/autologin.sh), with a pretend sudo"
+if out=$(bash tools/test-autologin.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") autologin checks"
+else
+    bad "autologin checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "The whonix command (bin/whonix), with a pretend virsh"
 if out=$(bash tools/test-whonix-cmd.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") whonix command checks"

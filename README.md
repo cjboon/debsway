@@ -141,7 +141,9 @@ At the first login on the console it asks once "Set it up now?": Enter runs
 for later. Options: `--user NAME`,
 `--keymap de`, `--locale de_DE.UTF-8`, `--timezone Europe/Berlin` (the clock's
 time zone; by default the one of the computer building the image), `--no-erase`
-(skip filling the disk with random data), `--scripts FOLDER` (your own files, to
+(skip filling the disk with random data), `--noencrypt` (no disk encryption: no
+passphrase at boot, but anyone with the laptop can read the disk; it asks first),
+`--autologin` (tty1 logs you in without your password and starts sway), `--scripts FOLDER` (your own files, to
 `~/scripts`). What it needs to build the image (xorriso, wget, gpg, git) it
 installs first if it is missing; xorriso it removes again at the end. Try the image
 in a VM first: `bash tools/try-install-iso.sh` starts it the way a laptop would

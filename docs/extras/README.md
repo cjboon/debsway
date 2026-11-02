@@ -24,6 +24,7 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 
 ## Browsing
 
+- [Firefox as you, with friendly defaults](firefox-regular.md)
 - [Firefox's hardening, and a throwaway window](firefox.md)
 - [Firefox as its own locked-down user](firefox-sandbox.md)
 - [One Firefox profile per site](firefox-profiles.md)
@@ -46,6 +47,7 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 
 ## Sandboxes and test machines
 
+- [Claude Code as you, with its own sandbox on](claude-regular.md)
 - [Claude Code in its own user](claude-code.md)
 - [Claude Code inside a disposable virtual machine](claude-vm.md)
 - [A disposable practice server](mockvps-kvm.md)
@@ -77,6 +79,7 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 - [Phone tethering over USB](phone-tethering.md)
 - [USB drives that mount by themselves, safely](udiskie.md)
 - [Closing the lid locks but doesn't suspend](lid-awake.md)
+- [Logging in on tty1 without the password](autologin.md)
 - [A webcam switch, off at every boot](webcam.md)
 
 ## Everyday tools

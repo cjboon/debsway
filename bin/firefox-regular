@@ -1,0 +1,6 @@
+#!/bin/sh
+# firefox-regular [URL...]: written by debsway extras/firefox-regular.sh
+# Firefox ESR as you, in a profile of its own (~/.mozilla/firefox/debsway-regular)
+# with friendly defaults (its user.js). It has what you have: your files, your
+# network. The sandboxed firefox, incognito and the per-site profiles are separate.
+exec /usr/bin/firefox-esr --profile "$HOME/.mozilla/firefox/debsway-regular" "$@"

@@ -1,0 +1,6 @@
+#!/bin/sh
+# claude-regular [ARGS...]: written by debsway extras/claude-regular.sh
+# Claude Code as you, in the folder you start it from, with your files and the
+# deny rules debsway added to ~/.claude/settings.json. (claude, from
+# extras/claude-code.sh, runs it as its own user instead.)
+exec /usr/bin/claude "$@"

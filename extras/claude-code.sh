@@ -38,8 +38,9 @@
 # Usage: bash claude-code.sh [--remove | --manual]
 # summary: Claude Code, sandboxed in its own user
 # files: bin/no-abstract-sockets
-# status: apt:claude-code bin:claude bin:claude-unsandboxed bin:git file:/usr/local/libexec/claude-session
+# status: bin:claude bin:claude-unsandboxed bin:git file:/usr/local/libexec/claude-session
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+. "$DEBSWAY_DIR/lib/claude-repo.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
@@ -50,8 +51,6 @@ SUDOERS=/etc/sudoers.d/debsway-claude
 FIREWALL=/etc/debsway/claude.nft
 UNIT=/etc/systemd/system/debsway-claude-firewall.service
 PROJECTS=$HOME/projects
-KEY=/etc/apt/keyrings/claude-code.asc
-LIST=/etc/apt/sources.list.d/claude-code.list
 
 if [ "${1:-}" = --remove ]; then
     remove_bin claude
@@ -82,20 +81,15 @@ if [ "${1:-}" = --remove ]; then
             note "Kept the user $AGENT and $AGENT_HOME."
         fi
     fi
+    # (claude-code itself stays while extras/claude-regular.sh needs it)
     apt_purge claude-code acl nftables ripgrep jq shellcheck python3-venv
-    sudo rm -f "$LIST" "$KEY"
-    forget_unattended_updates claude-code
-    note "Removed Claude Code and its apt repository. Your own settings stay in ~/.claude, and ~/projects is untouched."
+    remove_claude_repo_if_unused
+    note "Removed the sandboxed Claude Code. Your own settings stay in ~/.claude, and ~/projects is untouched."
     exit
 fi
 
 say "Claude Code apt repository"
-install_apt_key "$ANTHROPIC_FPR" "$ANTHROPIC_KEY_URL" "$KEY"
-echo "deb [signed-by=$KEY] https://downloads.claude.ai/claude-code/apt/stable stable main" |
-    sudo tee "$LIST" >/dev/null
-allow_unattended_updates claude-code downloads.claude.ai
-# A fresh update, so apt sees the new repository
-unset DEBSWAY_APT_UPDATED
+add_claude_repo
 
 say "Installing Claude Code"
 # acl: lets claude-agent into ~/projects without opening your home folder

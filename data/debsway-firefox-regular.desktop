@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Firefox (as you)
+GenericName=Web Browser
+Comment=Firefox run as your own user, with friendly defaults (debsway)
+Exec=firefox-regular %u
+Terminal=false
+Categories=Network;WebBrowser;
+MimeType=x-scheme-handler/http;x-scheme-handler/https;text/html;
+StartupNotify=true

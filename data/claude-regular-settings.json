@@ -1,0 +1,42 @@
+{
+  "sandbox": {
+    "enabled": true,
+    "filesystem": {
+      "denyRead": [
+        "~/.ssh",
+        "~/.gnupg",
+        "~/.password-store",
+        "~/.config/gh",
+        "~/.local/share/keyrings",
+        "~/.mozilla",
+        "~/.electrum",
+        "~/.sparrow",
+        "~/.config/tutanota-desktop",
+        "~/.config/debsway/backup.conf"
+      ]
+    }
+  },
+  "permissions": {
+    "deny": [
+      "Read(~/.ssh/**)",
+      "Read(~/.gnupg/**)",
+      "Read(~/.password-store/**)",
+      "Read(~/.config/gh/**)",
+      "Read(~/.local/share/keyrings/**)",
+      "Read(~/.mozilla/**)",
+      "Read(~/.electrum/**)",
+      "Read(~/.sparrow/**)",
+      "Read(~/.config/tutanota-desktop/**)",
+      "Read(~/**/*.kdbx)",
+      "Edit(~/.profile)",
+      "Edit(~/.bashrc)",
+      "Edit(~/.bash_profile)",
+      "Edit(~/.config/sway/**)",
+      "Edit(~/.config/systemd/**)",
+      "Edit(~/.local/bin/**)",
+      "Edit(~/.gitconfig)",
+      "Bash(sudo *)",
+      "Bash(su *)"
+    ]
+  }
+}

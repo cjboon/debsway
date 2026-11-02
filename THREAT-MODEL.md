@@ -96,7 +96,8 @@ this page to decide what else you need.
   don't plug in sticks you don't trust.
 - **A stolen laptop, while it's switched off**, if you installed Debian
   with disk encryption (see the README). `status.sh` warns when you
-  didn't.
+  didn't. An install stick made with `--noencrypt` gives none of this:
+  anyone with the laptop can read and change the disk.
 
 With the extras:
 
@@ -123,7 +124,17 @@ With the extras:
 - **Anything running as you.** If you run a malicious program, or an
   attack escapes the browser, it can read all your files, every Firefox
   profile's logins and your wallets. debsway doesn't sandbox your own
-  user. Only install software you trust.
+  user. Only install software you trust. `firefox-regular`
+  (`extras/firefox-regular.sh`) and `claude-regular`
+  (`extras/claude-regular.sh`) run as you on purpose, for ease: a hacked
+  page in `firefox-regular` reaches your files. `claude-regular`'s
+  sandbox and deny rules are Claude Code's own: it enforces them, they
+  name only some folders, and you can turn them off in it.
+- **Someone at the computer while you're logged in**, with autologin
+  (`extras/autologin.sh`, or the stick's `--autologin`): switching it on
+  (and typing the disk passphrase, on an encrypted disk) is enough to be
+  you until the screen locks. Without disk encryption, switching it on is
+  enough.
 - **A laptop that's on, asleep or locked.** The disk key is in memory
   then. Shut down before leaving it somewhere or crossing a border. With
   `extras/lid-awake.sh` a closed lid means on and locked, not asleep: the
