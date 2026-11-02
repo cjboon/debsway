@@ -124,6 +124,19 @@ check "a click on a heading checks nothing" test "$(pick 'click:SOMEWHAT SECURE'
 # shellcheck disable=SC2016  # its own shell would expand it, if the report reached arithmetic
 pick "\x1b[<0;5;a[\$(cd;touch pasted-ran)]M" '\r' >/dev/null
 check "a mouse report that isn't numbers (pasted text) runs nothing" test ! -e "$HOME/pasted-ran"
+# CL_ALONE: a "none of these" box (the wallpapers' "No wallpapers downloaded")
+cat >"$T/alone.sh" <<'EOF'
+. "$D/lib.sh"
+. "$D/lib/checklist.sh"
+ITEMS=(a "Alpha" ON b "Beta" ON none "None of these" OFF)
+CL_TITLE=Test CL_TEXT="Space or a click" CL_OK=Install CL_CANCEL=Cancel CL_ALONE=${ALONE-none}
+if checklist; then printf '%s\n' "${chosen[@]}" >"$2"; fi
+EOF
+alone() { : >"$T/picked"; D=$D python3 -I "$T/drive.py" "$T/alone.sh" choose "$T/picked" "$T/drawn" "$@"; paste -sd, "$T/picked"; }
+check "a box that goes alone (CL_ALONE): checking it unchecks the others" test "$(alone '\x1b[B' '\x1b[B' ' ' '\r')" = none
+check "...checking another then unchecks it" test "$(alone '\x1b[B' '\x1b[B' ' ' '\x1b[A' ' ' '\r')" = b
+check "...the same with a click" test "$(alone '\x1b[B' ' ' click:none click:Install)" = none
+check "...and without CL_ALONE, boxes stay as they were" test "$(ALONE='' alone '\x1b[B' '\x1b[B' ' ' '\r')" = a,b,none
 # ticked by the install stick (~/.config/debsway/preselect): in the first list only
 mkdir -p "$HOME/.config/debsway"
 echo beta >"$HOME/.config/debsway/preselect"

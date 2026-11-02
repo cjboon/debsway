@@ -11,7 +11,9 @@
 # checklist: shows ITEMS (an array of TAG DESCRIPTION ON|OFF triples; a TAG
 # starting with ~ is a heading, which can't be checked) with CL_TITLE, CL_TEXT
 # (lines, joined by \n), and the buttons CL_OK and CL_CANCEL. Sets chosen to
-# the checked tags, in list order. Returns 1 if cancelled.
+# the checked tags, in list order. Returns 1 if cancelled. CL_ALONE, if set,
+# is the tag of a box that is only ever checked on its own ("none of these"):
+# checking it unchecks the others, and checking another unchecks it.
 CL_ESC_WAIT=${DEBSWAY_ESC_WAIT:-0.05}
 
 # cl_key: the next key on the terminal, into CL_KEY (up down pgup pgdn home end
@@ -79,6 +81,17 @@ checklist() {
     n=${#tags[@]}
     for ((i = 0; i < n; i++)); do [[ ${tags[i]} == "~"* ]] || { cur=$i; break; }; done
     mapfile -t textlines < <(printf '%b\n' "$CL_TEXT")
+    # cl_toggle: the box on line cur checked or unchecked (and CL_ALONE kept alone)
+    cl_toggle() {
+        local k
+        [ "$cur" -ge 0 ] || return 0
+        on[cur]=$((1 - on[cur]))
+        [ -n "${CL_ALONE:-}" ] && [ "${on[cur]}" = 1 ] || return 0
+        for ((k = 0; k < n; k++)); do
+            [ "$k" != "$cur" ] || continue
+            if [ "${tags[cur]}" = "$CL_ALONE" ] || [ "${tags[k]}" = "$CL_ALONE" ]; then on[k]=0; fi
+        done
+    }
     # cl_step D: the next line that can be checked, D (1 or -1) lines on, round
     # the ends; cl_near D: the same, but stopping at the ends (the wheel)
     cl_step() {
@@ -156,7 +169,7 @@ checklist() {
             home) cur=-1; cl_step 1 ;;
             end) cur=0; cl_step -1 ;;
             space | x)
-                if [ "$cur" -ge 0 ]; then on[cur]=$((1 - on[cur])); fi ;;
+                cl_toggle ;;
             enter) rc=0 ;;
             esc | q) rc=1 ;;
             click)
@@ -168,7 +181,7 @@ checklist() {
                     i=$((top + CL_Y - listtop))
                     if [ "$i" -lt "$n" ] && [[ ${tags[i]} != "~"* ]]; then
                         cur=$i
-                        on[cur]=$((1 - on[cur]))
+                        cl_toggle
                     fi
                 fi ;;
         esac

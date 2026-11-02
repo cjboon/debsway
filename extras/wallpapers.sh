@@ -91,9 +91,10 @@ if [ -t 0 ] && [ -t 1 ]; then
         IFS='|' read -r name what _ <<<"$s"
         ITEMS+=("$name" "$what" ON)
     done
-    # ticked, nothing is downloaded, whatever else is ticked
+    # ticked, it unticks the others (CL_ALONE); and nothing is downloaded
+    # whatever else would be ticked
     ITEMS+=(none "No wallpapers downloaded, I'll find my own" OFF)
-    CL_TITLE="Wallpapers" CL_OK=Download CL_CANCEL=Cancel
+    CL_TITLE="Wallpapers" CL_OK=Download CL_CANCEL=Cancel CL_ALONE=none
     CL_TEXT="Which sources? The pictures all go in ~/Pictures/Wallpapers, named after their source.\nYour own pictures can go there too: nothing of yours is changed or removed."
     checklist || { note "Nothing downloaded."; exit 0; }
     if printf '%s\n' "${chosen[@]}" | grep -qx none; then chosen=(); fi
