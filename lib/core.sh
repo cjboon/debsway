@@ -182,7 +182,8 @@ remove_bin() {
 
 # script_found SCRIPT: what is set up of the part or extra SCRIPT, one per
 # line, from its "# status:" line: a list of apt:PACKAGE, opt:APP (unpacked
-# into ~/.local/opt), bin:COMMAND (in ~/.local/bin) and file:PATH. Nothing
+# into ~/.local/opt), bin:COMMAND (in ~/.local/bin), file:PATH and gone:PACKAGE
+# (for a script that removes it: done once it isn't installed). Nothing
 # is printed if it isn't set up; one thing is enough.
 script_found() {
     local tok what
@@ -190,6 +191,7 @@ script_found() {
         what=${tok#*:}
         case $tok in
             apt:*) if is_installed "$what"; then echo "$what"; fi ;;
+            gone:*) if ! is_installed "$what"; then echo "no $what"; fi ;;
             opt:*) if [ -f "$HOME/.local/opt/$what/.debsway-version" ]; then
                 echo "$what $(cat "$HOME/.local/opt/$what/.debsway-version")"; fi ;;
             bin:*) if [ -e "$BIN/$what" ] || [ -L "$BIN/$what" ]; then echo "$what"; fi ;;

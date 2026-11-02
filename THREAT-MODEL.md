@@ -31,7 +31,9 @@ this page to decide what else you need.
   and hotel Wi-Fi.
 - **Being recognised from network to network.** Wi-Fi uses a new,
   made-up hardware (MAC) address every time it connects, doesn't send this
-  computer's name to the network, and uses temporary IPv6 addresses
+  computer's name to the network (avahi, which a live-image install brings
+  and which announces the name on every network, is removed by
+  `parts/no-live-extras.sh`), and uses temporary IPv6 addresses
   (`parts/random-mac.sh`).
 - **Your network seeing which packages you install**, if you chose to
   download through Tor (`parts/apt-tor.sh`, with a bridge if you need one).

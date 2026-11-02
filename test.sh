@@ -270,6 +270,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "The live image's extras (parts/no-live-extras.sh), with pretend apt"
+if out=$(bash tools/test-live-extras.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") live extras checks"
+else
+    bad "live extras checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "The whonix command (bin/whonix), with a pretend virsh"
 if out=$(bash tools/test-whonix-cmd.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") whonix command checks"

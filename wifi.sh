@@ -18,6 +18,7 @@
 # DEBSWAY_PASSWORD_ON_COMMAND_LINE=1 bash wifi.sh uses the old way.
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
 . "$DEBSWAY_DIR/lib/offline.sh"
+. "$DEBSWAY_DIR/lib/live-extras.sh"
 
 if [ "$(id -u)" -ne 0 ]; then
     if command -v sudo >/dev/null; then
@@ -132,6 +133,13 @@ find_iface() {
         IF=${pick:-$IF}
     fi
     [ -e "/sys/class/net/$IF" ] || die "No device called $IF."
+    # A driver DKMS builds is rebuilt by it for every new kernel: without dkms
+    # the Wi-Fi would stop after the next kernel update. parts/no-live-extras.sh
+    # keeps dkms when it builds any module; say so here, where it matters.
+    local drv
+    if drv=$(dkms_wifi_driver "$IF"); then
+        note "Your Wi-Fi driver ($drv) is built by DKMS, so dkms stays installed: it rebuilds the driver for each new kernel."
+    fi
 
     say "Using Wi-Fi device $IF"
 }
