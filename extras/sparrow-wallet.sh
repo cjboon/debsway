@@ -7,6 +7,7 @@
 # Running it again installs a newer release if there is one.
 # Usage: bash sparrow-wallet.sh [--remove | --manual]
 # summary: Sparrow Bitcoin wallet (signed .deb)
+# security: some
 # status: apt:sparrowwallet
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/appimage.sh"

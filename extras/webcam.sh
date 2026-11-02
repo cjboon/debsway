@@ -15,6 +15,7 @@
 # same way; a cover over the lens is the stronger kind. See THREAT-MODEL.md.
 # Usage: bash webcam.sh [--remove | --manual]
 # summary: Webcam off at start; switch it from the menu
+# security: most
 # status: file:/usr/local/libexec/debsway-camera
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

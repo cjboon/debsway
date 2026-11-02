@@ -4,6 +4,7 @@
 # throwaway copy of debsway with pretend extras that only write down that they
 # ran. Changes nothing outside a temp folder. Run by test.sh, or:
 #   bash tools/test-extras-flow.sh
+# shellcheck disable=SC2016  # sed and the inner shells expand their own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 
 T=$(mktemp -d)
@@ -18,12 +19,20 @@ not() { ! "$@"; }
 
 D=$T/debsway
 mkdir -p "$D/extras" "$D/lib"
-cp "$HERE/lib.sh" "$HERE/pins.sh" "$HERE/packages.sh" "$HERE/install-extras.sh" "$D/"
+cp "$HERE/pins.sh" "$HERE/packages.sh" "$HERE/install-extras.sh" "$D/"
+# (its lib.sh keeps the test's PATH, so a pretend dialog can be found)
+sed 's|^export PATH=.*|export PATH="$FLOW_TEST_PATH"|' "$HERE/lib.sh" >"$D/lib.sh"
+export FLOW_TEST_PATH="$T/fake:$PATH"
+mkdir -p "$T/fake" "$D/data"
+cp "$HERE/data/dialogrc" "$D/data/"
 cp "$HERE"/lib/*.sh "$D/lib/"
-for n in alpha beta gamma; do
-    # shellcheck disable=SC2016  # written into the pretend extra, expanded when it runs
+for n in alpha beta gamma delta; do
     printf '#!/bin/bash\n# summary: the %s extra\n# status: file:%s/nowhere-%s\necho "%s $DEBSWAY_SETUP_GH" >>"%s/ran"\n[ "%s" != "$FAIL_ON" ]\n' "$n" "$T" "$n" "$n" "$T" "$n" >"$D/extras/$n.sh"
 done
+# their groups: gamma most secure, alpha least, beta somewhat, delta has no line (somewhat)
+sed -i 's/^# summary: the gamma extra$/&\n# security: most/' "$D/extras/gamma.sh"
+sed -i 's/^# summary: the alpha extra$/&\n# security: least/' "$D/extras/alpha.sh"
+sed -i 's/^# summary: the beta extra$/&\n# security: some/' "$D/extras/beta.sh"
 export HOME="$T/home" XDG_STATE_HOME="$T/state"
 mkdir -p "$HOME"
 run() { env -u TERM bash "$D/install-extras.sh" "$@" 2>&1; }
@@ -32,6 +41,29 @@ run() { env -u TERM bash "$D/install-extras.sh" "$@" 2>&1; }
 out=$(run --list)
 check "--list shows each extra with its summary" grep -q 'alpha  *the alpha extra' <<<"$out"
 check "nothing is marked installed" not grep -q '\[installed\]' <<<"$out"
+check "--list: most secure first, then somewhat, then least, each under its heading" \
+    test "$(grep -oE '^(MOST|SOMEWHAT|LEAST) SECURE|^  [a-z]+' <<<"$out" | tr -d ' ' | paste -sd,)" = 'MOSTSECURE,gamma,SOMEWHATSECURE,beta,delta,LEASTSECURE,alpha'
+missing=()
+for f in "$HERE"/extras/*.sh; do
+    grep -qxE '# security: (most|some|least)' "$f" || missing+=("${f##*/}")
+done
+check "every extra says how secure it is (# security: most, some or least)${missing:+: not ${missing[*]}}" test ${#missing[@]} -eq 0
+
+# The list drawn by dialog: what it answers (one name per line) is what gets
+# picked, a heading line checked by mistake is not an extra, and its colours are debsway's
+cat >"$T/fake/dialog" <<EOF
+#!/bin/sh
+echo "\$DIALOGRC" >"$T/dialogrc-used"
+printf '%s\n' "\$*" >"$T/dialog-args"
+printf '~most\ngamma\nalpha\n' >&2
+EOF
+chmod +x "$T/fake/dialog"
+script -qec "bash $D/install-extras.sh --choose $T/picked" /dev/null </dev/null >/dev/null 2>&1
+check "with dialog: the checked extras are picked, a checked heading isn't" test "$(paste -sd, "$T/picked")" = "gamma,alpha"
+check "...with Install and No extras as its buttons" bash -c 'grep -q -- "--ok-label Install --cancel-label No extras" "$1"' _ "$T/dialog-args"
+check "...in debsway's colours" test "$(cat "$T/dialogrc-used")" = "$D/data/dialogrc"
+check "...the headings in the list, in order" bash -c 'grep -o "~[a-z]*" "$1" | paste -sd, | grep -qx "~most,~some,~least"' _ "$T/dialog-args"
+rm "$T/fake/dialog"
 
 # --choose with no terminal to ask on: writes an empty file, installs nothing
 : >"$T/ran"

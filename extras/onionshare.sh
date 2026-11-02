@@ -12,6 +12,7 @@
 # its first start, so its first connection goes through the bridge.
 # Usage: bash onionshare.sh [--remove | --manual]
 # summary: Share files, sites and chat over Tor
+# security: some
 # status: apt:onionshare-cli apt:onionshare
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

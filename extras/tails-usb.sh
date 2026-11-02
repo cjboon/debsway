@@ -20,6 +20,7 @@
 #        bash tails-usb.sh --remove
 #        bash tails-usb.sh --manual   the steps to make a stick by hand
 # summary: Tails on a USB stick, downloaded and checked
+# security: most
 # status: bin:tails-usb
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/appimage.sh"

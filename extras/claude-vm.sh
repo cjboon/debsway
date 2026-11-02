@@ -30,6 +30,7 @@
 # See THREAT-MODEL.md.
 # Usage: bash claude-vm.sh [--remove | --manual]
 # summary: Claude Code in a disposable VM (no shared folder)
+# security: most
 # files: bin/no-abstract-sockets
 # status: bin:claude-vm file:/usr/local/libexec/claude-vm-session
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"

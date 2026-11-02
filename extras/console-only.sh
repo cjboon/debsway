@@ -8,6 +8,7 @@
 # ~/.profile, lib/core.sh profile_autostart).
 # Usage: bash console-only.sh [--remove | --manual]
 # summary: log in to tmux (same bar and keys), not sway
+# security: some
 # status: file:~/.config/tmux/tmux.conf
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

@@ -9,6 +9,7 @@
 # Takes effect at the next boot.
 # Usage: bash autologin.sh [--remove | --manual]
 # summary: Log in on tty1 without the password
+# security: least
 # status: file:/etc/systemd/system/getty@tty1.service.d/50-debsway-autologin.conf
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/install-iso.sh"

@@ -6,6 +6,7 @@
 # Browser, which runs on X11, so XWayland is installed.
 # Usage: bash mullvad-browser.sh [--remove | --manual]
 # summary: Mullvad Browser (Tor Browser's privacy, no Tor)
+# security: some
 # status: apt:mullvad-browser
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/mullvad-repo.sh"

@@ -17,6 +17,7 @@
 # (extras/firefox-sandbox.sh) is the safer one for sites you don't trust.
 # Usage: bash firefox-regular.sh [--remove | --manual]
 # summary: Firefox as you, friendly defaults (no sandbox)
+# security: least
 # status: bin:firefox-regular
 # files: data/firefox-regular-user.js data/debsway-firefox-regular.desktop
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"

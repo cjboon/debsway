@@ -37,6 +37,7 @@
 # Treat what it leaves there as untrusted before you run it. See THREAT-MODEL.md.
 # Usage: bash claude-code.sh [--remove | --manual]
 # summary: Claude Code, sandboxed in its own user
+# security: most
 # files: bin/no-abstract-sockets
 # status: bin:claude bin:claude-unsandboxed bin:git file:/usr/local/libexec/claude-session
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"

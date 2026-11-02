@@ -4,6 +4,7 @@
 # in to GitHub.
 # Usage: bash git.sh [--remove | --manual]
 # summary: git, and optionally GitHub's gh
+# security: some
 # status: apt:git apt:gh
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

@@ -4,6 +4,7 @@
 # the console, so apps that store secrets (like gh) don't ask again.
 # Usage: bash seahorse.sh [--remove | --manual]
 # summary: Passwords and Keys, keyring unlocked at login
+# security: some
 # status: apt:seahorse
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

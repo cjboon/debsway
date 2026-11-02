@@ -10,6 +10,7 @@
 # Run it again to repair it, see the address, or authorize another computer.
 # Usage: bash remote-access.sh [--remove | --manual]
 # summary: ssh in over a Tor onion service (no open port)
+# security: some
 # status: file:/etc/tor/.debsway-remote-access
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

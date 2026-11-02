@@ -21,6 +21,7 @@
 # resolver you chose; if they don't, it puts everything back.
 # Usage: bash secure-dns.sh [--remove | --manual]
 # summary: Encrypted DNS: Unbound, DNSSEC, DNS over TLS
+# security: most
 # status: file:/etc/unbound/unbound.conf.d/debsway-secure-dns.conf
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/secure-dns.sh"

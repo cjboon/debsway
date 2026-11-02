@@ -7,6 +7,7 @@
 # empty home. DEBSWAY_NO_SANDBOX=1 runs it without. Made the default for PDFs.
 # Usage: bash pdf-viewer.sh [--remove | --manual]
 # summary: zathura PDF viewer, in a sandbox
+# security: most
 # status: apt:zathura apt:zathura-pdf-poppler bin:zathura
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

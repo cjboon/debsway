@@ -4,6 +4,7 @@
 # wmenu in password mode if wmenu is installed, else a floating foot window.
 # Usage: bash udiskie.sh [--remove | --manual]
 # summary: USB drives mount by themselves (noexec), LUKS too
+# security: some
 # status: apt:udiskie
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

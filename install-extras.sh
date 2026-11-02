@@ -1,29 +1,52 @@
 #!/bin/bash
 # Pick optional programs from a list and install them: arrow keys to move,
-# space bar to check a box, Tab to the Install or No extras button. Every
+# space bar to check a box, Tab to the Install or No extras button. With
+# dialog (installed with the debsway menu), a click checks a box and a click on
+# Install installs; without it, whiptail draws the list, which takes no clicks. Every
 # program is a script in extras/. install-base.sh asks right after you agree to
 # the base install and installs what you picked once the base is done; you can
 # run this again whenever you like. Nothing is checked to begin with.
+# The list comes in three groups, from each extra's "# security:" line: most
+# secure (walled off from your files or network, or it protects you), somewhat
+# secure (everyday programs from signed sources, run as you) and least secure
+# (easier, with less protection).
 #   bash install-extras.sh               the list, then installs what you check
 #   bash install-extras.sh --list        only print what is available
 #   bash install-extras.sh --choose F    the list only; writes the names you checked to file F
 #   bash install-extras.sh --install F   installs the names in file F (no list)
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
 
-# One line per extra: NAME<TAB>SUMMARY<TAB>installed(1|0)
+# The groups, most secure first: TIER<TAB>HEADING
+TIERS=$'most\tMOST SECURE: walled off, or it protects you
+some\tSOMEWHAT SECURE: everyday programs, run as you
+least\tLEAST SECURE: easier, with less protection'
+# tier_rank TIER: where its group comes (an extra without the line counts as some)
+tier_rank() { case $1 in most) echo 1 ;; least) echo 3 ;; *) echo 2 ;; esac; }
+# tier_heading TIER
+tier_heading() { awk -F'\t' -v t="$1" '$1 == t { print $2 }' <<<"$TIERS"; }
+
+# One line per extra: NAME<TAB>SUMMARY<TAB>installed(1|0)<TAB>TIER, in the
+# groups' order, by name within each
 mapfile -t EXTRAS < <(
     for f in "$DEBSWAY_DIR"/extras/*.sh; do
         name=$(basename -- "$f" .sh)
         summary=$(sed -n 's/^# summary: //p' "$f" | head -1)
+        tier=$(sed -n 's/^# security: //p' "$f" | head -1)
+        case $tier in most | some | least) ;; *) tier=some ;; esac
         installed=0
         if [ -n "$(script_found "$f")" ]; then installed=1; fi
-        printf '%s\t%s\t%s\n' "$name" "${summary:-$name}" "$installed"
-    done
+        printf '%s\t%s\t%s\t%s\t%s\n' "$(tier_rank "$tier")" "$name" "${summary:-$name}" "$installed" "$tier"
+    done | sort -t$'\t' -k1,1n -k2,2 | cut -f2-
 )
 
 if [ "${1:-}" = --list ]; then
+    last=
     for line in "${EXTRAS[@]}"; do
-        IFS=$'\t' read -r name summary installed <<<"$line"
+        IFS=$'\t' read -r name summary installed tier <<<"$line"
+        if [ "$tier" != "$last" ]; then
+            printf '%s%s\n' "${last:+$'\n'}" "$(tier_heading "$tier")"
+            last=$tier
+        fi
         printf '  %-16s %s%s\n' "$name" "$summary" "$([ "$installed" = 1 ] && echo '  [installed]')"
     done
     exit 0
@@ -70,27 +93,48 @@ if [ -z "${NEWT_COLORS:-}" ]; then
 fi
 export NEWT_COLORS
 
-# whiptail comes with Debian's standard system: a list of check boxes
-pick_with_whiptail() {
-    local items=() line name summary installed rows cols out
+# checklist_items: the list's lines, three words each (TAG ITEM OFF), with a
+# heading line before each group (~TIER: checking one does nothing)
+checklist_items() {
+    local line name summary installed tier last=''
     for line in "${EXTRAS[@]}"; do
-        IFS=$'\t' read -r name summary installed <<<"$line"
+        IFS=$'\t' read -r name summary installed tier <<<"$line"
+        if [ "$tier" != "$last" ]; then
+            ITEMS+=("~$tier" "== $(tier_heading "$tier") ==" OFF)
+            last=$tier
+        fi
         if [ "$installed" = 1 ]; then summary="* $summary"; else summary="  $summary"; fi
-        items+=("$name" "$summary" OFF)
+        ITEMS+=("$name" "$summary" OFF)
     done
+}
+
+# pick_with PROGRAM: the check boxes, drawn by dialog or whiptail (the same
+# options), into chosen. Both draw on the terminal and answer on stderr.
+pick_with() {
+    local prog=$1 rows cols out c keep=() opts=()
+    ITEMS=()
+    checklist_items
     rows=$(stty size </dev/tty 2>/dev/null | cut -d' ' -f1)
     cols=$(stty size </dev/tty 2>/dev/null | cut -d' ' -f2)
     rows=${rows:-24} cols=${cols:-80}
     [ "$rows" -ge 14 ] || rows=14
     [ "$cols" -ge 76 ] || cols=76
     [ "$cols" -le 100 ] || cols=100
-    # whiptail draws on the terminal and answers on stderr
-    if out=$(whiptail --title "Optional extras" \
-        --ok-button "Install" --cancel-button "No extras" \
-        --checklist "Arrow keys move, Space checks a box, Tab reaches the buttons.\n* = already installed (checking it runs it again, to repair or update).\nInstall puts the checked ones in; No extras finishes without any." \
-        $((rows - 2)) $((cols - 4)) $((rows - 10)) "${items[@]}" 3>&1 1>&2 2>&3 </dev/tty); then
-        # Output looks like: "git" "mousepad"
-        read -ra chosen <<<"${out//\"/}"
+    if [ "$prog" = dialog ]; then
+        opts=(--ok-label Install --cancel-label "No extras" --separate-output)
+        # Its colours, as whiptail's below (yours win if you set DIALOGRC)
+        [ -n "${DIALOGRC:-}" ] || export DIALOGRC=$DEBSWAY_DIR/data/dialogrc
+    else
+        opts=(--ok-button Install --cancel-button "No extras" --separate-output)
+    fi
+    if out=$("$prog" --title "Optional extras" "${opts[@]}" \
+        --checklist "Arrow keys move, Space (or a click) checks a box, Tab reaches the buttons.\n* = already installed (checking it runs it again, to repair or update).\nInstall puts the checked ones in; No extras finishes without any." \
+        $((rows - 2)) $((cols - 4)) $((rows - 10)) "${ITEMS[@]}" 3>&1 1>&2 2>&3 </dev/tty); then
+        # One name per line (--separate-output); a heading, ~TIER, is no extra
+        while IFS= read -r c; do
+            [ -n "$c" ] && [[ $c != "~"* ]] && keep+=("$c")
+        done <<<"$out"
+        chosen=("${keep[@]}")
     else
         chosen=()
     fi
@@ -98,10 +142,14 @@ pick_with_whiptail() {
 
 # Without whiptail: numbers typed at a prompt
 pick_with_numbers() {
-    local i=0 line name summary installed reply n
+    local i=0 line name summary installed tier last='' reply n
     echo "Optional extras:"
     for line in "${EXTRAS[@]}"; do
-        IFS=$'\t' read -r name summary installed <<<"$line"
+        IFS=$'\t' read -r name summary installed tier <<<"$line"
+        if [ "$tier" != "$last" ]; then
+            printf '  %s\n' "$(tier_heading "$tier")"
+            last=$tier
+        fi
         i=$((i + 1))
         printf '  %2d) %-16s %s%s\n' "$i" "$name" "$summary" "$([ "$installed" = 1 ] && echo ' [installed]')"
     done
@@ -118,8 +166,10 @@ if [ "$mode" = install ]; then
     mapfile -t chosen < <(grep . "$file" 2>/dev/null || true)
 else
     say "Optional extras"
-    if command -v whiptail >/dev/null && [ -n "${TERM:-}" ] && [ "$TERM" != dumb ]; then
-        pick_with_whiptail
+    if command -v dialog >/dev/null && [ -n "${TERM:-}" ] && [ "$TERM" != dumb ]; then
+        pick_with dialog
+    elif command -v whiptail >/dev/null && [ -n "${TERM:-}" ] && [ "$TERM" != dumb ]; then
+        pick_with whiptail
     else
         pick_with_numbers
     fi

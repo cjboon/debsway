@@ -5,6 +5,7 @@
 # It's a Java app, and Java's GUI is X11-only, so XWayland is installed.
 # Usage: bash simplex-chat.sh [--remove | --manual]
 # summary: SimpleX Chat desktop (signed AppImage)
+# security: some
 # status: opt:simplex
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/appimage.sh"

@@ -9,6 +9,7 @@
 # switches it to the minimal one.
 # Usage: bash keepassxc.sh [--remove | --manual]
 # summary: KeePassXC password manager (no browser add-on)
+# security: most
 # status: apt:keepassxc-full apt:keepassxc-minimal apt:keepassxc
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

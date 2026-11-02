@@ -17,6 +17,7 @@
 # (then claude is the sandboxed one).
 # Usage: bash claude-regular.sh [--remove | --manual]
 # summary: Claude Code as you, with its own sandbox on
+# security: least
 # status: bin:claude-regular
 # files: data/claude-regular-settings.json lib/claude-settings.py
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"

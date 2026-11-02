@@ -10,6 +10,7 @@
 #   pair AA:BB:...   trust AA:BB:...   connect AA:BB:...
 # Usage: bash bluetooth.sh [--remove | --manual]
 # summary: Bluetooth (off at start; switch it from the menu)
+# security: some
 # status: apt:bluez
 # files: bin/radios
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"

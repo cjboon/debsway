@@ -4,6 +4,7 @@
 # Mullvad account number (mullvad.net, can be paid anonymously).
 # Usage: bash mullvad-vpn.sh [--remove | --manual]
 # summary: Mullvad VPN app and command
+# security: most
 # status: apt:mullvad-vpn
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/mullvad-repo.sh"

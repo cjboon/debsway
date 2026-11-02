@@ -3,6 +3,7 @@
 # show up as empty boxes.
 # Usage: bash emoji-font.sh [--remove | --manual]
 # summary: Color emoji instead of empty boxes
+# security: some
 # status: apt:fonts-noto-color-emoji
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

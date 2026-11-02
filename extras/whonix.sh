@@ -22,6 +22,7 @@
 #        bash whonix.sh --remove
 #        bash whonix.sh --manual   the steps to do it by hand
 # summary: Whonix Gateway + Workstation VMs (1.9 GB download)
+# security: most
 # status: bin:whonix
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/appimage.sh"

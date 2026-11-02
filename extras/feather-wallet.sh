@@ -5,6 +5,7 @@
 # Feather forces X11 itself (QT_QPA_PLATFORM=xcb), so XWayland is installed.
 # Usage: bash feather-wallet.sh [--remove | --manual]
 # summary: Feather Monero wallet (signed AppImage)
+# security: some
 # status: opt:feather
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/appimage.sh"

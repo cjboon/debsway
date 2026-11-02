@@ -23,6 +23,7 @@
 # the site's data (not this computer). See THREAT-MODEL.md. Needs KVM.
 # Usage: bash onion-site.sh [--remove | --manual]
 # summary: Your own onion site, in a VM with no network
+# security: most
 # files: bin/no-abstract-sockets
 # status: bin:onion-site file:/usr/local/libexec/onion-site-session
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"

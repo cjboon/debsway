@@ -9,6 +9,7 @@
 # undo changes you made in Mousepad.
 # Usage: bash mousepad.sh [--remove | --manual]
 # summary: Mousepad text editor
+# security: some
 # status: apt:mousepad
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

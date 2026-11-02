@@ -8,6 +8,7 @@
 # That is muting in software; see man debsway.
 # Usage: bash pipewire-audio.sh [--remove | --manual]
 # summary: Sound: PipeWire, volume keys, microphone mute
+# security: some
 # status: apt:pipewire-audio
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

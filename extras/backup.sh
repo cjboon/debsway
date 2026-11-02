@@ -9,6 +9,7 @@
 # the password itself is never written down.
 # Usage: bash backup.sh [--remove | --manual]
 # summary: Encrypted backups of your home folder (restic)
+# security: most
 # status: apt:restic
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

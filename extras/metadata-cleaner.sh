@@ -6,6 +6,7 @@
 # From Debian.
 # Usage: bash metadata-cleaner.sh [--remove | --manual]
 # summary: Metadata Cleaner (and the mat2 command)
+# security: most
 # status: apt:metadata-cleaner apt:mat2
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

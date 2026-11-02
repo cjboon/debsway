@@ -8,6 +8,7 @@
 # switch Wi-Fi off first: debsway menu > Wi-Fi, or  debsway --wifi off
 # Usage: bash phone-tethering.sh [--remove | --manual]
 # summary: Phone tethering over USB (iPhone and Android)
+# security: some
 # status: apt:usbmuxd
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

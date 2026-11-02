@@ -3,6 +3,7 @@
 # keeps patched. It uses Qt5, which runs on Wayland via qtwayland5 (base).
 # Usage: bash electrum.sh [--remove | --manual]
 # summary: Electrum Bitcoin wallet
+# security: some
 # status: apt:electrum
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

@@ -7,6 +7,7 @@
 # one installed. It's an Electron app and runs on Wayland directly.
 # Usage: bash tutamail.sh [--remove | --manual]
 # summary: Tuta Mail desktop (signed AppImage)
+# security: some
 # status: opt:tuta
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/appimage.sh"

@@ -6,6 +6,7 @@
 # URL) and an empty home. DEBSWAY_NO_SANDBOX=1 runs one without it.
 # Usage: bash media.sh [--remove | --manual]
 # summary: imv and mpv, each in a sandbox
+# security: most
 # status: apt:imv apt:mpv bin:imv bin:mpv bin:media-sandbox
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

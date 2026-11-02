@@ -28,6 +28,7 @@
 # build without it): copy and paste a password; the clipboard is shared.
 # Usage: bash firefox-sandbox.sh [--remove | --manual]
 # summary: Firefox as its own locked-down user
+# security: most
 # status: file:/usr/local/bin/firefox
 # files: bin/no-abstract-sockets bin/wayland-restrict data/firefox-firewall.nft data/firefox-user.js data/debsway-firefox.desktop lib/firefox-sandbox.sh
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"

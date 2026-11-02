@@ -3,6 +3,7 @@
 # already there): unzip, zip, 7zip, bzip2 and zstd, all command-line.
 # Usage: bash archive-tools.sh [--remove | --manual]
 # summary: unzip, zip, 7z, bzip2 and zstd for archives
+# security: some
 # status: apt:unzip apt:zip apt:7zip apt:bzip2 apt:zstd
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

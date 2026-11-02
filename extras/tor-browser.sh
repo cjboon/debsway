@@ -16,6 +16,7 @@
 # checked and installed, so nothing is fetched from torproject.org.
 # Usage: bash tor-browser.sh [--remove | --manual]
 # summary: Tor Browser with your bridges (bridge lines needed)
+# security: most
 # status: apt:torbrowser-launcher
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/appimage.sh"

@@ -6,6 +6,7 @@
 #                                 (needs parts/wl-clipboard.sh, else saves a file)
 # Usage: bash grim-slurp.sh [--remove | --manual]
 # summary: Screenshots: Print and Super+Shift+p keys
+# security: some
 # status: apt:grim apt:slurp
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

@@ -6,6 +6,7 @@
 # Made the default for folders, e.g. "open containing folder" in Firefox.
 # Usage: bash file-manager.sh [--remove | --manual]
 # summary: Thunar file manager with Trash and thumbnails
+# security: some
 # status: apt:thunar
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

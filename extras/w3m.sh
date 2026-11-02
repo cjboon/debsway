@@ -4,6 +4,7 @@
 # search results, and a way to get a page when nothing else is installed.
 # Usage: bash w3m.sh [--remove | --manual]
 # summary: w3m, a text-mode web browser for the terminal
+# security: some
 # status: apt:w3m
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

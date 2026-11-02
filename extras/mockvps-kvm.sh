@@ -5,6 +5,7 @@
 # installs what it needs and a mockvps-kvm command.
 # Usage: bash mockvps-kvm.sh [--remove | --manual]
 # summary: Disposable Debian VM for trying out server setups
+# security: some
 # status: bin:mockvps-kvm
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

@@ -11,6 +11,7 @@
 #    somewhere (see THREAT-MODEL.md).
 # Usage: bash lid-awake.sh [--remove | --manual]
 # summary: Closing the lid locks, but doesn't suspend
+# security: some
 # status: file:/etc/systemd/logind.conf.d/60-debsway-lid.conf
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

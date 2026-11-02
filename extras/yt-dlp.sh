@@ -19,6 +19,7 @@
 #    for the next one: give options on the command line.
 # Usage: bash yt-dlp.sh [--remove | --manual]   (run it again to update yt-dlp)
 # summary: yt-dlp video downloader, as its own locked user
+# security: most
 # status: file:/usr/local/bin/yt-dlp
 # files: bin/yt-dlp bin/yt-dlp-session data/yt-dlp-firewall.nft
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
