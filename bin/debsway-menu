@@ -2,8 +2,10 @@
 # debsway-menu: written by debsway parts/debsway-menu.sh
 # The menu behind the "debsway" item in the bar. A click opens a black-and-gray
 # terminal in a floating, centered window, with the choices Help, Terminal (Font size on a
-# text console), Web browser and Text editor (when one is installed), Install apps,
-# Update and Status. Arrow keys (or j/k) and Enter choose; so does a
+# text console), Web browser, Text editor, File manager, Password manager, Mail and
+# Claude (each when installed), Back up now (with the backup extra), Install apps,
+# Update and Status, then the switches: Wi-Fi, Bluetooth, Microphone, Webcam and
+# Vault, when there is one. Arrow keys (or j/k) and Enter choose; so does a
 # click. Esc closes every screen of it, the install list and the pager
 # included. What you choose runs in that same window, and the window closes
 # when it ends (the install and update screens wait for a key first, if they
@@ -227,13 +229,41 @@ text_editor() {
     for c in $EDITORS; do [ -x "$c" ] && { echo "$c"; return; }; done
     return 0
 }
+# app NAME...: the first of these commands that is installed, from APPS (where
+# debsway and Debian put them; DEBSWAY_MENU_APPS: a test's own list)
+APPS=${DEBSWAY_MENU_APPS-/usr/bin/thunar /usr/bin/keepassxc $HOME/.local/bin/tuta $HOME/.local/bin/claude-vm $HOME/.local/bin/claude $HOME/.local/bin/claude-regular $HOME/.local/bin/vault $HOME/.local/bin/backup}
+app() {
+    local want c
+    for want; do
+        for c in $APPS; do [ "${c##*/}" = "$want" ] && [ -x "$c" ] && { echo "$c"; return; }; done
+    done
+    return 0
+}
+# claude_cmd: Claude Code in a window of its own: claude-vm opens its own;
+# the sandboxed claude must start in ~/projects, claude-regular in your home
+claude_cmd() {
+    local c
+    c=$(app claude-vm claude claude-regular)
+    case ${c##*/} in
+        claude-vm) echo "$c" ;;
+        claude) echo "foot --title=Claude -D $HOME/projects $c" ;;
+        claude-regular) echo "foot --title=Claude -D $HOME $c" ;;
+    esac
+}
 if [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null; then
     ids+=(terminal)
     items+=(Terminal)
     BROWSER=$(web_browser) EDITOR_CMD=$(text_editor)
     if [ -n "$BROWSER" ]; then ids+=(browser); items+=("Web browser"); fi
     if [ -n "$EDITOR_CMD" ]; then ids+=(editor); items+=("Text editor"); fi
+    FILES_CMD=$(app thunar) PASSWORDS_CMD=$(app keepassxc) MAIL_CMD=$(app tuta) CLAUDE_CMD=$(claude_cmd)
+    if [ -n "$FILES_CMD" ]; then ids+=(files); items+=("File manager"); fi
+    if [ -n "$PASSWORDS_CMD" ]; then ids+=(passwords); items+=("Password manager"); fi
+    if [ -n "$MAIL_CMD" ]; then ids+=(mail); items+=(Mail); fi
+    if [ -n "$CLAUDE_CMD" ]; then ids+=(claude); items+=(Claude); fi
 fi
+BACKUP_CMD=$(app backup) VAULT_CMD=$(app vault)
+if [ -n "$BACKUP_CMD" ]; then ids+=(backup); items+=("Back up now"); fi
 # Text size, on a text console only (console-only mode): there is no Terminal
 # there, and the menu runs in the console itself
 if [ -z "${SWAYSOCK:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ] && [ -x "$HOME/.local/bin/console-font" ]; then
@@ -250,11 +280,18 @@ if [ -x "$RADIOS" ]; then
 fi
 fixed=${#ids[@]}
 for r in "${radio_ids[@]}"; do ids+=("$r"); items+=(""); done
+# The vault is a switch too: it shows whether it is open
+if [ -n "$VAULT_CMD" ]; then ids+=(vault); items+=(""); fi
 n=${#ids[@]}
 
 # radio_label NAME: what the entry shows, e.g. "Wi-Fi: on"
 radio_label() {
     local name state
+    if [ "$1" = vault ]; then
+        state=$("$VAULT_CMD" status 2>/dev/null)
+        printf 'Vault: %s' "${state%% *}"
+        return
+    fi
     case $1 in wifi) name=Wi-Fi ;; bluetooth) name=Bluetooth ;; mic) name=Microphone ;; camera) name=Webcam ;; esac
     state=$("$RADIOS" "$1" status 2>/dev/null)
     case $state in
@@ -309,6 +346,37 @@ run_choice() {
         browser)
             swaymsg exec "$BROWSER" >/dev/null 2>&1
             exit 0 ;;
+        files | passwords | mail | claude)
+            local cmd
+            case ${ids[sel]} in
+                files) cmd=$FILES_CMD ;; passwords) cmd=$PASSWORDS_CMD ;;
+                mail) cmd=$MAIL_CMD ;; claude) cmd=$CLAUDE_CMD ;;
+            esac
+            swaymsg exec "$cmd" >/dev/null 2>&1
+            exit 0 ;;
+        vault)
+            if "$VAULT_CMD" status 2>/dev/null | grep -q '^open'; then
+                "$VAULT_CMD" close >/dev/null 2>&1
+            else
+                # It asks for the vault's password: on this window's own screen
+                screen_off
+                printf '\e[2J\e[1;1HOpening the vault (for an hour; vault open --for 2h in a terminal for longer).\n\n'
+                "$VAULT_CMD" open || true
+                printf '\nPress Enter to go back. '
+                IFS= read -r _ </dev/tty || true
+                screen_on
+                settle
+            fi
+            refresh_items
+            return 0 ;;
+        backup)
+            screen_off
+            printf '\e[2J\e[1;1HBacking up your home folder.\n\n'
+            "$BACKUP_CMD" || printf '\nThe backup stopped with an error (see above).\n'
+            printf '\nPress Enter to go back. '
+            IFS= read -r _ </dev/tty || true
+            screen_on
+            settle ;;
         editor)
             swaymsg exec "$EDITOR_CMD" >/dev/null 2>&1
             exit 0 ;;
