@@ -4,7 +4,7 @@
 # folder changes nothing), parts/wallpaper.sh (the sway snippet), and
 # extras/wallpapers.sh (every source in one folder, named after it; Budgie's
 # unpacked from Debian's package, never installed: no sudo, no package
-# script, no links; personal/ and --remove keeping what you added) and
+# script, no links; --remove keeping what you added) and
 # lib/wallpaper-sources.py's rules (only https, to each source's own hosts;
 # size from the file, shape, credit; the feeds read right), offline. Uses a
 # pretend swaymsg, a pretend apt-get download serving a package built here, a
@@ -26,6 +26,8 @@ unset SWAYSOCK
 
 mkdir -p "$T/fake" "$T/home"
 printf '#!/bin/sh\necho "$*" >>"%s/sway"\n' "$T" >"$T/fake/swaymsg"
+# (no notification may pop up on the real desktop)
+printf '#!/bin/sh\necho "$*" >>"%s/notify"\n' "$T" >"$T/fake/notify-send"
 # sudo: "may I" (-v) is yes; anything else is logged, and refused
 printf '#!/bin/sh\n[ "$1" = -v ] && exit 0\necho "sudo $*" >>"%s/sudo"\nexit 1\n' "$T" >"$T/fake/sudo"
 chmod +x "$T/fake/"*
@@ -73,6 +75,67 @@ touch "$D/new.JPG"
 wp status
 check "a picture bigger than 50 MB isn't used" grep -q "new.JPG: bigger than 50 MB" "$T/out"
 
+# ---- choosing from ~/Pictures/Wallpapers: next, previous, pick
+rm -f "$D"/*
+CO=$T/home/Pictures/Wallpapers
+mkdir -p "$CO"
+jpg "$CO/hubble_potw1a.jpg"
+png "$CO/nasa_iss1.png"
+jpg "$CO/my mountain_lake.jpg"
+printf 'GIF89a' >"$CO/not-a.jpg"
+printf '\xff\xd8\xff' >"$CO/found.webp"
+printf 'hubble_potw1a.jpg: A vista of stellar birth. Credit: ESA/Hubble (CC BY 4.0). https://x\nnasa_iss1.png: Aurora over the sea. Credit: NASA. https://y\n' >"$CO/CREDITS.txt"
+touch -d '2026-01-01' "$CO/hubble_potw1a.jpg"
+touch -d '2026-02-01' "$CO/nasa_iss1.png"
+touch -d '2026-03-01' "$CO/my mountain_lake.jpg"
+mine() { readlink "$(sed -E 's/.* bg "([^"]*)".*/\1/' "$T/sway" | tail -1)"; }
+wp next
+check "Super+]: the first picture of the folder, up at once, kept as chosen.jpg in the desktop folder" \
+    bash -c '[ "$(cat "$1")" = hubble_potw1a.jpg ] && cmp -s "$2/hubble_potw1a.jpg" "$3/chosen.jpg" && [ "$4" = "$3/chosen.jpg" ]' _ "$C/chosen-wallpaper" "$CO" "$D" "$(mine)"
+wp next
+check "...again: the next one, by name" \
+    bash -c '[ "$(cat "$1")" = my\ mountain_lake.jpg ] && [ -f "$2/chosen.jpg" ] && [ ! -e "$2/chosen.png" ]' _ "$C/chosen-wallpaper" "$D"
+wp next
+check "...and the next (a PNG: chosen.png, the JPEG gone; files that aren't JPEG or PNG passed over)" bash -c '[ "$(cat "$1")" = nasa_iss1.png ] && [ -f "$2/chosen.png" ] && [ ! -e "$2/chosen.jpg" ]' _ "$C/chosen-wallpaper" "$D"
+wp next
+check "...past the last, round to the first" test "$(cat "$C/chosen-wallpaper")" = hubble_potw1a.jpg
+wp previous
+check "Super+[: back round to the last" test "$(cat "$C/chosen-wallpaper")" = nasa_iss1.png
+check "...its name shows in a notification for a moment" grep -q "Wallpaper NASA: Aurora over the sea" "$T/notify"
+wp status
+check "status names it by its title from CREDITS.txt" grep -q "Wallpaper: NASA: Aurora over the sea" "$T/out"
+check "...and says why a WebP or a fake JPEG isn't used" bash -c 'grep -q "found.webp: a WebP picture" "$1" && grep -q "not-a.jpg: not really a JPEG" "$1"' _ "$T/out"
+jpg "$D/my-own.jpg"
+wp
+check "a picture you copy into the desktop folder later wins over the chosen one" test "$(mine)" = "$D/my-own.jpg"
+rm "$D/my-own.jpg"
+# pick: a pretend wmenu shows what it was given and answers with line 2
+cat >"$T/fake/wmenu" <<EOF
+#!/bin/sh
+cat >"$T/menu"
+sed -n 2p "$T/menu"
+EOF
+chmod +x "$T/fake/wmenu"
+wp pick
+check "Super+Shift+w: a list newest first, by title (yours by its tidied name)" \
+    bash -c '[ "$(sed -n 1p "$1")" = "1  my mountain lake" ] && [ "$(sed -n 2p "$1")" = "2  NASA: Aurora over the sea" ] && [ "$(sed -n 3p "$1")" = "3  Hubble: A vista of stellar birth" ] && [ "$(wc -l <"$1")" = 3 ]' _ "$T/menu"
+check "...the line picked becomes the wallpaper" bash -c '[ "$(cat "$1")" = nasa_iss1.png ] && [ -f "$2/chosen.png" ]' _ "$C/chosen-wallpaper" "$D"
+printf '#!/bin/sh\ncat >/dev/null\necho "99  nope"\n' >"$T/fake/wmenu"
+before=$(cat "$C/chosen-wallpaper")
+wp pick
+check "...an answer that isn't one of the lines changes nothing" test "$(cat "$C/chosen-wallpaper")" = "$before"
+printf '#!/bin/sh\ncat >/dev/null\nexit 1\n' >"$T/fake/wmenu"
+wp pick
+check "...nor does Esc" test "$(cat "$C/chosen-wallpaper")" = "$before"
+# a file name made to put escape codes on the screen, in the list
+jpg "$CO/x$(printf '\033')]52;c;SGk=$(printf '\007').jpg"
+printf '#!/bin/sh\ncat >"%s/menu"\nexit 1\n' "$T" >"$T/fake/wmenu"
+wp pick
+check "...a file name's escape codes never reach the list" not grep -q "$(printf '\033')" "$T/menu"
+rm -f "$CO"/x*
+rm -rf "${CO:?}" "${D:?}"/* "${C:?}"
+mkdir -p "$D"
+
 # lib.sh sets PATH itself: a copy that keeps the pretend programs first
 R=$T/r
 mkdir -p "$R/extras" "$R/parts"
@@ -92,6 +155,8 @@ P=$T/part
 mkdir -p "$P/home"
 if env -u SWAYSOCK WP_TEST_PATH="$T/fake:$PATH" HOME="$P/home" bash "$R/parts/wallpaper.sh" >"$T/out" 2>&1; then :; fi
 check "the part: sway runs wallpaper at every start and reload" grep -qx "exec_always $P/home/.local/bin/wallpaper" "$P/home/.config/sway/config.d/wallpaper.conf"
+check "...Super+] and Super+[ step through the pictures, Super+Shift+w lists them" \
+    bash -c 'grep -qx "bindsym \$mod+bracketright exec $2/wallpaper next" "$1" && grep -qx "bindsym \$mod+bracketleft exec $2/wallpaper previous" "$1" && grep -qx "bindsym \$mod+Shift+w exec $2/wallpaper pick" "$1"' _ "$P/home/.config/sway/config.d/wallpaper.conf" "$P/home/.local/bin"
 check "...the command is installed, the folder made, with a README" \
     bash -c '[ -x "$1/.local/bin/wallpaper" ] && [ -d "$1/Pictures/debsway/desktop" ] && grep -q "Super+Shift+c" "$1/Pictures/debsway/README.txt"' _ "$P/home"
 env -u SWAYSOCK WP_TEST_PATH="$T/fake:$PATH" HOME="$P/home" bash "$R/parts/wallpaper.sh" --remove >"$T/out" 2>&1
@@ -141,7 +206,7 @@ for n in A1 B2; do printf '\377\330\377' >"\$3/\$4_\$n.jpg"; echo "\$4_\$n.jpg";
 echo "\$4_A1.jpg: credit" >>"\$3/CREDITS.txt"
 echo "../../.bashrc"
 echo "\$4_x/../../.bashrc"
-echo "personal/found.png"
+echo "inner/found.png"
 echo "nasa_not-mine.jpg"
 EOF
 chmod +x "$T/fake/apt-get" "$T/fake/python3"
@@ -158,9 +223,9 @@ check "...no links come out (a .png pointing at /etc/passwd)" bash -c '[ ! -e "$
 check "...nothing is installed: no sudo, no package script ran" bash -c '[ ! -e "$1/sudo" ] && [ ! -e "$1/postinst-ran" ]' _ "$T"
 check "...two pictures with the same name both kept, under their own names" \
     test "$(find "$W" -name 'budgie_*1920x1080.jpg' | wc -l)" = 2
-check "...the downloads are on the list; paths out of the folder, personal/ and another source's names aren't" \
+check "...the downloads are on the list; paths out of the folder or into one, and another source's names, aren't" \
     bash -c 'grep -qx hubble_A1.jpg "$1" && grep -qx CREDITS.txt "$1" && ! grep -qE "\.\.|/" "$1" && [ "$(grep -c "^nasa_not-mine" "$1")" = 1 ]' _ "$W/.debsway-wallpapers"
-check "...a personal folder for your own, and a README" bash -c '[ -d "$1/personal" ] && grep -q "personal/" "$1/README.txt"' _ "$W"
+check "...a README, which says your own pictures can go there too" bash -c '[ ! -e "$1/personal" ] && grep -q "Your own pictures" "$1/README.txt"' _ "$W"
 check "...and the run succeeds" test "$rc" -eq 0
 n=$(find "$W" -type f | wc -l)
 xw
@@ -175,14 +240,14 @@ rc=$?
 check "a source failing is said, and the run fails" bash -c '[ "$1" -ne 0 ] && grep -q "Not downloaded: webb" "$2"' _ "$rc" "$T/out"
 rm "$T/fails-webb"
 png "$W/mine.png"
-png "$W/personal/found.png"
+mkdir -p "$W/inner"; png "$W/inner/found.png"
 echo "../mine.png" >>"$W/.debsway-wallpapers"
-echo "personal/found.png" >>"$W/.debsway-wallpapers"
+echo "inner/found.png" >>"$W/.debsway-wallpapers"
 xw --remove
 check "--remove takes out what it put there" \
     bash -c '[ ! -e "$1/budgie_big.png" ] && [ ! -e "$1/nasa_A1.jpg" ] && [ ! -e "$1/CREDITS.txt" ] && [ ! -e "$1/.debsway-wallpapers" ]' _ "$W"
-check "...and keeps what you added, personal/ and all, whatever the list says" \
-    bash -c '[ -f "$1/mine.png" ] && [ -f "$1/personal/found.png" ]' _ "$W"
+check "...and keeps what you added, in the folder or below, whatever the list says" \
+    bash -c '[ -f "$1/mine.png" ] && [ -f "$1/inner/found.png" ]' _ "$W"
 check "...no sudo there either" test ! -e "$T/sudo"
 
 # ---- lib/wallpaper-sources.py's rules, offline (no connection is made)

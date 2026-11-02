@@ -7,8 +7,8 @@ bash ~/debsway/extras/wallpapers.sh            pick sources; their pictures go i
 bash ~/debsway/extras/wallpapers.sh --remove   take out what it downloaded (your own pictures stay)
 bash ~/debsway/extras/wallpapers.sh --manual   print the manual steps below
 
-cp ~/Pictures/Wallpapers/hubble_potw2552a.jpg ~/Pictures/debsway/desktop/
-                                               make one your wallpaper, then Super+Shift+c
+Super+] / Super+[                              step through them as your wallpaper
+wallpaper pick                                 choose one by name
 ```
 
 Pictures to choose your wallpaper from (the base's `~/Pictures/debsway/desktop`,
@@ -26,10 +26,11 @@ runs and no sudo is needed. The others are fetched by `lib/wallpaper-sources.py`
 https only, to each source's own hosts, also after a redirect; each picture at
 least 1920×1080 and landscape (read from the file itself), a real JPEG or PNG
 of at most 40 MB, and none whose credit names another copyright holder, with
-its title, credit and page in `CREDITS.txt`. `personal/` is yours, for
-pictures you find yourself (an image search, saved through Firefox into
-`~/Downloads`), and debsway never changes or removes it. `README.txt` there
-says the same.
+its title, credit and page in `CREDITS.txt`. Pictures of your own (an image
+search, saved through Firefox into `~/Downloads`) can go in the same folder:
+debsway never changes or removes them. Super+] and Super+[ step through the
+folder as your wallpaper, and `wallpaper pick` lists it by name
+(`parts/wallpaper.sh`). `README.txt` there says the same.
 
 ## LIMITS
 
@@ -46,7 +47,7 @@ says the same.
 ```
 # Budgie's: downloaded (apt checks it against Debian's signed lists), its
 # pictures and licence unpacked, nothing installed
-mkdir -p ~/Pictures/Wallpapers/personal /tmp/wp && cd /tmp/wp
+mkdir -p ~/Pictures/Wallpapers /tmp/wp && cd /tmp/wp
 apt-get download budgie-backgrounds
 dpkg-deb -x budgie-backgrounds_*.deb x
 find x -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) -size +100k |

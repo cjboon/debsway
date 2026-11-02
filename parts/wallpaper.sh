@@ -4,6 +4,8 @@
 # newest one there wins. With the folder empty nothing changes: your sway
 # config's own "output * bg" line, or sway's plain background, stays.
 # bin/wallpaper does the work; "wallpaper status" says which picture is used.
+# Super+] and Super+[ step through ~/Pictures/Wallpapers as the wallpaper,
+# Super+Shift+w lists it by name (wmenu); the one chosen stays.
 # (extras/wallpapers.sh fills ~/Pictures/Wallpapers with pictures to pick from.)
 # Usage: bash wallpaper.sh [--remove]
 # status: bin:wallpaper
@@ -34,15 +36,22 @@ desktop/   Put a JPEG or PNG here and it becomes your wallpaper at the next
            with none, the default. "wallpaper status" says which, and why a
            file isn't used.
 
-Pictures to choose from: bash ~/debsway/extras/wallpapers.sh fills
-~/Pictures/Wallpapers with space, Earth and wild animal pictures (NASA,
-Hubble, Webb, Earth Observatory, Wikimedia Commons, Budgie), next to
-personal/ for the ones you find yourself (copy one into desktop/).
+Wallpapers/ (one folder up) is to choose from: Super+] and Super+[ step
+through it on the desktop itself, and Super+Shift+w (or "wallpaper pick")
+lists it by name. The one you stop on is copied here as chosen.jpg, so it
+stays. bash ~/debsway/extras/wallpapers.sh fills it with space, Earth and
+wild animal pictures (NASA, Hubble, Webb, Earth Observatory, Wikimedia
+Commons, Budgie); pictures of your own can go there too.
 EOF
 fi
-# exec_always: at every start and every reload, so a new picture shows on Super+Shift+c
+# exec_always: at every start and every reload, so a new picture shows on
+# Super+Shift+c. The keys step through ~/Pictures/Wallpapers, or list it.
 put_snippet wallpaper <<EOF
 # Your own wallpaper: the newest picture in ~/Pictures/debsway/desktop (debsway parts/wallpaper.sh)
 exec_always $BIN/wallpaper
+bindsym \$mod+bracketright exec $BIN/wallpaper next
+bindsym \$mod+bracketleft exec $BIN/wallpaper previous
+bindsym \$mod+Shift+w exec $BIN/wallpaper pick
 EOF
-note "Put a picture in $PICS/desktop, then press Super+Shift+c."
+note "Super+] and Super+[ step through ~/Pictures/Wallpapers; Super+Shift+w lists it."
+note "Or put a picture in $PICS/desktop, then press Super+Shift+c."

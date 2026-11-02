@@ -14,6 +14,7 @@
     Super+Shift+q          close the window
     Super+?                this page
     Super+m                the debsway menu (or click debsway in the bar)
+    Super+] / Super+[      next / previous wallpaper; Super+Shift+w: pick one
 
   IN THE TERMINAL (foot)
     Ctrl+Shift+c / v       copy / paste (Ctrl+c stops a program)

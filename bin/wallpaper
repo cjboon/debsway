@@ -5,11 +5,20 @@
 # changes (your sway config's "output * bg" line, or sway's plain background).
 # sway runs it at every start and reload (parts/wallpaper.sh).
 #   wallpaper           put the picture up (or nothing, if there is none)
+#   wallpaper next      the next picture in ~/Pictures/Wallpapers (Super+]),
+#   wallpaper previous  or the one before (Super+[), up at once and kept
+#   wallpaper pick      choose one from ~/Pictures/Wallpapers by name (Super+Shift+w)
 #   wallpaper status    which picture is used, and which files aren't, and why
+# A picture chosen with next, previous or pick is copied into the desktop
+# folder as chosen.jpg (or .png), so it is the newest there and stays after a
+# reboot; a picture you copy in yourself later wins over it.
 set -uo pipefail
 
 DIR=${DEBSWAY_WALLPAPER_DIR:-$HOME/Pictures/debsway/desktop}
+COLL=${DEBSWAY_WALLPAPERS:-$HOME/Pictures/Wallpapers}
 CACHE=${XDG_CACHE_HOME:-$HOME/.cache}/debsway
+# the collection's file last chosen, for next and previous
+CURRENT=$CACHE/chosen-wallpaper
 MAX_BYTES=$((50 * 1024 * 1024))
 
 # why_not FILE: empty if FILE can be the wallpaper, else the reason
@@ -17,6 +26,7 @@ why_not() {
     local f=$1 magic
     case ${f,,} in
         *.jpg | *.jpeg | *.png) ;;
+        *.webp) echo "a WebP picture: only JPEG and PNG can be wallpapers (convert it, or save a JPEG)"; return ;;
         *) echo "not a .jpg, .jpeg or .png"; return ;;
     esac
     [ -f "$f" ] && [ -r "$f" ] || { echo "can't be read"; return; }
@@ -41,36 +51,132 @@ newest() {
     [ -n "$best" ] && echo "$best"
 }
 
+# shown TEXT: TEXT without control characters (a file name can hold escape codes)
+shown() { printf '%s' "$1" | tr -d '\000-\037\177'; }
+
+# collection: the usable pictures in COLL, one a line, by name
+collection() {
+    local f
+    for f in "$COLL"/*; do
+        [ -e "$f" ] || continue
+        case ${f##*/} in *$'\n'*) continue ;; esac
+        [ -z "$(why_not "$f")" ] && printf '%s\n' "$f"
+    done
+}
+
+# label FILE: what to call it: its title from CREDITS.txt, after its source
+# ("Hubble: A neighbouring vista of stellar birth"), else its tidied file name
+label() {
+    local base=${1##*/} src="" title
+    title=$(awk -v b="$base: " 'index($0, b) == 1 { print substr($0, length(b) + 1); exit }' "$COLL/CREDITS.txt" 2>/dev/null)
+    title=${title%%. Credit:*}
+    case $base in
+        nasa_*) src=NASA ;; hubble_*) src=Hubble ;; webb_*) src=Webb ;;
+        earth_*) src="Earth Observatory" ;; wild_*) src=Wild ;; budgie_*) src=Budgie ;;
+    esac
+    if [ -z "$title" ]; then
+        title=${base%.*}
+        [ -z "$src" ] || title=${title#*_}
+        title=${title//[_-]/ }
+    fi
+    shown "${src:+$src: }$title"
+}
+
+# apply: the newest picture in DIR goes up
+apply() {
+    local pic ext link old
+    pic=$(newest) || return 0
+    # sway reads the path inside a command line, where a quote or a ; in a file
+    # name would end it: hand sway a link with a name made of digits only. The
+    # name changes with the picture, so sway starts the new one.
+    case $CACHE in *[\"\'\\\;]* | *$'\n'*) echo "wallpaper: can't use the folder $CACHE (odd characters in its name)" >&2; return 1 ;; esac
+    mkdir -p "$CACHE"
+    ext=${pic##*.}
+    ext=${ext,,}
+    [ "$ext" = jpeg ] && ext=jpg
+    link="$CACHE/wallpaper-$(stat -L -c '%i-%Y' -- "$pic").$ext"
+    # (only the links: wallpaper- and digits)
+    for old in "$CACHE"/wallpaper-[0-9]*; do
+        [ "$old" = "$link" ] || rm -f -- "$old"
+    done
+    ln -sfn -- "$pic" "$link"
+    swaymsg -q "output * bg \"$link\" fill"
+}
+
+# use FILE: FILE, from the collection, becomes the wallpaper and stays
+use() {
+    local ext=${1##*.}
+    ext=${ext,,}
+    [ "$ext" = jpeg ] && ext=jpg
+    mkdir -p "$DIR" "$CACHE"
+    cp -- "$1" "$DIR/.chosen.part" || return 1
+    rm -f -- "$DIR/chosen.jpg" "$DIR/chosen.png"
+    mv -f -- "$DIR/.chosen.part" "$DIR/chosen.$ext"
+    printf '%s\n' "${1##*/}" >"$CURRENT"
+    apply
+    # its name, for a moment, if notifications are set up
+    if command -v notify-send >/dev/null; then notify-send -t 3000 Wallpaper "$(label "$1")" 2>/dev/null || true; fi
+}
+
+# step +1|-1: the next or previous picture in the collection
+step() {
+    local pics=() cur i n=0
+    mapfile -t pics < <(collection)
+    n=${#pics[@]}
+    [ "$n" -gt 0 ] || { echo "wallpaper: no pictures in $COLL (bash ~/debsway/extras/wallpapers.sh fetches some)" >&2; return 1; }
+    cur=$(cat "$CURRENT" 2>/dev/null)
+    i=-1
+    for ((k = 0; k < n; k++)); do [ "${pics[k]##*/}" = "$cur" ] && i=$k; done
+    if [ "$i" -lt 0 ]; then
+        # nothing chosen yet: start at the first (or, going back, the last)
+        if [ "$1" -gt 0 ]; then i=0; else i=$((n - 1)); fi
+    else
+        i=$(((i + $1 + n) % n))
+    fi
+    use "${pics[i]}"
+}
+
+# pick: a list of the collection by name, newest first, in debsway's wmenu look
+pick() {
+    local pics=() f sel num
+    mapfile -t pics < <(collection | while IFS= read -r f; do printf '%s\t%s\n' "$(stat -c %Y -- "$f")" "$f"; done | sort -rn | cut -f2-)
+    [ ${#pics[@]} -gt 0 ] || { echo "wallpaper: no pictures in $COLL (bash ~/debsway/extras/wallpapers.sh fetches some)" >&2; return 1; }
+    # each line starts with its number, which says which picture it is
+    sel=$(for i in "${!pics[@]}"; do printf '%d  %s\n' "$((i + 1))" "$(label "${pics[i]}")"; done |
+        wmenu -i -l 15 -p "Wallpaper:" -f 'monospace 12' -N 000000 -n ffffff -M 000000 -m ffffff -S ffffff -s 000000) || return 0
+    num=${sel%% *}
+    [[ $num =~ ^[0-9]{1,6}$ ]] && [ "$num" -ge 1 ] && [ "$num" -le ${#pics[@]} ] || return 0
+    use "${pics[num - 1]}"
+}
+
 case ${1:-} in
     status)
         if pic=$(newest); then
-            echo "Wallpaper: ${pic##*/} (from $DIR)"
+            if [ "${pic##*/}" = chosen.jpg ] || [ "${pic##*/}" = chosen.png ]; then
+                cur=$(cat "$CURRENT" 2>/dev/null)
+                if [ -n "$cur" ] && [ -f "$COLL/$cur" ]; then
+                    echo "Wallpaper: $(label "$COLL/$cur") ($(shown "$cur"), from $COLL)"
+                else
+                    echo "Wallpaper: ${pic##*/} (from $DIR)"
+                fi
+            else
+                echo "Wallpaper: $(shown "${pic##*/}") (from $DIR)"
+            fi
         else
             echo "Wallpaper: the default (no picture in $DIR)"
         fi
-        for f in "$DIR"/*; do
-            [ -e "$f" ] || continue
-            why=$(why_not "$f")
-            # (names printed without control characters: a file name can hold escape codes)
-            if [ -n "$why" ]; then printf '  not used: %s: %s\n' "${f##*/}" "$why" | tr -d '\000-\010\013-\037\177'; fi
+        for d in "$DIR" "$COLL"; do
+            for f in "$d"/*; do
+                [ -f "$f" ] || continue
+                case ${f##*/} in *.txt) continue ;; esac
+                why=$(why_not "$f")
+                if [ -n "$why" ]; then printf '  not used: %s: %s\n' "$(shown "${f##*/}")" "$why"; fi
+            done
         done
         exit 0 ;;
-    "") ;;
-    *) echo "usage: wallpaper [status]" >&2; exit 2 ;;
+    next) step 1 ;;
+    previous | prev) step -1 ;;
+    pick) pick ;;
+    "") apply ;;
+    *) echo "usage: wallpaper [next | previous | pick | status]" >&2; exit 2 ;;
 esac
-
-pic=$(newest) || exit 0
-# sway reads the path inside a command line, where a quote or a ; in a file
-# name would end it: hand sway a link with a name made of digits only. The
-# name changes with the picture, so sway starts the new one.
-case $CACHE in *[\"\'\\\;]* | *$'\n'*) echo "wallpaper: can't use the folder $CACHE (odd characters in its name)" >&2; exit 1 ;; esac
-mkdir -p "$CACHE"
-ext=${pic##*.}
-ext=${ext,,}
-[ "$ext" = jpeg ] && ext=jpg
-link="$CACHE/wallpaper-$(stat -L -c '%i-%Y' -- "$pic").$ext"
-for old in "$CACHE"/wallpaper-*; do
-    [ "$old" = "$link" ] || rm -f -- "$old"
-done
-ln -sfn -- "$pic" "$link"
-swaymsg -q "output * bg \"$link\" fill"

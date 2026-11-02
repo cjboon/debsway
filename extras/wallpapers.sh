@@ -11,7 +11,7 @@
 #   wild_*    wild animals: Wikimedia Commons' featured photos, free licences
 #             (lib/wallpaper-sources.py: https only, to each source's own
 #             hosts; at least 1920x1080, landscape; credits in CREDITS.txt)
-#   personal/ yours, e.g. pictures from an image search; never touched.
+# Your own pictures can go there too: --remove takes out only what it downloaded.
 # A list asks which sources. Run it again to top each one up.
 # Usage: bash wallpapers.sh [--remove | --manual]
 # summary: Wallpapers: space, Earth and wild animals
@@ -43,12 +43,12 @@ listed() { grep -qxF -- "$1" "$LIST" || echo "$1" >>"$LIST"; }
 if [ "${1:-}" = --remove ]; then
     if [ -f "$LIST" ]; then
         while IFS= read -r f; do
-            # only plain names: nothing outside the folder, nothing in personal/
+            # only plain names: nothing outside the folder, nor in a folder in it
             case $f in "" | */* | .*) continue ;; esac
             rm -f -- "${DEST:?}/$f"
         done <"$LIST"
         rm -f "$LIST"
-        note "Removed the wallpapers it downloaded; $DEST/personal and anything else of yours are still there."
+        note "Removed the wallpapers it downloaded; pictures of your own in $DEST are still there."
     fi
     exit
 fi
@@ -60,8 +60,9 @@ readme() {
     cat >"$f" <<'EOF'
 Wallpapers to choose from (written by debsway extras/wallpapers.sh)
 
-To make one your wallpaper, copy it into ~/Pictures/debsway/desktop and press
-Super+Shift+c (the newest picture there is used).
+To make one your wallpaper: Super+] and Super+[ step through them on the
+desktop itself, and "wallpaper pick" lists them by name. (Or copy one into
+~/Pictures/debsway/desktop and press Super+Shift+c.)
 
 Each picture is named after where it came from:
   nasa_     NASA's image library. NASA's own pictures are public domain.
@@ -74,11 +75,10 @@ Each picture is named after where it came from:
   budgie_   Budgie's photos, from Debian. Free licences: budgie_LICENCE.txt.
 CREDITS.txt names each one's title, credit and page.
 
-personal/   Yours: pictures you find yourself, e.g. from an image search
-            (save them through Firefox into ~/Downloads, then move them
-            here). debsway never changes or removes them. Pictures from the
-            web are often copyrighted: fine on your own screen, but don't
-            share them on.
+Your own pictures (JPEG or PNG), e.g. from an image search, can go here too:
+save them through Firefox into ~/Downloads, then move them here, with a name
+you will recognise. debsway never changes or removes them. Pictures from the
+web are often copyrighted: fine on your own screen, but don't share them on.
 
 bash ~/debsway/extras/wallpapers.sh fetches more (each source is topped up);
 with --remove it takes out what it downloaded, nothing of yours.
@@ -97,13 +97,13 @@ if [ -t 0 ] && [ -t 1 ]; then
         ITEMS+=("$name" "$what" ON)
     done
     CL_TITLE="Wallpapers" CL_OK=Download CL_CANCEL=Cancel
-    CL_TEXT="Which sources? The pictures all go in ~/Pictures/Wallpapers, named after their source.\n~/Pictures/Wallpapers/personal is for pictures you find yourself."
+    CL_TEXT="Which sources? The pictures all go in ~/Pictures/Wallpapers, named after their source.\nYour own pictures can go there too: nothing of yours is changed or removed."
     checklist || { note "Nothing downloaded."; exit 0; }
 else
     for s in "${SOURCES[@]}"; do chosen+=("${s%%|*}"); done
 fi
 
-mkdir -p "$DEST/personal"
+mkdir -p "$DEST"
 touch "$LIST"
 readme
 [ ${#chosen[@]} -gt 0 ] || { note "Nothing chosen, nothing downloaded."; exit 0; }
@@ -171,8 +171,8 @@ for src in "${chosen[@]}"; do
     note "$n of Budgie's pictures in $DEST"
 done
 
-note "To use one: copy it into ~/Pictures/debsway/desktop, then press Super+Shift+c."
-note "Your own finds go in $DEST/personal. $DEST/README.txt says more."
+note "To use one: Super+] and Super+[ step through them, or: wallpaper pick"
+note "Your own pictures can go in $DEST too. $DEST/README.txt says more."
 if [ ${#failed[@]} -gt 0 ]; then
     warn "Not downloaded: ${failed[*]}"
     exit 1
