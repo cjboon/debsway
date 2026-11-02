@@ -70,6 +70,48 @@ check "the clean-up runs whatever happens (on exit)" grep -qx 'trap cleanup EXIT
 check "...and the marker is named for the script, so it comes out cleanly" \
     test "$(cd "$HERE" && env -u DEBSWAY_OWNER bash -c '. ./lib.sh; apt_marker' "$HERE/prep/make-install-iso.sh")" = debsway-make-install-iso
 
+# ---- the offline Wi-Fi packages: refreshed before they get too old ----
+O=$T/odir
+inrelease() { # NAME DATE [VALID-UNTIL]: a saved list
+    mkdir -p "$O/offline/debs/verify/$1"
+    { echo "Date: $2"; [ -z "${3:-}" ] || echo "Valid-Until: $3"; } >"$O/offline/debs/verify/$1/InRelease"
+}
+mkdir -p "$O/prep"
+# The pretend fetch script writes down how it ran, and (unless FETCH_FAILS)
+# leaves lists from "today" behind
+cat >"$O/prep/fetch-offline-debs.sh" <<EOF
+echo "fetch \$*" >>"$T/fetched"
+[ -z "\${FETCH_FAILS:-}" ] || exit 1
+mkdir -p "$O/offline/debs/verify/debian" && echo "Date: Mon, 02 Nov 2026 00:00:00 UTC" >"$O/offline/debs/verify/debian/InRelease"
+EOF
+refresh() { : >"$T/fetched"; (DEBSWAY_DIR=$O DEBSWAY_NOW=$(date -d '2026-11-02 12:00 UTC' +%s) offline_debs_refresh) >"$T/said" 2>&1; }
+. "$HERE/lib/offline.sh"
+inrelease debian 'Sat, 12 Sep 2026 07:55:41 UTC'
+inrelease security 'Sat, 31 Oct 2026 22:02:52 UTC' 'Sat, 07 Nov 2026 22:02:52 UTC'
+check "good until: the earliest of each list's Valid-Until and Date + 120 days" \
+    test "$(date -u -d "@$(offline_good_until "$O/offline/debs/verify")" +%F)" = 2026-11-07
+inrelease security 'Sat, 31 Oct 2026 22:02:52 UTC' 'Sat, 21 Nov 2026 22:02:52 UTC'
+: >"$O/offline/debs/Packages"
+refresh
+check "packages good for more than 5 days: left as they are" test ! -s "$T/fetched"
+check "...and it says until when they work" grep -q 'work until 2026-11-21' "$T/said"
+inrelease security 'Sat, 31 Oct 2026 22:02:52 UTC' 'Sat, 05 Nov 2026 22:02:52 UTC'
+refresh
+check "good for under 5 days: the signed lists are refreshed, the packages checked against them" test "$(cat "$T/fetched")" = "fetch --check"
+rm -rf "$O/offline"; mkdir -p "$O/offline/debs"
+refresh
+check "none saved: fetched, with firmware for every card (the laptop may be another)" grep -qx 'fetch --all' "$T/fetched"
+rm -rf "$O/offline"; mkdir -p "$O/offline/debs"; touch "$O/offline/debs/Packages" "$O/offline/debs/firmware-iwlwifi_1_all.deb" "$O/offline/debs/firmware-realtek_2_all.deb"
+sed -i '1i [ "$1" != --check ] || { echo "fetch --check" >>"'"$T"'/fetched"; exit 1; }' "$O/prep/fetch-offline-debs.sh"
+refresh
+check "a saved package changed since (--check fails): the same firmware is fetched again" \
+    test "$(paste -sd, "$T/fetched")" = "fetch --check,fetch firmware-iwlwifi firmware-realtek"
+rm -rf "$O/offline"; mkdir -p "$O/offline/debs"
+FETCH_FAILS=1 refresh
+check "no network to fetch them: the build goes on, saying the laptop needs a cable" grep -q 'needs a cable or a phone' "$T/said"
+check "make-install-iso.sh does this before it puts debsway on the image" \
+    bash -c 'grep -n "^offline_debs_refresh$\|^say \"What goes on it\"$" "$1" | cut -d: -f2 | paste -sd, | grep -qx "offline_debs_refresh,say \"What goes on it\""' _ "$HERE/prep/make-install-iso.sh"
+
 # ---- the installer's answers ----
 P=$(fill_preseed "$HERE/data/install-iso-preseed.cfg" me de_DE.UTF-8 de true)
 ans=$(grep -v '^[[:space:]]*#' <<<"$P")

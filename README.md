@@ -145,7 +145,10 @@ time zone; by default the one of the computer building the image), `--no-erase`
 passphrase at boot, but anyone with the laptop can read the disk; it asks first),
 `--autologin` (tty1 logs you in without your password and starts sway), `--scripts FOLDER` (your own files, to
 `~/scripts`). What it needs to build the image (xorriso, wget, gpg, git) it
-installs first if it is missing; xorriso it removes again at the end. Try the image
+installs first if it is missing; xorriso it removes again at the end. The
+offline Wi-Fi packages (`offline/debs`, for a laptop with no network at first
+boot) are refreshed first when they'd soon be too old for `wifi.sh` to take,
+and it says until when they work. Try the image
 in a VM first: `bash tools/try-install-iso.sh` starts it the way a laptop would
 (UEFI, the image as a USB stick, an empty 20 GB disk), says what to check, then
 starts the installed system; `--two-disks` checks that it asks which disk,

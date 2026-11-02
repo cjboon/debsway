@@ -91,6 +91,25 @@ release_fresh() {
     return 1
 }
 
+# offline_good_until DIR: until when wifi.sh will take the saved lists in DIR
+# (DIR/NAME/InRelease), as seconds since 1970: the earliest of each list's
+# Date plus OFFLINE_MAX_AGE_DAYS and its Valid-Until. Nothing, if DIR has no
+# list or one has no readable Date. (Only the dates: verify_offline_lists
+# checks the signatures.)
+offline_good_until() {
+    local f d u t best=
+    for f in "$1"/*/InRelease; do
+        [ -f "$f" ] || continue
+        d=$(sed -n 's/^Date: *//p' "$f" | head -1)
+        [ -n "$d" ] && t=$(date -d "$d" +%s 2>/dev/null) || return 0
+        t=$((t + OFFLINE_MAX_AGE_DAYS * 86400))
+        u=$(sed -n 's/^Valid-Until: *//p' "$f" | head -1)
+        if [ -n "$u" ] && u=$(date -d "$u" +%s 2>/dev/null) && [ "$u" -lt "$t" ]; then t=$u; fi
+        if [ -z "$best" ] || [ "$t" -lt "$best" ]; then best=$t; fi
+    done
+    [ -z "$best" ] || echo "$best"
+}
+
 # verify_offline_lists DIR OUT: checks every DIR/NAME/InRelease against
 # Debian's archive keyring and every Packages file against its InRelease,
 # then writes the SHA-256 of every package they list to OUT. Returns 1, with

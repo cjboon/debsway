@@ -36,6 +36,42 @@ fill_preseed() {
         -e "s|@TIMEZONE@|${6:-UTC}|g" -e "s|@METHOD@|${7:-crypto}|g" "$1"
 }
 
+# offline_debs_refresh: the Wi-Fi packages that go on the stick (offline/debs),
+# for a laptop with no network at first boot, brought up to date when wifi.sh
+# would refuse them within DEBSWAY_OFFLINE_MIN_DAYS days (5): their signed
+# lists are fetched again and the saved packages checked against them (--check);
+# if one has changed, the same firmware is fetched again; with none saved,
+# every common Wi-Fi card's (the laptop it's for may not be this one). Says
+# until when they're good. Never stops the build: a stick still installs over
+# a cable or a phone.
+offline_debs_refresh() {
+    local debs=$DEBSWAY_DIR/offline/debs fetch=$DEBSWAY_DIR/prep/fetch-offline-debs.sh
+    local now until min=${DEBSWAY_OFFLINE_MIN_DAYS:-5} fw=() f
+    now=${DEBSWAY_NOW:-$(date +%s)}
+    until=$(offline_good_until "$debs/verify")
+    if [ -z "$until" ] || [ "$until" -lt $((now + min * 86400)) ]; then
+        if [ -f "$debs/Packages" ]; then
+            note "Refreshing the offline Wi-Fi packages' signed lists (they'd soon be too old to use)."
+            if ! bash "$fetch" --check; then
+                for f in "$debs"/firmware-*_*.deb; do [ -f "$f" ] && fw+=("$(basename -- "${f%%_*}")"); done
+                note "Fetching them again${fw[*]:+ (with ${fw[*]})}."
+                bash "$fetch" "${fw[@]}" || warn "Couldn't fetch them again."
+            fi
+        else
+            note "Fetching the offline Wi-Fi packages, with firmware for every common card."
+            bash "$fetch" --all || warn "Couldn't fetch them."
+        fi
+        until=$(offline_good_until "$debs/verify")
+    fi
+    if [ -z "$until" ]; then
+        warn "No offline Wi-Fi packages on this stick: the new laptop needs a cable or a phone to get online."
+    elif [ "$until" -lt "$now" ]; then
+        warn "The offline Wi-Fi packages are too old to be used: the new laptop needs a cable or a phone to get online."
+    else
+        note "The offline Wi-Fi packages on it work until $(date -d "@$until" '+%F') (after that wifi.sh refuses them as too old)."
+    fi
+}
+
 # autologin_conf USER: the getty drop-in that logs USER in on tty1 without a
 # password (data/autologin-getty.conf), for extras/autologin.sh and the stick
 autologin_conf() {

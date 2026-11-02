@@ -29,7 +29,9 @@
 #
 # On the image: the last commit of debsway (as tools/pack-usb.sh copies it, so
 # nothing from ignore/) and offline/ (Wi-Fi packages, saved Tor Browser and
-# Whonix downloads; not offline/install-iso or offline/tails).
+# Whonix downloads; not offline/install-iso or offline/tails). The Wi-Fi
+# packages are refreshed first when wifi.sh would soon refuse them as too old
+# (prep/fetch-offline-debs.sh), and it says until when they work.
 #
 #   bash prep/make-install-iso.sh [--user NAME] [--keymap us] [--locale en_US.UTF-8]
 #                                 [--timezone Area/City] [--no-erase] [--noencrypt]
@@ -53,6 +55,7 @@
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/appimage.sh"
 . "$DEBSWAY_DIR/lib/install-iso.sh"
+. "$DEBSWAY_DIR/lib/offline.sh"
 . "$DEBSWAY_DIR/lib/tails.sh"
 not_root
 
@@ -146,6 +149,9 @@ else
     note "Checked: $iso"
 fi
 [ -n "$out" ] || out=$SAVED/${name%.iso}-debsway.iso
+
+say "The offline Wi-Fi packages"
+offline_debs_refresh
 
 say "What goes on it"
 stage=$work/stage
