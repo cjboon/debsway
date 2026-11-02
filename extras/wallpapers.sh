@@ -1,85 +1,138 @@
 #!/bin/bash
-# Debian's wallpaper collections, as pictures in ~/Pictures/Wallpapers to pick
-# from (copy one into ~/Pictures/debsway/desktop: parts/wallpaper.sh). The
-# packages are only downloaded, with apt-get download (checked against
-# Debian's signed package lists, through Tor if apt goes through Tor), and the
-# JPEG and PNG pictures and each package's licence file are unpacked: nothing
-# is installed, no package script runs, no sudo. (Installed, desktop-base would
-# also change the boot and login screens.) A list asks which collections.
+# Pictures to pick a wallpaper from, all in ~/Pictures/Wallpapers, each named
+# after where it came from (copy one into ~/Pictures/debsway/desktop:
+# parts/wallpaper.sh):
+#   budgie_*  Budgie's photos, from Debian. The package is only downloaded
+#             (apt-get download: checked against Debian's signed lists, through
+#             Tor if apt goes through Tor) and its pictures unpacked: nothing
+#             installed, no package script, no sudo.
+#   nasa_*    NASA's image library            hubble_*  ESA/Hubble
+#   webb_*    ESA/Webb                        earth_*   NASA Earth Observatory
+#             (lib/wallpaper-sources.py: https only, to each source's own
+#             hosts; at least 1920x1080, landscape; credits in CREDITS.txt)
+#   personal/ yours, e.g. pictures from an image search; never touched.
+# A list asks which sources. Run it again to top each one up.
 # Usage: bash wallpapers.sh [--remove | --manual]
-# summary: Debian's wallpapers to pick from (no install)
-# security: most
+# summary: Wallpapers: NASA, Hubble, Webb, Budgie and more
+# security: some
 # status: file:~/Pictures/Wallpapers/.debsway-wallpapers
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 DEST="$HOME/Pictures/Wallpapers"
-# what this script put there, one path (under DEST) a line; --remove takes
-# out exactly these, so pictures you add yourself stay
+# what this script put there, one file name a line; --remove takes out
+# exactly these, so pictures you add yourself stay
 LIST="$DEST/.debsway-wallpapers"
-# PACKAGE|WHAT|ON or OFF in the list (the big ones start unticked)
-COLLECTIONS=(
-    "sway-backgrounds|sway's own (4 MB)|ON"
-    "desktop-base|Debian's release artwork, old and new (9 MB)|ON"
-    "budgie-backgrounds|Budgie's photos (11 MB)|ON"
-    "gnome-backgrounds|GNOME's photos and abstracts (35 MB)|ON"
-    "mate-backgrounds|MATE's collection (44 MB)|OFF"
-    "plasma-workspace-wallpapers|KDE's large set, high resolution (124 MB)|OFF"
-    "xfdesktop4-data|Xfce's few (1 MB)|OFF"
+# SOURCE|WHAT|HOW MANY (for the downloaded ones)
+SOURCES=(
+    "budgie|Budgie's photos, from Debian's budgie-backgrounds (11 MB)|"
+    "nasa|NASA's image library: space and Earth (about 60 MB)|24"
+    "hubble|ESA/Hubble's pictures of the week (about 15 MB)|12"
+    "webb|ESA/Webb's pictures of the month (about 15 MB)|12"
+    "earth|NASA Earth Observatory's images of the day (up to 200 MB)|10"
 )
-# pictures smaller than this are icons and boot-screen pieces, not wallpapers
+# pictures in Budgie's package smaller than this are icons, not wallpapers
 MIN_BYTES=100000
+
+# listed NAME: NAME goes on the list (once)
+listed() { grep -qxF -- "$1" "$LIST" || echo "$1" >>"$LIST"; }
 
 if [ "${1:-}" = --remove ]; then
     if [ -f "$LIST" ]; then
         while IFS= read -r f; do
-            case $f in "" | /* | *..*) continue ;; esac
+            # only plain names: nothing outside the folder, nothing in personal/
+            case $f in "" | */* | .*) continue ;; esac
             rm -f -- "${DEST:?}/$f"
         done <"$LIST"
         rm -f "$LIST"
-        # the collection folders, if nothing of yours is left in them
-        find "$DEST" -mindepth 1 -type d -empty -delete 2>/dev/null || true
-        rmdir "$DEST" 2>/dev/null || true
-        note "Removed Debian's wallpapers; anything you put in $DEST yourself is still there."
+        note "Removed the wallpapers it downloaded; $DEST/personal and anything else of yours are still there."
     fi
     exit
 fi
 
-# Which collections: a list when there is a terminal to show it on
+# readme: what is in the folder (rewritten while it is debsway's own)
+readme() {
+    local f="$DEST/README.txt"
+    if [ -e "$f" ] && ! head -1 "$f" | grep -q 'written by debsway'; then return; fi
+    cat >"$f" <<'EOF'
+Wallpapers to choose from (written by debsway extras/wallpapers.sh)
+
+To make one your wallpaper, copy it into ~/Pictures/debsway/desktop and press
+Super+Shift+c (the newest picture there is used).
+
+Each picture is named after where it came from:
+  nasa_     NASA's image library. NASA's own pictures are public domain.
+  hubble_   ESA/Hubble.  webb_  ESA/Webb. Free to use (CC BY 4.0): to share
+            one, credit it as CREDITS.txt says.
+  earth_    NASA Earth Observatory. Public domain.
+  budgie_   Budgie's photos, from Debian. Free licences: budgie_LICENCE.txt.
+CREDITS.txt names each one's title, credit and page.
+
+personal/   Yours: pictures you find yourself, e.g. from an image search
+            (save them through Firefox into ~/Downloads, then move them
+            here). debsway never changes or removes them. Pictures from the
+            web are often copyrighted: fine on your own screen, but don't
+            share them on.
+
+bash ~/debsway/extras/wallpapers.sh fetches more (each source is topped up);
+with --remove it takes out what it downloaded, nothing of yours.
+EOF
+    listed README.txt
+}
+
+# Which sources: a list when there is a terminal to show it on
 chosen=()
 declare -A used
 if [ -t 0 ] && [ -t 1 ]; then
     . "$DEBSWAY_DIR/lib/checklist.sh"
     ITEMS=()
-    for c in "${COLLECTIONS[@]}"; do
-        IFS='|' read -r pkg what on <<<"$c"
-        ITEMS+=("$pkg" "$what" "$on")
+    for s in "${SOURCES[@]}"; do
+        IFS='|' read -r name what _ <<<"$s"
+        ITEMS+=("$name" "$what" ON)
     done
-    CL_TITLE="Wallpapers from Debian" CL_OK=Download CL_CANCEL=Cancel
-    CL_TEXT="Which collections? They go in ~/Pictures/Wallpapers, one folder each.\nNothing is installed: only the pictures are unpacked."
+    CL_TITLE="Wallpapers" CL_OK=Download CL_CANCEL=Cancel
+    CL_TEXT="Which sources? The pictures all go in ~/Pictures/Wallpapers, named after their source.\n~/Pictures/Wallpapers/personal is for pictures you find yourself."
     checklist || { note "Nothing downloaded."; exit 0; }
 else
-    for c in "${COLLECTIONS[@]}"; do
-        IFS='|' read -r pkg _ on <<<"$c"
-        [ "$on" = ON ] && chosen+=("$pkg")
-    done
+    for s in "${SOURCES[@]}"; do chosen+=("${s%%|*}"); done
 fi
+
+mkdir -p "$DEST/personal"
+touch "$LIST"
+readme
 [ ${#chosen[@]} -gt 0 ] || { note "Nothing chosen, nothing downloaded."; exit 0; }
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-mkdir -p "$DEST"
-touch "$LIST"
 failed=()
-for pkg in "${chosen[@]}"; do
-    say "Wallpapers: $pkg"
+for src in "${chosen[@]}"; do
+    if [ "$src" != budgie ]; then
+        count=
+        for s in "${SOURCES[@]}"; do [ "${s%%|*}" = "$src" ] && count=${s##*|}; done
+        say "Wallpapers: $src (https only, from its own site)"
+        need_tools python3:python3
+        # the files it saved, one a line, go on the list
+        if ! python3 -I "$DEBSWAY_DIR/lib/wallpaper-sources.py" "$DEST" "$src" "$count" >"$tmp/saved"; then
+            failed+=("$src")
+        fi
+        while IFS= read -r f; do
+            case $f in
+                */* | .* | *..*) ;;
+                "${src}"_?*) listed "$f" ;;
+            esac
+        done <"$tmp/saved"
+        [ ! -f "$DEST/CREDITS.txt" ] || listed CREDITS.txt
+        continue
+    fi
+    pkg=budgie-backgrounds
+    say "Wallpapers: Budgie's, from Debian's $pkg"
     rm -rf "${tmp:?}"/*
     # apt checks the file against the hash in Debian's signed lists
     if ! (cd "$tmp" && apt-get download -q "$pkg" >/dev/null 2>"$tmp/err"); then
         warn "Couldn't download $pkg: $(tail -1 "$tmp/err")"
         warn "(Old package lists? sudo apt update, then run this again.)"
-        failed+=("$pkg")
+        failed+=(budgie)
         continue
     fi
     deb=$(ls "$tmp"/*.deb)
@@ -87,16 +140,14 @@ for pkg in "${chosen[@]}"; do
     # only regular files come out (no links, no device files), owned by you
     dpkg-deb --fsys-tarfile "$deb" | tar -x -C "$tmp/x" --no-same-owner --no-same-permissions \
         --wildcards --no-anchored '*.jpg' '*.jpeg' '*.png' '*.JPG' '*.PNG' "usr/share/doc/$pkg/copyright" 2>/dev/null || true
-    mkdir -p "$DEST/$pkg"
     n=0
     used=()
     while IFS= read -r -d '' f; do
         [ "$(stat -c %s -- "$f")" -ge "$MIN_BYTES" ] || continue
-        # name: the file's own; if this run already used it, or a file of
-        # yours has it, its whole path in the package (desktop-base has a
-        # 1920x1080.png for each theme)
+        # name: budgie_ and the file's own; if this run already used it, or a
+        # file of yours has it, its whole path in the package
         name=${f##*/}
-        if [ -n "${used[$name]:-}" ] || { [ -e "$DEST/$pkg/$name" ] && ! grep -qxF -- "$pkg/$name" "$LIST"; }; then
+        if [ -n "${used[$name]:-}" ] || { [ -e "$DEST/budgie_$name" ] && ! grep -qxF -- "budgie_$name" "$LIST"; }; then
             name=${f#"$tmp/x/"}
             name=${name#./}
             name=${name#usr/share/}
@@ -104,19 +155,19 @@ for pkg in "${chosen[@]}"; do
         fi
         name=${name//[^A-Za-z0-9._+-]/_}
         used[$name]=1
-        install -m 0644 -- "$f" "$DEST/$pkg/$name"
-        grep -qxF -- "$pkg/$name" "$LIST" || echo "$pkg/$name" >>"$LIST"
+        install -m 0644 -- "$f" "$DEST/budgie_$name"
+        listed "budgie_$name"
         n=$((n + 1))
     done < <(find "$tmp/x" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) -print0)
     if [ -f "$tmp/x/usr/share/doc/$pkg/copyright" ]; then
-        install -m 0644 "$tmp/x/usr/share/doc/$pkg/copyright" "$DEST/$pkg/LICENCE.txt"
-        grep -qxF -- "$pkg/LICENCE.txt" "$LIST" || echo "$pkg/LICENCE.txt" >>"$LIST"
+        install -m 0644 "$tmp/x/usr/share/doc/$pkg/copyright" "$DEST/budgie_LICENCE.txt"
+        listed budgie_LICENCE.txt
     fi
-    note "$n pictures in $DEST/$pkg"
+    note "$n of Budgie's pictures in $DEST"
 done
 
 note "To use one: copy it into ~/Pictures/debsway/desktop, then press Super+Shift+c."
-note "They are freely licensed (each folder's LICENCE.txt): to share one, credit its artist as the licence says."
+note "Your own finds go in $DEST/personal. $DEST/README.txt says more."
 if [ ${#failed[@]} -gt 0 ]; then
     warn "Not downloaded: ${failed[*]}"
     exit 1

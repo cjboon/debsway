@@ -74,7 +74,7 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 - [SimpleX Chat, a private messenger](simplex-chat.md)
 - [Tuta Mail, encrypted email](tutamail.md)
 - [Metadata Cleaner, to strip hidden data from files](metadata-cleaner.md)
-- [Debian's wallpapers to pick from (nothing installed)](wallpapers.md)
+- [Wallpapers to pick from: NASA, Hubble, Webb, Earth Observatory, Budgie](wallpapers.md)
 
 ## Devices and hardware
 
