@@ -162,4 +162,14 @@ run claude-regular.sh --remove
 check "--remove: only debsway's settings go" jq_has "$H/.claude/settings.json" 'd == {"permissions": {"deny": ["Read(~/mine)"]}}'
 check "...the command goes, and the repository only if unused" bash -c '[ ! -e "$1/.local/bin/claude-regular" ] && grep -qx remove-repo-if-unused "$2"' _ "$H" "$T/calls"
 
+# the owner's New Tab page, in firefox-regular's own settings (it has them
+# without the sandboxed Firefox's system-wide ones): the fox, which Firefox
+# 140+ shows only with user.enabled, and no shortcuts, weather or search box
+check "firefox-regular's New Tab: the fox shown, no shortcuts, weather or search box (no logo)" bash -c '
+    for p in "newtabWallpapers.user.enabled\", true" "newtabWallpapers.enabled\", true" "newtabWallpapers.wallpaper\", \"dark-fox-anniversary\"" \
+             "feeds.topsites\", false" "showWeather\", false" "showSearch\", false"; do
+        grep -qF "browser.newtabpage.activity-stream.$p" "$1" || exit 1
+    done' _ "$HERE/data/firefox-regular-user.js"
+check "...and the sandboxed one shows its fox too (user.enabled)" grep -qF 'pref("browser.newtabpage.activity-stream.newtabWallpapers.user.enabled", true);' "$HERE/data/firefox-hardening.js"
+
 [ "$fails" -eq 0 ]

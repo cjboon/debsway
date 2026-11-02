@@ -33,3 +33,6 @@ pref("browser.newtabpage.activity-stream.showSearch", false);
 pref("browser.newtabpage.activity-stream.newtabWallpapers.enabled", true);
 pref("browser.newtabpage.activity-stream.newtabWallpapers.v2.enabled", true);
 pref("browser.newtabpage.activity-stream.newtabWallpapers.wallpaper", "dark-fox-anniversary");
+// Firefox 140+ shows the chosen wallpaper only with this on (it is off until
+// you pick one in the page's own settings)
+pref("browser.newtabpage.activity-stream.newtabWallpapers.user.enabled", true);

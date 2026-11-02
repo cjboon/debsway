@@ -30,6 +30,16 @@ user_pref("browser.discovery.enabled", false);
 user_pref("browser.newtabpage.activity-stream.showSponsored", false);
 user_pref("browser.newtabpage.activity-stream.showSponsoredTopSites", false);
 user_pref("browser.newtabpage.activity-stream.feeds.section.topstories", false);
+// A clean New Tab page, also without the sandboxed Firefox's settings: no
+// shortcuts, highlights, weather or search box (and so no Firefox logo), the
+// fox wallpaper behind it (shown only with user.enabled, since Firefox 140)
+user_pref("browser.newtabpage.activity-stream.feeds.topsites", false);
+user_pref("browser.newtabpage.activity-stream.feeds.section.highlights", false);
+user_pref("browser.newtabpage.activity-stream.showWeather", false);
+user_pref("browser.newtabpage.activity-stream.showSearch", false);
+user_pref("browser.newtabpage.activity-stream.newtabWallpapers.enabled", true);
+user_pref("browser.newtabpage.activity-stream.newtabWallpapers.user.enabled", true);
+user_pref("browser.newtabpage.activity-stream.newtabWallpapers.wallpaper", "dark-fox-anniversary");
 user_pref("extensions.pocket.enabled", false);
 
 // Straight to the page: no welcome tour, no "make Firefox your default" nag
