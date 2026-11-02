@@ -63,7 +63,8 @@ pause_if_asked() {
 ask() {
     local reply def=${2:-n} hint='[y/N]'
     [ "$def" = y ] && hint='[Y/n]'
-    tty_read reply "$1 $hint "
+    # (indented as note's lines are, so a question sits with what it is about)
+    tty_read reply "    $1 $hint "
     [[ ${reply:-$def} =~ ^[Yy] ]]
 }
 
