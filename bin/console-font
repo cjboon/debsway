@@ -5,9 +5,18 @@
 # With no argument it shows the list and asks which one.
 # Names are a typeface and the height of a character in pixels: dejavu-43,
 # terminus-bold-24. A file name from /usr/share/consolefonts also works.
+# In a terminal window (foot, in sway) it sets foot's text size instead, in
+# points (dejavu-16, dejavu-bold-18): the font= line of ~/.config/foot/foot.ini,
+# for every terminal opened after (Ctrl+plus/minus still changes the one you
+# are in), remembered in ~/.config/debsway/foot-font so that
+# parts/foot-config.sh keeps it when it writes foot.ini again.
+#   console-font --foot | --console ...   the one or the other, wherever you are
 dir=/usr/share/consolefonts
 conf="$HOME/.config/debsway/console-font"
 default=Uni3-Terminus28x14
+FOOT_INI=${XDG_CONFIG_HOME:-$HOME/.config}/foot/foot.ini
+FOOT_CONF="$HOME/.config/debsway/foot-font"
+FOOT_DEFAULT="DejaVu Sans Mono:size=14"
 
 # name file size
 FONTS=(
@@ -79,10 +88,60 @@ apply() {
     esac
 }
 
+# where: the text console, or a terminal window (foot)
+where=console
+case ${1:-} in
+    --foot) where=foot; shift ;;
+    --console) shift ;;
+    *)
+        if [ -n "${TMUX:-}" ]; then t=$(tmux display-message -p '#{client_tty}' 2>/dev/null); else t=$(tty 2>/dev/null); fi
+        case $t in
+            /dev/tty[0-9]*) ;;
+            *) if [ -n "${WAYLAND_DISPLAY:-}" ] || [[ ${TERM:-} == foot* ]]; then where=foot; fi ;;
+        esac ;;
+esac
+
+if [ "$where" = foot ]; then
+    # name, foot's font= value: DejaVu Sans Mono (fonts-dejavu-mono, the base's)
+    names=() files=()
+    for s in 11 12 13 14 16 18 20 24 28; do
+        names+=("dejavu-$s") files+=("DejaVu Sans Mono:size=$s")
+    done
+    for s in 14 16 18 20 24; do
+        names+=("dejavu-bold-$s") files+=("DejaVu Sans Mono:style=Bold:size=$s")
+    done
+    current=$(cat "$FOOT_CONF" 2>/dev/null); current=${current:-$FOOT_DEFAULT}
+    show() {
+        echo "Terminal text sizes (in points; bigger is easier to read):"
+        for i in "${!names[@]}"; do
+            mark=" "; [ "${files[i]}" = "$current" ] && mark="*"
+            printf ' %s %2d  %s\n' "$mark" $((i + 1)) "${names[i]}"
+        done
+        echo "(* = in use)  Usage: console-font NAME or NUMBER. Ctrl+plus/minus: this window only."
+    }
+    apply() {
+        local font=$1 new
+        [ -f "$FOOT_INI" ] || { echo "console-font: there is no $FOOT_INI (bash ~/debsway/parts/foot-config.sh writes it)" >&2; return 1; }
+        grep -q '^font=' "$FOOT_INI" || { echo "console-font: $FOOT_INI has no font= line to change" >&2; return 1; }
+        new=$(mktemp)
+        sed "s|^font=.*|font=$font|" "$FOOT_INI" >"$new"
+        if command -v foot >/dev/null && ! foot -C -c "$new" >/dev/null 2>&1; then
+            rm -f "$new"
+            echo "console-font: foot doesn't take font=$font; nothing changed" >&2
+            return 1
+        fi
+        cat "$new" >"$FOOT_INI"
+        rm -f "$new"
+        mkdir -p "${FOOT_CONF%/*}"
+        echo "$font" >"$FOOT_CONF"
+        echo "Terminals you open from now on use $font."
+    }
+fi
+
 pick=${1:-}
 case $pick in
     list) show; exit ;;
-    -h | --help) echo "usage: console-font [list | NAME | NUMBER]"; exit ;;
+    -h | --help) echo "usage: console-font [--foot | --console] [list | NAME | NUMBER]"; exit ;;
     "")
         show
         [ -t 0 ] || exit 0
@@ -98,7 +157,7 @@ else
     for i in "${!names[@]}"; do
         if [ "${names[i]}" = "$pick" ] || [ "${files[i]}" = "$pick" ]; then file=${files[i]}; fi
     done
-    [ -n "$file" ] || { ls "$dir/$pick".psf* >/dev/null 2>&1 && file=$pick; }
+    [ -n "$file" ] || [ "$where" = foot ] || { ls "$dir/$pick".psf* >/dev/null 2>&1 && file=$pick; }
 fi
 [ -n "$file" ] || { echo "console-font: no font '$pick'. Try: console-font list" >&2; exit 1; }
 apply "$file"

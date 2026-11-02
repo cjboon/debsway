@@ -340,6 +340,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "console-font in a terminal window (foot's text size)"
+if out=$(bash tools/test-console-font.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") console-font checks"
+else
+    bad "console-font checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "The usb command, with pretend lsblk, udisksctl and sudo"
 if out=$(bash tools/test-usb.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") usb checks"

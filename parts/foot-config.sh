@@ -33,5 +33,14 @@ if [ -f "$CONF" ] && ! grep -qs "$MARK" "$CONF" && ! cmp -s "$DEBSWAY_DIR/data/f
     note "Your foot.ini is kept as $CONF.bak"
 fi
 cp "$DEBSWAY_DIR/data/foot.ini" "$CONF"
+# The text size chosen with console-font (in a terminal window) stays
+FONT_CHOICE="$HOME/.config/debsway/foot-font"
+if [ -s "$FONT_CHOICE" ]; then
+    font=$(head -n1 "$FONT_CHOICE")
+    case $font in
+        *'|'* | *\\*) warn "Ignoring $FONT_CHOICE: odd characters in it" ;;
+        *) sed -i "s|^font=.*|font=$font|" "$CONF" && note "Your text size: $font (console-font)" ;;
+    esac
+fi
 foot -C -c "$CONF" || warn "foot reports a problem in $CONF"
 note "Installed $CONF. New terminals use it (Super+Enter)."

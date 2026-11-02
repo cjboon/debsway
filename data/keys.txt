@@ -18,6 +18,7 @@
     Ctrl+Shift+c / v       copy / paste (Ctrl+c stops a program)
     Shift+PageUp / Down    scroll back / forward
     Ctrl+plus / minus      bigger / smaller text (Ctrl+0: normal)
+    console-font           the text size of every terminal you open after
     Ctrl+Shift+n           another terminal, in the same folder
 
   IN PROGRAMS (Firefox, Mousepad, Thunar, ...)
