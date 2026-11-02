@@ -19,11 +19,12 @@
 #    (parts/firefox-hardening.sh), Mullvad Browser keeps its own.
 # Before anything is switched over it checks that names resolve through the
 # resolver you chose; if they don't, it puts everything back.
-# Usage: bash secure-dns.sh [--remove]
+# Usage: bash secure-dns.sh [--remove | --manual]
 # summary: Encrypted DNS: Unbound, DNSSEC, DNS over TLS
 # status: file:/etc/unbound/unbound.conf.d/debsway-secure-dns.conf
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/secure-dns.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 CONF=$SECURE_DNS_CONF

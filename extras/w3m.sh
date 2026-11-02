@@ -2,10 +2,11 @@
 # w3m, a web browser that runs inside the terminal. No JavaScript, no
 # plugins, no images in foot: good for reading pages, documentation and
 # search results, and a way to get a page when nothing else is installed.
-# Usage: bash w3m.sh [--remove]
+# Usage: bash w3m.sh [--remove | --manual]
 # summary: w3m, a text-mode web browser for the terminal
 # status: apt:w3m
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 if [ "${1:-}" = --remove ]; then

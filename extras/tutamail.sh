@@ -5,12 +5,11 @@
 # code-signing key (data/tuta-pub.pem, TUTA_KEY_SHA256 in pins.sh), and the
 # unpacked app must be the version Tuta's release file names, no older than the
 # one installed. It's an Electron app and runs on Wayland directly.
-# Usage: bash tutamail.sh [--remove]
+# Usage: bash tutamail.sh [--remove | --manual]
 # summary: Tuta Mail desktop (signed AppImage)
 # status: opt:tuta
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/appimage.sh"
-need_user
 
 NAME=tuta
 KEY=$DEBSWAY_DIR/data/tuta-pub.pem
@@ -23,6 +22,9 @@ LIBS=(libnss3 libnspr4 libglib2.0-0t64 libatk1.0-0t64 libatk-bridge2.0-0t64 liba
     libcups2t64 libdbus-1-3 libcairo2 libgtk-3-0t64 libpango-1.0-0 libx11-6 libxcomposite1
     libxdamage1 libxext6 libxfixes3 libxrandr2 libxcb1 libxkbcommon0 libgbm1 libexpat1 libudev1
     libasound2t64 libsecret-1-0 xdg-utils)
+
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
+need_user
 
 if [ "${1:-}" = --remove ]; then
     remove_appimage "$NAME"

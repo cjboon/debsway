@@ -1,9 +1,22 @@
 # The extras, explained
 
-One article per extra: what it's for, the ideas behind it in plain words, what
-it does to your computer step by step, what it protects against and what it
-doesn't, and how to remove it. The short list of all of them is in
+One page per extra. The short list of all of them is in
 [../extras.md](../extras.md); general advice is in [../opsec.md](../opsec.md).
+
+The pages are being rewritten into one shape (so far: w3m, Tuta Mail,
+encrypted DNS; the others are still the longer, older kind):
+
+- **SYNOPSIS**: the commands to install, remove and use it.
+- One paragraph on what it is.
+- **LIMITS**: what it does not protect against.
+- **MANUAL INSTALL**: every step to do by hand what the script does, each with
+  what it is for. `bash ~/debsway/extras/NAME.sh --manual` prints this section
+  and changes nothing. In the page, `@NAME@` stands for a value from `pins.sh`
+  or the script (a key's fingerprint, an address, a package list) and
+  `@DEBSWAY_DIR@` for your debsway folder; `--manual` fills them in.
+
+Installed by hand, an extra has no debsway marker package, so its `--remove`
+doesn't know what to take out: undo it with the steps at the end of its page.
 
 
 ## Browsing

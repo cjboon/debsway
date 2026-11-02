@@ -49,6 +49,10 @@ installed (`~/.local/bin`), and other users exist (e.g. `onion-site`). So:
 - Every behaviour has a test in `tools/test-*.sh`, registered in `test.sh`. Make a test
   that can fail: check that it fails on the old code. The test suite replaces `sleep` with
   a no-op; use `/bin/sleep` where a test must really wait.
+- An extra's page in `docs/extras/` that has a `## MANUAL INSTALL` section is what
+  its `--manual` prints (`print_manual`). Change those steps in the same commit as
+  the script; no test can check that they still do the same thing. Values from
+  `pins.sh` or the script go in as `@NAME@`, never typed in.
 - Keep docs in step with behaviour: `README.md`, `docs/`, `THREAT-MODEL.md` (do not claim
   protection a script doesn't give), and the man page `data/debsway.1` (a test checks that
   it matches `debsway --help`).

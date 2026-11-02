@@ -141,6 +141,33 @@ sudo_keepalive() {
     trap '[ -z "${SUDO_KEEPALIVE_PID:-}" ] || { pkill -P "$SUDO_KEEPALIVE_PID" 2>/dev/null; kill "$SUDO_KEEPALIVE_PID" 2>/dev/null; }' EXIT
 }
 
+# print_manual: what --manual prints. The "## MANUAL INSTALL" section of the
+# running extra's page (docs/extras/NAME.md), without its code fences, with
+# each @VAR@ filled in from a variable of the same name (pins.sh, or the
+# script's own; an array gives its items). Changes nothing and needs no sudo.
+print_manual() {
+    local doc line out name m
+    doc="$DEBSWAY_DIR/docs/extras/$(basename -- "$0" .sh).md"
+    grep -qx '## MANUAL INSTALL' "$doc" 2>/dev/null ||
+        die "There are no manual steps for $(basename -- "$0") yet ($doc)."
+    while IFS= read -r line; do
+        out=
+        while [[ $line =~ @([A-Z][A-Z0-9_]*)@ ]]; do
+            m=${BASH_REMATCH[0]} name=${BASH_REMATCH[1]}
+            out+=${line%%"$m"*}
+            if declare -p "$name" >/dev/null 2>&1; then
+                declare -n ref=$name
+                out+="${ref[*]}"
+                unset -n ref
+            else
+                out+=$m
+            fi
+            line=${line#*"$m"}
+        done
+        printf '%s\n' "$out$line"
+    done < <(awk '$0 == "## MANUAL INSTALL" { on = 1; next } on && /^## / { exit } on && !/^```/' "$doc")
+}
+
 is_installed() {
     dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q 'install ok installed'
 }

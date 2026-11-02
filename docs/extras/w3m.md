@@ -1,44 +1,39 @@
-# w3m, a web browser for the terminal (`extras/w3m.sh`)
+# w3m (`extras/w3m.sh`)
 
-You get w3m, a web browser that runs inside the terminal and shows pages as plain text. It is good for reading articles, documentation and search results.
+## SYNOPSIS
 
-## The problem it solves
+```
+bash ~/debsway/extras/w3m.sh            install it
+bash ~/debsway/extras/w3m.sh --remove   remove it (~/.w3m stays)
+bash ~/debsway/extras/w3m.sh --manual   print the manual steps below
 
-Sometimes you want to read a page without opening a full browser, or you have no other browser installed.
+w3m https://example.org                 open a page (w3m duckduckgo.com works too)
+  arrows or j/k scroll   Space/b page down/up   Tab next link   Enter follow it
+  B back   U type an address   / search   T new tab   q quit
+```
 
-## The ideas behind it
+w3m is a web browser that runs inside the terminal and shows pages as plain
+text with their links: good for articles, documentation and search results,
+and for getting a page when no other browser is installed. It runs no
+JavaScript and shows no images in foot, so most of what makes pages
+tracking-heavy or dangerous isn't there, and sites that need JavaScript don't
+work. It comes from Debian's own archive and is updated with the rest of the
+system.
 
-**A text-mode browser** shows text and links, not pictures, layouts or scripts. **JavaScript** is the code web pages run in your browser, and w3m runs none. Most of what makes pages tracking-heavy or dangerous lives in JavaScript, so w3m avoids it, but sites that need it will not work.
+## LIMITS
 
-## How it works, step by step
+- The sites you visit and your network see your address and what you visit.
+- It isn't sandboxed: it runs as you, and a bug in it could reach your files.
+- Firefox's HTTPS-Only Mode doesn't apply; type `https://` yourself.
 
-1. `apt_install w3m`, under the marker package `debsway-w3m`.
-2. It prints a short list of keys.
+## MANUAL INSTALL
 
-## What it changes on your computer
+```
+# Install w3m from Debian, without the extras it only recommends
+sudo apt install --no-install-recommends w3m
+# Try it
+w3m https://www.debian.org
+```
 
-- Package `w3m`.
-- Later, w3m creates `~/.w3m` for its settings and cookies.
-- No settings, key bindings or default applications.
-
-## Using it
-
-- `w3m https://example.org`: open a page. `w3m duckduckgo.com` works too.
-- Arrows or j/k: scroll. Space and b: page down and up.
-- Tab: next link. Enter: follow it. B: back.
-- U: type an address. /: search. T: new tab. q: quit.
-
-## What it protects against
-
-Mostly a convenience. The real safety detail is that w3m runs no JavaScript, so most of what makes pages dangerous or tracking-heavy is not there.
-
-## What it doesn't protect against
-
-- **Being seen.** The sites you visit and your network still see your IP address and what you visit.
-- **Anything running as you.** w3m is not sandboxed, and it can have bugs like any program reading data from the web.
-- **Sites that need JavaScript** simply will not work.
-- **HTTPS-Only Mode.** That protection belongs to Firefox, not w3m.
-
-## Removing it
-
-`bash extras/w3m.sh --remove` removes the `w3m` package and what only it needed. Your w3m settings and cookies stay in `~/.w3m`.
+To undo: `sudo apt purge w3m && sudo apt autoremove --purge`. Your settings
+and cookies stay in `~/.w3m`.
