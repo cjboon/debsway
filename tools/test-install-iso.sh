@@ -81,6 +81,14 @@ check "no root password: root is locked, your user gets sudo" grep -qx 'd-i pass
 check "the whole disk, encrypted LVM" bash -c 'grep -qx "d-i partman-auto/method string crypto" <<<"$1"' _ "$ans"
 check "the disk is filled with random data first" grep -qx 'd-i partman-crypto/erase_disks boolean true' <<<"$ans"
 check "...unless --no-erase" grep -qx 'd-i partman-crypto/erase_disks boolean false' <(fill_preseed "$HERE/data/install-iso-preseed.cfg" me en_US.UTF-8 us false)
+check "--noencrypt: plain partitions, no encryption" grep -qx 'd-i partman-auto/method string regular' <(fill_preseed "$HERE/data/install-iso-preseed.cfg" me en_US.UTF-8 us true UTC regular)
+check "...asked for, after a warning, and not the default" \
+    bash -c 'grep -q "^        --noencrypt) encrypt=false; shift ;;$" "$1" && grep -q "ask \"Build an image that installs without disk encryption?\" n" "$1"' _ "$HERE/prep/make-install-iso.sh"
+check "--autologin: the image carries the autologin rule for the user" \
+    grep -q 'if \$autologin; then autologin_conf "\$user" >"\$stage/debsway-install/autologin.conf"; fi' "$HERE/prep/make-install-iso.sh"
+check "the autologin rule logs that user in on tty1, with login -f" \
+    bash -c 'c=$(DEBSWAY_DIR=$1 bash -c ". \"\$DEBSWAY_DIR/lib/install-iso.sh\"; autologin_conf me"); grep -qx "ExecStart=" <<<"$c" && grep -qF -- "-o '"'"'-p -f -- \\\\u'"'"'" <<<"$c" && grep -qF -- "--autologin me - \${TERM}" <<<"$c"' _ "$HERE"
+check "...and no user name that isn't one" bash -c '! DEBSWAY_DIR=$1 bash -c ". \"\$DEBSWAY_DIR/lib/install-iso.sh\"; autologin_conf \"me x\""' _ "$HERE"
 check "the time zone is the one asked for" grep -qx 'd-i time/zone string Europe/Berlin' <(fill_preseed "$HERE/data/install-iso-preseed.cfg" me de_DE.UTF-8 de true Europe/Berlin)
 check "...UTC when none is given" grep -qx 'd-i time/zone string UTC' <<<"$ans"
 check "...and the clock is kept right over NTP" grep -qx 'd-i clock-setup/ntp boolean true' <<<"$ans"
@@ -265,6 +273,13 @@ check "the new user's .profile gets the first-login question, after what it had"
     bash -c 'head -1 "$1" | grep -q "Debian" && grep -qx "# >>> debsway first login >>>" "$1"' _ "$T/target/home/me/.profile"
 PATH="$T/fake:$PATH" sh "$L" me
 check "...once, even if the installer's step runs again" test "$(grep -c '^# >>> debsway first login >>>$' "$T/target/home/me/.profile")" = 1
+check "without --autologin, tty1 asks for the password as usual" test ! -e "$T/target/etc/systemd/system/getty@tty1.service.d"
+chmod -R u+w "$T/cdrom"
+echo '[Service]' >"$T/cdrom/debsway-install/autologin.conf"
+chmod -R a-w "$T/cdrom"
+PATH="$T/fake:$PATH" sh "$L" me
+check "with --autologin, the rule goes into the new system's tty1" \
+    cmp "$T/cdrom/debsway-install/autologin.conf" "$T/target/etc/systemd/system/getty@tty1.service.d/50-debsway-autologin.conf"
 chmod -R u+w "$T/cdrom"
 
 # ---- the first login: asks once, on the console ----

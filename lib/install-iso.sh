@@ -28,11 +28,19 @@ debian_cd_image_ok() {
         sha512sum -c --quiet - >/dev/null 2>&1
 }
 
-# fill_preseed TEMPLATE USER LOCALE KEYMAP ERASE(true|false) [TIMEZONE]: the
-# answers, with the @...@ values in (each already checked by the caller)
+# fill_preseed TEMPLATE USER LOCALE KEYMAP ERASE(true|false) [TIMEZONE]
+# [METHOD]: the answers, with the @...@ values in (each already checked by the
+# caller). METHOD is crypto (encrypted LVM, the default) or regular (--noencrypt).
 fill_preseed() {
     sed -e "s|@USERNAME@|$2|g" -e "s|@LOCALE@|$3|g" -e "s|@KEYMAP@|$4|g" -e "s|@ERASE@|$5|g" \
-        -e "s|@TIMEZONE@|${6:-UTC}|g" "$1"
+        -e "s|@TIMEZONE@|${6:-UTC}|g" -e "s|@METHOD@|${7:-crypto}|g" "$1"
+}
+
+# autologin_conf USER: the getty drop-in that logs USER in on tty1 without a
+# password (data/autologin-getty.conf), for extras/autologin.sh and the stick
+autologin_conf() {
+    user_ok "$1" || return 1
+    sed "s|@USER@|$1|g" "$DEBSWAY_DIR/data/autologin-getty.conf"
 }
 
 # this_timezone: the time zone of the computer building the image (UTC if it

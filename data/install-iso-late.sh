@@ -4,7 +4,8 @@
 # It copies debsway from the ISO to the new user's ~/debsway, owned by them,
 # with the folders and scripts as they should be, and adds to ~/.profile a
 # question asked once at the first login on the console: set debsway up now?
-# (yes runs bash ~/debsway/start.sh, as the user, on the running system)
+# (yes runs bash ~/debsway/start.sh, as the user, on the running system).
+# With --autologin, tty1 then logs the user in without the password.
 #   late.sh USERNAME
 set -e
 user=$1
@@ -26,6 +27,12 @@ if [ -f /cdrom/debsway-install/first-login.sh ] && ! grep -q '^# >>> debsway fir
     [ -f "$profile" ] || in-target cp /etc/skel/.profile "/home/$user/.profile"
     cat /cdrom/debsway-install/first-login.sh >>"$profile"
     in-target chown "$user:$user" "/home/$user/.profile"
+fi
+# Logged in on tty1 without a password (make-install-iso.sh --autologin)
+if [ -f /cdrom/debsway-install/autologin.conf ]; then
+    mkdir -p /target/etc/systemd/system/getty@tty1.service.d
+    cp /cdrom/debsway-install/autologin.conf /target/etc/systemd/system/getty@tty1.service.d/50-debsway-autologin.conf
+    chmod 644 /target/etc/systemd/system/getty@tty1.service.d/50-debsway-autologin.conf
 fi
 # The user's own extra scripts, if the ISO has any
 if [ -d /cdrom/debsway-install/scripts ]; then
