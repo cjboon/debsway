@@ -222,6 +222,20 @@ assert n.nasa_why_not({"description": "Photo Credit: (NASA/Bill Ingalls)"}, ok) 
 assert "JPEG" in n.nasa_why_not({}, dict(ok, **{"File:MIMEType": "image/tiff"}))
 assert "copyright" in n.nasa_why_not({}, dict(ok, **{"XMP:Credit": "© Getty Images"}))
 assert "copyright" in n.nasa_why_not({"secondary_creator": "AP Photo/Someone"}, ok)
+# figures aren't wallpapers: JPL's PIA items (a Jupiter storm with labels and
+# insets came in that way), and titles that name a graphic or diagram
+assert "figure" in n.nasa_why_not({"nasa_id": "PIA09340", "title": "Probing Storm Activity on Jupiter"}, ok)
+assert "figure" in n.nasa_why_not({"nasa_id": "x1", "title": "Diagram of the Solar System"}, ok)
+assert "figure" in n.nasa_why_not({"nasa_id": "x2", "title": "Artist's Concept of a Planet"}, ok)
+assert n.nasa_why_not({"nasa_id": "iss043e010521", "title": "Earth Observation taken by the Expedition 43 crew"}, ok) is None
+assert all(c in ("JSC", "GSFC") for _, c in n.NASA_SEARCHES)
+# a station photo: its camera's colour profile names HP's copyright, which
+# isn't the picture's; one with no size in its metadata is checked by the file
+iss = {"File:ImageWidth": 4928, "File:ImageHeight": 3280, "File:MIMEType": "image/jpeg",
+       "ICC_Profile:ProfileCopyright": "Copyright (c) 1998 Hewlett-Packard Company", "XMP:CreatorTool": "NIKON D4"}
+assert n.nasa_why_not({"nasa_id": "iss043e010521", "title": "Earth Observation"}, iss) is None
+assert n.nasa_why_not({"nasa_id": "S39-23-020", "title": "Aurora Australis"}, {"AVAIL:SecondaryCreator": ""}) is None
+assert "smaller" in n.nasa_why_not({"nasa_id": "x"}, {"EXIF:ExifImageWidth": 1280, "EXIF:ExifImageHeight": 1070})
 assert n.picture_kind(b"\xff\xd8\xff\xe0") == "jpg" and n.picture_kind(png) == "png"
 assert n.clean("a\x1b]52;c;x\x07b") == "a ]52;c;x b"
 for bad in ("../x", "a/b", "", "x" * 101):

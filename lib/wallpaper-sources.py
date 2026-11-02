@@ -43,8 +43,15 @@ ID_RE = re.compile(r"^[A-Za-z0-9_.-]{1,100}$")
 NOT_FREE = re.compile(r"©|\(c\)|copyright|getty|reuters|associated press|"
                       r"ap photo|afp|all rights reserved", re.I)
 RIGHTS_KEYS = ("Copyright", "Rights", "Credit", "Artist", "Creator", "Source")
-NASA_QUERIES = ["nebula", "galaxy", "earth from space", "aurora", "milky way",
-                "jupiter", "saturn", "star cluster"]
+# (search, NASA centre): astronauts' photos from the Johnson Space Center and
+# Hubble's archive at Goddard are photographs; JPL's (PIA...) are often
+# figures with labels and insets, so those are left out
+NASA_SEARCHES = [("earth observation", "JSC"), ("aurora", "JSC"), ("milky way", "JSC"),
+                 ("city lights", "JSC"), ("nebula", "GSFC"), ("galaxy", "GSFC"),
+                 ("hubble", "GSFC"), ("star cluster", "GSFC")]
+NOT_PHOTO = re.compile(r"\b(graphics?|infographic|diagrams?|charts?|graphs?|plots?|maps?|"
+                       r"illustrations?|artist'?s|concept|comparison|annotated|label(l)?ed|"
+                       r"animation|logo|poster|timeline|spectrum)\b", re.I)
 NASA_PER_QUERY = 4      # at most this many from one search, for variety
 NASA_LOOK_AT = 25       # candidates looked at per search
 ESA = {
@@ -152,16 +159,27 @@ def clean(text):
 def nasa_why_not(item, meta):
     """None if a NASA library picture suits, else why not. ITEM is the
     search's data, META the picture's metadata.json."""
-    try:
-        w, h = int(meta.get("File:ImageWidth", 0)), int(meta.get("File:ImageHeight", 0))
-    except (TypeError, ValueError):
-        return "no size"
-    why = size_ok(w, h)
-    if why:
-        return why
-    if meta.get("File:MIMEType") not in ("image/jpeg", "image/png"):
+    if str(item.get("nasa_id", "")).upper().startswith("PIA"):
+        return "a JPL figure"
+    if NOT_PHOTO.search(str(item.get("title", ""))):
+        return "a figure, not a photo"
+    # the size, where the metadata has it (older photos often have almost
+    # none: then the downloaded file's own size decides, as for every picture)
+    w = meta.get("File:ImageWidth") or meta.get("EXIF:ExifImageWidth")
+    h = meta.get("File:ImageHeight") or meta.get("EXIF:ExifImageHeight")
+    if w and h:
+        try:
+            why = size_ok(int(w), int(h))
+        except (TypeError, ValueError):
+            why = None
+        if why:
+            return why
+    if meta.get("File:MIMEType") and meta.get("File:MIMEType") not in ("image/jpeg", "image/png"):
         return "not a JPEG or PNG"
-    rights = [str(v) for k, v in meta.items() if any(s in k for s in RIGHTS_KEYS)]
+    # (a camera's colour profile carries its maker's copyright, e.g.
+    # "Copyright (c) 1998 Hewlett-Packard Company": not the picture's)
+    rights = [str(v) for k, v in meta.items() if any(s in k for s in RIGHTS_KEYS)
+              and not k.startswith("ICC_Profile:") and k != "XMP:CreatorTool"]
     rights += [str(item.get(k, "")) for k in ("secondary_creator", "photographer", "description")]
     if NOT_FREE.search(" ".join(rights)):
         return "another copyright holder"
@@ -180,10 +198,10 @@ def nasa_original(nasa_id):
 
 def nasa():
     """(id, url, title, credit) of NASA library pictures that suit."""
-    for q in NASA_QUERIES:
+    for q, centre in NASA_SEARCHES:
         try:
             url = "https://images-api.nasa.gov/search?" + urllib.parse.urlencode(
-                {"q": q, "media_type": "image", "page_size": 100})
+                {"q": q, "center": centre, "media_type": "image", "page_size": 100})
             items = json.loads(fetch(url, FEED_BYTES))["collection"]["items"]
         except (OSError, ValueError, KeyError) as e:
             print("NASA search for %r failed: %s" % (q, e), file=sys.stderr)
