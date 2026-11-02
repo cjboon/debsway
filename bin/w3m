@@ -1,0 +1,28 @@
+#!/bin/bash
+# w3m: written by debsway extras/w3m.sh
+# w3m with cookies only while it is open: the cookies w3m keeps between runs
+# (~/.w3m/cookie) are deleted when it starts and when it ends, also when its
+# terminal is closed, so no site recognises you the next time. Logins work
+# while it runs. w3m -no-cookie (none at all) and -cookie still work for a run.
+# The real w3m is the next one on your PATH after this one (/usr/bin/w3m).
+set -u
+cookies=${W3M_DIR:-$HOME/.w3m}/cookie
+forget() { rm -f -- "$cookies"; }
+
+self=$(readlink -f -- "${BASH_SOURCE[0]}")
+real=
+IFS=: read -ra dirs <<<"${PATH:-}"
+for d in "${dirs[@]}"; do
+    [ -n "$d" ] && [ -x "$d/w3m" ] || continue
+    [ "$(readlink -f -- "$d/w3m")" != "$self" ] || continue
+    real=$d/w3m
+    break
+done
+[ -n "$real" ] || { echo "w3m isn't installed: bash ~/debsway/extras/w3m.sh" >&2; exit 127; }
+
+forget
+trap forget EXIT
+trap 'exit 129' HUP
+trap 'exit 143' TERM
+# (Ctrl+C is w3m's own: it stops loading a page)
+"$real" "$@"

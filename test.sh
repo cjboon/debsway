@@ -126,7 +126,7 @@ while read -r key _; do
     [ -e "/proc/sys/${key//.//}" ] || meh "sysctl $key doesn't exist on this kernel (data/sysctl-hardening.conf)"
 done < <(grep -E '^[a-z]' data/sysctl-hardening.conf)
 # Every helper a script installs from bin/ has to be there
-mapfile -t wanted < <(grep -rhoE 'install_bin [a-z-]+' --include='*.sh' . | awk '{ print $2 }' | sort -u)
+mapfile -t wanted < <(grep -rhoE 'install_bin [a-z0-9-]+' --include='*.sh' . | awk '{ print $2 }' | sort -u)
 for name in "${wanted[@]}"; do
     [ -f "bin/$name" ] || bad "install_bin $name: there is no bin/$name"
 done
@@ -377,6 +377,14 @@ if out=$(bash tools/test-wallpaper.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") wallpaper checks"
 else
     bad "wallpaper checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
+section "w3m keeps cookies only while it is open (bin/w3m), with a pretend w3m"
+if out=$(bash tools/test-w3m.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") w3m checks"
+else
+    bad "w3m checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
 fi
 
 # --------------------------------------------------------------------
