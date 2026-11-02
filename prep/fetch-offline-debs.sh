@@ -72,7 +72,7 @@ else
         drv=$(basename -- "$(readlink -f "$dev/driver")")
         fw=$(firmware_for_driver "$drv")
         note "$(basename -- "$(dirname -- "$dev")"): driver $drv -> ${fw:-no extra firmware needed}"
-        # shellcheck disable=SC2206
+        # shellcheck disable=SC2206  # the package names are meant to split
         [ -z "$fw" ] || { PKGS+=($fw); found=true; }
     done
     $found || warn "No known Wi-Fi firmware for this machine. For another machine use: --all"

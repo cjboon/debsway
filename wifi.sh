@@ -195,7 +195,7 @@ networkd_dhcp() {
     dns=$(sed -n 's/^DNS=//p' "$lease" 2>/dev/null)
     # Home routers usually answer DNS themselves
     [ -n "$dns" ] || dns=$(ip -4 route show default dev "$ifc" | awk '{ print $3; exit }')
-    # shellcheck disable=SC2086
+    # shellcheck disable=SC2086  # one or more servers, meant to split
     set_dns $dns
 }
 
