@@ -35,11 +35,12 @@
 # Use this one when KVM isn't available, or you want the light setup.
 # What it still shares with you: the internet, and anything in ~/projects.
 # Treat what it leaves there as untrusted before you run it. See THREAT-MODEL.md.
-# Usage: bash claude-code.sh [--remove]
+# Usage: bash claude-code.sh [--remove | --manual]
 # summary: Claude Code, sandboxed in its own user
 # files: bin/no-abstract-sockets
 # status: apt:claude-code bin:claude bin:claude-unsandboxed bin:git file:/usr/local/libexec/claude-session
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 AGENT=claude-agent

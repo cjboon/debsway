@@ -11,6 +11,7 @@
 #   bash new-profile.sh NAME URL [--fast-js] [--show-toolbars]
 #                                             e.g. bash new-profile.sh bank https://mybank.example
 #   bash new-profile.sh --remove NAME         removes firefox-NAME; asks whether to delete the profile and its user
+#   bash new-profile.sh --manual              prints the steps to make one by hand
 #
 # --fast-js turns the JavaScript JIT back on for this profile (debsway's
 # parts/firefox-hardening.sh turns it off everywhere), for heavy web apps.
@@ -18,6 +19,7 @@
 . "$(dirname -- "${BASH_SOURCE[0]}")/../../lib.sh"
 . "$DEBSWAY_DIR/lib/firefox-sandbox.sh"
 . "$DEBSWAY_DIR/lib/firefox-profiles.sh"
+if [ "${1:-}" = --manual ]; then print_manual firefox-profiles; exit; fi
 not_root
 
 valid_name() { fx_profile_name_ok "$1"; }

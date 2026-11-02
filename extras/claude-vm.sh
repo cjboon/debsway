@@ -28,11 +28,12 @@
 # runs Claude Code as its own user instead: lighter, but it shares your
 # kernel, so a kernel bug could get out (docs/extras.md compares the two).
 # See THREAT-MODEL.md.
-# Usage: bash claude-vm.sh [--remove]
+# Usage: bash claude-vm.sh [--remove | --manual]
 # summary: Claude Code in a disposable VM (no shared folder)
 # files: bin/no-abstract-sockets
 # status: bin:claude-vm file:/usr/local/libexec/claude-vm-session
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 AGENT=claude-vm

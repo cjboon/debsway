@@ -141,15 +141,15 @@ sudo_keepalive() {
     trap '[ -z "${SUDO_KEEPALIVE_PID:-}" ] || { pkill -P "$SUDO_KEEPALIVE_PID" 2>/dev/null; kill "$SUDO_KEEPALIVE_PID" 2>/dev/null; }' EXIT
 }
 
-# print_manual: what --manual prints. The "## MANUAL INSTALL" section of the
-# running extra's page (docs/extras/NAME.md), without its code fences, with
+# print_manual [PAGE]: what --manual prints. The "## MANUAL INSTALL" section of
+# docs/extras/PAGE.md (by default the running extra's name), without its code fences, with
 # each @VAR@ filled in from a variable of the same name (pins.sh, or the
 # script's own; an array gives its items). Changes nothing and needs no sudo.
 print_manual() {
     local doc line out name m
-    doc="$DEBSWAY_DIR/docs/extras/$(basename -- "$0" .sh).md"
+    doc="$DEBSWAY_DIR/docs/extras/${1:-$(basename -- "$0" .sh)}.md"
     grep -qx '## MANUAL INSTALL' "$doc" 2>/dev/null ||
-        die "There are no manual steps for $(basename -- "$0") yet ($doc)."
+        die "There are no manual steps in $doc."
     while IFS= read -r line; do
         out=
         while [[ $line =~ @([A-Z][A-Z0-9_]*)@ ]]; do

@@ -1,92 +1,137 @@
-# Claude Code in its own user (`extras/claude-code.sh`)
+# Claude Code, as its own user (`extras/claude-code.sh`)
 
-You get Claude Code, Anthropic's coding assistant for the terminal, installed from Anthropic's signed apt repository. The `claude` command runs it as a separate Linux user, `claude-agent`, which has no password and cannot read your home folder, ssh keys, passwords or browser profiles. It works in `~/projects`, which you share with it, and a firewall rule keeps it off your local network.
+## SYNOPSIS
 
-## The problem it solves
+```
+bash ~/debsway/extras/claude-code.sh            install it and the claude-agent user
+bash ~/debsway/extras/claude-code.sh --remove   remove it (asks before deleting the user)
+bash ~/debsway/extras/claude-code.sh --manual   print the manual steps below
 
-A coding assistant reads files, writes files and runs commands. That is its job, and it is also a risk: it can be misled by text it reads, or simply make a mistake. If it runs as you, a mistake or a trick can touch everything you own, including your ssh keys and password database.
+cd ~/projects/NAME && claude     Claude Code as claude-agent, in that folder
+claude-unsandboxed               Claude Code as you, with all your files
+claude-pull                      in your copy of a repository: shows what Claude pushed, brings it in on y
+```
 
-This extra gives it a smaller space to work in. It does not make the assistant trustworthy. It limits what a mistake can reach.
+Claude Code, Anthropic's coding assistant for the terminal, from Anthropic's
+signed apt repository (its key must be exactly `ANTHROPIC_FPR` in `pins.sh`;
+unattended-upgrades installs its updates). `claude` runs it as its own user,
+`claude-agent`, which has no password and no login and can't read your home
+folder, keys, passwords or browser profiles. It works in `~/projects`, which
+you share with it through ACLs. Your user may run exactly one thing as it,
+the script that starts Claude Code (`bin/claude-session`, through a rule in
+`/etc/sudoers.d`), and a firewall rule matching only that user
+(`data/claude-firewall.nft`, loaded at every boot) keeps it off this computer
+and your local network: it can reach the internet, nothing else. It gets its
+own ssh key and git identity, and Debian's git, ssh, ripgrep, jq, shellcheck
+and python venv. Because it can change any file in `~/projects`, your own git
+gets a guard there (`bin/git`) that refuses a repository whose `.git/config`
+or hooks could run a program as you. This is the lighter of the two Claude
+Code sandboxes: it shares your kernel; `extras/claude-vm.sh` is the stronger.
 
-## The ideas behind it
+## LIMITS
 
-**A Linux user.** Each account on a Linux computer is a user, and files have owners. A program running as another user cannot read your private files. Normally every program you start runs as you.
+- It shares your kernel: a kernel bug could let it out of its user.
+- It reaches the internet, so what it reads in `~/projects` can leave this computer.
+- Treat what it leaves in `~/projects` as untrusted before you run it; the git guard checks git's own files, not the code.
+- `/usr/bin/git` skips the guard, and `claude-unsandboxed` has all your files.
 
-**A locked user.** `claude-agent` has no password, so nobody can log in as it. It exists to own its own files and run one program.
+## MANUAL INSTALL
 
-**sudo and a sudoers rule.** `sudo` lets one user run a command as another. A sudoers rule, a line in `/etc/sudoers.d/debsway-claude`, says who may run what. This one lets your user run exactly one script as `claude-agent`, without a password. It is checked with `visudo` first, because a broken sudoers file can lock you out of sudo.
+```
+# Anthropic's signing key. Check it is exactly the pinned one: this must
+# print one "pub" key with the fingerprint @ANTHROPIC_FPR@
+wget -O /tmp/claude-code.asc @ANTHROPIC_KEY_URL@
+gpg --show-keys --with-fingerprint /tmp/claude-code.asc
+sudo install -D -m 0644 /tmp/claude-code.asc /etc/apt/keyrings/claude-code.asc
+rm /tmp/claude-code.asc
+# The repository, trusted with that key only, and its updates installed by unattended-upgrades
+echo "deb [signed-by=/etc/apt/keyrings/claude-code.asc] https://downloads.claude.ai/claude-code/apt/stable stable main" |
+    sudo tee /etc/apt/sources.list.d/claude-code.list
+echo 'Unattended-Upgrade::Origins-Pattern:: "site=downloads.claude.ai";' |
+    sudo tee /etc/apt/apt.conf.d/52debsway-claude-code
 
-**A sandbox.** A box around a program that limits what it can touch. This is the lighter of debsway's two Claude Code sandboxes: it shares your computer's kernel (the core of the operating system). `extras/claude-vm.sh` is the stronger one and puts the assistant in a virtual machine; see `docs/extras/claude-vm.md`.
+# Claude Code; acl for sharing ~/projects; nftables for the firewall rule; its tools
+sudo apt update
+sudo apt install --no-install-recommends claude-code acl nftables git openssh-client ripgrep jq shellcheck python3-venv
 
-**An ACL.** An access-control list adds a permission for one named user on a file or folder. It lets `claude-agent` walk through your home folder to `~/projects` without being able to list or read anything else there.
+# The claude-agent user, locked (no password: nobody can log in as it)
+sudo useradd --create-home --home-dir /home/claude-agent --shell /bin/bash --user-group --comment "debsway Claude Code" claude-agent
+sudo usermod --lock claude-agent
+sudo chmod 700 /home/claude-agent
+# Its notes on how it is set up, and its own git identity
+sudo install -d -o claude-agent -g claude-agent -m 0700 /home/claude-agent/.claude
+sudo install -o claude-agent -g claude-agent -m 0644 @DEBSWAY_DIR@/data/claude-agent-CLAUDE.md /home/claude-agent/.claude/CLAUDE.md
+printf '[user]\n\tname = Claude\n\temail = noreply@anthropic.com\n[init]\n\tdefaultBranch = main\n[safe]\n\tdirectory = *\n' |
+    sudo install -o claude-agent -g claude-agent -m 0644 /dev/stdin /home/claude-agent/.gitconfig
+# Its own ssh key (no passphrase: it uses it by itself), and GitHub's host keys
+sudo install -d -o claude-agent -g claude-agent -m 0700 /home/claude-agent/.ssh
+sudo -u claude-agent -H bash -c 'cd && ssh-keygen -q -t ed25519 -N "" -C "claude-agent@$(hostname)" -f .ssh/id_ed25519'
+curl -fsS https://api.github.com/meta | python3 -c 'import json,sys; [print("github.com " + k) for k in json.load(sys.stdin)["ssh_keys"]]' |
+    sudo install -o claude-agent -g claude-agent -m 0644 /dev/stdin /home/claude-agent/.ssh/known_hosts
 
-**A firewall rule.** An instruction to the network layer to allow or refuse certain connections. This one applies only to `claude-agent`.
+# The firewall rule: claude-agent reaches the internet only, not this
+# computer or your network. Loaded at every boot before the network comes up.
+sudo install -D -o root -g root -m 0644 @DEBSWAY_DIR@/data/claude-firewall.nft /etc/debsway/claude.nft
+printf '%s\n' '[Unit]' 'Description=Keep the claude-agent user off the local network' \
+    'Before=network-pre.target' 'Wants=network-pre.target' '' '[Service]' \
+    'Type=oneshot' 'RemainAfterExit=yes' 'ExecStart=/usr/sbin/nft -f /etc/debsway/claude.nft' \
+    'ExecStop=/usr/sbin/nft delete table inet debsway_claude' '' '[Install]' 'WantedBy=multi-user.target' |
+    sudo tee /etc/systemd/system/debsway-claude-firewall.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now debsway-claude-firewall.service
 
-**A git hook.** Git can run a program automatically at certain moments (a hook), and some settings can name programs to run. Since `claude-agent` can edit any repository in `~/projects`, including the hidden `.git` folder, it could plant something that your own git would run as you.
+# ~/projects, shared: it may pass through your home (not list or read it),
+# and read and write in ~/projects; new files there are open to both of you
+mkdir -p ~/projects
+setfacl -m u:claude-agent:--x ~
+setfacl -R -m "u:claude-agent:rwX,u:$(id -un):rwX" ~/projects
+setfacl -R -d -m "u:claude-agent:rwX,u:$(id -un):rwX,m::rwX" ~/projects
 
-**An ssh key.** A pair of files used to prove who you are to a server such as GitHub. The public half is shared, the private half stays secret.
+# The script that starts Claude Code as claude-agent, and the wrapper it
+# uses to keep it off X11's abstract socket
+sudo install -d -o root -g root -m 0755 /usr/local/libexec
+sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/claude-session /usr/local/libexec/claude-session
+sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/no-abstract-sockets /usr/local/libexec/debsway-no-abstract-sockets
+# Your user may run that script, and nothing else, as claude-agent. visudo
+# checks the rule first: never put a rule in /etc/sudoers.d it hasn't passed.
+printf '%s ALL=(claude-agent) NOPASSWD: /usr/local/libexec/claude-session\n' "$(id -un)" >/tmp/debsway-claude
+sudo visudo -cf /tmp/debsway-claude
+sudo install -o root -g root -m 0440 /tmp/debsway-claude /etc/sudoers.d/debsway-claude
+rm /tmp/debsway-claude
 
-## How it works, step by step
+# The commands, and the git guard for ~/projects
+for c in claude claude-unsandboxed claude-pull git; do install -D -m 0755 @DEBSWAY_DIR@/bin/$c ~/.local/bin/$c; done
 
-When you run `bash extras/claude-code.sh`:
+# Its public key, to add on GitHub (a deploy key on one repository is the narrowest)
+sudo cat /home/claude-agent/.ssh/id_ed25519.pub
+cd ~/projects && mkdir -p NAME && cd NAME && claude
+```
 
-1. It adds Anthropic's apt repository. The signing key is fetched and used only if its fingerprint is exactly the one pinned in `pins.sh`. It also allows unattended-upgrades to install updates from `downloads.claude.ai`.
-2. It installs `claude-code`, `acl`, `nftables`, `git`, `openssh-client`, `ripgrep`, `jq`, `shellcheck` and `python3-venv`.
-3. It creates the user `claude-agent` (home `/home/claude-agent`, mode 700, own group only) and locks its password.
-4. It gives it `~/.claude/CLAUDE.md` (from `data/claude-agent-CLAUDE.md`, a note telling the assistant how it is set up) and a `~/.gitconfig` (name Claude, email noreply@anthropic.com, `safe.directory = *`). Files you have edited yourself are kept: it only overwrites those that still carry the "written by debsway" mark.
-5. It makes an ssh key for the agent with no passphrase, so the agent can use it by itself. It also writes GitHub's published host keys into its `known_hosts`, fetched over https from `api.github.com/meta`.
-6. It installs the firewall rule `/etc/debsway/claude.nft` and the service `debsway-claude-firewall`, loaded at every boot. For `claude-agent` it accepts DNS and the internet, and rejects connections to this computer itself and to private address ranges.
-7. It creates `~/projects` and uses ACLs so `claude-agent` can pass through your home folder, and read and write `~/projects`, including files created later. You keep access to what it creates.
-8. It installs `/usr/local/libexec/claude-session`, `debsway-no-abstract-sockets`, the sudoers rule, and the commands `claude`, `claude-unsandboxed`, `claude-pull` and `git` in `~/.local/bin`. It prints the agent's public ssh key.
+To undo:
 
-When you run `claude`:
-
-1. It checks that the sandbox is set up and that you are in a folder inside `~/projects`. Elsewhere it refuses (only `--version` and `--help` work anywhere).
-2. It runs `claude-session` as `claude-agent` through sudo, in that folder. That script sets a clean `HOME` and `PATH`, and starts Claude Code through `debsway-no-abstract-sockets`, which uses the kernel's Landlock feature to stop the program connecting to X11's "abstract" sockets that any user could otherwise reach.
-3. The first time, Claude Code shows a login link; open it in your browser. The login lives in `/home/claude-agent`, apart from your own `~/.claude`.
-
-**The git guard.** `bin/git` is installed as your `git` in `~/.local/bin`. Inside `~/projects`, before git runs, it reads the repository's `.git/config` and `.git/hooks`. It accepts only a list of harmless settings (user name, remotes with ordinary addresses, branch tracking and so on) and refuses if it finds a hook or any other setting, such as `core.fsmonitor`. It then tells you what it found. When the check passes for a repository the agent made, it tells git to trust that one for that one command, so you do not get git's "dubious ownership" warning. Outside `~/projects` it is plain git; `/usr/bin/git` skips the guard.
-
-**Getting its work.** `claude-pull`, run in your own copy of a repository, fetches what the agent pushed, shows the commits, and asks `Bring these in? [y/N]` before merging (fast-forward only).
-
-## What it changes on your computer
-
-- The apt repository file `/etc/apt/sources.list.d/claude-code.list`, the key `/etc/apt/keyrings/claude-code.asc`, and `/etc/apt/apt.conf.d/52debsway-claude-code`.
-- Packages: `claude-code`, `acl`, `nftables`, `git`, `openssh-client`, `ripgrep`, `jq`, `shellcheck`, `python3-venv`.
-- The user `claude-agent` and `/home/claude-agent` (its `.claude`, `.gitconfig`, `.ssh`).
-- `/etc/sudoers.d/debsway-claude`; `/usr/local/libexec/claude-session` and `debsway-no-abstract-sockets`.
-- `/etc/debsway/claude.nft` and `/etc/systemd/system/debsway-claude-firewall.service`.
-- ACL entries for `claude-agent` on your home folder (pass through only) and on `~/projects`.
-- `~/projects` if it did not exist.
-- Commands in `~/.local/bin`: `claude`, `claude-unsandboxed`, `claude-pull`, `git`.
-
-## Using it
-
-- `cd ~/projects/NAME && claude`: Claude Code as `claude-agent`. Use `mkdir` for a new project.
-- `claude-unsandboxed`: Claude Code as you, with all your files. No protection.
-- `claude-pull`: in your own clone, show and (if you answer y) bring in what Claude pushed.
-- Add the printed public key (or `sudo cat /home/claude-agent/.ssh/id_ed25519.pub`) on GitHub so the agent can push. A deploy key on one repository is the narrowest; a key on your account lets it push to all of them.
-- The note at the top of `/etc/debsway/claude.nft` says how to let it reach servers on this machine. By default it cannot, including its own dev servers.
-- The agent has no sudo and cannot install packages. Add Node, Rust or Go with apt yourself.
-
-## What it protects against
-
-- **Reading your private files.** It cannot read your home folder, ssh keys, passwords or browser profiles.
-- **Reaching things on your network.** Your router, printers, other computers and programs listening on this machine are refused.
-- **Using your ssh identity.** It has its own key and git identity.
-- **Snooping on X11 windows** through the abstract socket.
-- **Planted git settings or hooks running as you** in `~/projects`, because of the git guard.
-
-## What it doesn't protect against
-
-- **A kernel bug.** It shares your kernel. If this computer has KVM, `claude-vm` is the stronger wall.
-- **Anything in `~/projects`.** You share it both ways. Read scripts it leaves before you run them, and look at `.git/config` and `.git/hooks` before telling your own git to trust a repository. Do not set git's `safe.directory '*'` for yourself.
-- **The internet.** It can still send anything it can read to anywhere online.
-- **A race against the guard.** A file could change between the check and the git command, so the guard stops a confused assistant, not one racing your keystrokes.
-- **`claude-unsandboxed` and `/usr/bin/git`**, which skip the protections.
-- **Files readable by every user.** `claude-agent` is an ordinary user.
-- **A bad idea carried out with its own access.** If it deletes things in `~/projects`, they are gone.
-
-## Removing it
-
-`bash extras/claude-code.sh --remove` removes the commands, the firewall service and rule, the sudoers rule and the session script, takes back the ACL entries on your home folder and `~/projects`, and asks whether to delete the user `claude-agent` and its home (its Claude login, ssh keys and settings); the default is no. If you say yes, files it made in `~/projects` are handed to you first. It then purges the packages it installed (unless another extra needs them), the apt repository file and key, and the update rule. `claude-pull` stays if `claude-vm` is still set up. Your own `~/.claude` and `~/projects` are untouched.
+```
+# The commands and the git guard (keep claude-pull if claude-vm is set up)
+rm ~/.local/bin/claude ~/.local/bin/claude-unsandboxed ~/.local/bin/claude-pull ~/.local/bin/git
+# The firewall rule
+sudo systemctl disable --now debsway-claude-firewall.service
+sudo rm /etc/systemd/system/debsway-claude-firewall.service /etc/debsway/claude.nft
+sudo systemctl daemon-reload
+# The sudo rule and the start script (the no-abstract-sockets wrapper only if
+# incognito, claude-vm and the Firefox sandbox don't use it)
+sudo rm /etc/sudoers.d/debsway-claude /usr/local/libexec/claude-session
+sudo rm /usr/local/libexec/debsway-no-abstract-sockets
+# Its access to your home and ~/projects
+setfacl -x u:claude-agent ~
+setfacl -R -x "u:claude-agent,d:u:claude-agent" ~/projects
+# The user and its home (its Claude login, ssh key and settings); what it
+# made in ~/projects becomes yours first
+sudo pkill -KILL -u claude-agent
+sudo find ~/projects -user claude-agent -exec chown -h "$(id -un):$(id -gn)" {} +
+sudo userdel -r claude-agent
+# Claude Code, its repository, key and update rule
+sudo apt purge claude-code
+sudo rm /etc/apt/sources.list.d/claude-code.list /etc/apt/keyrings/claude-code.asc /etc/apt/apt.conf.d/52debsway-claude-code
+# The tools, marked "automatic": autoremove takes them out only if nothing needs them
+sudo apt-mark auto acl nftables ripgrep jq shellcheck python3-venv
+sudo apt autoremove --purge
+```

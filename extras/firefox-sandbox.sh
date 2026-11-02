@@ -26,12 +26,14 @@
 #    in a locked-down user of its own with nothing kept (parts/incognito.sh).
 # There is no KeePassXC browser add-on (debsway's KeePassXC is the minimal
 # build without it): copy and paste a password; the clipboard is shared.
-# Usage: bash firefox-sandbox.sh [--remove]
+# Usage: bash firefox-sandbox.sh [--remove | --manual]
 # summary: Firefox as its own locked-down user
 # status: file:/usr/local/bin/firefox
 # files: bin/no-abstract-sockets bin/wayland-restrict data/firefox-firewall.nft data/firefox-user.js data/debsway-firefox.desktop lib/firefox-sandbox.sh
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/firefox-sandbox.sh"
+# The hardening and incognito it sets up first, then the sandbox itself
+if [ "${1:-}" = --manual ]; then print_manual firefox; print_manual; exit; fi
 need_user
 
 NAME=firefox

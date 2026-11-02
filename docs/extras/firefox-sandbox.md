@@ -1,92 +1,117 @@
-# Firefox as its own locked-down user (`extras/firefox-sandbox.sh`)
+# Firefox as its own user (`extras/firefox-sandbox.sh`)
 
-You get a `firefox` command that opens Firefox as a normal window on your desktop, but the program runs as a different Linux user that has no password and none of your files. Your logins, history and bookmarks are kept, in that user's own home. If a web page takes over the browser, it reaches that user and not your documents, ssh keys or passwords.
+## SYNOPSIS
 
-## The problem it solves
+```
+bash ~/debsway/extras/firefox-sandbox.sh            install it (with Firefox's hardening and incognito)
+bash ~/debsway/extras/firefox-sandbox.sh --remove   remove it (asks about incognito and the profile)
+bash ~/debsway/extras/firefox-sandbox.sh --manual   print the manual steps (firefox.md's, then these)
 
-When you run `firefox-esr` the ordinary way, it runs as you. Anything that takes over the browser can then do what you can do: read your files, your ssh keys, your password database, and the saved logins of other programs. Browsers are big and have bugs, so an exploit is not far-fetched, and a browser is the program that visits the most strangers' code.
+firefox [URL]       the sandboxed Firefox, as a normal window (links from other programs open in it)
+firefox-esr         the same Firefox run as you, with everything you can reach
+```
 
-This extra does not make Firefox bug-free. It limits what a taken-over Firefox can reach.
+The `firefox` command opens Firefox as a normal window on your sway, but it
+runs as a different user, `firefox`, with no password, no login and none of
+your files, so a hacked page reaches only that user's own profile
+(`/var/lib/debsway-firefox`: your logins, history and bookmarks), not your
+documents, keys or passwords. The clipboard is shared while its window has
+focus, and `~/Downloads` both ways. Its sound goes through a pipe into a
+player of yours, so it can't hear your microphone, and it gets a restricted
+Wayland socket. A firewall rule on its group, `debsway-fx`
+(`data/firefox-firewall.nft`), keeps it off your router, printers and this
+computer's own services; DNS stays open. Your user may run exactly one thing
+as it, the session script `bin/firefox-session`, through a rule in
+`/etc/sudoers.d`, and a limit on processes keeps a runaway page from filling
+the machine. It becomes your default browser. It also sets up Firefox's
+hardening and `incognito` ([firefox.md](firefox.md)), and the profiles made
+with `extras/firefox-profiles/new-profile.sh` each get a user like it.
 
-## The ideas behind it
+## LIMITS
 
-**A Linux user.** Every account on a Linux computer is a user. Files have owners, and by default one user cannot read another user's private files. Normally you only have one user, and every program you start runs as you.
+- What lands in `~/Downloads` comes from the web: treat it as untrusted.
+- The clipboard is shared while its window has focus.
+- It shares your kernel: a kernel bug could let a page out of its user.
+- It's your network and your address; and `firefox-esr` runs as you, without any of this.
 
-**A locked system user.** A user can be made with no password and no login shell, so nobody can sign in as it. It exists only to own things and to run one program. Here that user is called `firefox`. Its home folder is `/var/lib/debsway-firefox`, which only it can enter.
+## MANUAL INSTALL
 
-**sudo and a sudoers rule.** `sudo` lets one user run a command as another. A sudoers rule (a line in a file under `/etc/sudoers.d/`) says who may run what. The rule here lets your user run exactly one helper script as `firefox`, without a password, and nothing else. It is checked with `visudo` before it is installed, because a broken sudoers file can lock you out of sudo.
+Do the steps in [firefox.md](firefox.md) first: Firefox's hardening, then
+incognito. (`--manual` prints them above these.)
 
-**A sandbox.** A box around a program that limits what it can touch. Here the box is a separate user plus the limits below. Think of a visitor in a room: they can use what is in the room and what you pass through the hatch, but not wander the house.
+```
+# Firefox, video codecs, uBlock, acl for sharing the socket and ~/Downloads,
+# nftables, its own audio server and player, dbus for links to the running Firefox
+sudo apt install --no-install-recommends firefox-esr libavcodec61 webext-ublock-origin-firefox acl nftables python3 dbus-daemon \
+    pipewire-bin pipewire-pulse wireplumber
 
-**Wayland and a socket.** Wayland is how programs draw windows on your sway desktop. A socket is a special file a program opens to talk to another program, here the window system. Whoever can open your real socket can also ask for screenshots or send keystrokes as if you typed them. The sandboxed Firefox is given a second, restricted socket instead.
+# The group every sandboxed Firefox user is in (the firewall rule matches it)
+sudo groupadd --system debsway-fx
+# The firefox user: no password, no login shell, a home only it can enter;
+# render lets Firefox open the GPU's render node (not the screen)
+sudo useradd --system --gid debsway-fx --create-home --home-dir /var/lib/debsway-firefox --shell /usr/sbin/nologin --comment "debsway sandboxed Firefox" firefox
+sudo usermod --lock --shell /usr/sbin/nologin firefox
+sudo chmod 0700 /var/lib/debsway-firefox
+sudo usermod -aG render firefox
 
-**A firewall rule.** An instruction to the network layer to allow or refuse certain connections. Here it applies only to the sandboxed Firefox users.
+# The command, its session script and prefs, the restricted Wayland socket
+# and the no-abstract-sockets wrapper
+sudo install -d -o root -g root -m 0755 /usr/local/share/debsway /usr/local/libexec
+install -D -m 0755 @DEBSWAY_DIR@/bin/wayland-restrict ~/.local/bin/wayland-restrict
+sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/no-abstract-sockets /usr/local/libexec/debsway-no-abstract-sockets
+sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/firefox /usr/local/bin/firefox
+sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/firefox-session /usr/local/libexec/firefox-session
+sudo install -o root -g root -m 0644 @DEBSWAY_DIR@/data/firefox-user.js /usr/local/share/debsway/firefox-user.js
 
-**An ACL.** An access-control list adds a permission for one named user to a file or folder. It lets the `firefox` user reach a few things of yours without opening them to everyone.
+# Your user may run the session script, and nothing else, as firefox. visudo
+# checks the rule first: never put a rule in /etc/sudoers.d it hasn't passed.
+printf '%s ALL=(firefox) NOPASSWD: /usr/local/libexec/firefox-session\n' "$(id -un)" >/tmp/debsway-firefox
+sudo visudo -cf /tmp/debsway-firefox
+sudo install -o root -g root -m 0440 /tmp/debsway-firefox /etc/sudoers.d/debsway-firefox
+rm /tmp/debsway-firefox
+# A limit on processes for every sandboxed Firefox user, and no core dumps
+printf '%s\n' '@debsway-fx hard nproc 4096' '@debsway-fx hard core 0' | sudo tee /etc/security/limits.d/50-debsway-firefox.conf
 
-## How it works, step by step
+# The firewall rule, loaded at every boot before the network comes up
+sudo install -D -o root -g root -m 0644 @DEBSWAY_DIR@/data/firefox-firewall.nft /etc/debsway/firefox.nft
+printf '%s\n' '[Unit]' 'Description=Keep the firefox user off the local network' \
+    'Before=network-pre.target' 'Wants=network-pre.target' '' '[Service]' \
+    'Type=oneshot' 'RemainAfterExit=yes' 'ExecStart=/usr/sbin/nft -f /etc/debsway/firefox.nft' \
+    'ExecStop=/usr/sbin/nft delete table inet debsway_firefox' '' '[Install]' 'WantedBy=multi-user.target' |
+    sudo tee /etc/systemd/system/debsway-firefox-firewall.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now debsway-firefox-firewall.service
 
-When you run `bash extras/firefox-sandbox.sh` (as your normal user, which uses sudo where needed):
+# The default browser: links from other programs open in it
+install -D -m 0644 @DEBSWAY_DIR@/data/debsway-firefox.desktop ~/.local/share/applications/debsway-firefox.desktop
+mkdir -p ~/.config && touch ~/.config/mimeapps.list
+grep -qx '\[Default Applications\]' ~/.config/mimeapps.list || echo '[Default Applications]' >>~/.config/mimeapps.list
+for t in x-scheme-handler/http x-scheme-handler/https; do
+    sed -i "\\|^$t=|d; /^\\[Default Applications\\]\$/a $t=debsway-firefox.desktop" ~/.config/mimeapps.list
+done
+firefox
+```
 
-1. It installs `firefox-esr`, `libavcodec61`, `webext-ublock-origin-firefox`, `acl`, `nftables`, `python3`, `dbus-daemon`, and PipeWire's pieces (`pipewire-bin`, `pipewire-pulse`, `wireplumber`), then runs `parts/firefox-hardening.sh` (see `docs/extras/firefox.md`). That gives every Firefox uBlock Origin in medium mode, HTTPS-Only Mode and no JavaScript JIT.
-2. It creates the system user `firefox` (using `lib/firefox-sandbox.sh`): no password, shell `/usr/sbin/nologin`, home `/var/lib/debsway-firefox` mode 700, primary group `debsway-fx`, plus the `render` group so Firefox can open the graphics card's render node.
-3. It installs `/usr/local/bin/firefox`, `/usr/local/libexec/firefox-session`, `wayland-restrict`, `debsway-no-abstract-sockets`, and the settings file `/usr/local/share/debsway/firefox-user.js`.
-4. It writes `/etc/sudoers.d/debsway-firefox` and a limits file that caps processes at 4096 and switches off core dumps for everyone in `debsway-fx`.
-5. It installs the firewall rule `/etc/debsway/firefox.nft` and a service `debsway-firefox-firewall`, loaded at every boot before the network. The rule matches the group `debsway-fx`. Those users may answer connections and do DNS lookups and reach the internet, but connections to this computer itself (any of its addresses), your router, private address ranges, and the local network are rejected.
-6. It installs `~/.local/share/applications/debsway-firefox.desktop` and makes it your default handler for `http` and `https` links in `~/.config/mimeapps.list`. Links from a terminal or file manager now open in the sandboxed Firefox.
+To undo (remove each profile made with new-profile.sh first):
 
-When you later run `firefox`:
+```
+# The firewall rule
+sudo systemctl disable --now debsway-firefox-firewall.service
+sudo rm /etc/systemd/system/debsway-firefox-firewall.service /etc/debsway/firefox.nft
+sudo systemctl daemon-reload
+# The sudo rule, the limits, the command, its session script and prefs
+sudo rm /etc/sudoers.d/debsway-firefox /etc/security/limits.d/50-debsway-firefox.conf
+sudo rm /usr/local/bin/firefox /usr/local/libexec/firefox-session /usr/local/share/debsway/firefox-user.js
+sudo rm -rf /dev/shm/firefox-run
+# Links open in firefox-esr again
+sed -i '/=debsway-firefox\.desktop$/d' ~/.config/mimeapps.list
+rm ~/.local/share/applications/debsway-firefox.desktop
+# The user and its group
+sudo pkill -KILL -u firefox
+sudo userdel firefox
+sudo groupdel debsway-fx
+# Its profile: your logins, history and bookmarks in it (only if you want them gone)
+sudo rm -rf /var/lib/debsway-firefox
+```
 
-1. It checks that you are in your sway session and that you may run the helper. If a sandboxed Firefox is already open (a lock file in your runtime folder), it only hands the link to it through the helper's `open` command and stops. Only `http://` and `https://` addresses are accepted.
-2. Otherwise it starts `wayland-restrict`, which makes a second Wayland socket that sway marks as "sandboxed". Windows work through it, but sway does not offer the protocols that read the screen, type for you, or lock the session.
-3. Using ACLs, it lets the `firefox` user pass through your home folder to `~/Downloads` (pass through only; it cannot list or read your home), reach the new socket, and read and write `~/Downloads`. These are taken back when the window closes. Anything it saves there is made readable and writable for you, and for nobody else, as it lands: Firefox may save a download as private, which would leave your ACL entry with no effect (the file's ACL *mask* would be empty), so the session sets the mask on what its user saved, every few seconds while it runs.
-4. If PipeWire is running for you, it makes a named pipe (a one-way channel) and starts `pw-cat` as you to play whatever arrives in it.
-5. It runs `firefox-session start` as `firefox` through sudo. The helper rewrites the profile's `user.js` at every start (a clean start page, tracking protection on, no telemetry, geolocation/camera/microphone/notification prompts refused, no prefetching, no hardware video decoding), keeps its runtime files in memory under `/dev/shm/firefox-run`, starts a private message bus, a small PipeWire of its own whose only output is the pipe, and then `firefox-esr`, through `debsway-no-abstract-sockets`. That program uses the kernel's Landlock feature so the browser cannot connect to X11's "abstract" sockets, which any user could otherwise reach.
-6. When the window closes, the runtime folder, socket, pipe and ACLs are cleaned up. The profile in `/var/lib/debsway-firefox/profile` stays.
-
-The private message bus is how a second `firefox URL` finds the running browser: `firefox-session open` sends the address there and opens a new tab.
-
-## What it changes on your computer
-
-- Packages: `firefox-esr`, `libavcodec61`, `webext-ublock-origin-firefox`, `acl`, `nftables`, `python3`, `dbus-daemon`, `pipewire-bin`, `pipewire-pulse`, `wireplumber`, and what the hardening part adds.
-- Everything the Firefox hardening part writes (`/etc/firefox-esr/debsway-hardening.js`, `policies.json`, `ublock-allow`, the restart-notice timer).
-- The user `firefox`, the group `debsway-fx`, the folder `/var/lib/debsway-firefox`.
-- `/usr/local/bin/firefox`, `/usr/local/libexec/firefox-session` and `debsway-no-abstract-sockets`, `~/.local/bin/wayland-restrict`, `/usr/local/share/debsway/firefox-user.js`.
-- `/etc/sudoers.d/debsway-firefox`, `/etc/security/limits.d/50-debsway-firefox.conf`.
-- `/etc/debsway/firefox.nft` and the service `/etc/systemd/system/debsway-firefox-firewall.service`.
-- `~/.local/share/applications/debsway-firefox.desktop` and `http`/`https` defaults in `~/.config/mimeapps.list`.
-- While it runs: temporary access for the `firefox` user on `$XDG_RUNTIME_DIR`, `~/` and `~/Downloads`, and full access to `~/Downloads`.
-
-## Using it
-
-- `firefox` or Super+d: open the sandboxed Firefox. `firefox https://example.org/` opens a page, in the running window if there is one.
-- `firefox --no-audio`: no sound pipe.
-- `firefox-esr`: Firefox as you, with no sandbox. It stays installed.
-- `sudo systemctl stop debsway-firefox-firewall`: lift the network rule for a while, for example to reach your router's page or a server on this computer. `sudo systemctl start debsway-firefox-firewall` puts it back.
-- Copy and paste work while the Firefox window has focus. There is no KeePassXC browser add-on in debsway's build, so copy a password out of KeePassXC and paste it.
-- To give a site its own sandboxed profile, see `docs/extras/firefox-profiles.md`.
-
-## What it protects against
-
-- **A browser exploit reaching your files.** The browser runs as a user with no password, login or home access of yours. Only `~/Downloads` is shared.
-- **Reading your screen or typing for you.** The restricted socket does not offer those protocols.
-- **Listening in.** It never gets your audio server, so it cannot hear your microphone or other programs. Sound leaves through one pipe in one direction.
-- **Reaching your local network.** A hacked browser cannot connect to your router, printers, other computers, or programs listening on this machine.
-- **X11 snooping.** Landlock stops it connecting to XWayland's abstract socket.
-- **Your own programs reading the browser's logins.** The profile folder is mode 700, owned by `firefox`.
-
-## What it doesn't protect against
-
-- **A kernel bug.** The browser shares your kernel, so a bug there could still let it out.
-- **An exploit that stays in the browser.** It can still use the logins and cookies kept in that profile, and send them anywhere on the internet.
-- **What lands in `~/Downloads`.** It is shared both ways, so treat it as untrusted and do not run it unread.
-- **The clipboard.** It is shared while the Firefox window has focus. Anything you copy then, including a password, is visible to the page's scripts if the browser is compromised.
-- **Your identity on the network.** It uses your network and your IP address. Use a VPN or Tor Browser for that.
-- **Anything you run as yourself**, including `firefox-esr` and links opened by programs that do not use the default browser setting.
-- **Readable files elsewhere.** The `firefox` user is an ordinary user: files on the computer that any user can read are still readable by it.
-
-## Removing it
-
-If you made profiles with `firefox-profiles/new-profile.sh`, they run through this sandbox, so `--remove` first refuses, names them and tells you to remove each one (`bash extras/firefox-profiles/new-profile.sh --remove NAME`); nothing is changed until they are gone.
-
-`bash extras/firefox-sandbox.sh --remove` stops and deletes the firewall service and rule, the sudoers rule, the limits file, the commands, the helper, the settings file, and the default-browser entry (links open in `firefox-esr` again). It removes the user `firefox` and the group `debsway-fx`, then asks whether to delete its profile in `/var/lib/debsway-firefox`; the default is no, so your logins and history stay. Firefox itself stays installed, as the Firefox extra's.
+Then undo [firefox.md](firefox.md)'s steps, unless you keep incognito.
