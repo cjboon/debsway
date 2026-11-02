@@ -48,6 +48,8 @@ check "an image the list doesn't name is refused" not debian_cd_image_ok "$T/SUM
 check "the Debian CD signing key is pinned" test "$DEBIAN_CD_FPR" = DF9B9C49EAA9298432589D76DA87E80D6294BE9B
 check "what it needs (wget, gpg, git) is installed at the start if missing" \
     bash -c 'grep -q "^need_tools .*gpg:gpg" "$1" && grep -q "^need_tools .*git:git" "$1"' _ "$HERE/prep/make-install-iso.sh"
+check "age and diceware are part of the base install" \
+    bash -c '. "$1/packages.sh"; printf "%s\n" "${PKGS[@]}" | grep -qx age && printf "%s\n" "${PKGS[@]}" | grep -qx diceware' _ "$HERE"
 check "xorriso isn't part of the base install" \
     bash -c '. "$1/packages.sh"; ! printf "%s\n" "${PKGS[@]}" | grep -qx xorriso' _ "$HERE"
 check "a missing xorriso is installed for this run, under a marker of its own" \

@@ -4,7 +4,9 @@
 # The core: sway and a terminal. Apps people may not want are in extras/
 # (Firefox, git and gh, KeePassXC, Claude Code, ...).
 # gpg: checks the signatures of everything debsway downloads
-PKGS=(sway foot libgl1-mesa-dri gpg)
+# age: encrypts a file to a password or a key (age -p file > file.age)
+# diceware: makes passphrases from random words (diceware -n 6)
+PKGS=(sway foot libgl1-mesa-dri gpg age diceware)
 
 # Each parts/ script installs its own packages and sets them up; this is
 # the order install-base.sh runs them in. network-manager goes near the

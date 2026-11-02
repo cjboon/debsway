@@ -6,7 +6,10 @@
    (`install-extras.sh --choose`) so you answer everything up front; nothing
    is checked for you. What you pick is installed once the base is done.
 1. Installs the core packages, all with `--no-install-recommends`:
-   `sway foot libgl1-mesa-dri gpg` (`gpg` checks downloads). Every part
+   `sway foot libgl1-mesa-dri gpg age diceware` (`gpg` checks downloads;
+   `age` encrypts a file to a password or a key, `age -p file >file.age`, and
+   `age -d file.age` decrypts it; `diceware -n 6` makes a passphrase of six random
+   words, from the system's secure random source). Every part
    installs its own packages (see the table below). There is no web
    browser until you pick one: Firefox and w3m are in the extras list.
 2. Sets up sway (a copy of the stock config plus one `include` line for
