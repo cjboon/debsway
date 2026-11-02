@@ -96,6 +96,13 @@ SIGNAL_KEY_URL=https://updates.signal.org/desktop/apt/keys.asc
 # checked: 2026-11-02  opencode.ai/docs; api.github.com/repos/sst/opencode redirects here; v1.19.5 immutable
 OPENCODE_REPO=anomalyco/opencode
 
+# The Tor Project's apt repo, for lyrebird only (webtunnel bridges for the
+# system tor: lib/tor.sh). "deb.torproject.org archive signing key"; it signs
+# with a subkey that expires 2027-11-01, renewed in the file at the URL.
+# checked: 2026-11-02  deb.torproject.org's key file; keys.openpgp.org; keyserver.ubuntu.com; it signs trixie's InRelease
+TORPROJECT_FPR=A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89
+TORPROJECT_KEY_URL=https://deb.torproject.org/torproject.org/A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89.asc
+
 # Mullvad apt repo (extras/mullvad-vpn.sh, extras/mullvad-browser-regular.sh).
 # Mullvad (code signing) <admin@mullvad.net>.
 # checked: 2026-10-26  mullvad.net/en/help/verifying-signatures; the repo's keyring

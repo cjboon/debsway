@@ -96,7 +96,8 @@ if [ "${1:-}" = --remove ]; then
             note "Kept the user $AGENT and $AGENT_HOME (the VM is still there)."
         fi
     fi
-    apt_purge qemu-system-x86 qemu-utils socat nftables tor openssl obfs4proxy snowflake-client
+    apt_purge qemu-system-x86 qemu-utils socat nftables tor openssl obfs4proxy lyrebird snowflake-client
+    remove_torproject_repo_if_unused
     if ! system_tor_wanted && is_installed onionshare-cli; then
         sudo systemctl mask tor.service tor@default.service >/dev/null
     fi
@@ -154,10 +155,10 @@ if ! is_installed tor; then sudo systemctl mask tor.service tor@default.service 
 pkgs=(qemu-system-x86 qemu-utils socat nftables openssh-client cpio gzip wget gpgv
     debian-archive-keyring tor openssl)
 if $bridge_block; then
-    case $BRIDGE_TYPE in
-        obfs4) pkgs+=(obfs4proxy) ;;
-        snowflake) pkgs+=(snowflake-client) ;;
-    esac
+    # webtunnel: lyrebird, from the Tor Project's repository (lib/tor.sh)
+    [ "$BRIDGE_TYPE" != webtunnel ] || add_torproject_repo
+    b=$(bridge_packages)
+    [ -z "$b" ] || pkgs+=("$b")
 fi
 apt_install "${pkgs[@]}"
 

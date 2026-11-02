@@ -340,6 +340,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "webtunnel for the system tor: the Tor Project's repository, lyrebird only"
+if out=$(bash tools/test-webtunnel.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") webtunnel checks"
+else
+    bad "webtunnel checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "console-font in a terminal window (foot's text size)"
 if out=$(bash tools/test-console-font.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") console-font checks"

@@ -110,10 +110,13 @@ this page to decide what else you need.
 With the extras:
 
 - **Your network or ISP seeing that you use Tor**, if you say you need a
-  bridge: Tor Browser, OnionShare, Whonix and apt over Tor ask first, then
-  offer obfs4, webtunnel, Snowflake or meek, whichever that program can use
-  (docs/install-base.md, "Bridges"). The bridge is set up before the first
-  connection.
+  bridge: Tor Browser, OnionShare, Whonix and the system Tor (apt over Tor,
+  remote access, the onion site) ask first, then offer obfs4, webtunnel,
+  Snowflake or meek, whichever that program can use (docs/install-base.md,
+  "Bridges"). The bridge is set up before the first connection. webtunnel
+  for the system Tor is lyrebird from the Tor Project's repository, with its
+  key pinned and an apt pin that lets nothing else come from there: trusting
+  the Tor Project for that one program, as Tor Browser users do.
 - **A hacked browser revealing your real IP address**: Whonix
   (`extras/whonix.sh`) runs the browser in a virtual machine whose only
   way out is Tor.

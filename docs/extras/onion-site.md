@@ -50,7 +50,8 @@ APP=python
 # (skip this if apt over Tor or remote access already runs tor)
 sudo systemctl mask tor.service tor@default.service
 # The VM, socat, nftables, ssh into the VM, the checked Debian installer, tor
-# and openssl (add obfs4proxy or snowflake-client for a bridge)
+# and openssl (add obfs4proxy or snowflake-client for a bridge; for webtunnel,
+# lyrebird: see docs/install-base.md, "webtunnel for the system Tor")
 sudo apt install --no-install-recommends qemu-system-x86 qemu-utils socat nftables openssh-client cpio gzip wget gpgv \
     debian-archive-keyring tor openssl
 
@@ -158,5 +159,9 @@ sudo pkill -KILL -u onion-site
 sudo userdel -r onion-site
 # The packages, marked "automatic": autoremove takes them out only if nothing needs them
 sudo apt-mark auto qemu-system-x86 qemu-utils socat nftables tor openssl
+# (and the bridge program, if you set one up: obfs4proxy, lyrebird or snowflake-client)
 sudo apt autoremove --purge
+# Once lyrebird is gone (webtunnel), the Tor Project's repository too
+dpkg -s lyrebird >/dev/null 2>&1 || sudo rm -f /etc/apt/sources.list.d/debsway-torproject.list \
+    /etc/apt/preferences.d/debsway-torproject.pref /usr/share/keyrings/debsway-torproject.asc /etc/apt/apt.conf.d/52debsway-torproject
 ```

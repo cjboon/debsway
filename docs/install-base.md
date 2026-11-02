@@ -119,14 +119,16 @@ are not in Debian, and using them means trusting another apt repository.
 should fetch Debian's packages through Tor (the default is no). Say yes, or
 run `bash parts/apt-tor.sh` any time, and it:
 
-1. installs `tor`, `obfs4proxy` and `apt-transport-tor` in the normal way
-   (once), with Tor kept from starting until your bridges are in place;
-2. asks whether you need a bridge to reach Tor (see [Bridges](#bridges));
-   obfs4 lines or Snowflake are offered here, since Debian has no client
-   program for webtunnel or meek; the choice goes into `/etc/tor/torrc`;
+1. asks whether you need a bridge to reach Tor (see [Bridges](#bridges));
+   obfs4 or webtunnel lines, or Snowflake, are offered here (there is no
+   client program for meek); the choice goes into `/etc/tor/torrc`;
+2. installs `tor`, `apt-transport-tor` and the bridge's program in the
+   normal way (once), with Tor kept from starting until your bridges are in
+   place;
 3. starts Tor and waits for it to connect; if it doesn't in 3 minutes,
    apt is left alone;
-4. changes `deb.debian.org` and `security.debian.org` in your apt sources to
+4. changes `deb.debian.org` and `security.debian.org` (and
+   `deb.torproject.org`, for webtunnel) in your apt sources to
    `tor+https://…` (originals saved as `*.debsway-tor.bak`) and runs
    `apt-get update` through Tor; if that fails, the sources are put back.
 
@@ -138,23 +140,75 @@ fetched directly. `bash parts/apt-tor.sh --remove` puts it all back.
 ## Bridges
 
 Everything in debsway that connects to Tor (Tor Browser, Whonix, OnionShare,
-apt over Tor) asks the same way. First: **do you need a bridge to reach the
+and the system Tor that apt over Tor, remote access and the onion site
+share) asks the same way. First: **do you need a bridge to reach the
 Tor network?** A bridge is a relay that isn't listed publicly; you need one if
 your network blocks Tor or you don't want it to see that you use Tor. The
 default is no. If you say yes, you get the kinds that work in that place:
 
-| Kind | What it is | Tor Browser | Whonix Gateway | OnionShare | apt over Tor |
+| Kind | What it is | Tor Browser | Whonix Gateway | OnionShare | system Tor |
 |---|---|---|---|---|---|
 | obfs4, built-in | Tor's own public list; nothing to fetch; often blocked where Tor is | yes | no | yes | no |
 | obfs4, your lines | Makes Tor look like random data; fast | yes | yes | yes | yes |
-| webtunnel | Looks like a visit to a website; good against blocking | yes | no | no | no |
+| webtunnel | Looks like a visit to a website; good against blocking | yes | no | no | yes |
 | Snowflake | No lines needed; borrows volunteers' browsers; slower | yes | yes | yes | yes |
 | meek (Azure) | Looks like a visit to Microsoft's cloud; slowest, a last resort | yes | no | no | no |
 
 The "no" entries are real limits: the Whonix Gateway ships only the obfs4 and
-Snowflake programs (I checked its package list), Debian has no client for
-webtunnel or meek, and OnionShare can't use them. The menu says what is left
-out, and why.
+Snowflake programs (I checked its package list), there is no client for meek
+outside Tor Browser, and OnionShare can't use webtunnel or meek. The menu says
+what is left out, and why. The system Tor is shared, so its bridge is asked
+for once, by whichever of apt over Tor, remote access and the onion site comes
+first.
+
+### webtunnel for the system Tor
+
+Debian has no webtunnel client. The Tor Project's own bridge program,
+**lyrebird** (the one Tor Browser carries; it speaks obfs4, webtunnel,
+Snowflake and meek), comes from the Tor Project's apt repository,
+deb.torproject.org, and debsway takes **only lyrebird** from it:
+
+- its signing key must be exactly `TORPROJECT_FPR` in `pins.sh` (checked
+  against the key on deb.torproject.org, keys.openpgp.org and
+  keyserver.ubuntu.com, and against the repository's signature);
+- `/etc/apt/preferences.d/debsway-torproject.pref` gives every other package
+  there priority -1, so it can't replace Debian's `tor` or add anything else
+  (tested with real apt: lyrebird installable, the repository's newer `tor`
+  and its keyring package not);
+- the package is one program and a man page, with no install scripts;
+  unattended-upgrades keeps it up to date;
+- Debian's AppArmor profile for tor already allows `/usr/bin/lyrebird`, so
+  nothing in AppArmor is changed; the torrc gets
+  `ClientTransportPlugin webtunnel exec /usr/bin/lyrebird`.
+
+When the last script using it is removed, lyrebird and the repository go too.
+Building webtunnel from its git source as root, and editing the
+`system_tor` AppArmor profile by hand, as some guides say, is not done: its
+releases aren't signed, and Debian's profile is overwritten by updates.
+
+By hand:
+
+```
+# the key: check gpg prints exactly the TORPROJECT_FPR of pins.sh
+wget -O /tmp/tpo.asc "$(. ~/debsway/pins.sh; echo "$TORPROJECT_KEY_URL")"
+gpg --show-keys /tmp/tpo.asc
+sudo install -D -m 0644 /tmp/tpo.asc /usr/share/keyrings/debsway-torproject.asc
+# lyrebird only, from that repository
+printf '%s\n' 'Package: lyrebird' 'Pin: origin deb.torproject.org' 'Pin-Priority: 500' '' \
+    'Package: *' 'Pin: origin deb.torproject.org' 'Pin-Priority: -1' |
+    sudo tee /etc/apt/preferences.d/debsway-torproject.pref
+echo "deb [signed-by=/usr/share/keyrings/debsway-torproject.asc arch=amd64] https://deb.torproject.org/torproject.org trixie main" |
+    sudo tee /etc/apt/sources.list.d/debsway-torproject.list
+sudo apt update
+# tor's Candidate must be Debian's version (not one ending in ~d13.trixie+1),
+# and the deb.torproject.org lines under tor must show -1
+apt-cache policy tor lyrebird
+sudo apt install lyrebird
+# at the end of /etc/tor/torrc:
+#   UseBridges 1
+#   ClientTransportPlugin webtunnel exec /usr/bin/lyrebird
+#   Bridge webtunnel [ADDRESS]:443 FINGERPRINT url=https://... ver=0.0.3
+```
 
 For **obfs4** and **webtunnel** lines you get yourself, from Tor's BridgeDB:
 

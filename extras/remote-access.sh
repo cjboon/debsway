@@ -49,7 +49,8 @@ if [ "${1:-}" = --remove ]; then
     fi
     # Takes sshd back off 127.0.0.1 if it stays installed (a bare restart is fine)
     if is_installed openssh-server; then sudo systemctl restart ssh.service >/dev/null 2>&1 || true; fi
-    apt_purge openssh-server tor openssl obfs4proxy snowflake-client
+    apt_purge openssh-server tor openssl obfs4proxy lyrebird snowflake-client
+    remove_torproject_repo_if_unused
     # OnionShare keeps the system tor service off
     if ! system_tor_wanted .debsway-remote-access && is_installed onionshare-cli; then
         sudo systemctl mask tor.service tor@default.service >/dev/null
@@ -155,10 +156,10 @@ EOF
 if ! is_installed tor; then sudo systemctl mask tor.service tor@default.service >/dev/null; fi
 pkgs=(openssh-server tor openssl)
 if $bridge_block; then
-    case $BRIDGE_TYPE in
-        obfs4) pkgs+=(obfs4proxy) ;;
-        snowflake) pkgs+=(snowflake-client) ;;
-    esac
+    # webtunnel: lyrebird, from the Tor Project's repository (lib/tor.sh)
+    [ "$BRIDGE_TYPE" != webtunnel ] || add_torproject_repo
+    b=$(bridge_packages)
+    [ -z "$b" ] || pkgs+=("$b")
 fi
 say "Installing ${pkgs[*]}"
 apt_install "${pkgs[@]}"

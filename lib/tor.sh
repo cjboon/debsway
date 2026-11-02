@@ -16,13 +16,15 @@ BRIDGE_WANTED=false
 
 # bridge_kinds CONTEXT: the kinds that work there, in the order offered
 #   tor-browser   Tor Browser: has all of them built in
-#   system-tor    Debian's tor (apt over Tor): obfs4proxy and snowflake-client
+#   system-tor    Debian's tor (apt over Tor, remote access, the onion site):
+#                 obfs4proxy, lyrebird (webtunnel) and snowflake-client
 #   onionshare    OnionShare's own tor: its built-in lists, obfs4proxy, snowflake-client
 #   whonix        the Whonix Gateway: obfs4proxy and snowflake-client
 bridge_kinds() {
     case $1 in
         tor-browser) echo "obfs4-builtin obfs4 webtunnel snowflake meek" ;;
-        system-tor | whonix) echo "obfs4 snowflake" ;;
+        system-tor) echo "obfs4 webtunnel snowflake" ;;
+        whonix) echo "obfs4 snowflake" ;;
         onionshare) echo "obfs4-builtin obfs4 snowflake" ;;
         *) echo "obfs4" ;;
     esac
@@ -31,7 +33,7 @@ bridge_kinds() {
 # bridge_unavailable CONTEXT: kinds that don't work there, and why
 bridge_unavailable() {
     case $1 in
-        system-tor) echo "webtunnel, meek: Debian has no client program for them" ;;
+        system-tor) echo "meek: no client program for it here" ;;
         onionshare) echo "webtunnel, meek: OnionShare and Debian have no client for them" ;;
         whonix) echo "webtunnel, meek: the Whonix Gateway has no client for them" ;;
     esac
@@ -154,7 +156,8 @@ snowflake_lines() {
 }
 
 # tor_bridge_config: torrc lines for the chosen bridges, for a tor that runs
-# obfs4proxy and snowflake-client from /usr/bin. Nothing is printed for
+# obfs4proxy, lyrebird and snowflake-client from /usr/bin (Debian's AppArmor
+# profile for tor already lets it run all three). Nothing is printed for
 # none, or for kinds that aren't set up in torrc (the built-in ones).
 tor_bridge_config() {
     local b
@@ -164,12 +167,74 @@ tor_bridge_config() {
             echo "ClientTransportPlugin obfs4 exec /usr/bin/obfs4proxy"
             for b in "${BRIDGES[@]}"; do echo "Bridge $b"; done
             ;;
+        webtunnel)
+            echo "UseBridges 1"
+            echo "ClientTransportPlugin webtunnel exec /usr/bin/lyrebird"
+            for b in "${BRIDGES[@]}"; do echo "Bridge $b"; done
+            ;;
         snowflake)
             echo "UseBridges 1"
             echo "ClientTransportPlugin snowflake exec /usr/bin/snowflake-client"
             snowflake_lines | sed 's/^/Bridge /'
             ;;
     esac
+}
+
+# bridge_packages: what the system tor needs for the chosen bridge (lyrebird
+# comes from the Tor Project's repository: add_torproject_repo first)
+bridge_packages() {
+    case $BRIDGE_TYPE in
+        obfs4) echo obfs4proxy ;;
+        webtunnel) echo lyrebird ;;
+        snowflake) echo snowflake-client ;;
+    esac
+}
+
+# The Tor Project's apt repository, for one package: lyrebird, the Tor
+# Project's own bridge program (the one Tor Browser carries), which speaks
+# webtunnel; Debian has no webtunnel client. Its key must be exactly
+# TORPROJECT_FPR (pins.sh). An apt pin makes everything else in it
+# uninstallable (priority -1), so Debian's tor and every other package stay
+# Debian's; lyrebird is one program and a man page, with no install scripts.
+# Its updates install themselves (unattended-upgrades). Through Tor when apt
+# goes through Tor (apt-tor.sh), once lyrebird is there to connect with.
+TORPROJECT_KEY=/usr/share/keyrings/debsway-torproject.asc
+TORPROJECT_LIST=/etc/apt/sources.list.d/debsway-torproject.list
+TORPROJECT_PREF=/etc/apt/preferences.d/debsway-torproject.pref
+torproject_pref() {
+    cat <<'EOF'
+# Written by debsway (lib/tor.sh): from the Tor Project's repository,
+# lyrebird only. Nothing else there can be installed.
+Package: lyrebird
+Pin: origin deb.torproject.org
+Pin-Priority: 500
+
+Package: *
+Pin: origin deb.torproject.org
+Pin-Priority: -1
+EOF
+}
+add_torproject_repo() {
+    local cn proto=https
+    cn=$(. /etc/os-release && echo "${VERSION_CODENAME:-}")
+    [ -n "$cn" ] || die "Can't tell which Debian this is (no VERSION_CODENAME), so not adding the Tor Project's repository."
+    install_apt_key "$TORPROJECT_FPR" "$TORPROJECT_KEY_URL" "$TORPROJECT_KEY"
+    torproject_pref | sudo tee "$TORPROJECT_PREF" >/dev/null
+    # apt over Tor, with lyrebird already here: this repository through Tor too
+    if [ -e "${DEBSWAY_ETC:-/etc}/tor/.debsway-apt-tor" ] && is_installed lyrebird; then proto=tor+https; fi
+    echo "deb [signed-by=$TORPROJECT_KEY arch=$(dpkg --print-architecture)] $proto://deb.torproject.org/torproject.org $cn main" |
+        sudo tee "$TORPROJECT_LIST" >/dev/null
+    allow_unattended_updates torproject deb.torproject.org
+    unset DEBSWAY_APT_UPDATED
+}
+# Only once lyrebird is gone
+remove_torproject_repo_if_unused() {
+    local had=false
+    is_installed lyrebird && return 0
+    [ ! -e "$TORPROJECT_LIST" ] || had=true
+    sudo rm -f "$TORPROJECT_LIST" "$TORPROJECT_KEY" "$TORPROJECT_PREF"
+    forget_unattended_updates torproject
+    ! $had || note "Removed the Tor Project's apt repository."
 }
 
 # The debsway scripts that use the system tor service (tor@default), each

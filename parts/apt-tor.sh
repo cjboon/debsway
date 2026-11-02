@@ -2,9 +2,10 @@
 # Download Debian's packages through Tor, over https, so your network
 # doesn't see which packages you get (or when), and Debian's mirrors don't
 # see your address. It first asks whether you need a bridge to reach Tor
-# (obfs4 with lines you paste, or Snowflake; Debian has no client for
-# webtunnel or meek), installs tor, apt-transport-tor and the bridge
-# program that kind needs, checks that Tor connects, and only then points
+# (obfs4 or webtunnel with lines you paste, or Snowflake; webtunnel's
+# program, lyrebird, comes from the Tor Project's repository, lib/tor.sh),
+# installs tor, apt-transport-tor and the bridge program that kind needs,
+# checks that Tor connects, and only then points
 # apt's Debian sources at
 # tor+https://deb.debian.org and tor+https://security.debian.org. If Tor
 # doesn't connect, nothing is changed.
@@ -23,19 +24,20 @@ BEGIN='# >>> debsway apt-tor >>>'
 END='# <<< debsway apt-tor <<<'
 BAK_SUFFIX=.debsway-tor.bak
 
-# The files that name Debian's mirrors: classic lines and deb822 stanzas
+# The files that name Debian's mirrors (classic lines and deb822 stanzas),
+# and the Tor Project's (lyrebird, for webtunnel)
 source_files() {
     { [ -f /etc/apt/sources.list ] && echo /etc/apt/sources.list
-      grep -ls 'debian\.org' /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list 2>/dev/null
+      grep -ls 'debian\.org\|deb\.torproject\.org' /etc/apt/sources.list.d/*.sources /etc/apt/sources.list.d/*.list 2>/dev/null
     } || true
 }
 
 use_tor_sources() {
     local f
     for f in $(source_files); do
-        grep -qE 'https?://(deb|security)\.debian\.org' "$f" || continue
+        grep -qE '(^|[^+])https?://((deb|security)\.debian|deb\.torproject)\.org' "$f" || continue
         [ -e "$f$BAK_SUFFIX" ] || sudo cp -a "$f" "$f$BAK_SUFFIX"
-        sudo sed -i -E 's#https?://(deb|security)\.debian\.org#tor+https://\1.debian.org#g' "$f"
+        sudo sed -i -E 's#(^|[^+])https?://((deb|security)\.debian|deb\.torproject)\.org#\1tor+https://\2.org#g' "$f"
         note "Now through Tor: $f"
     done
 }
@@ -60,7 +62,8 @@ if [ "${1:-}" = --remove ]; then
         tor_service_off
     fi
     sudo rm -f "$MARK"
-    apt_purge tor obfs4proxy snowflake-client apt-transport-tor
+    apt_purge tor obfs4proxy lyrebird snowflake-client apt-transport-tor
+    remove_torproject_repo_if_unused
     # OnionShare keeps the system tor service off, unless something still needs it
     if is_installed onionshare-cli && ! system_tor_wanted .debsway-apt-tor; then
         sudo systemctl mask tor.service tor@default.service >/dev/null
@@ -85,10 +88,10 @@ fi
 # your bridge. Mask it until the bridge is in place.
 sudo systemctl mask tor.service tor@default.service >/dev/null
 pkgs=(tor apt-transport-tor)
-case $BRIDGE_TYPE in
-    obfs4) pkgs+=(obfs4proxy) ;;
-    snowflake) pkgs+=(snowflake-client) ;;
-esac
+# webtunnel: lyrebird, from the Tor Project's repository (lib/tor.sh)
+[ "$BRIDGE_TYPE" != webtunnel ] || add_torproject_repo
+b=$(bridge_packages)
+[ -z "$b" ] || pkgs+=("$b")
 say "Installing ${pkgs[*]}"
 note "(These come in the normal way, once; everything after goes through Tor.)"
 apt_install "${pkgs[@]}"

@@ -224,13 +224,17 @@ deb $proto://security.debian.org/debian-security $VERSION_CODENAME-security main
 
 # key_ok FILE FPR: FILE holds exactly one key, it is FPR, and it hasn't
 # expired or been revoked. apt trusts every key in a signed-by file, so a
-# file with a second key next to the pinned one must not pass.
+# file with a second key next to the pinned one must not pass. It must also
+# still be able to sign: the key itself, or a subkey of it that hasn't
+# expired (the Tor Project's signs with a subkey that expires every few
+# years; with that one expired, the next run fetches the renewed key).
 key_ok() {
     local out
     out=$(gpg --show-keys --with-colons "$1" 2>/dev/null) || return 1
     [ "$(grep -c '^pub:' <<<"$out")" -eq 1 ] || return 1
     [ "$(awk -F: '/^fpr:/ { print $10; exit }' <<<"$out")" = "$2" ] || return 1
-    awk -F: '/^pub:/ { exit ($2 ~ /[er]/) }' <<<"$out"
+    awk -F: '/^pub:/ { exit ($2 ~ /[er]/) }' <<<"$out" || return 1
+    awk -F: '/^(pub|sub):/ && $2 !~ /[erd]/ && $12 ~ /s/ { ok = 1 } END { exit !ok }' <<<"$out"
 }
 
 # install_apt_key FPR URL DEST: the signing key at URL, into DEST (for

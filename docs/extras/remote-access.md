@@ -61,7 +61,8 @@ EOF
 # Debian starts tor the moment it is installed: hold it until it is set up
 sudo systemctl mask tor.service tor@default.service
 # sshd, tor, and openssl to make the client key (add obfs4proxy or
-# snowflake-client for a bridge)
+# snowflake-client for a bridge; for webtunnel, lyrebird: see
+# docs/install-base.md, "webtunnel for the system Tor")
 sudo apt install --no-install-recommends openssh-server tor openssl
 # Debian can start sshd from a socket, which ignores ListenAddress
 sudo systemctl disable --now ssh.socket
@@ -132,6 +133,10 @@ sudo rm /etc/tor/.debsway-remote-access
 # Stop tor (unless apt over Tor or the onion site uses it), and sshd
 sudo systemctl disable --now tor@default.service tor.service
 sudo apt purge openssh-server
-sudo apt-mark auto tor openssl obfs4proxy snowflake-client
+sudo apt-mark auto tor openssl obfs4proxy lyrebird snowflake-client
 sudo apt autoremove --purge
+# Once lyrebird is gone (webtunnel; not if apt over Tor or the onion site
+# still use it), the Tor Project's repository too
+dpkg -s lyrebird >/dev/null 2>&1 || sudo rm -f /etc/apt/sources.list.d/debsway-torproject.list \
+    /etc/apt/preferences.d/debsway-torproject.pref /usr/share/keyrings/debsway-torproject.asc /etc/apt/apt.conf.d/52debsway-torproject
 ```

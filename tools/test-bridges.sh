@@ -53,7 +53,12 @@ check "Whonix says why webtunnel is missing" has 'Not offered here (webtunnel, m
 check "Whonix does not offer webtunnel as a choice" lacks 'webtunnel, bridge lines' "$out"
 check "choice 2 is Snowflake" test "$(result "$out")" = "RESULT snowflake 0 true"
 out=$(run system-tor y 1 "$OBFS4" "")
-check "apt over Tor says Debian has no webtunnel client" has 'Debian has no client' "$out"
+check "the system Tor offers webtunnel (lyrebird)" has 'webtunnel, bridge lines' "$out"
+check "...and says why meek is missing" has 'Not offered here (meek' "$out"
+out=$(run system-tor y 2 "$WEBT" "$OBFS4" "")
+check "the system Tor, choice 2: webtunnel, the webtunnel line kept" test "$(result "$out")" = "RESULT webtunnel 1 true"
+out=$(run system-tor y 3)
+check "...choice 3: Snowflake" test "$(result "$out")" = "RESULT snowflake 0 true"
 out=$(run onionshare y 1)
 check "OnionShare offers built-in obfs4" has 'own public list' "$out"
 check "OnionShare offers Snowflake" has 'Snowflake: no lines' "$out"
@@ -87,6 +92,14 @@ conf=$(
 check "obfs4: the plugin line" has '^ClientTransportPlugin obfs4 exec /usr/bin/obfs4proxy' "$conf"
 check "obfs4: the bridge line" has '^Bridge obfs4 192.0.2.1' "$conf"
 check "obfs4: UseBridges" has '^UseBridges 1' "$conf"
+check "obfs4 needs obfs4proxy" test "$(BRIDGE_TYPE=obfs4 bridge_packages)" = obfs4proxy
+conf=$(BRIDGE_TYPE=webtunnel; BRIDGES=("$WEBT"); tor_bridge_config)
+check "webtunnel: lyrebird runs it (the program Debian's AppArmor profile for tor allows)" has '^ClientTransportPlugin webtunnel exec /usr/bin/lyrebird$' "$conf"
+# shellcheck disable=SC2016  # the inner shell expands them
+check "webtunnel: the bridge line and UseBridges" bash -c 'grep -qxF "Bridge $2" <<<"$1" && grep -qx "UseBridges 1" <<<"$1"' _ "$conf" "$WEBT"
+check "webtunnel needs lyrebird" test "$(BRIDGE_TYPE=webtunnel bridge_packages)" = lyrebird
+check "...which Debian's AppArmor profile for tor lets it run" \
+    bash -c '[ ! -e /etc/apparmor.d/abstractions/tor ] || grep -qx "  /usr/bin/lyrebird Pix," /etc/apparmor.d/abstractions/tor'
 conf=$(BRIDGE_TYPE=snowflake tor_bridge_config)
 check "Snowflake: both bridges" test "$(grep -c '^Bridge snowflake ' <<<"$conf")" = 2
 check "Snowflake: the plugin line" has '^ClientTransportPlugin snowflake exec /usr/bin/snowflake-client' "$conf"
