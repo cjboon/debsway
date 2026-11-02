@@ -44,15 +44,24 @@ echo changed >>"$T/debian-13.7.0-amd64-DVD-1.iso"
 check "a changed image is refused" not debian_cd_image_ok "$T/SUMS" "$T/debian-13.7.0-amd64-DVD-1.iso" debian-13.7.0-amd64-DVD-1.iso
 check "an image the list doesn't name is refused" not debian_cd_image_ok "$T/SUMS" "$T/debian-13.7.0-amd64-DVD-1.iso.part" debian-14.0.0-amd64-DVD-1.iso
 check "the Debian CD signing key is pinned" test "$DEBIAN_CD_FPR" = DF9B9C49EAA9298432589D76DA87E80D6294BE9B
-check "what it needs (xorriso, wget, gpg, git) is installed at the start if missing" \
-    bash -c 'grep -q "^need_tools .*xorriso:xorriso" "$1" && grep -q "^need_tools .*gpg:gpg" "$1" && ! grep -q "Install it for now" "$1"' _ "$HERE/prep/make-install-iso.sh"
-check "xorriso is part of the base install, so it isn't taken out again" \
-    bash -c '. "$1/packages.sh"; printf "%s\n" "${PKGS[@]}" | grep -qx xorriso && ! grep -q "apt_purge" "$1/prep/make-install-iso.sh"' _ "$HERE"
-# the clean-up, run on its own
-eval "$(sed -n '/^cleanup() {/,/^}/p' "$HERE/prep/make-install-iso.sh")"
-work=$T/work; mkdir -p "$work"
+check "what it needs (wget, gpg, git) is installed at the start if missing" \
+    bash -c 'grep -q "^need_tools .*gpg:gpg" "$1" && grep -q "^need_tools .*git:git" "$1"' _ "$HERE/prep/make-install-iso.sh"
+check "xorriso isn't part of the base install" \
+    bash -c '. "$1/packages.sh"; ! printf "%s\n" "${PKGS[@]}" | grep -qx xorriso' _ "$HERE"
+check "a missing xorriso is installed for this run, under a marker of its own" \
+    bash -c 'grep -q "^    DEBSWAY_OWNER=\$XORRISO_OWNER apt_install xorriso$" "$1" && ! grep -q "^need_tools .*xorriso" "$1"' _ "$HERE/prep/make-install-iso.sh"
+# the clean-up, run on its own: it takes xorriso out only if this run put it in,
+# and only xorriso's marker (not the one holding wget, gpg and git)
+eval "$(sed -n '/^XORRISO_OWNER=/p; /^cleanup() {/,/^}/p' "$HERE/prep/make-install-iso.sh")"
+apt_purge() { apt_marker >>"$T/purged"; }
+work=$T/work; mkdir -p "$work"; installed_here=true
 cleanup >/dev/null 2>&1
-check "at the end the temporary folder is gone" test ! -e "$T/work"
+check "at the end, xorriso is removed again if this run installed it" grep -qx debsway-make-install-iso-xorriso "$T/purged"
+check "...and nothing else this script installed" test "$(wc -l <"$T/purged")" -eq 1
+check "...and the temporary folder is gone" test ! -e "$T/work"
+: >"$T/purged"; work=''; installed_here=false
+cleanup >/dev/null 2>&1
+check "an xorriso that was there before stays" test ! -s "$T/purged"
 check "the clean-up runs whatever happens (on exit)" grep -qx 'trap cleanup EXIT' "$HERE/prep/make-install-iso.sh"
 check "...and the marker is named for the script, so it comes out cleanly" \
     test "$(cd "$HERE" && env -u DEBSWAY_OWNER bash -c '. ./lib.sh; apt_marker' "$HERE/prep/make-install-iso.sh")" = debsway-make-install-iso

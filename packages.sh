@@ -4,8 +4,7 @@
 # The core: sway and a terminal. Apps people may not want are in extras/
 # (Firefox, git and gh, KeePassXC, Claude Code, ...).
 # gpg: checks the signatures of everything debsway downloads
-# xorriso: builds and reads ISO images (prep/make-install-iso.sh)
-PKGS=(sway foot libgl1-mesa-dri gpg xorriso)
+PKGS=(sway foot libgl1-mesa-dri gpg)
 
 # Each parts/ script installs its own packages and sets them up; this is
 # the order install-base.sh runs them in. network-manager goes near the

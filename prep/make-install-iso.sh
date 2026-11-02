@@ -43,8 +43,9 @@
 # Then it offers to write the image to a USB stick (as tails-usb does: only USB
 # sticks, you type its name, and it reads it back to check).
 # It runs as you; sudo is asked for only to install what it needs and is
-# missing (xorriso, wget, gpg, git; xorriso is part of debsway's base install)
-# and to write a stick.
+# missing (xorriso, wget, gpg, git) and to write a stick. xorriso is needed
+# only to build the image, so one this run installed is removed again at the
+# end, whether the build worked or not (one you had before stays).
 # Test it in a VM first if you can (the end of this script says how).
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/appimage.sh"
@@ -71,14 +72,29 @@ keymap_ok "$keymap" || die "\"$keymap\" doesn't look like a keyboard layout (us,
 locale_ok "$locale" || die "\"$locale\" doesn't look like a locale (en_US.UTF-8, de_DE.UTF-8...)."
 timezone_ok "$timezone" || die "\"$timezone\" isn't a time zone (like Europe/Berlin or America/New_York; see: timedatectl list-timezones)."
 [ -z "$scripts" ] || [ -d "$scripts" ] || die "No folder $scripts."
-# What it needs, installed now if missing (xorriso builds the image)
-need_tools wget:wget gpg:gpg sha512sum:coreutils md5sum:coreutils git:git xorriso:xorriso
-# At the end, whatever happens: the temporary folder goes
-work=''
+# What it needs, installed now if missing
+need_tools wget:wget gpg:gpg sha512sum:coreutils md5sum:coreutils git:git
+# At the end, whatever happens: the temporary folder goes, and so does
+# xorriso if this run installed it. It has a marker package of its own, so
+# that taking it out leaves the tools above alone.
+XORRISO_OWNER=make-install-iso-xorriso
+work='' installed_here=false
 cleanup() {
     [ -z "$work" ] || rm -rf "$work"
+    if $installed_here; then
+        note "Removing xorriso again (it was only needed to build the image)."
+        DEBSWAY_OWNER=$XORRISO_OWNER apt_purge >/dev/null 2>&1 ||
+            warn "Couldn't remove it; do it yourself with: sudo apt purge debsway-$XORRISO_OWNER"
+    fi
 }
 trap cleanup EXIT
+
+# xorriso builds the image
+if ! command -v xorriso >/dev/null; then
+    note "Installing xorriso, which builds the image, for this run only."
+    installed_here=true
+    DEBSWAY_OWNER=$XORRISO_OWNER apt_install xorriso
+fi
 
 SAVED=$DEBSWAY_DIR/offline/install-iso
 mkdir -p "$SAVED"

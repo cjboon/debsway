@@ -141,7 +141,7 @@ for later. Options: `--user NAME`,
 time zone; by default the one of the computer building the image), `--no-erase`
 (skip filling the disk with random data), `--scripts FOLDER` (your own files, to
 `~/scripts`). What it needs to build the image (xorriso, wget, gpg, git) it
-installs first if it is missing. Try the image
+installs first if it is missing; xorriso it removes again at the end. Try the image
 in a VM first: `bash tools/try-install-iso.sh` starts it the way a laptop would
 (UEFI, the image as a USB stick, an empty 20 GB disk), says what to check, then
 starts the installed system; `--two-disks` checks that it asks which disk,
