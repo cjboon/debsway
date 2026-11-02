@@ -16,6 +16,7 @@ check() { # DESCRIPTION CONDITION-COMMAND...
     shift
     if "$@" >/dev/null 2>&1; then printf '  ok    %s\n' "$what"; else printf '  FAIL  %s\n' "$what"; fails=$((fails + 1)); fi
 }
+not() { ! "$@"; }
 
 mkdir -p "$T/fake"
 printf '#!/bin/sh\ncat "%s/lsblk.out"\n' "$T" >"$T/fake/lsblk"
@@ -37,13 +38,13 @@ stick() { # FSTYPE MOUNTPOINT [LABEL]: one stick, sda1, next to the computer's o
     printf '%s\nPATH="/dev/sda" TYPE="disk" FSTYPE="" SIZE="29G" PKNAME="" MOUNTPOINT="" LABEL="" HOTPLUG="1" RM="1" TRAN="usb"\n' "$nvme" >"$T/lsblk.out"
     printf 'PATH="/dev/sda1" TYPE="part" FSTYPE="%s" SIZE="29G" PKNAME="/dev/sda" MOUNTPOINT="%s" LABEL="%s" HOTPLUG="1" RM="1" TRAN=""\n' "$1" "$2" "${3:-}" >>"$T/lsblk.out"
 }
-run() { : >"$T/calls"; PATH="$T/fake:$PATH" DEBSWAY_USB_TEST=1 bash "$HERE/bin/usb" "$@" >"$T/out" 2>&1 </dev/null; }
+run() { : >"$T/calls"; PATH="$T/fake:$PATH" bash "$HERE/bin/usb" "$@" >"$T/out" 2>&1 </dev/null; }
 # answer y|n ARGS...: run with a terminal, answering its question
 answer() {
     local a=$1
     shift
     : >"$T/calls"
-    printf '%s\n' "$a" | PATH="$T/fake:$PATH" DEBSWAY_USB_TEST=1 script -qec "bash $HERE/bin/usb $*" /dev/null >"$T/out" 2>&1
+    printf '%s\n' "$a" | PATH="$T/fake:$PATH" script -qec "bash $HERE/bin/usb $*" /dev/null >"$T/out" 2>&1
 }
 
 printf '%s\n' "$nvme" >"$T/lsblk.out"
@@ -122,6 +123,20 @@ run mount
 check "two sticks and no name: asks which, mounts nothing" bash -c '[ ! -s "$1" ] && grep -q "more than one" "$2"' _ "$T/calls" "$T/out"
 run mount CAM
 check "...by its label: that one" grep -q 'udisksctl mount -b /dev/sdb1' "$T/calls"
+
+# a stranger's label with an escape sequence in it (lsblk shows it as \x1b)
+stick vfat '' 'A\x1b]52;c;SGk=\x07'
+run
+check "a label's control characters are never printed (no escape sequence reaches the terminal)" \
+    bash -c '! grep -q $'"'"'\e'"'"' "$1" && grep -q "A?\]52;c;SGk=?" "$1"' _ "$T/out"
+# an internal disk that says it is hot-pluggable (many laptops' SATA ports do)
+printf '%s\n' "$nvme" 'PATH="/dev/sdb" TYPE="disk" FSTYPE="" SIZE="1T" PKNAME="" MOUNTPOINT="" LABEL="" HOTPLUG="1" RM="0" TRAN="sata"' \
+    'PATH="/dev/sdb1" TYPE="part" FSTYPE="ext4" SIZE="1T" PKNAME="/dev/sdb" MOUNTPOINT="/mnt/data" LABEL="DATA" HOTPLUG="1" RM="0" TRAN=""' >"$T/lsblk.out"
+run unmount
+check "an internal SATA disk that says hot-pluggable isn't a stick: never unmounted or switched off" test ! -s "$T/calls"
+run
+check "...nor listed" grep -q "No USB sticks" "$T/out"
+check "the program has no switch for tests" not grep -q DEBSWAY_USB_TEST "$HERE/bin/usb"
 
 check "the part installs it, with udisks2, in the base" \
     bash -c '. "$1/packages.sh"; printf "%s\n" "${PARTS[@]}" | grep -qx usb && grep -q "apt_install udisks2" "$1/parts/usb.sh" && grep -q "install_bin usb" "$1/parts/usb.sh"' _ "$HERE"

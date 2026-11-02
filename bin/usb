@@ -15,7 +15,8 @@
 # one mounted by root, it offers to mount it again as you.
 set -euo pipefail
 
-say() { printf 'usb: %s\n' "$*" >&2; }
+# (no control characters: mount points are named after the stick's own label)
+say() { local m="$*"; printf 'usb: %s\n' "${m//[[:cntrl:]]/?}" >&2; }
 die() { say "$*"; exit 1; }
 # File systems with no owners of their own: the mounter's user owns every file
 NO_OWNERS=" vfat exfat ntfs ntfs3 msdos "
@@ -41,8 +42,10 @@ devices() {
         [ -n "$p" ] || continue
         ALL+=("$p")
         TYPE[$p]=${f[TYPE]:-} FST[$p]=${f[FSTYPE]:-} SIZE[$p]=${f[SIZE]:-}
-        PARENT[$p]=${f[PKNAME]:-} MNT[$p]=${f[MOUNTPOINT]:-} LABEL[$p]=${f[LABEL]:-}
-        HOT[$p]=${f[HOTPLUG]:-0}${f[RM]:-0}${f[TRAN]:-}
+        # the label is the stick's own, from whoever made it: no control
+        # characters (an escape sequence would be printed to your terminal)
+        PARENT[$p]=${f[PKNAME]:-} MNT[$p]=${f[MOUNTPOINT]:-} LABEL[$p]=${f[LABEL]//[[:cntrl:]]/?}
+        HOT[$p]=${f[RM]:-0}${f[TRAN]:-}
     done < <(lsblk -Pp -o PATH,TYPE,FSTYPE,SIZE,PKNAME,MOUNTPOINT,LABEL,HOTPLUG,RM,TRAN 2>/dev/null)
 }
 ALL=()
@@ -54,13 +57,17 @@ disk_of() {
     while [ -n "${PARENT[$d]:-}" ]; do d=${PARENT[$d]}; done
     echo "$d"
 }
-# is_stick DEV: on a USB or hot-plugged drive (not this computer's own disk)
+# is_stick DEV: on a USB drive or one marked removable. Not "hot-pluggable"
+# alone: many laptops say that of their internal SATA disks.
 is_stick() {
     local d h
     d=$(disk_of "$1")
-    h=${HOT[$d]:-000}
-    [[ $h == 1* || $h == ?1* || $h == *usb ]]
+    h=${HOT[$d]:-0}
+    [[ $h == 1* || $h == *usb ]]
 }
+# shown TEXT: TEXT without control characters, to print (a mount point is
+# named after the stick's label)
+shown() { printf '%s' "${1//[[:cntrl:]]/?}"; }
 # The sticks' file systems (and locked encrypted ones), in lsblk's order
 STICKS=()
 for p in "${ALL[@]}"; do
@@ -111,9 +118,9 @@ list() {
             if [ -n "$o" ]; then echo "unlocked, as ${o#/dev/}"; else echo "locked: usb mount ${p#/dev/}"; fi
         elif [ -n "${MNT[$p]}" ]; then
             if owner_ok "$p"; then
-                echo "mounted at ${MNT[$p]}"
+                echo "mounted at $(shown "${MNT[$p]}")"
             else
-                echo "mounted at ${MNT[$p]} BY ROOT: you can't write to it (usb mount ${p#/dev/} fixes it)"
+                echo "mounted at $(shown "${MNT[$p]}") BY ROOT: you can't write to it (usb mount ${p#/dev/} fixes it)"
             fi
         else
             echo "not mounted: usb mount ${p#/dev/}"
@@ -159,7 +166,8 @@ mount_it() {
         *" ${FST[$dev]} "*) opts+=,dmask=0077,fmask=0177 ;;
     esac
     out=$(udisksctl mount -b "$dev" -o "$opts") || die "couldn't mount $dev"
-    echo "$out"
+    shown "$out"
+    echo
     case $NO_OWNERS in
         *" ${FST[$dev]} "*)
             echo "$(describe "$dev") keeps no owners of its own: here every file is yours alone;"
@@ -177,7 +185,7 @@ cmd_mount() {
             # "Unlocked /dev/sdb1 as /dev/dm-3."
             o=${out##* as }
             o=${o%.}
-            [ -b "$o" ] || [ -n "${DEBSWAY_USB_TEST:-}" ] || die "unlocked, but can't tell as what: $out"
+            [[ $o =~ ^/dev/[a-z0-9/_-]+$ ]] || die "unlocked, but can't tell as what: $(shown "$out")"
             # what was unlocked is a new device, with its own file system
             ALL=() STICKS=()
             devices
@@ -188,10 +196,10 @@ cmd_mount() {
     fi
     if [ -n "${MNT[$dev]:-}" ]; then
         if owner_ok "$dev"; then
-            echo "Already mounted at ${MNT[$dev]}"
+            echo "Already mounted at $(shown "${MNT[$dev]}")"
             return
         fi
-        say "${dev#/dev/} is mounted at ${MNT[$dev]} by root (sudo mount): its files are root's, so you can't write to it."
+        say "${dev#/dev/} is mounted at $(shown "${MNT[$dev]}") by root (sudo mount): its files are root's, so you can't write to it."
         ours_to_touch "${MNT[$dev]}" || die "${MNT[$dev]} isn't where sticks are mounted; not touching it"
         yes_no "Unmount it (sudo asks for your password) and mount it again as you?" ||
             die "left as it is. Later: usb mount ${dev#/dev/}"
@@ -223,7 +231,7 @@ cmd_unmount() {
     for p in "${STICKS[@]}"; do
         if [ "$p" != "$o" ] && [ "$(disk_of "$p")" = "$disk" ] && [ -n "${MNT[$p]}" ]; then
             ours_to_touch "${MNT[$p]}" || { echo "Unmounted: safe to pull out."; return; }
-            echo "Unmounted. ${disk#/dev/} also has ${p#/dev/} mounted at ${MNT[$p]}: usb unmount ${p#/dev/} too, then pull it out."
+            echo "Unmounted. ${disk#/dev/} also has ${p#/dev/} mounted at $(shown "${MNT[$p]}"): usb unmount ${p#/dev/} too, then pull it out."
             return
         fi
     done
