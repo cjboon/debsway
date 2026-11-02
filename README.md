@@ -127,11 +127,13 @@ executable bit.
 
 Or, instead of installing Debian by hand and copying debsway over: build
 **an automatic install stick** with `bash prep/make-install-iso.sh`. It
-downloads Debian 13's installer image (checked against the Debian CD signing
-key pinned in `pins.sh`), adds debsway's answers and debsway itself, and can
-write it to a USB stick. Booted from it, "Automatic install with debsway"
-installs Debian as below (encrypted LVM over the whole disk, no root password,
-standard system utilities only) and puts debsway in `~/debsway`; it asks only
+downloads Debian 13's live "standard" image, text only (checked against the
+Debian CD signing key pinned in `pins.sh`), adds debsway's answers and debsway
+itself, and can write it to a USB stick. Booted from it, "Automatic install
+with debsway" installs Debian as below (encrypted LVM over the whole disk, no
+root password; the installer copies the live system, and the base install's
+`parts/no-live-extras.sh` takes out what that brings and debsway doesn't use,
+such as avahi and printing) and puts debsway in `~/debsway`; it asks only
 for the disk passphrase, your password, and the final "write the changes to
 disks?", which names the disk it erases (the stick itself is never offered).
 At the first login on the console it asks once "Set it up now?": Enter runs

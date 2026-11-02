@@ -1,7 +1,7 @@
 #!/bin/bash
 # Builds a Debian 13 install image that installs Debian the way debsway's
-# README says (encrypted LVM over the whole disk, no root password, only
-# "standard system utilities") and puts debsway in ~/debsway. At the first
+# README says (encrypted LVM over the whole disk, no root password, no
+# desktop) and puts debsway in ~/debsway. At the first
 # login on the console it asks once "Set it up now?": yes runs
 # bash ~/debsway/start.sh, as you, on the running system (not inside the
 # installer, where nothing runs yet and nobody can be asked).
@@ -22,23 +22,22 @@
 # carry a good signature from the Debian CD signing key (pinned in pins.sh,
 # DEBIAN_CD_FPR), and the image must have the checksum in that list. The
 # downloaded image is kept in offline/install-iso and checked again next time.
-# By default that is the DVD-1 image (everything on it, no network needed).
-# With --live it is Debian's text-only live image instead (about half the
-# size): the installer then copies the live system onto the disk rather than
-# choosing packages, so what you get is what that image contains.
+# It is Debian's text-only live "standard" image: the installer copies the live
+# system onto the disk rather than choosing packages, so what you get is what
+# that image contains (parts/no-live-extras.sh later takes out what debsway
+# doesn't use: avahi, printing, hw-probe...).
 #
 # On the image: the last commit of debsway (as tools/pack-usb.sh copies it, so
 # nothing from ignore/) and offline/ (Wi-Fi packages, saved Tor Browser and
 # Whonix downloads; not offline/install-iso or offline/tails).
 #
 #   bash prep/make-install-iso.sh [--user NAME] [--keymap us] [--locale en_US.UTF-8]
-#                                 [--timezone Area/City] [--no-erase] [--live]
+#                                 [--timezone Area/City] [--no-erase]
 #                                 [--scripts FOLDER] [--out FILE]
 #   --user     the user to make (default: yours, $(id -un))
 #   --keymap   the keyboard layout (default: us); see the README on passphrases
 #   --timezone the clock's time zone, like Europe/Berlin (default: this
 #              computer's; the clock shows local time, kept right over NTP)
-#   --live     start from Debian's live "standard" image instead of DVD-1
 #   --scripts  a folder of your own, copied to ~/scripts in the new system
 # Then it offers to write the image to a USB stick (as tails-usb does: only USB
 # sticks, you type its name, and it reads it back to check).
@@ -53,7 +52,7 @@
 . "$DEBSWAY_DIR/lib/tails.sh"
 not_root
 
-user=$(id -un) keymap=us locale=en_US.UTF-8 timezone=$(this_timezone) erase=true live=false scripts='' out='' choice=''
+user=$(id -un) keymap=us locale=en_US.UTF-8 timezone=$(this_timezone) erase=true scripts='' out='' choice=''
 while [ $# -gt 0 ]; do
     case $1 in
         --user) user=${2:-}; shift 2 ;;
@@ -61,10 +60,11 @@ while [ $# -gt 0 ]; do
         --locale) locale=${2:-}; shift 2 ;;
         --timezone) timezone=${2:-}; shift 2 ;;
         --no-erase) erase=false; shift ;;
-        --live) live=true; shift ;;
+        # (the live image is the only one now; kept so old commands still work)
+        --live) shift ;;
         --scripts) scripts=${2:-}; shift 2 ;;
         --out) out=${2:-}; shift 2 ;;
-        *) die "Usage: bash prep/make-install-iso.sh [--user NAME] [--keymap us] [--locale en_US.UTF-8] [--timezone Area/City] [--no-erase] [--live] [--scripts FOLDER] [--out FILE]" ;;
+        *) die "Usage: bash prep/make-install-iso.sh [--user NAME] [--keymap us] [--locale en_US.UTF-8] [--timezone Area/City] [--no-erase] [--scripts FOLDER] [--out FILE]" ;;
     esac
 done
 user_ok "$user" || die "\"$user\" can't be a user name (lowercase letters, digits, _ and -, starting with a letter; not root)."
@@ -100,15 +100,8 @@ SAVED=$DEBSWAY_DIR/offline/install-iso
 mkdir -p "$SAVED"
 work=$(mktemp -d)
 
-if $live; then
-    say "The newest Debian 13 live (standard) installer image"
-    base=$DEBIAN_LIVE_BASE
-    old_glob='debian-live-*-standard.iso'
-else
-    say "The newest Debian 13 DVD-1 installer image"
-    base=$DEBIAN_CD_BASE
-    old_glob='debian-*-DVD-1.iso'
-fi
+say "The newest Debian 13 live (standard) installer image"
+base=$DEBIAN_LIVE_BASE
 wget -q -O "$work/SHA512SUMS" "$base/SHA512SUMS" &&
     wget -q -O "$work/SHA512SUMS.sign" "$base/SHA512SUMS.sign" ||
     die "Couldn't download Debian's list of image checksums."
@@ -117,13 +110,8 @@ verify_detached "$DEBIAN_CD_FPR" "$DEBIAN_CD_KEY_URL" \
     "$work/SHA512SUMS.sign" "$work/SHA512SUMS" ||
     die "Debian's list of checksums isn't signed by the Debian CD signing key. Nothing was built."
 
-if $live; then
-    name=$(live_name "$work/SHA512SUMS")
-    [ -n "$name" ] || die "No live standard image in Debian's list."
-else
-    name=$(dvd_name "$work/SHA512SUMS")
-    [ -n "$name" ] || die "No DVD-1 image in Debian's list."
-fi
+name=$(live_name "$work/SHA512SUMS")
+[ -n "$name" ] || die "No live standard image in Debian's list."
 iso=$SAVED/$name
 
 note "$name (the list is signed by the Debian CD signing key)"
@@ -138,8 +126,9 @@ else
         die "The image doesn't have the checksum in Debian's signed list, so it was deleted."
     fi
     mv "$iso.part" "$iso"
-    # shellcheck disable=SC2231  # the glob in old_glob is meant to expand
-    for f in "$SAVED"/$old_glob; do
+    # Older downloads go, and DVD-1 ones from before the live image was the
+    # only one (about 4 GB each). Images you built from them stay.
+    for f in "$SAVED"/debian-live-*-standard.iso "$SAVED"/debian-*-DVD-1.iso; do
         [ "$f" = "$iso" ] || rm -f "$f"
     done
     note "Checked: $iso"
@@ -167,23 +156,17 @@ note "debsway $(git -C "$DEBSWAY_DIR" describe --always --dirty 2>/dev/null), us
     warn "debsway has changes that aren't committed; only the last commit goes on the image."
 
 say "The boot menus"
-# the BIOS menu's second file: gtk.cfg on the DVD, live.cfg on the live image
-if $live; then second=live.cfg; else second=gtk.cfg; fi
+# the BIOS menu's second file, with the live system's entries
+second=live.cfg
 xorriso -osirrox on -indev "$iso" \
     -extract /boot/grub/grub.cfg "$stage/boot/grub/grub.cfg" \
     -extract /isolinux/menu.cfg "$stage/isolinux/menu.cfg" \
     -extract "/isolinux/$second" "$stage/isolinux/$second" \
     -extract /md5sum.txt "$stage/md5sum.txt" >/dev/null 2>&1 || die "Couldn't read the boot menus from $iso."
 chmod u+w "$stage/boot/grub/grub.cfg" "$stage/isolinux/menu.cfg" "$stage/isolinux/$second" "$stage/md5sum.txt"
-if $live; then
-    grub_add_entry_live "$stage/boot/grub/grub.cfg" || die "The image's GRUB menu isn't as expected (a new Debian release?); nothing was built."
-    isolinux_edit_live "$stage/isolinux/menu.cfg" "$stage/isolinux/$second" || die "The image's BIOS menu isn't as expected; nothing was built."
-    isolinux_entry_live >"$stage/isolinux/debsway.cfg"
-else
-    grub_add_entry "$stage/boot/grub/grub.cfg" || die "The image's GRUB menu isn't as expected (a new Debian release?); nothing was built."
-    isolinux_edit "$stage/isolinux/menu.cfg" "$stage/isolinux/$second" || die "The image's BIOS menu isn't as expected; nothing was built."
-    isolinux_entry >"$stage/isolinux/debsway.cfg"
-fi
+grub_add_entry "$stage/boot/grub/grub.cfg" || die "The image's GRUB menu isn't as expected (a new Debian release?); nothing was built."
+isolinux_edit "$stage/isolinux/menu.cfg" "$stage/isolinux/$second" || die "The image's BIOS menu isn't as expected; nothing was built."
+isolinux_entry >"$stage/isolinux/debsway.cfg"
 (cd "$stage" && find debsway-install debsway -type f | sed 's|^|./|') >"$work/added"
 mapfile -t added <"$work/added"
 md5_update "$stage/md5sum.txt" "$stage" ./boot/grub/grub.cfg ./isolinux/menu.cfg "./isolinux/$second" ./isolinux/debsway.cfg "${added[@]}"

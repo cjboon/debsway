@@ -27,22 +27,24 @@ not() { ! "$@"; }
 
 # ---- the image ----
 h() { printf '%0128d' "$1"; }
-printf '%s  %s\n' "$(h 1)" debian-13.7.0-amd64-DVD-1.iso "$(h 2)" debian-edu-13.7.0-amd64-DVD-1.iso \
-    "$(h 3)" debian-mac-13.7.0-amd64-DVD-1.iso >"$T/SHA512SUMS"
-check "the plain DVD-1 image is picked from Debian's list" test "$(dvd_name "$T/SHA512SUMS")" = debian-13.7.0-amd64-DVD-1.iso
-printf '%s  %s\n' "$(h 1)" '../../etc/passwd' >"$T/BAD"
-check "a list entry that isn't a DVD-1 image name is ignored" test -z "$(dvd_name "$T/BAD")"
-echo "debsway test image" >"$T/debian-13.7.0-amd64-DVD-1.iso"
-sum=$(sha512sum "$T/debian-13.7.0-amd64-DVD-1.iso" | cut -d' ' -f1)
-printf '%s  %s\n' "$sum" debian-13.7.0-amd64-DVD-1.iso >"$T/SUMS"
-check "an image with the listed checksum passes" debian_cd_image_ok "$T/SUMS" "$T/debian-13.7.0-amd64-DVD-1.iso" debian-13.7.0-amd64-DVD-1.iso
+printf '%s  %s\n' "$(h 1)" debian-live-13.7.0-amd64-standard.iso.contents "$(h 2)" debian-live-13.7.0-amd64-standard.iso \
+    "$(h 3)" debian-live-13.7.0-amd64-gnome.iso "$(h 4)" debian-live-13.7.0-amd64-standard.log >"$T/SHA512SUMS"
+check "the live standard image is picked from Debian's list" test "$(live_name "$T/SHA512SUMS")" = debian-live-13.7.0-amd64-standard.iso
+printf '%s  %s\n' "$(h 1)" 'debian-live-13.7.0-amd64-standard.iso;rm' "$(h 2)" '../debian-live-13.7.0-amd64-standard.iso' >"$T/BAD"
+check "a list entry that isn't a live standard image name is ignored" test -z "$(live_name "$T/BAD")"
+check "the live image is the only one (no DVD-1 left)" bash -c '! grep -q "dvd_name\|DEBIAN_CD_BASE\|DVD-1 installer" "$1/prep/make-install-iso.sh" "$1/lib/install-iso.sh"' _ "$HERE"
+check "--live still works, doing nothing" grep -q '^        --live) shift ;;$' "$HERE/prep/make-install-iso.sh"
+echo "debsway test image" >"$T/debian-live-13.7.0-amd64-standard.iso"
+sum=$(sha512sum "$T/debian-live-13.7.0-amd64-standard.iso" | cut -d' ' -f1)
+printf '%s  %s\n' "$sum" debian-live-13.7.0-amd64-standard.iso >"$T/SUMS"
+check "an image with the listed checksum passes" debian_cd_image_ok "$T/SUMS" "$T/debian-live-13.7.0-amd64-standard.iso" debian-live-13.7.0-amd64-standard.iso
 # the download is checked while it is still NAME.part (a check by file name refused every download)
-cp "$T/debian-13.7.0-amd64-DVD-1.iso" "$T/debian-13.7.0-amd64-DVD-1.iso.part"
-check "...also while the download is still called NAME.part" debian_cd_image_ok "$T/SUMS" "$T/debian-13.7.0-amd64-DVD-1.iso.part" debian-13.7.0-amd64-DVD-1.iso
+cp "$T/debian-live-13.7.0-amd64-standard.iso" "$T/debian-live-13.7.0-amd64-standard.iso.part"
+check "...also while the download is still called NAME.part" debian_cd_image_ok "$T/SUMS" "$T/debian-live-13.7.0-amd64-standard.iso.part" debian-live-13.7.0-amd64-standard.iso
 check "the script checks the download under the image's name" grep -q 'debian_cd_image_ok "$work/SHA512SUMS" "$iso.part" "$name"' "$HERE/prep/make-install-iso.sh"
-echo changed >>"$T/debian-13.7.0-amd64-DVD-1.iso"
-check "a changed image is refused" not debian_cd_image_ok "$T/SUMS" "$T/debian-13.7.0-amd64-DVD-1.iso" debian-13.7.0-amd64-DVD-1.iso
-check "an image the list doesn't name is refused" not debian_cd_image_ok "$T/SUMS" "$T/debian-13.7.0-amd64-DVD-1.iso.part" debian-14.0.0-amd64-DVD-1.iso
+echo changed >>"$T/debian-live-13.7.0-amd64-standard.iso"
+check "a changed image is refused" not debian_cd_image_ok "$T/SUMS" "$T/debian-live-13.7.0-amd64-standard.iso" debian-live-13.7.0-amd64-standard.iso
+check "an image the list doesn't name is refused" not debian_cd_image_ok "$T/SUMS" "$T/debian-live-13.7.0-amd64-standard.iso.part" debian-live-14.0.0-amd64-standard.iso
 check "the Debian CD signing key is pinned" test "$DEBIAN_CD_FPR" = DF9B9C49EAA9298432589D76DA87E80D6294BE9B
 check "what it needs (wget, gpg, git) is installed at the start if missing" \
     bash -c 'grep -q "^need_tools .*gpg:gpg" "$1" && grep -q "^need_tools .*git:git" "$1"' _ "$HERE/prep/make-install-iso.sh"
@@ -96,45 +98,57 @@ for bad in 'us|x' 'u s' 'us;id' ''; do check "the keyboard '$bad' is refused" no
 check "a layout with a variant is fine" keymap_ok 'us(intl)'
 for bad in 'en_US' 'en_US.UTF-8;x' ''; do check "the locale '$bad' is refused" not locale_ok "$bad"; done
 
-# ---- the boot menus (excerpts of Debian 13.7.0's own) ----
+# ---- the boot menus (excerpts of Debian 13.7.0's live standard image) ----
 cat >"$T/grub.cfg" <<'EOF'
-set theme=/boot/grub/theme/1
-menuentry --hotkey=g 'Graphical install' {
-    set background_color=black
-    linux    /install.amd/vmlinuz vga=788 --- quiet
-    initrd   /install.amd/gtk/initrd.gz
+source /boot/grub/config.cfg
+
+# Live boot
+menuentry "Live system (amd64)" --hotkey=l {
+	linux	/live/vmlinuz-6.12.107+deb13-amd64 boot=live components quiet splash findiso=${iso_path}
+	initrd	/live/initrd.img-6.12.107+deb13-amd64
 }
-menuentry --hotkey=i 'Install' {
-    set background_color=black
-    linux    /install.amd/vmlinuz vga=788 --- quiet
-    initrd   /install.amd/initrd.gz
+menuentry "Live system (amd64 fail-safe mode)" {
+	linux	/live/vmlinuz-6.12.107+deb13-amd64 boot=live components memtest noapic noapm nodma nomce nosmp nosplash vga=788
+	initrd	/live/initrd.img-6.12.107+deb13-amd64
 }
-submenu --hotkey=a 'Advanced options ...' {
-    menuentry '... Graphical rescue mode' {
-        linux    /install.amd/vmlinuz vga=788 rescue/enable=true --- quiet
-        initrd   /install.amd/gtk/initrd.gz
-    }
+
+# Installer (if any)
+if true; then
+
+source	/boot/grub/install_start.cfg
+
+submenu 'Advanced install options ...' --hotkey=a {
+
+	source /boot/grub/theme.cfg
+
+	source	/boot/grub/install.cfg
+
 }
+fi
 EOF
 cp "$T/grub.cfg" "$T/grub.orig"
 grub_add_entry "$T/grub.cfg"
 check "GRUB: the automatic install is the first entry (the default)" \
-    test "$(grep -m1 '^menuentry' "$T/grub.cfg")" = "menuentry --hotkey=a 'Automatic install with debsway (asks for your passphrase and password)' {"
-check "...starting the installer with debsway's answers" grep -qF "vga=788 $AUTO_ARGS --- quiet" "$T/grub.cfg"
-check "...and only that entry gets them (rescue mode stays as it was)" test "$(grep -c 'preseed/file=' "$T/grub.cfg")" = 1
-check "...nothing else in the menu changes" bash -c 'diff <(sed "1,1d" "$1") <(sed "1d" "$2" | sed "1,5d")' _ "$T/grub.orig" "$T/grub.cfg"
+    test "$(grep -m1 '^menuentry' "$T/grub.cfg")" = "menuentry --hotkey=d 'Automatic install with debsway (asks for your passphrase and password)' {"
+check "...starting the live image's installer with debsway's answers" \
+    bash -c 'grep -qF "linux    /install/gtk/vmlinuz vga=788 $2 --- quiet" "$1" && grep -qF "initrd   /install/gtk/initrd.gz" "$1"' _ "$T/grub.cfg" "$AUTO_ARGS"
+check "...and only that entry gets them" test "$(grep -c 'preseed/file=' "$T/grub.cfg")" = 1
+check "...its hotkey isn't one the menu already uses" bash -c '! grep -q "hotkey=d" "$1"' _ "$T/grub.orig"
+check "...nothing else in the menu changes" diff "$T/grub.orig" <(sed '4,8d' "$T/grub.cfg")
 echo 'menuentry "Something else" {' >"$T/odd.cfg"
 check "GRUB: a menu that isn't Debian's as expected is refused" not grub_add_entry "$T/odd.cfg"
-printf '%s\n' 'include stdmenu.cfg' 'include gtk.cfg' 'include txt.cfg' >"$T/menu.cfg"
-printf '%s\n' 'default installgui' 'label installgui' '	menu label ^Graphical install' '	menu default' \
-    '	kernel /install.amd/vmlinuz' '	append vga=788 initrd=/install.amd/gtk/initrd.gz --- quiet ' >"$T/gtk.cfg"
-isolinux_edit "$T/menu.cfg" "$T/gtk.cfg"
-check "BIOS: the menu includes the automatic install before the graphical one" \
-    test "$(sed -n 2p "$T/menu.cfg")" = 'include debsway.cfg'
+printf '%s\n' 'menu hshift 0' 'menu width 82' '' 'menu title Boot menu' 'include stdmenu.cfg' 'include live.cfg' 'include install.cfg' >"$T/menu.cfg"
+printf '%s\n' 'label live-amd64' '	menu label ^Live system (amd64)' '	menu default' '	linux /live/vmlinuz' \
+    '	initrd /live/initrd.img' '	append boot=live components quiet splash' '' 'label live-amd64-failsafe' \
+    '	menu label Live system (amd64 fail-safe mode)' '	linux /live/vmlinuz' >"$T/live.cfg"
+isolinux_edit "$T/menu.cfg" "$T/live.cfg"
+check "BIOS: the menu includes the automatic install before the live system" \
+    test "$(grep -n 'include debsway.cfg' "$T/menu.cfg" | cut -d: -f1)" -lt "$(grep -n 'include live.cfg' "$T/menu.cfg" | cut -d: -f1)"
 check "...which is the default" grep -qx '	menu default' <(isolinux_entry)
-check "...and the graphical install no longer is (its entry stays)" \
-    bash -c '! grep -q "menu default\|default installgui" "$1" && grep -q "label installgui" "$1"' _ "$T/gtk.cfg"
-check "BIOS: a menu that isn't as expected is refused" not isolinux_edit "$T/menu.cfg" "$T/gtk.cfg"
+check "...starting the live image's installer" grep -qF "append vga=788 initrd=/install/gtk/initrd.gz $AUTO_ARGS --- quiet" <(isolinux_entry)
+check "...and the live system no longer is (its entries stay)" \
+    bash -c '! grep -q "menu default" "$1" && grep -q "label live-amd64$" "$1"' _ "$T/live.cfg"
+check "BIOS: a menu that isn't as expected is refused" not isolinux_edit "$T/menu.cfg" "$T/live.cfg"
 mkdir -p "$T/root/boot/grub"
 echo new >"$T/root/boot/grub/grub.cfg"
 printf '%s\n' "0123456789abcdef0123456789abcdef  ./boot/grub/grub.cfg" "fedcba9876543210fedcba9876543210  ./README.txt" >"$T/md5sum.txt"
