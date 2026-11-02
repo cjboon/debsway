@@ -148,7 +148,9 @@ passphrase at boot, but anyone with the laptop can read the disk; it asks first)
 installs first if it is missing; xorriso it removes again at the end. The
 offline Wi-Fi packages (`offline/debs`, for a laptop with no network at first
 boot) are refreshed first when they'd soon be too old for `wifi.sh` to take,
-and it says until when they work. Try the image
+and it says until when they work: about a week after the build, since Debian's
+security and updates lists are only valid that long (an older stick still
+installs, over a cable or a phone). Try the image
 in a VM first: `bash tools/try-install-iso.sh` starts it the way a laptop would
 (UEFI, the image as a USB stick, an empty 20 GB disk), says what to check, then
 starts the installed system; `--two-disks` checks that it asks which disk,
