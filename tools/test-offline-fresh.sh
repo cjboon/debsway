@@ -45,4 +45,32 @@ at "2027-06-01 00:00 UTC"
 check "DEBSWAY_OFFLINE_ALLOW_STALE=1 accepts an old list" env DEBSWAY_OFFLINE_ALLOW_STALE=1 DEBSWAY_NOW="$DEBSWAY_NOW" \
     bash -c '. "$1/lib.sh"; . "$1/lib/offline.sh"; release_fresh "$2" security' _ "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" "$T/security"
 
+# The signature: checked with sqv (apt in Debian 13 depends on it, so a new
+# install without a network has it), also where gpgv isn't installed
+if command -v gpg >/dev/null && command -v sqv >/dev/null; then
+    mkdir -m 700 "$T/gh"
+    G=(gpg --homedir "$T/gh" --batch --quiet --passphrase '' --pinentry-mode loopback)
+    for n in debian other; do
+        "${G[@]}" --quick-gen-key "$n <$n@test>" ed25519 sign never 2>/dev/null
+        "${G[@]}" --export "$n@test" >"$T/$n.pgp"
+    done
+    "${G[@]}" --local-user debian@test --clearsign -o "$T/InRelease" "$T/security" 2>/dev/null
+    sed 's/^Suite: stable-security/Suite: evil/' "$T/InRelease" >"$T/tampered"
+    "${G[@]}" --local-user other@test --clearsign -o "$T/other-signed" "$T/security" 2>/dev/null
+    # only sqv and rm on the PATH: no gpgv
+    mkdir "$T/nogpgv"
+    for c in sqv rm; do ln -s "$(command -v "$c")" "$T/nogpgv/$c"; done
+    ci() { # FILE: check_inrelease with Debian's pretend key, without gpgv
+        rm -f "$T/out"
+        # shellcheck disable=SC2123  # only sqv and rm, on purpose
+        (PATH=$T/nogpgv; check_inrelease "$T/gh" "$T/out" "$1" --keyring "$T/debian.pgp")
+    }
+    ci "$T/InRelease"
+    check "without gpgv: a list signed by the key passes, its text comes out" grep -qx 'Suite: stable-security' "$T/out"
+    check "...a changed list is refused" not ci "$T/tampered"
+    check "...so is one signed by another key" not ci "$T/other-signed"
+else
+    echo "  ok    skipped the signature checks: gpg or sqv isn't installed"
+fi
+
 [ "$fails" -eq 0 ]

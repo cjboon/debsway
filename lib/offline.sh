@@ -112,8 +112,25 @@ offline_good_until() {
 
 # verify_offline_lists DIR OUT: checks every DIR/NAME/InRelease against
 # Debian's archive keyring and every Packages file against its InRelease,
-# then writes the SHA-256 of every package they list to OUT. Returns 1, with
+# then writes the SHA-256 of every package they list to OUT. The signature is
+# checked with sqv, which Debian 13's apt depends on, so it is there on a new
+# install without a network; gpgv only if sqv isn't (it may not be installed). Returns 1, with
 # a reason on stderr, if anything doesn't check out.
+# check_inrelease HOME OUT INRELEASE --keyring K...: the signed text of
+# INRELEASE into OUT, if one of the keyrings signed it
+check_inrelease() {
+    local home=$1 out=$2 file=$3 k sqvargs=()
+    shift 3
+    if command -v sqv >/dev/null; then
+        while [ $# -gt 0 ]; do k=$2; sqvargs+=("--keyring=$k"); shift 2; done
+        # (sqv won't write over a file)
+        rm -f "$out"
+        sqv "${sqvargs[@]}" --output="$out" --cleartext "$file" >/dev/null 2>&1
+    else
+        gpgv --quiet --homedir "$home" "$@" --output "$out" "$file" 2>/dev/null
+    fi
+}
+
 verify_offline_lists() {
     local dir=$1 out=$2 k keyargs=() home rel d name pk base comp want got n=0 rc=0
     for k in /usr/share/keyrings/debian-archive-*.pgp /usr/share/keyrings/debian-archive-*.gpg; do
@@ -129,7 +146,7 @@ verify_offline_lists() {
     for d in "$dir"/*/; do
         [ -f "$d/InRelease" ] || continue
         name=$(basename -- "$d")
-        if ! gpgv --quiet --homedir "$home" "${keyargs[@]}" --output "$rel" "$d/InRelease" 2>/dev/null; then
+        if ! check_inrelease "$home" "$rel" "$d/InRelease" "${keyargs[@]}"; then
             warn "The signature on $name/InRelease isn't Debian's."
             rc=1
             break
