@@ -44,6 +44,7 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `simplex-chat.sh` | SimpleX Chat desktop, the signed official AppImage. Command: `simplex` |
 | `tutamail.sh` | Tuta Mail desktop (Tuta, end-to-end encrypted email), the official AppImage, installed only if it is signed by Tuta's pinned code-signing key and is no older than the one you have. Runs on Wayland with Electron's sandbox on. Command: `tuta`. See [extras/tutamail.md](extras/tutamail.md) |
 | `seahorse.sh` | Seahorse and the GNOME keyring, unlocked by your login password (edits `/etc/pam.d/login`; `--remove` takes the lines out) |
+| `vault.sh` | `~/Vault`, an encrypted folder (gocryptfs) with its own password: `vault open` opens it for an hour (`--for 2h`, `--no-timeout`), and it closes itself when its time is up or the screen locks (idle, before sleep, Super+Escape, the lid). Closed, its key isn't in memory, so a laptop taken while on and locked doesn't give its files away. See [extras/vault.md](extras/vault.md) |
 | `backup.sh` | Encrypted backups of your home folder with restic, and a `backup` command. Prints examples |
 | `metadata-cleaner.sh` | Metadata Cleaner, the graphical program Tails ships, and the `mat2` command: removes hidden metadata from photos, PDFs and documents before you share them. Prints examples |
 | `media.sh` | imv (images) and mpv (video, music), each started in a bubblewrap sandbox that sees only the files you open. Prints examples and keys |

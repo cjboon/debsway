@@ -4,6 +4,8 @@
 # with  timer lock MINUTES  (30 unless you changed it; 1 to 120); for the 30
 # seconds before that it fades down with a notice (bin/dim-warning), and it
 # turns off 5 minutes after the lock. It always locks before the laptop sleeps.
+# Just before each lock it runs every program in ~/.config/debsway/on-lock.d
+# (each for at most 10 seconds): the vault extra closes its folder there.
 # sway starts it (~/.config/sway/config.d/idle.conf); timer lock restarts it.
 #   debsway-idle              run swayidle
 #   debsway-idle --minutes    print the minutes until the lock
@@ -24,8 +26,10 @@ off=$((lock + 300))
 DIM=$HOME/.local/bin/dim-warning
 # the same as LOCK_CMD in lib/sway.sh (test.sh checks)
 LOCK='swaylock -f -c 000000'
+hooks=${XDG_CONFIG_HOME:-$HOME/.config}/debsway/on-lock.d
+case $hooks in *"'"*) HOOKS=: ;; *) HOOKS="for h in '$hooks'/*; do [ -x \"\$h\" ] && timeout 10 \"\$h\"; done" ;; esac
 exec swayidle -w \
     timeout "$dim" "$DIM start" resume "$DIM stop" \
-    timeout "$lock" "$LOCK" \
+    timeout "$lock" "$HOOKS; $LOCK" \
     timeout "$off" 'swaymsg "output * power off"' resume 'swaymsg "output * power on"' \
-    before-sleep "$LOCK"
+    before-sleep "$HOOKS; $LOCK"

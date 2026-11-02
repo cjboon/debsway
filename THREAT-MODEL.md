@@ -138,7 +138,11 @@ With the extras:
 - **A laptop that's on, asleep or locked.** The disk key is in memory
   then. Shut down before leaving it somewhere or crossing a border. With
   `extras/lid-awake.sh` a closed lid means on and locked, not asleep: the
-  same applies.
+  same applies. The vault (`extras/vault.sh`) narrows this for the files
+  in `~/Vault`: it closes itself after its time (an hour by default) and
+  whenever the screen locks, and closed its key isn't in memory. While it
+  is open it protects nothing, and what programs keep about its files
+  elsewhere (thumbnails, recent-file lists, swap) isn't covered.
 - **Physical tampering.** Someone with the laptop alone for a while
   could install a hardware keylogger or tamper with the boot process.
   debsway doesn't set up Secure Boot measurement or tamper evidence.

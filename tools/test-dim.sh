@@ -90,7 +90,18 @@ chmod +x "$T/idlebin/swayidle"
 PATH="$T/idlebin:$PATH" XDG_CONFIG_HOME="$T/idleconf" sh "$HERE/bin/debsway-idle"
 args=$(paste -sd' ' "$T/swayidle-args")
 check "swayidle starts the fade 30 seconds before the lock (1770 s, lock at 1800 s)" \
-    grep -q 'timeout 1770 .*/dim-warning start resume .*/dim-warning stop timeout 1800 swaylock' <<<"$args"
+    grep -q 'timeout 1770 .*/dim-warning start resume .*/dim-warning stop timeout 1800 .*swaylock' <<<"$args"
+# The on-lock programs run just before the lock, and before sleep, each at most 10 s
+mkdir -p "$T/idleconf/debsway/on-lock.d"
+printf '#!/bin/sh\necho ran >>"%s/hook-ran"\n' "$T" >"$T/idleconf/debsway/on-lock.d/a"
+printf 'not run\n' >"$T/idleconf/debsway/on-lock.d/b"
+chmod +x "$T/idleconf/debsway/on-lock.d/a"
+lockcmd=$(sed -n '/^timeout$/{n;/^1800$/{n;p}}' "$T/swayidle-args")
+sleepcmd=$(sed -n '/^before-sleep$/{n;p}' "$T/swayidle-args")
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+check "...running the on-lock programs first, then swaylock" bash -c '[[ $1 == *"on-lock.d"*"; swaylock -f -c 000000" ]] && [ "$1" = "$2" ]' _ "$lockcmd" "$sleepcmd"
+PATH="$T/idlebin:$PATH" sh -c "${lockcmd%; swaylock*}"
+check "...each executable one, once (not the others)" test "$(cat "$T/hook-ran")" = ran
 check "...and turns the screen off 5 minutes after the lock (2100 s)" grep -q 'timeout 2100 swaymsg' <<<"$args"
 
 [ "$fails" -eq 0 ]

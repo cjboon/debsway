@@ -310,6 +310,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "The vault (bin/vault, extras/vault.sh), with a pretend gocryptfs"
+if out=$(bash tools/test-vault.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") vault checks"
+else
+    bad "vault checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "The whonix command (bin/whonix), with a pretend virsh"
 if out=$(bash tools/test-whonix-cmd.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") whonix command checks"

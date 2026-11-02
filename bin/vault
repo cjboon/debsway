@@ -1,0 +1,133 @@
+#!/bin/bash
+# vault: written by debsway extras/vault.sh
+# An encrypted folder: ~/Vault, whose files are kept encrypted (gocryptfs) in
+# ~/.local/share/debsway-vault and appear in ~/Vault only while it is open. It
+# has its own password, not your login's. Closed, its key isn't in memory, so
+# a laptop taken while it is on and locked doesn't give the files away.
+#   vault open [--for TIME | --no-timeout]   open it; it closes itself after an
+#                                            hour (TIME: 30m, 2h, or minutes)
+#   vault close                              close it now
+#   vault status                             open or closed, and for how long
+# It also closes whenever the screen locks: when you're idle and before the
+# laptop sleeps (debsway's idle lock runs ~/.config/debsway/on-lock.d/vault),
+# and within seconds of Super+Escape, the lid or the power menu locking it.
+# A program with a file open in it when it closes loses access to that file:
+# save your work first.
+#   vault watch UNTIL     (what open starts: closes it at UNTIL, epoch seconds or
+#                          0 for never, or as soon as the screen locks)
+set -euo pipefail
+
+CIPHER=${DEBSWAY_VAULT_CIPHER:-$HOME/.local/share/debsway-vault}
+MNT=${DEBSWAY_VAULT_DIR:-$HOME/Vault}
+STATE=${XDG_STATE_HOME:-$HOME/.local/state}/debsway/vault-until
+UNIT=debsway-vault-watch
+POLL=${DEBSWAY_VAULT_POLL:-5}
+
+say() { printf 'vault: %s\n' "$*" >&2; }
+die() { say "$*"; exit 1; }
+# (from the idle lock there is no terminal: a notification says it too)
+tell() {
+    say "$*"
+    [ -t 2 ] || notify-send -a debsway Vault "$*" 2>/dev/null || true
+}
+is_open() { mountpoint -q "$MNT" 2>/dev/null; }
+screen_locked() { pgrep -x -u "$(id -u)" swaylock >/dev/null 2>&1; }
+
+# minutes TIME: 30m, 2h or a number of minutes, as minutes
+minutes() {
+    case $1 in
+        *[!0-9mh]* | '' | m | h) return 1 ;;
+        *h) [[ ${1%h} =~ ^[0-9]+$ ]] && echo $((${1%h} * 60)) ;;
+        *m) [[ ${1%m} =~ ^[0-9]+$ ]] && echo "${1%m}" ;;
+        *) [[ $1 =~ ^[0-9]+$ ]] && echo "$1" ;;
+    esac
+}
+
+# The watcher goes too (not from inside it: it ends by itself)
+stop_watch() {
+    [ -n "${IN_WATCH:-}" ] || systemctl --user stop "$UNIT.service" >/dev/null 2>&1 || true
+    rm -f "$STATE"
+}
+
+close_vault() {
+    local quiet=${1:-}
+    if ! is_open; then
+        [ -n "$quiet" ] || say "It is closed."
+        stop_watch
+        return 0
+    fi
+    if fusermount3 -u "$MNT" 2>/dev/null; then
+        [ -n "$quiet" ] || say "Closed."
+    else
+        # Something has a file open in it. Closed anyway: nothing can open
+        # anything new in it, and gocryptfs, which holds the key, is ended,
+        # so the open files stop working too.
+        fusermount3 -u -z "$MNT" 2>/dev/null || true
+        pkill -TERM -u "$(id -u)" -f "^gocryptfs .*$CIPHER" 2>/dev/null || true
+        tell "Closed, though a program still had a file open in it (that file is no longer reachable)."
+    fi
+    stop_watch
+}
+
+case ${1:-status} in
+    open)
+        shift
+        mins=60
+        case ${1:-} in
+            --for) mins=$(minutes "${2:-}") && [ "$mins" -ge 1 ] || die "--for takes a time like 30m, 2h or 90 (minutes)." ;;
+            --no-timeout) mins=0 ;;
+            '') ;;
+            *) die "usage: vault open [--for TIME | --no-timeout]" ;;
+        esac
+        [ -f "$CIPHER/gocryptfs.conf" ] || die "There is no vault yet. Make one with: bash ~/debsway/extras/vault.sh"
+        if is_open; then
+            say "It is open already ($MNT)."
+        else
+            mkdir -p "$MNT"
+            chmod 700 "$MNT"
+            # gocryptfs asks for the password, then keeps running in the background
+            gocryptfs -q "$CIPHER" "$MNT" || die "It didn't open (a wrong password?)."
+        fi
+        until=0
+        [ "$mins" -eq 0 ] || until=$(($(date +%s) + mins * 60))
+        mkdir -p "${STATE%/*}"
+        echo "$until" >"$STATE"
+        # The watcher that closes it: a user service, so it outlives this terminal
+        systemctl --user stop "$UNIT.service" >/dev/null 2>&1 || true
+        systemd-run --user --quiet --collect --unit="$UNIT" "$(readlink -f -- "$0")" watch "$until" ||
+            say "Couldn't start the timer: close it yourself with  vault close  (the screen lock still closes it)."
+        if [ "$mins" -eq 0 ]; then
+            say "Open: $MNT. It closes when the screen locks, or with: vault close"
+        else
+            say "Open: $MNT, for $mins minutes (or until the screen locks). Close it sooner with: vault close"
+        fi
+        ;;
+    close) close_vault "${2:-}" ;;
+    status)
+        if ! is_open; then
+            echo "closed"
+        else
+            until=$(cat "$STATE" 2>/dev/null || echo 0)
+            if [ "${until:-0}" -gt 0 ]; then
+                echo "open in $MNT, closes in $(((until - $(date +%s) + 59) / 60)) minutes (or when the screen locks)"
+            else
+                echo "open in $MNT, until the screen locks or vault close"
+            fi
+        fi
+        ;;
+    watch)
+        until=${2:-0} IN_WATCH=1
+        [[ $until =~ ^[0-9]+$ ]] || die "usage: vault watch UNTIL"
+        while is_open; do
+            if screen_locked; then close_vault quiet; exit 0; fi
+            if [ "$until" -gt 0 ] && [ "$(date +%s)" -ge "$until" ]; then
+                close_vault quiet
+                tell "The vault closed itself (its time was up)."
+                exit 0
+            fi
+            sleep "$POLL"
+        done
+        rm -f "$STATE"
+        ;;
+    *) die "usage: vault open [--for TIME | --no-timeout] | close | status" ;;
+esac

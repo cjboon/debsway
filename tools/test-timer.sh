@@ -269,9 +269,9 @@ t lock 10 >/dev/null
 "$IDLE"
 run=$(grep '^swayidle ' "$T/calls")
 check "swayidle fades 30 seconds before the lock (570 s)" grep -q 'timeout 570 .*dim-warning start' <<<"$run"
-check "...locks at 600 s" grep -q "timeout 600 swaylock -f -c 000000" <<<"$run"
+check "...locks at 600 s (after the on-lock programs)" grep -q "timeout 600 .*on-lock.d.*; swaylock -f -c 000000" <<<"$run"
 check "...turns the screen off 5 minutes later (900 s)" grep -q 'timeout 900 swaymsg "output \* power off"' <<<"$run"
-check "...and locks before sleep" grep -q 'before-sleep swaylock' <<<"$run"
+check "...and locks before sleep (after them too)" grep -q 'before-sleep .*on-lock.d.*; swaylock -f -c 000000' <<<"$run"
 printf 'minutes=500\n' >"$T/config/debsway/lock"
 check "a time out of range in the file falls back to 30" test "$("$IDLE" --minutes)" = 30
 check "the timer menu offers it" grep -q 'lock after $("$IDLE" --minutes) min idle' "$TIMER"

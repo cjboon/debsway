@@ -59,6 +59,7 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 - [A password manager](keepassxc.md)
 - [A keyring that unlocks when you log in](seahorse.md)
 - [Encrypted backups of your home folder](backup.md)
+- [An encrypted ~/Vault that locks itself](vault.md)
 
 ## Money
 
