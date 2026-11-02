@@ -39,6 +39,32 @@ sed -n '/^case "\$(tty/,/^esac/p' "$HOME/.profile" | sed 's|/dev/tty\[0-9\]\*|*|
 PATH=$T/lb:$PATH bash -c 'unset WAYLAND_DISPLAY TMUX; . "$1"' _ "$T/block.sh" >/dev/null 2>&1
 check "ending sway after the mode changed to console starts tmux" test "$(cat "$T/ran")" = "$(printf 'sway\ntmux')"
 
+# extras/console-only.sh itself, in a copy of debsway with a pretend sudo, swaymsg
+# and sleep, and the base's tmux part stubbed out
+R=$T/r
+mkdir -p "$R/extras" "$R/parts" "$T/cb"
+sed 's|^export PATH=.*|export PATH="$CONSOLE_TEST_PATH"|' "$HERE/lib.sh" >"$R/lib.sh"
+for f in pins.sh packages.sh lib data docs bin; do ln -s "$HERE/$f" "$R/$f"; done
+cp "$HERE/extras/console-only.sh" "$R/extras/"
+printf 'mkdir -p "$HOME/.config/tmux"; : >"$HOME/.config/tmux/tmux.conf"\n' >"$R/parts/console-tmux.sh"
+printf '#!/bin/sh\n[ "$1" = -v ] && exit 0\n' >"$T/cb/sudo"
+printf '#!/bin/sh\necho "swaymsg $*" >>"%s/sway-calls"\n' "$T" >"$T/cb/swaymsg"
+printf '#!/bin/sh\n' >"$T/cb/sleep"
+chmod +x "$T"/cb/*
+export CONSOLE_TEST_PATH="$T/cb:$PATH"
+co() { : >"$T/sway-calls"; WAYLAND_DISPLAY=wayland-1 DEBSWAY_LOGIN_LOOP=1 bash "$R/extras/console-only.sh" "$@" >/dev/null 2>&1; }
+found() { (cd "$R" && bash -c '. ./lib.sh; script_found extras/console-only.sh'); }
+rm -rf "$HOME/.config"; swap sway
+mkdir -p "$HOME/.config/tmux"; : >"$HOME/.config/tmux/tmux.conf"
+check "console-only: the base's tmux config alone doesn't count as it being set up" test -z "$(found)"
+co
+check "set up from inside sway: the login is tmux, and sway is left" bash -c 'grep -qx console "$1" && grep -qx "swaymsg exit" "$2"' _ "$HOME/.config/debsway/login" "$T/sway-calls"
+check "...and it counts as set up" test -n "$(found)"
+co
+check "run again (as update.sh does) from a sway started by hand: sway stays" not grep -q 'swaymsg exit' "$T/sway-calls"
+co --remove
+check "--remove: no longer counted as set up, and the login is sway" bash -c '[ -z "$1" ] && grep -qx sway "$2"' _ "$(found)" "$HOME/.config/debsway/login"
+
 bar=$(sh "$HERE/bin/sway-status" --tmux)
 check "the tmux bar starts with the debsway menu range" bash -c '[[ $1 == "#[range=user|menu]debsway#[norange]"* ]]' _ "$bar"
 check "...and has a date item" bash -c '[[ $1 == *"#[range=user|date]"* ]]' _ "$bar"

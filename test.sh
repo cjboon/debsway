@@ -375,6 +375,20 @@ for f in extras/*.sh; do
     done
 done
 [ "$shared" = 0 ] && ok "no extra's status line lists a package another script installs"
+# The same for files and commands: one a base part sets up is there on every
+# computer, so update.sh would take the extra for set up and run it again
+# (console-only once named the base's tmux config, and left sway when run)
+partmarks=$(sed -n 's/^# status: //p' parts/*.sh | tr ' ' '\n' | grep -E '^(file|bin):' | sort -u)
+shared=0
+for f in extras/*.sh; do
+    for tok in $(sed -n 's/^# status: //p' "$f" | head -1 | tr ' ' '\n' | grep -E '^(file|bin):'); do
+        if grep -qxF "$tok" <<<"$partmarks"; then
+            bad "$f lists $tok on its status line, which a base part sets up too"
+            shared=1
+        fi
+    done
+done
+[ "$shared" = 0 ] && ok "no extra's status line names a file or command a base part sets up"
 
 # --------------------------------------------------------------------
 section "update.sh: which scripts to rerun, with a pretend server"

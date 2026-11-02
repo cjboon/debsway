@@ -5,16 +5,21 @@
 # `sway` still starts it by hand. Removing this extra starts sway at login again.
 # Both happen at once: installing it from inside sway ends sway and drops you into
 # tmux; removing it from inside tmux detaches and starts sway (login loop in
-# ~/.profile, lib/core.sh profile_autostart).
+# ~/.profile, lib/core.sh profile_autostart). Run again while it is set up (as
+# update.sh does), it leaves whatever is running alone.
 # Usage: bash console-only.sh [--remove | --manual]
 # summary: log in to tmux (same bar and keys), not sway
 # security: some
-# status: file:~/.config/tmux/tmux.conf
+# status: file:~/.config/debsway/console-only
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
+# Set up: this file (the tmux config is the base's, so it can't say)
+MARK=$HOME/.config/debsway/console-only
+
 if [ "${1:-}" = --remove ]; then
+    rm -f "$MARK"
     profile_autostart sway
     note "Logging in on tty1 starts sway again."
     if [ -n "${TMUX:-}" ] && [ -n "${DEBSWAY_LOGIN_LOOP:-}" ]; then
@@ -30,7 +35,11 @@ fi
 say "Console-only"
 # the tmux config comes with the base; make sure it is in place
 bash "$DEBSWAY_DIR/parts/console-tmux.sh"
+# Only a switch from sway to tmux leaves sway; a run again (update.sh) doesn't
+was=$(login_mode)
 profile_autostart console
+mkdir -p "${MARK%/*}"
+printf '%s\n' '# Written by debsway extras/console-only.sh: logging in starts tmux, not sway.' >"$MARK"
 cat <<'EOT'
 
     Logging in on any text console now starts tmux (log out: exit the last
@@ -45,7 +54,7 @@ cat <<'EOT'
     console: type  sway.
 EOT
 
-if [ -n "${WAYLAND_DISPLAY:-}" ] && command -v swaymsg >/dev/null; then
+if [ "$was" != console ] && [ -n "${WAYLAND_DISPLAY:-}" ] && command -v swaymsg >/dev/null; then
     if [ -n "${DEBSWAY_LOGIN_LOOP:-}" ]; then
         note "Leaving sway for the console in 3 seconds (programs in sway close)..."
         sleep 3
