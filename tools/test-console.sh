@@ -38,6 +38,19 @@ swap sway
 sed -n '/^case "\$(tty/,/^esac/p' "$HOME/.profile" | sed 's|/dev/tty\[0-9\]\*|*|' >"$T/block.sh"
 PATH=$T/lb:$PATH bash -c 'unset WAYLAND_DISPLAY TMUX; . "$1"' _ "$T/block.sh" >/dev/null 2>&1
 check "ending sway after the mode changed to console starts tmux" test "$(cat "$T/ran")" = "$(printf 'sway\ntmux')"
+# Ending sway with no change: the shell stays (a login prompt or autologin would
+# start sway again); ending tmux with no change logs out
+printf '#!/bin/sh\necho sway >>%s/ran\n' "$T" >"$T/lb/env"
+rm -f "$T/ran"; swap sway
+sed -n '/^case "\$(tty/,/^esac/p' "$HOME/.profile" | sed 's|/dev/tty\[0-9\]\*|*|' >"$T/block.sh"
+out=$(PATH=$T/lb:$PATH bash -c 'unset WAYLAND_DISPLAY TMUX; . "$1"; echo still-here' _ "$T/block.sh" 2>&1)
+check "exiting sway (mode unchanged) leaves you at the shell, saying how to start it again" \
+    bash -c 'grep -qx still-here <<<"$1" && grep -q "Start it again: sway" <<<"$1"' _ "$out"
+swap console
+out=$(PATH=$T/lb:$PATH bash -c 'unset WAYLAND_DISPLAY TMUX; . "$1"; echo still-here' _ "$T/block.sh" 2>&1)
+check "...while leaving tmux (mode unchanged) logs out, as before" not grep -qx still-here <<<"$out"
+swap sway
+
 
 # extras/console-only.sh itself, in a copy of debsway with a pretend sudo, swaymsg
 # and sleep, and the base's tmux part stubbed out

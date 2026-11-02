@@ -246,7 +246,8 @@ profile_autostart() {
 
 # >>> debsway autostart >>>
 # What a text console login starts: ~/.config/debsway/login says sway (tty1) or
-# console (tmux, any tty). When it ends and that file has changed, the other starts.
+# console (tmux, any tty). When it ends and that file has changed, the other starts;
+# otherwise tmux's end logs out, and sway's leaves you at the shell.
 case "$(tty 2>/dev/null)" in
     /dev/tty[0-9]*)
         if [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${TMUX:-}" ]; then
@@ -266,7 +267,14 @@ case "$(tty 2>/dev/null)" in
                     break
                 fi
                 n=$(cat "$HOME/.config/debsway/login" 2>/dev/null)
-                [ "${n:-sway}" != "$m" ] || exit
+                if [ "${n:-sway}" = "$m" ]; then
+                    # Leaving tmux (its last window) logs out. Leaving sway leaves
+                    # you here, at the shell: with autologin, logging out would
+                    # only log you in again and start sway
+                    [ "$m" = sway ] || exit
+                    printf '\nsway has ended. Start it again: sway   Log out: exit\n'
+                    break
+                fi
             done
         fi ;;
 esac
