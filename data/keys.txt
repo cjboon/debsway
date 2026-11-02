@@ -121,6 +121,9 @@
 @end
 @if udiskie-umount
     udiskie-umount -a      unmount all USB drives before unplugging
+@if usb
+    usb                    USB sticks: usb mount, usb unmount (then pull it out)
+@end
 @end
 @if volume
     volume up|down 10      bigger volume steps (volume mute, volume micmute)

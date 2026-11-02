@@ -94,10 +94,14 @@ this page to decide what else you need.
   release, so a hijacked maintainer account could slip in a bad one: the VM
   limits what that reaches, not whether it runs.
 - **A stranger's USB stick running something.** Drives mount with
-  `nosuid`, `nodev` and `noexec` (`extras/udiskie.sh`), so nothing on a stick
-  can run from it by itself. They still mount the moment they're plugged
-  in, so the kernel's filesystem code reads whatever a stick contains:
-  don't plug in sticks you don't trust.
+  `nosuid`, `nodev` and `noexec` (the `usb` command, `parts/usb.sh`, and
+  `extras/udiskie.sh`), so nothing on a stick can run from it by itself.
+  With udiskie they mount the moment they're plugged in, and either way the
+  kernel's filesystem code reads whatever a stick contains: don't plug in
+  sticks you don't trust. FAT, exFAT and NTFS keep no permissions, so `usb`
+  mounts them readable by you alone on this computer; on another computer
+  anyone holding the stick reads all of it (an encrypted stick doesn't
+  have that problem: `usb mount` unlocks LUKS).
 - **A stolen laptop, while it's switched off**, if you installed Debian
   with disk encryption (see the README). `status.sh` warns when you
   didn't. An install stick made with `--noencrypt` gives none of this:

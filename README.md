@@ -368,8 +368,10 @@ main ones:
   `nmtui` to pick the network, or `bash wifi.sh` to rescue it.
 - **A Wi-Fi login page keeps asking again**: that's the random MAC; see
   [docs/install-base.md](docs/install-base.md).
-- **USB stick doesn't mount**: `udiskie-info -a`, or mount it by hand
-  with `udisksctl mount -b /dev/sdb1`.
+- **USB stick doesn't mount, or you can't write to it**: `usb` lists your
+  sticks and `usb mount` mounts one as you. Don't use `sudo mount`: a FAT or
+  exFAT stick mounted that way is root's, all of it (`usb mount` offers to
+  fix that). Before pulling it out: `usb unmount`.
 - **No sound**: `wpctl status`. If nothing is listed, log out and back in.
 - **Brightness keys do nothing**: log out and back in after
   `brightnessctl.sh` added you to the `video` group.

@@ -71,6 +71,7 @@ checked with `sway -C` before it's kept.
 | `ufw.sh` | ufw | Firewall: blocks everything incoming, allows outgoing |
 | `power-profiles-daemon.sh` | power-profiles-daemon | `powerprofilesctl set power-saver \| balanced \| performance` (skips itself if tlp is installed) |
 | `network-manager.sh` | network-manager, wpasupplicant, wireless-regdb, polkitd | Moves the Wi-Fi from the installer or wifi.sh into NetworkManager; `nmtui` (in debsway's white-on-black colors, like the install list; your own `NEWT_COLORS` wins) to switch networks |
+| `usb.sh` | udisks2, polkitd | The `usb` command: `usb` lists sticks, `usb mount [NAME]` mounts one as you under `/media/$USER/` (`nosuid,nodev,noexec`; FAT, exFAT and NTFS readable by you alone; an encrypted one asks for its passphrase), `usb unmount` unmounts, locks and switches it off. A FAT stick mounted with `sudo mount` is root's, so you can't write to it: `usb mount` offers to mount it again as you. Nothing mounts by itself (that is `extras/udiskie.sh`) |
 | `random-mac.sh` | (NetworkManager) | A made-up Wi-Fi MAC address on every connection and while scanning, no computer name sent to the network, temporary IPv6 addresses: networks can't recognise the laptop from place to place |
 
 **USB drives and `noexec`:** a drive can't run programs from itself

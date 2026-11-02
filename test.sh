@@ -340,6 +340,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "The usb command, with pretend lsblk, udisksctl and sudo"
+if out=$(bash tools/test-usb.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") usb checks"
+else
+    bad "usb checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "status.sh's screen lock line, with and without swaylock"
 if out=$(bash tools/test-status.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") status checks"
