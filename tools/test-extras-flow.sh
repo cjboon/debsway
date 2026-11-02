@@ -27,7 +27,7 @@ mkdir -p "$T/fake" "$D/data"
 cp "$HERE/data/dialogrc" "$D/data/"
 cp "$HERE"/lib/*.sh "$D/lib/"
 for n in alpha beta gamma delta; do
-    printf '#!/bin/bash\n# summary: the %s extra\n# status: file:%s/nowhere-%s\necho "%s $DEBSWAY_SETUP_GH" >>"%s/ran"\n[ "%s" != "$FAIL_ON" ]\n' "$n" "$T" "$n" "$n" "$T" "$n" >"$D/extras/$n.sh"
+    printf '#!/bin/bash\n# summary: the %s extra\n# status: file:%s/nowhere-%s\necho "%s${1:+ $1} $DEBSWAY_SETUP_GH" >>"%s/ran"\n[ "%s" != "$FAIL_ON" ]\n' "$n" "$T" "$n" "$n" "$T" "$n" >"$D/extras/$n.sh"
 done
 # their groups: gamma most secure, alpha least, beta somewhat, delta has no line (somewhat)
 sed -i 's/^# summary: the gamma extra$/&\n# security: most/' "$D/extras/gamma.sh"
@@ -69,6 +69,27 @@ check "...with Install and No extras as its buttons" bash -c 'grep -q -- "--ok-l
 check "...in debsway's colours" test "$(cat "$T/dialogrc-used")" = "$D/data/dialogrc"
 check "...the headings in the list, in order" bash -c 'grep -o "~[a-z]*" "$1" | paste -sd, | grep -qx "~most,~some,~least"' _ "$T/dialog-args"
 rm "$T/fake/dialog"
+
+# Remove apps (--remove): a list of only what is installed; what you check is
+# removed with its own --remove, after a question (Enter is no)
+cat >"$T/fake/dialog" <<EOF
+#!/bin/sh
+printf '%s\n' "\$*" >"$T/dialog-args"
+cat "$T/dialog-answer" >&2
+EOF
+chmod +x "$T/fake/dialog"
+rmlist() { : >"$T/ran"; printf '%s\n' "$@" >"$T/answers"; DEBSWAY_TEST_ANSWERS=$T/answers script -qec "bash $D/install-extras.sh --remove" /dev/null </dev/null >"$T/out" 2>&1; }
+rmlist ''
+check "--remove with nothing installed: says so, removes nothing" bash -c 'grep -q "nothing to remove" "$1" && [ ! -s "$2" ]' _ "$T/out" "$T/ran"
+: >"$T/nowhere-beta"; : >"$T/nowhere-delta"
+printf 'beta\ngamma\n' >"$T/dialog-answer"
+rmlist y
+check "--remove lists only what is installed" bash -c 'grep -q " beta " "$1" && grep -q " delta " "$1" && ! grep -q " gamma " "$1" && ! grep -q " alpha " "$1"' _ "$T/dialog-args"
+check "...with Remove and Cancel as its buttons" grep -q -- '--ok-label Remove --cancel-label Cancel' "$T/dialog-args"
+check "...and after yes, removes the checked one with its own --remove (not one that isn't installed)" test "$(cat "$T/ran")" = "beta --remove "
+rmlist ''
+check "...Enter at the question removes nothing" test ! -s "$T/ran"
+rm "$T/fake/dialog" "$T/nowhere-beta" "$T/nowhere-delta"
 
 # --choose with no terminal to ask on: writes an empty file, installs nothing
 : >"$T/ran"

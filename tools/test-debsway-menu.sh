@@ -139,7 +139,8 @@ if __name__ == "__main__":
     scenarios = {
         "enter": ["\r"],
         "down-enter": ["\x1b[B", "\r"],
-        "j-enter": ["j", "j", "\r"],
+        "j-enter": ["j", "j", "j", "\r"],
+        "j-remove": ["j", "j", "\r"],
         "up-wraps": ["\x1b[A", "\r"],
         "click-update": [click_on("Update")],
         "click-outside": ["\x1b[<0;1;1M\x1b[<0;1;1m", "q"],
@@ -152,7 +153,7 @@ if __name__ == "__main__":
         "help-wheel": ["\r", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b"],
         "status-esc": ["\x1b[A", "\r", "\x1b"],
         "resize": [("resize", 40, 120), "q"],
-        "toggle-wifi": ["j", "j", "j", "j", "\r", "\x1b"],
+        "toggle-wifi": ["j", "j", "j", "j", "j", "\r", "\x1b"],
         "click-mic": [click_on("Microphone"), "\x1b"],
         "early-resize": [("early", 40, 120), "q"],
         "q": ["q"],
@@ -279,6 +280,8 @@ check "...and Esc closes it" grep -q 'STATUS 0' <<<"$out"
 menu down-enter
 check "Down then Enter runs install-extras.sh in the debsway folder" grep -qxF "$T/debsway|install-extras.sh|pause=1" "$T/ran"
 
+menu j-remove
+check "Remove apps, after Install apps, runs install-extras.sh --remove in the debsway folder" grep -qxF "$T/debsway|install-extras.sh --remove|pause=1" "$T/ran"
 menu j-enter
 check "j moves down too (Update)" grep -qxF "$T/debsway|update.sh|pause=1" "$T/ran"
 check "what Update prints is also kept in a log" grep -qx 'printed by update.sh' "$T/home/.local/state/debsway/menu-update.log"
@@ -300,12 +303,12 @@ menu q
 check "q closes the menu" grep -q 'STATUS 0' <<<"$out"
 
 menu resize
-check "the menu starts centered for the window's first size (24x80)" grep -q 'TITLES 9;22' <<<"$out"
-check "and centers itself again, with no key pressed, when sway stretches the window" grep -q 'TITLES 9;22 17;42' <<<"$out"
+check "the menu starts centered for the window's first size (24x80)" grep -q 'TITLES 8;22' <<<"$out"
+check "and centers itself again, with no key pressed, when sway stretches the window" grep -q 'TITLES 8;22 16;42' <<<"$out"
 check "...without leaving the menu" grep -q 'STATUS 0' <<<"$out"
 
 menu early-resize
-check "a window stretched before the first draw is drawn centered at once, with no jump" grep -qx 'TITLES 17;42' <<<"$(grep TITLES <<<"$out")"
+check "a window stretched before the first draw is drawn centered at once, with no jump" grep -qx 'TITLES 16;42' <<<"$(grep TITLES <<<"$out")"
 
 # Wi-Fi, Bluetooth and the microphone: listed only when the computer has them
 printf 'wifi on\nmic off\n' >"$T/radios-list"; echo on >"$T/radio-wifi"; echo off >"$T/radio-mic"

@@ -271,8 +271,8 @@ if [ -z "${SWAYSOCK:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ] && [ -x "$HOME/.local
     items+=("Font size")
 fi
 if [ -f "$DIR/update.sh" ]; then
-    ids+=(apps update status)
-    items+=("Install apps" Update Status)
+    ids+=(apps remove update status)
+    items+=("Install apps" "Remove apps" Update Status)
 fi
 radio_ids=()
 if [ -x "$RADIOS" ]; then
@@ -400,7 +400,7 @@ run_choice() {
             out=$(cd "$DIR" && bash status.sh 2>&1)
             mapfile -t lines <<<"$out"
             pager ;;
-        apps | update)
+        apps | remove | update)
             trap - EXIT
             screen_off
             cd "$DIR" || exit 1
@@ -422,7 +422,7 @@ run_choice() {
                 bash update.sh 2>&1 | tee "$log"
                 rc=${PIPESTATUS[0]}
             else
-                bash install-extras.sh
+                if [ "${ids[sel]}" = remove ]; then bash install-extras.sh --remove; else bash install-extras.sh; fi
                 rc=$?
             fi
             if [ "$rc" -ne 0 ] && [ ! -e "$DEBSWAY_PAUSED_FILE" ]; then

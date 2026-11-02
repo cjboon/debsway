@@ -2,6 +2,8 @@
 
 Run one with `bash extras/NAME.sh`; run it again to repair it or, for
 downloaded apps, update to the newest release; undo it with `--remove`.
+The debsway menu's Install apps and Remove apps (`bash install-extras.sh`,
+`bash install-extras.sh --remove`) do the same from a list.
 `bash extras/NAME.sh --manual` prints the steps to do it all by hand instead,
 and changes nothing. Each one has a page in [extras/](extras/README.md): its
 commands, what it is, what it doesn't protect against, and those manual steps.
