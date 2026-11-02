@@ -1,6 +1,6 @@
 #!/bin/bash
-# onion-site [start|stop|status|shell|upload|update|address|rebuild]: written by
-# debsway extras/onion-site.sh
+# onion-site [start|stop|status|shell|upload|update|address|rebuild]
+# written by debsway extras/onion-site.sh
 # Your onion site, which runs in its own VM with no network: only Tor on this
 # computer reaches it, so nothing the site does can give away your address.
 #   onion-site start                  start the site's VM (the site is up while it runs)

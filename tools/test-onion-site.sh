@@ -188,4 +188,12 @@ check "onion-site start says when Tor is off, and how to turn it on" \
 printf '#!/bin/sh\nexit 0\n' >"$T/fake/systemctl"
 check "...and nothing when it runs" bash -c '! grep -q "Tor is not running" <<<"$1"' _ "$(os start 2>&1 </dev/null)"
 
+# remove_bin takes out only a command that says "written by debsway" (on one
+# line): one that said it over two was left behind by --remove
+check "every command debsway installs (install_bin's) says it is debsway's, on one line (remove_bin needs it)" bash -c '
+    for n in $(grep -rhoE "install_bin [a-z0-9-]+" "$1"/parts "$1"/extras "$1"/lib "$1"/install-base.sh | cut -d" " -f2 | sort -u); do
+        [ -f "$1/bin/$n" ] || continue
+        grep -qi "written by debsway" "$1/bin/$n" || { echo "$n"; exit 1; }
+    done' _ "$HERE"
+
 [ "$fails" -eq 0 ]
