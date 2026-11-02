@@ -1,6 +1,6 @@
 # shellcheck shell=bash
 # lib/mullvad-repo.sh: Mullvad's apt repository, shared by mullvad-vpn.sh
-# and mullvad-browser.sh. Sourced after lib.sh. The repository key is only
+# and mullvad-browser-regular.sh. Sourced after lib.sh. The repository key is only
 # trusted if it is exactly MULLVAD_FPR (pins.sh), Mullvad's code signing
 # key as published at mullvad.net/en/help/verifying-signatures.
 

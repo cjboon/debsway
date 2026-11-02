@@ -49,6 +49,11 @@ for f in "$HERE"/extras/*.sh; do
 done
 check "every extra says how secure it is (# security: most, some or least)${missing:+: not ${missing[*]}}" test ${#missing[@]} -eq 0
 
+# A renamed extra keeps its package marker's old name, or a computer that
+# installed it before the rename would lose track of what it installed
+check "mullvad-browser-regular.sh keeps the marker of mullvad-browser.sh" \
+    test "$(cd "$HERE" && bash -c '. ./lib.sh; eval "$(grep -x "export DEBSWAY_OWNER=.*" extras/mullvad-browser-regular.sh)"; apt_marker')" = debsway-mullvad-browser
+
 # The list drawn by dialog: what it answers (one name per line) is what gets
 # picked, a heading line checked by mistake is not an extra, and its colours are debsway's
 cat >"$T/fake/dialog" <<EOF

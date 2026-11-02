@@ -83,7 +83,7 @@ TUTA_KEY_SHA256=9566e054634a75f540b64db71b92b040bc77f9a3954d737cb01c4630c1225127
 TUTA_KEY_URL=https://raw.githubusercontent.com/tutao/tutanota/master/tutao-pub.pem
 TUTA_DESKTOP_URL=https://app.tuta.com/desktop
 
-# Mullvad apt repo (extras/mullvad-vpn.sh, extras/mullvad-browser.sh).
+# Mullvad apt repo (extras/mullvad-vpn.sh, extras/mullvad-browser-regular.sh).
 # Mullvad (code signing) <admin@mullvad.net>.
 # checked: 2026-10-26  mullvad.net/en/help/verifying-signatures; the repo's keyring
 MULLVAD_FPR=A1198702FC3E0A09A9AE5B75D5A1D4F266DE8DDF

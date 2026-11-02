@@ -1,11 +1,11 @@
-# Mullvad Browser (`extras/mullvad-browser.sh`)
+# Mullvad Browser, as you (`extras/mullvad-browser-regular.sh`)
 
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/mullvad-browser.sh            install it
-bash ~/debsway/extras/mullvad-browser.sh --remove   remove it (and Mullvad's repository, if Mullvad VPN isn't installed)
-bash ~/debsway/extras/mullvad-browser.sh --manual   print the manual steps below
+bash ~/debsway/extras/mullvad-browser-regular.sh            install it
+bash ~/debsway/extras/mullvad-browser-regular.sh --remove   remove it (and Mullvad's repository, if Mullvad VPN isn't installed)
+bash ~/debsway/extras/mullvad-browser-regular.sh --manual   print the manual steps below
 
 mullvad-browser                                     start it (or Super+d); connect a VPN first
 ```

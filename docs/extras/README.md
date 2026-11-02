@@ -33,7 +33,7 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 - [Console-only, tmux instead of sway](console-only.md): `docs/extras/console-only.md`
 - [w3m, a web browser for the terminal](w3m.md): `docs/extras/w3m.md`
 - [Tor Browser](tor-browser.md)
-- [Mullvad Browser](mullvad-browser.md)
+- [Mullvad Browser, as you](mullvad-browser-regular.md)
 
 ## Anonymity and network privacy
 
