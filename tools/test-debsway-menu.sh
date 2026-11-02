@@ -129,7 +129,10 @@ def click_on(label):
 if __name__ == "__main__":
     script, home, path, folder, ranfile = sys.argv[1:6]
     scenario = sys.argv[6]
-    env = {"PATH": path, "HOME": home, "TERM": "xterm-256color", "DEBSWAY_DIR": folder, "LANG": "C.UTF-8", "DEBSWAY_ESC_WAIT": "1"}
+    env = {"PATH": path, "HOME": home, "TERM": "xterm-256color", "DEBSWAY_DIR": folder, "LANG": "C.UTF-8", "DEBSWAY_ESC_WAIT": "1",
+           # no browser or editor unless a scenario's test names some
+           "DEBSWAY_MENU_BROWSERS": os.environ.get("DEBSWAY_MENU_BROWSERS", "/nonexistent"),
+           "DEBSWAY_MENU_EDITORS": os.environ.get("DEBSWAY_MENU_EDITORS", "/nonexistent")}
     if scenario.startswith("sway-"):
         env["SWAYSOCK"] = "/nonexistent/sway.sock"
     scenarios = {
@@ -154,6 +157,8 @@ if __name__ == "__main__":
         "q": ["q"],
         "sway-terminal": ["j", "\r"],
         "sway-click-terminal": [click_on("Terminal")],
+        "sway-browser": [click_on("Web browser")],
+        "sway-editor": [click_on("Text editor")],
     }
     drawn, status = run(script, env, scenarios[scenario])
     if len(sys.argv) > 7:
@@ -161,6 +166,7 @@ if __name__ == "__main__":
     print("STATUS", status)
     print("DREW", "|".join(re.findall(r"(Help|Install apps|Update|Status)", drawn)[:4]))
     print("DREWALL", "|".join(re.findall(r"(Help|Terminal|Install apps|Update|Status)", drawn)[:5]))
+    print("DREWAPPS", "|".join(re.findall(r"(Help|Terminal|Web browser|Text editor|Install apps)", drawn)[:5]))
     # where the title "debsway" was drawn each time: row;column
     print("TITLES", " ".join("%s;%s" % m for m in re.findall(r"\x1b\[(\d+);(\d+)H\x1b\[1mdebsway", drawn)))
 PY
@@ -182,6 +188,25 @@ check "inside sway the menu has Terminal, after Help" grep -q 'DREWALL Help|Term
 check "...which opens foot through sway, and the menu closes" bash -c 'grep -qx "swaymsg exec foot" "$1" && grep -q "STATUS 0" <<<"$2"' _ "$T/ran" "$out"
 menu sway-click-terminal
 check "...also with a click" grep -qx 'swaymsg exec foot' "$T/ran"
+check "no browser or editor installed: no lines for them" not grep -qE '^DREWAPPS.*(Web browser|Text editor)' <<<"$out"
+# A web browser and a text editor: the default browser (mimeapps.list) is the one opened
+mkdir -p "$T/apps" "$T/home/.config"
+for a in firefox firefox-regular firefox-esr mousepad; do printf '#!/bin/sh\n' >"$T/apps/$a"; chmod +x "$T/apps/$a"; done
+export DEBSWAY_MENU_BROWSERS="$T/apps/firefox $T/apps/firefox-regular $T/apps/firefox-esr" DEBSWAY_MENU_EDITORS="$T/apps/mousepad"
+printf '[Default Applications]\nx-scheme-handler/https=debsway-firefox-regular.desktop\n' >"$T/home/.config/mimeapps.list"
+menu sway-browser
+check "inside sway: Web browser and Text editor, after Terminal" grep -q 'DREWAPPS Help|Terminal|Web browser|Text editor|Install apps' <<<"$out"
+check "...Web browser opens the default browser (here firefox-regular), through sway" grep -qx "swaymsg exec $T/apps/firefox-regular" "$T/ran"
+rm "$T/home/.config/mimeapps.list"
+menu sway-browser
+check "...with no default set, the first one installed (the sandboxed firefox)" grep -qx "swaymsg exec $T/apps/firefox" "$T/ran"
+menu sway-editor
+check "...Text editor opens Mousepad" grep -qx "swaymsg exec $T/apps/mousepad" "$T/ran"
+export DEBSWAY_MENU_EDITORS=/nonexistent
+menu sway-browser
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+check "...no editor installed: only Web browser" bash -c 'grep -q "Web browser" <<<"$1" && ! grep -q "Text editor" <<<"$1"' _ "$(grep ^DREWAPPS <<<"$out")"
+unset DEBSWAY_MENU_BROWSERS DEBSWAY_MENU_EDITORS
 rm -f "$T/fake/swaymsg"
 menu enter
 check "the four entries are drawn" grep -q 'DREW Help|Install apps|Update|Status' <<<"$out"

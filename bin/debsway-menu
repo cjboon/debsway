@@ -2,7 +2,8 @@
 # debsway-menu: written by debsway parts/debsway-menu.sh
 # The menu behind the "debsway" item in the bar. A click opens a black-and-gray
 # terminal in a floating, centered window, with the choices Help, Terminal (Font size on a
-# text console), Install apps, Update and Status. Arrow keys (or j/k) and Enter choose; so does a
+# text console), Web browser and Text editor (when one is installed), Install apps,
+# Update and Status. Arrow keys (or j/k) and Enter choose; so does a
 # click. Esc closes every screen of it, the install list and the pager
 # included. What you choose runs in that same window, and the window closes
 # when it ends (the install and update screens wait for a key first, if they
@@ -204,9 +205,34 @@ ids=(help)
 items=(Help)
 # A terminal window, as Super+Enter opens: for a mouse, or where the keys don't
 # arrive (sway in a VM's window: the computer's own sway takes Super first)
+# web_browser: the browser links open in (mimeapps.list), or the first one
+# installed; text_editor: Mousepad, if installed. Each prints its command, or nothing.
+# (DEBSWAY_MENU_BROWSERS and DEBSWAY_MENU_EDITORS: a test's own lists)
+BROWSERS=${DEBSWAY_MENU_BROWSERS-/usr/local/bin/firefox $HOME/.local/bin/firefox-regular /usr/bin/firefox-esr /usr/bin/mullvad-browser}
+EDITORS=${DEBSWAY_MENU_EDITORS-$HOME/.local/bin/mousepad /usr/bin/mousepad}
+web_browser() {
+    local app c
+    app=$({ sed -n 's|^x-scheme-handler/https=||p' "$HOME/.config/mimeapps.list" 2>/dev/null || true; } | head -1)
+    for c in $BROWSERS; do
+        [ -x "$c" ] || continue
+        case $app:${c##*/} in
+            debsway-firefox.desktop:firefox | debsway-firefox-regular.desktop:firefox-regular) echo "$c"; return ;;
+        esac
+    done
+    for c in $BROWSERS; do [ -x "$c" ] && { echo "$c"; return; }; done
+    return 0
+}
+text_editor() {
+    local c
+    for c in $EDITORS; do [ -x "$c" ] && { echo "$c"; return; }; done
+    return 0
+}
 if [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null; then
     ids+=(terminal)
     items+=(Terminal)
+    BROWSER=$(web_browser) EDITOR_CMD=$(text_editor)
+    if [ -n "$BROWSER" ]; then ids+=(browser); items+=("Web browser"); fi
+    if [ -n "$EDITOR_CMD" ]; then ids+=(editor); items+=("Text editor"); fi
 fi
 # Text size, on a text console only (console-only mode): there is no Terminal
 # there, and the menu runs in the console itself
@@ -279,6 +305,12 @@ run_choice() {
             return 0 ;;
         terminal)
             swaymsg exec foot >/dev/null 2>&1
+            exit 0 ;;
+        browser)
+            swaymsg exec "$BROWSER" >/dev/null 2>&1
+            exit 0 ;;
+        editor)
+            swaymsg exec "$EDITOR_CMD" >/dev/null 2>&1
             exit 0 ;;
         font)
             # console-font lists the sizes and asks; leave the menu's screen
