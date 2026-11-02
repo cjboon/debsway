@@ -271,7 +271,7 @@ that is set up.
 - [docs/wifi.md](docs/wifi.md): `wifi.sh`, and how the packages on the stick are checked
 - [docs/install-base.md](docs/install-base.md): what `install-base.sh` sets up, and every part
 - [docs/extras.md](docs/extras.md): the optional apps, Firefox with its hardening and `incognito`, Firefox profiles
-- [docs/extras/](docs/extras/README.md): one article per extra, explaining from the ground up how it works and what it protects against
+- [docs/extras/](docs/extras/README.md): one page per extra: its commands, what it is, what it doesn't protect against, and every step to install it by hand (`bash extras/NAME.sh --manual` prints them)
 - [docs/opsec.md](docs/opsec.md): operations security in general: laptops, USB drives, networks, passwords, encryption, private communication, physical security, and what to do when something goes wrong
 - [docs/maintaining.md](docs/maintaining.md): `test.sh`, `pins.sh`, shellcheck, the other scripts
 - [THREAT-MODEL.md](THREAT-MODEL.md): what this protects against, and what it doesn't

@@ -21,12 +21,13 @@
 # What it can't hide: the site is only up while this computer is on and the VM
 # runs, which can link it to you; and a hole in your app still gets the VM and
 # the site's data (not this computer). See THREAT-MODEL.md. Needs KVM.
-# Usage: bash onion-site.sh [--remove]
+# Usage: bash onion-site.sh [--remove | --manual]
 # summary: Your own onion site, in a VM with no network
 # files: bin/no-abstract-sockets
 # status: bin:onion-site file:/usr/local/libexec/onion-site-session
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/onion-site.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 AGENT=$ONION_SITE_USER

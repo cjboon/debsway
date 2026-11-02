@@ -42,17 +42,20 @@ installed (`~/.local/bin`), and other users exist (e.g. `onion-site`). So:
 - Scripts are bash, shellcheck-clean (`.shellcheckrc`). New scripts: `chmod +x`.
 - `parts/` is the base (the `PARTS` list in `packages.sh`); `extras/` is optional and is
   listed by `install-extras.sh`. An extra needs `# summary:` (52 characters at most, the
-  checklist cuts it off), `# status:` and a `--remove`. The `# status:` line lists only
+  checklist cuts it off), `# status:`, a `--remove`, and a `--manual` with its page
+  in `docs/extras/` (SYNOPSIS, one paragraph, LIMITS, MANUAL INSTALL; a test checks). The `# status:` line lists only
   what that script alone sets up: a package another script installs makes a permanent `*`.
   `# files:` names repo files that a library function installs for the script, so that
   `update.sh` knows when to run it again.
 - Every behaviour has a test in `tools/test-*.sh`, registered in `test.sh`. Make a test
   that can fail: check that it fails on the old code. The test suite replaces `sleep` with
   a no-op; use `/bin/sleep` where a test must really wait.
-- An extra's page in `docs/extras/` that has a `## MANUAL INSTALL` section is what
-  its `--manual` prints (`print_manual`). Change those steps in the same commit as
-  the script; no test can check that they still do the same thing. Values from
-  `pins.sh` or the script go in as `@NAME@`, never typed in.
+- An extra's `## MANUAL INSTALL` section in `docs/extras/` is what its `--manual`
+  prints (`print_manual`). Change those steps in the same commit as the script;
+  tests compare only a few of them with the script (Unbound's settings, sshd's,
+  claude-vm's provisioning). Values from `pins.sh` or the script go in as `@NAME@`,
+  never typed in. Undo steps purge only the extra's own packages: shared ones are
+  marked `apt-mark auto` (a purge also removes whatever depends on them).
 - Keep docs in step with behaviour: `README.md`, `docs/`, `THREAT-MODEL.md` (do not claim
   protection a script doesn't give), and the man page `data/debsway.1` (a test checks that
   it matches `debsway --help`).

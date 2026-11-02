@@ -1,74 +1,87 @@
 # Tor Browser (`extras/tor-browser.sh`)
 
-Tor Browser is a web browser that sends your traffic through the Tor network, so the sites you visit do not see your real internet address. This extra installs it the Debian way, through `torbrowser-launcher`, and starts it in its strictest mode with JavaScript off. If your network blocks Tor, it can also set up a bridge before the first connection.
+## SYNOPSIS
 
-## The problem it solves
+```
+bash ~/debsway/extras/tor-browser.sh            install it, or change its bridge (asks if you need one)
+bash ~/debsway/extras/tor-browser.sh --remove   remove it (asks before deleting the downloaded browser)
+bash ~/debsway/extras/tor-browser.sh --manual   print the manual steps below
 
-Every website you visit sees the internet address (IP address) your connection comes from, and your internet provider sees which sites you go to. An address is a bit like the return address on a letter: it points back to your home or to the network you are on.
+torbrowser-launcher       start Tor Browser (or Super+d); the first start downloads it
+```
 
-Tor Browser is for the times you do not want a site to learn that, or do not want your provider to see where you go. It also helps if you are somewhere that blocks Tor itself: the bridge options exist for that.
+Tor Browser sends what you browse through three Tor relays, so the sites
+can't see your address and your network can't see where you go. It comes
+through Debian's torbrowser-launcher, which downloads Tor Browser from
+torproject.org, checks its signature and keeps it updated; the launcher is in
+Debian's contrib section, so contrib is turned on. Tor Browser runs on X11 on
+purpose (it's less fingerprintable), so XWayland is installed. Before its
+first start, debsway writes a `user.js` into its profile: the Safest security
+level with JavaScript off (`data/tor-browser-safest.js`), and a bridge if you
+need one (obfs4, webtunnel, Snowflake or meek), so its very first connection
+already goes through it; Firefox applies `user.js` at every start. Tor's
+AppArmor profile is fixed so bridges given as host names can be looked up.
+If `prep/fetch-tor-browser.sh` saved a checked copy in `offline/torbrowser`,
+that is unpacked instead, and torproject.org is never contacted.
 
-## The ideas behind it
+## LIMITS
 
-**Tor.** Tor is a network of relays run by volunteers. Your traffic is wrapped in layers and passed through three relays. The first knows who you are but not where you are going. The last knows where you are going but not who you are. No single relay knows both. It is like passing a sealed letter through three people, each of whom can only open one layer of the envelope.
+- The first start downloads Tor Browser without Tor: your network sees that you fetched it (not what you do with it).
+- Logging in to a site tells it who you are, Tor or not.
+- Safest breaks many sites; lowering it gives attackers more to work with.
+- It runs as you, with no sandbox from debsway; for a stronger wall, use Whonix or Tails.
 
-**Tor Browser.** Tor Browser is Firefox with Tor built in and many settings changed so that all its users look alike. That matters because a site can often recognise a browser by small details (screen size, fonts, plug-ins). If every Tor Browser looks the same, you are harder to pick out.
+## MANUAL INSTALL
 
-**Security level.** Tor Browser has a slider with three levels. Safest is the strictest: it switches off the web features that are most often used to attack browsers. This extra sets Safest and also turns JavaScript off completely. Many sites will look broken or refuse to work. That is the price of the setting.
+```
+# Debian's contrib section, where torbrowser-launcher is: add "contrib" after
+# "main" on Debian's lines (in /etc/apt/sources.list, or the Components: lines
+# of /etc/apt/sources.list.d/debian.sources), then check
+sudo sed -i -E '/^deb(-src)?[[:space:]].*debian/ { /[[:space:]]contrib([[:space:]]|$)/! s/[[:space:]]main([[:space:]]|$)/ main contrib\1/ }' /etc/apt/sources.list
+grep -n contrib /etc/apt/sources.list /etc/apt/sources.list.d/*.sources
 
-**A bridge.** The list of Tor relays is public, so a network can block them. A bridge is a relay that is not on the public list. You need one if your network blocks Tor, or if you do not want it to see that you use Tor. Most people on a home connection do not need one. See "Bridges" in `docs/install-base.md` for the kinds. Tor Browser can use all of them: obfs4 (Tor's built-in list, or lines you get yourself), webtunnel, Snowflake and meek.
+# XWayland (Tor Browser uses X11) and the launcher
+sudo apt update
+sudo apt install --no-install-recommends xwayland torbrowser-launcher xz-utils
+# If XWayland was new: log out and back in once, so sway starts it
 
-**A signature check.** A download can be swapped on the way. A signature is a mathematical stamp made with the developers' secret key; anyone can check it with their public key, and it fails if even one byte changed. `torbrowser-launcher` checks Tor Browser's signature when it downloads it.
+# Let Tor's AppArmor profile read resolv.conf through its symlink, for
+# bridges given as host names (webtunnel), then reload the profile
+printf '%s\n' '# >>> debsway: DNS through the resolv.conf symlink >>>' \
+    '@{run}/resolvconf/resolv.conf r,' '@{run}/NetworkManager/{,no-stub-}resolv.conf r,' \
+    '@{run}/systemd/resolve/{,stub-}resolv.conf r,' '# <<< debsway <<<' | sudo tee -a /etc/apparmor.d/local/torbrowser.Tor.tor
+sudo apparmor_parser -r /etc/apparmor.d/torbrowser.Tor.tor
 
-## How it works, step by step
+# Safest, JavaScript off, before its first start: a user.js in the profile
+# torbrowser-launcher will unpack Tor Browser into
+P=~/.local/share/torbrowser/tbb/$(uname -m)/tor-browser/Browser/TorBrowser/Data/Browser/profile.default
+mkdir -p "$P" && chmod 700 "$P"
+cp @DEBSWAY_DIR@/data/tor-browser-safest.js "$P/user.js"
+# A bridge, if you need one: add ONE of these blocks to that user.js
+#  Tor Browser's built-in bridges (TYPE is obfs4, snowflake or meek):
+#    user_pref("torbrowser.settings.bridges.enabled", true);
+#    user_pref("torbrowser.settings.bridges.source", 0);
+#    user_pref("torbrowser.settings.bridges.builtin_type", "TYPE");
+#  your own obfs4 or webtunnel lines from bridges.torproject.org, numbered from 0:
+#    user_pref("torbrowser.settings.bridges.enabled", true);
+#    user_pref("torbrowser.settings.bridges.source", 2);
+#    user_pref("torbrowser.settings.bridges.bridge_strings.0", "obfs4 1.2.3.4:443 ...");
+chmod 600 "$P/user.js"
 
-1. **Turns on Debian's `contrib` section.** `torbrowser-launcher` lives there, not in the main section. The script edits your apt sources (`/etc/apt/sources.list` and any deb822 `*.sources` files that point at debian.org). If it changed anything, it creates `/etc/apt/debsway-enabled-contrib` as a note to itself, so `--remove` knows to undo it.
-2. **Installs `torbrowser-launcher` and `xz-utils`**, plus XWayland. Tor Browser runs on X11 on purpose (the script's comment says it is less fingerprintable), and XWayland lets X11 programs run under sway. Log out and back in once after the first X11 app, because sway only notices XWayland when it starts.
-3. **Fixes Tor's AppArmor profile.** AppArmor is a Linux feature that limits which files a program may read. The package's profile lets Tor read `/etc/resolv.conf`, but that file is usually a link, and AppArmor checks the real file. Bridges given as host names (webtunnel) would then fail with "Temporary failure in name resolution". The script adds a few lines to `/etc/apparmor.d/local/torbrowser.Tor.tor` and reloads the profile.
-4. **Installs a saved copy, if you have one.** If `prep/fetch-tor-browser.sh` saved Tor Browser into `offline/torbrowser`, the script checks its signature against the developers' key and unpacks it. Then torproject.org is never contacted.
-5. **Asks about a bridge** (unless Tor Browser is running, in which case it asks you to quit it and run the script again). If you ran it before, it offers to keep the earlier bridge.
-6. **Writes `user.js`** into Tor Browser's profile (`~/.local/share/torbrowser/tbb/<arch>/tor-browser/Browser/TorBrowser/Data/Browser/profile.default/`). A `user.js` file is a list of settings that Firefox-based browsers apply at every start. Yours contains the Safest settings from `data/tor-browser-safest.js` and, if you chose one, the bridge. Because it is re-applied each start, changing these in the browser's own menus does not last. Run the script again to change them.
+# Start it: the first start downloads Tor Browser and checks its signature
+torbrowser-launcher
+```
 
-Later, the first time you run `torbrowser-launcher`, it downloads Tor Browser from torproject.org and checks its signature. That first download does not go through Tor, so your network can see that you fetched it (not what you do with it). The launcher also keeps Tor Browser updated.
+To undo:
 
-## What it changes on your computer
-
-- Packages: `torbrowser-launcher`, `xz-utils`, XWayland.
-- Debian's `contrib` section turned on in your apt sources, with the note file `/etc/apt/debsway-enabled-contrib`.
-- A block of lines added to `/etc/apparmor.d/local/torbrowser.Tor.tor`.
-- `user.js` in Tor Browser's profile folder, with the debsway lines between `// >>> debsway extras/tor-browser.sh >>>` and `// <<< debsway <<<`.
-- If a bridge was chosen, any older bridge lines saved in `prefs.js` are removed so only yours are used.
-- If you used a saved copy: `~/.config/torbrowser/settings.json` and the unpacked browser under `~/.local/share/torbrowser`.
-- Nothing is added to `~/.local/bin`.
-
-## Using it
-
-- `torbrowser-launcher` starts Tor Browser (or press Super+d and type the name). The first run downloads it.
-- Run `bash extras/tor-browser.sh` again to change the bridge or to repair the settings.
-
-## What it protects against
-
-- **Sites and your network learning where you connect from or where you go**, for what you do inside Tor Browser. Sites see a Tor relay's address. Your provider sees only that you talk to Tor.
-- **Being told apart from other Tor users by browser details**, because Tor Browser is built to look the same for everyone.
-- **A network that blocks or watches Tor**, if you choose a bridge. The bridge is set before the very first connection.
-- **Many attacks through web pages**, because of the Safest level and JavaScript being off. This makes attacks harder, not impossible.
-- **Name look-ups leaking.** Tor Browser looks up site names through Tor (`THREAT-MODEL.md`).
-
-## What it doesn't protect against
-
-- **Anything outside Tor Browser.** Other programs on your computer do not use Tor.
-- **Telling a site who you are.** If you log in, the site knows who you are. Tor hides your address, not your identity.
-- **The first download.** Your network sees you fetch Tor Browser from torproject.org, unless you used a saved copy.
-- **A hacked browser finding your real address.** Tor Browser runs as you, on your computer. If an attack escapes it, it can read your files and see your real address. For that, use Whonix (`extras/whonix.sh`), where the browser sits in a VM whose only way out is Tor.
-- **Writing style, habits and mistakes.** Opening a downloaded file outside Tor Browser, for example, can leak your address.
-- **A determined, well-funded attacker** (`THREAT-MODEL.md`).
-- **The Snowflake lines for Debian's client are untested** by the project. If a bridge fails, try another kind. (Tor Browser itself has Snowflake built in.)
-
-## Removing it
-
-`bash extras/tor-browser.sh --remove`:
-
-- takes out the AppArmor lines it added, and reloads the profile so they stop applying at once;
-- uninstalls `torbrowser-launcher` (and `xz-utils`, unless something else needs it);
-- turns `contrib` off again, but only if this script was what turned it on;
-- asks whether to delete the downloaded Tor Browser and its bookmarks (`~/.local/share/torbrowser`, `~/.cache/torbrowser`, `~/.config/torbrowser`). The default is no. If you say no, it removes only the debsway lines from `user.js`; the browser keeps those settings' last values.
+```
+# The launcher
+sudo apt purge torbrowser-launcher
+# The AppArmor lines added above (between the debsway marker lines)
+sudo sed -i '/^# >>> debsway: DNS through the resolv.conf symlink >>>$/,/^# <<< debsway <<<$/d' /etc/apparmor.d/local/torbrowser.Tor.tor
+# contrib off again, if nothing else needs it
+sudo sed -i -E 's/ main contrib([[:space:]]|$)/ main\1/' /etc/apt/sources.list
+sudo apt update
+# The downloaded browser, its bookmarks and settings
+rm -rf ~/.local/share/torbrowser ~/.cache/torbrowser ~/.config/torbrowser
+```

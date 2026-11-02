@@ -20,10 +20,12 @@
 # Usage: bash whonix.sh            download (if needed) and install
 #        bash whonix.sh --fetch    only download and check, for later
 #        bash whonix.sh --remove
+#        bash whonix.sh --manual   the steps to do it by hand
 # summary: Whonix Gateway + Workstation VMs (1.9 GB download)
 # status: bin:whonix
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/appimage.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 # WHONIX_FPR (pins.sh): Patrick Schleizer, signs all Whonix releases

@@ -1,77 +1,162 @@
 # Your own onion site (`extras/onion-site.sh`)
 
-This sets up a website at a `.onion` address, served from your computer, for sites that need more than plain files. The site runs inside a virtual machine (VM) that has no network at all, so nothing the site's software does can give away where your computer is. Only Tor, on your computer, can reach it.
+## SYNOPSIS
 
-## The problem it solves
+```
+bash ~/debsway/extras/onion-site.sh            set it up and build its VM (asks: which kind, public or private, a bridge)
+bash ~/debsway/extras/onion-site.sh --remove   take it out (asks before deleting the address and the VM)
+bash ~/debsway/extras/onion-site.sh --manual   print the manual steps below
 
-The most common way an onion site gives away where it runs is its own software reaching out to the internet: loading an image or font, checking for updates, sending email, looking up a name. Each of those connections can show the real address. By putting the site where it cannot reach any network, these leaks are impossible.
+onion-site start | stop | status    the site is up while its VM runs (it starts at every boot)
+onion-site upload static FOLDER     your files, served as they are
+onion-site upload app FOLDER        your app (python: a Flask app.py; any: run it on 127.0.0.1:8000)
+onion-site shell                    a shell in the VM (as the user "site")
+onion-site update                   the VM's security updates, through Tor
+onion-site address                  the address again
+```
 
-## The ideas behind it
+Your own onion site, a Tor .onion address, able to run more than static files:
+nginx in front, and either your own app server ("any") or a Python (Flask)
+app run by gunicorn ("python"). It runs on this computer, but in a VM with no
+network at all (QEMU's `restrict=on`), so whatever the site does it can't
+give away this computer's address. The VM is built with the bundled
+mockvps-kvm and run by a locked user, `onion-site`, whose firewall rule
+(`data/onion-site-firewall.nft`) also governs it; two loopback ports lead in,
+its ssh console and its nginx, which Tor's onion service points at. Tor runs
+on this computer (the system tor service, shared with apt over Tor and remote
+access), with its defences against floods of visits. The site is public, or
+private: only visitors you give a client key can even find it. The VM starts
+at every boot, and gets security updates through this computer's Tor with
+`onion-site update`. Your user may run exactly one thing as `onion-site`, the
+`onion-site-session` script, through a rule in `/etc/sudoers.d`.
 
-**Tor and an onion service.** Tor is a network of volunteer relays that hides who talks to whom. An onion service is a website reachable only through Tor at a `.onion` address, without anyone learning where it is hosted. A visitor opens it in Tor Browser. See `docs/extras/tor-browser.md`.
+## LIMITS
 
-**A virtual machine.** A whole pretend computer run by a program (here QEMU with KVM) with its own disk and system. If something goes wrong inside, it stays inside the VM unless the program running the VM has a bug.
+- The site is up only while this computer is on: that pattern can link it to you.
+- A hole in your app gets the VM and the site's data (not this computer).
+- The app has no network: no fonts, images or email from the internet.
+- Whoever has `/var/lib/tor/debsway-onion-site` can be this address: back it up as root, and keep it private.
 
-**No network, but two small doors.** After its first setup the VM runs with QEMU's `restrict=on`: the guest cannot send a single packet out. Two ports on your computer's own loopback lead in: its SSH console (2243) and its nginx web server (18080).
+## MANUAL INSTALL
 
-**nginx and an app server.** nginx serves static files (pages, images) and hands everything else to your own program running on `127.0.0.1:8000` inside the VM. **gunicorn** runs a Python **Flask** app. You choose which one when you set it up.
+```
+# KVM must be on: this must list /dev/kvm
+ls -l /dev/kvm
+# Your choices: APP is python (Flask with gunicorn) or any (your own app
+# server); a private site gets a client key further down
+APP=python
 
-**Client authorization.** An option for a private site: only visitors who hold a key you gave them can even find it. Tor Browser asks for the key the first time.
+# Debian starts tor the moment it is installed: hold it until it is set up
+# (skip this if apt over Tor or remote access already runs tor)
+sudo systemctl mask tor.service tor@default.service
+# The VM, socat, nftables, ssh into the VM, the checked Debian installer, tor
+# and openssl (add obfs4proxy or snowflake-client for a bridge)
+sudo apt install --no-install-recommends qemu-system-x86 qemu-utils socat nftables openssh-client cpio gzip wget gpgv \
+    debian-archive-keyring tor openssl
 
-**A firewall rule.** A rule that allows or refuses network traffic. Here it applies to the `onion-site` user, who runs the VM.
+# The onion-site user, locked, with /dev/kvm as its only extra group
+sudo useradd --create-home --home-dir /home/onion-site --shell /bin/bash --user-group --comment "debsway onion site VM" onion-site
+sudo usermod --lock onion-site
+sudo chmod 700 /home/onion-site
+sudo usermod -aG kvm onion-site
 
-**A bridge.** A Tor relay not on the public list, for networks that block Tor. See "Bridges" in `docs/install-base.md`; obfs4 and Snowflake are offered here.
+# The firewall rule on that user (and so its VM), loaded at every boot
+sudo install -D -o root -g root -m 0644 @DEBSWAY_DIR@/data/onion-site-firewall.nft /etc/debsway/onion-site.nft
+printf '%s\n' '[Unit]' 'Description=Keep the onion-site user (and its VM) off the local network' \
+    'Before=network-pre.target' 'Wants=network-pre.target' '' '[Service]' \
+    'Type=oneshot' 'RemainAfterExit=yes' 'ExecStart=/usr/sbin/nft -f /etc/debsway/onion-site.nft' \
+    'ExecStop=/usr/sbin/nft delete table inet debsway_onion_site' '' '[Install]' 'WantedBy=multi-user.target' |
+    sudo tee /etc/systemd/system/debsway-onion-site-firewall.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now debsway-onion-site-firewall.service
 
-## How it works, step by step
+# The VM engine, the session script and the no-abstract-sockets wrapper, as root's files
+sudo install -d -o root -g root -m 0755 /usr/local/libexec
+sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/vendor/mockvps-kvm/mockvps-kvm.sh /usr/local/libexec/onion-site-mockvps-kvm
+sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/onion-site-session /usr/local/libexec/onion-site-session
+sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/no-abstract-sockets /usr/local/libexec/debsway-no-abstract-sockets
+# Your choices, and the provisioning script with them filled in
+printf 'app=%s\naccess=%s\n' "$APP" public | sudo install -o root -g root -m 0644 /dev/stdin /etc/debsway/onion-site.conf
+sudo install -d -o onion-site -g onion-site -m 0700 /home/onion-site/.config /home/onion-site/.config/onion-site
+sed -e "s|[@]APP@|$APP|g" -e 's|[@]VM_USER@|site|g' @DEBSWAY_DIR@/data/onion-site-provision.sh |
+    sudo install -o onion-site -g onion-site -m 0600 /dev/stdin /home/onion-site/.config/onion-site/provision.sh
 
-1. **Needs `/dev/kvm`.** If missing, it tells you to turn on virtualization in the firmware.
-2. **Asks first,** before installing anything: which app (1 `any`, your own server on `127.0.0.1:8000`; 2 `python`, a Flask app), who can reach it (public or private), and about a bridge if the system tor is not yet set up by something else.
-3. **Installs** `qemu-system-x86`, `qemu-utils`, `socat`, `nftables`, `openssh-client`, `cpio`, `gzip`, `wget`, `gpgv`, `debian-archive-keyring`, `tor`, `openssl` (and a bridge program). Tor is kept from starting until its settings are in.
-4. **Makes the `onion-site` user:** locked (no password, no login), in the `kvm` group.
-5. **Loads a firewall rule for that user** (`data/onion-site-firewall.nft`, run at boot by `debsway-onion-site-firewall.service`). It keeps even the QEMU process off your router, printers, other machines and local services, except two loopback doors: the VM's SSH console (2243) and Tor's SOCKS port (9050, used only for updates). DNS is allowed. The internet is allowed because the first setup needs it.
-6. **Installs the VM engine and the command:** `mockvps-kvm` from `vendor/` into `/usr/local/libexec/onion-site-mockvps-kvm`, the session script, a one-line sudo rule in `/etc/sudoers.d/debsway-onion-site` (checked with `visudo`) that lets you run only that script as `onion-site`, and `~/.local/bin/onion-site`.
-7. **Sets up Tor's onion service** in `/etc/tor/torrc`: port 80 of the onion address leads to `127.0.0.1:18080`, with Tor's defences against floods of visits (and a proof-of-work defence where this Tor has it). The settings are checked before Tor restarts. If private, it makes a client key and shows it once.
-8. **Starts Tor** (`tor.service` and `tor@default.service`, both enabled, so Tor runs again after a reboot) and waits up to 3 minutes. It saves the address to `~/.local/state/debsway/onion-site-address`.
-9. **Builds the VM** (without asking): this installs Debian and nginx (and gunicorn with Flask) in the VM, takes 5 to 15 minutes and downloads a few hundred MB, without Tor. The time zone in the VM is UTC; nginx shows no version and keeps no access log. After that the VM has no network.
-10. **Starts the site at every boot:** `debsway-onion-site.service` runs the VM as `onion-site` after its firewall rule, and powers it off cleanly at shutdown. The site is up whenever the computer is on.
+# Your user may run the session script, and nothing else, as onion-site. visudo
+# checks the rule first: never put a rule in /etc/sudoers.d it hasn't passed.
+printf '%s ALL=(onion-site) NOPASSWD: /usr/local/libexec/onion-site-session\n' "$(id -un)" >/tmp/debsway-onion-site
+sudo visudo -cf /tmp/debsway-onion-site
+sudo install -o root -g root -m 0440 /tmp/debsway-onion-site /etc/sudoers.d/debsway-onion-site
+rm /tmp/debsway-onion-site
+install -D -m 0755 @DEBSWAY_DIR@/bin/onion-site ~/.local/bin/onion-site
 
-## What it changes on your computer
+# A bridge, if you need one, at the end of /etc/tor/torrc (as in remote-access.md)
+# The onion service: port 80 of the address leads to the VM's nginx on
+# 127.0.0.1:@ONION_SITE_WEB_PORT@, with Tor's limits on floods of visits
+sudo install -d -m 0700 -o debian-tor -g debian-tor @ONION_SITE_SVC_DIR@ @ONION_SITE_SVC_DIR@/authorized_clients
+printf '%s\n' '# >>> debsway onion-site >>>' 'HiddenServiceDir @ONION_SITE_SVC_DIR@/' 'HiddenServiceVersion 3' \
+    'HiddenServicePort 80 127.0.0.1:@ONION_SITE_WEB_PORT@' 'HiddenServiceEnableIntroDoSDefense 1' \
+    'HiddenServicePoWDefensesEnabled 1' '# <<< debsway onion-site <<<' | sudo tee -a /etc/tor/torrc
+# tor must accept it ("Configuration was valid"); if it names
+# HiddenServicePoWDefensesEnabled, this tor lacks that defence: delete that line
+sudo tor --defaults-torrc /usr/share/tor/tor-service-defaults-torrc -f /etc/tor/torrc --RunAsDaemon 0 --verify-config
+# A mark that tells debsway's other scripts this uses the system tor
+echo 'Written by debsway extras/onion-site.sh: the system tor service runs the onion site.' | sudo tee @ONION_SITE_MARK@
 
-- Packages: those listed above.
-- The user `onion-site` and its home `/home/onion-site` (the VM and the site's data).
-- `/etc/debsway/onion-site.nft`, `/etc/debsway/onion-site.conf`, `/etc/systemd/system/debsway-onion-site-firewall.service` (nft table `inet debsway_onion_site`), `/etc/systemd/system/debsway-onion-site.service` (the VM at boot).
-- `/usr/local/libexec/onion-site-session`, `onion-site-mockvps-kvm` and the `no-abstract-sockets` helper; `/etc/sudoers.d/debsway-onion-site`.
-- `/etc/tor/torrc` (marked blocks), `/etc/tor/.debsway-onion-site`, `/var/lib/tor/debsway-onion-site/` (the address and keys); `tor.service` and `tor@default.service` enabled.
-- `~/.local/bin/onion-site` and `~/.local/state/debsway/onion-site-address`.
+# For a private site: a client key (tor gets the public half; give the
+# private half to the visitor, whose Tor Browser asks for it)
+openssl genpkey -algorithm x25519 -outform DER -out /tmp/client.der
+PRIV=$(tail -c 32 /tmp/client.der | base32 | tr -d =)
+PUB=$(openssl pkey -inform DER -in /tmp/client.der -pubout -outform DER | tail -c 32 | base32 | tr -d =)
+rm /tmp/client.der
+echo "descriptor:x25519:$PUB" | sudo install -o debian-tor -g debian-tor -m 0600 /dev/stdin @ONION_SITE_SVC_DIR@/authorized_clients/client.auth
+sudo sed -i 's/^access=public$/access=private/' /etc/debsway/onion-site.conf
+echo "the visitor's key: $PRIV"
 
-## Using it
+# Start tor now and at every boot, and show the address
+sudo systemctl unmask tor.service tor@default.service
+sudo systemctl enable tor.service tor@default.service
+sudo systemctl restart tor@default.service
+sleep 30
+sudo cat @ONION_SITE_SVC_DIR@/hostname
 
-- `onion-site start | stop | status`: the site is up only while its VM runs. It starts by itself at every boot; `stop` takes it down until the next boot or `start`. To keep it from starting at boot: `sudo systemctl disable debsway-onion-site`. `start` and `status` also say when Tor isn't running on this computer, the usual reason the address can't be reached.
-- **Can't reach the address?** Check `onion-site status` (the VM) and `systemctl status tor@default` (Tor). A new address can take a minute or two to be found the first time. A private site opens only with its client key: Tor Browser asks for it (a key icon in the address bar).
-- `onion-site upload static FOLDER`: your files, served as they are. It replaces what was there.
-- `onion-site upload app FOLDER`: your app (Flask: `app.py` with `app = Flask(...)`; otherwise run it on `127.0.0.1:8000` through `onion-site shell`).
-- `onion-site shell`: a shell in the VM as the user `site`.
-- `onion-site update`: the VM's security updates. It lends the VM a relay to your Tor for apt only, upgrades, then takes it away.
-- `onion-site address`: the address again. `onion-site rebuild`: a fresh VM (the address stays; the site's files do not).
-- Run `bash extras/onion-site.sh` again for a new client key (private sites).
-- Back up `/var/lib/tor/debsway-onion-site` as root to keep the address.
+# Build the VM (unattended, 10-20 minutes)
+sudo -u onion-site /usr/local/libexec/onion-site-session install
 
-## What it protects against
+# Start it at every boot, after its firewall rule, and power it off cleanly at shutdown
+printf '%s\n' '[Unit]' "Description=The onion site's VM" 'Requires=debsway-onion-site-firewall.service' \
+    'After=debsway-onion-site-firewall.service tor@default.service' '' '[Service]' \
+    'Type=oneshot' 'RemainAfterExit=yes' 'User=onion-site' \
+    'ExecStart=/usr/local/libexec/onion-site-session start' 'ExecStop=/usr/local/libexec/onion-site-session stop' \
+    'TimeoutStartSec=600' 'TimeoutStopSec=120' '' '[Install]' 'WantedBy=multi-user.target' |
+    sudo tee /etc/systemd/system/debsway-onion-site.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now debsway-onion-site.service
+onion-site status
+```
 
-- **The site's software giving away your address,** because the VM can send nothing out (`THREAT-MODEL.md`).
-- **A hole in your app reaching your computer.** It gets the VM and the site's data, not your home or files.
-- **Floods of visits,** partly, through Tor's defences.
-- **The VM reaching your local network,** by the firewall rule on its user.
+To undo:
 
-## What it doesn't protect against
-
-- **When it is up.** The site is only up while your computer is on and the VM runs. That timing can link it to you. A dedicated machine is the right host for anything serious.
-- **What you put in the site:** names, metadata in files, writing style.
-- **A hole in QEMU or the kernel,** which a VM does not fully stop.
-- **It is a service strangers can send requests to** (unless private). Turn it on only if you need it.
-- **Your network seeing that you use Tor,** unless you chose a bridge.
-- **Fetching anything at run time.** The app cannot reach the internet, ever; this is a limit, not a protection.
-
-## Removing it
-
-`bash extras/onion-site.sh --remove` stops the VM, removes the Tor blocks, the marker, the firewall service and rule, the sudo rule, helper scripts and the command. It asks before deleting the `.onion` address (default: keep) and before deleting the `onion-site` user and its home, which holds the VM and the site's data (default: keep). It uninstalls the packages it added, unless another debsway script needs them.
+```
+# The VM off, and no longer started at boot
+sudo systemctl disable --now debsway-onion-site.service
+sudo systemctl disable --now debsway-onion-site-firewall.service
+sudo rm /etc/systemd/system/debsway-onion-site.service /etc/systemd/system/debsway-onion-site-firewall.service /etc/debsway/onion-site.nft
+sudo systemctl daemon-reload
+# The onion service's lines in torrc, its mark, and its address (gone for good)
+sudo sed -i '/^# >>> debsway onion-site >>>$/,/^# <<< debsway onion-site <<<$/d' /etc/tor/torrc
+sudo rm @ONION_SITE_MARK@
+sudo rm -rf @ONION_SITE_SVC_DIR@
+# Stop tor (unless apt over Tor or remote access uses it)
+sudo systemctl disable --now tor@default.service tor.service
+# The command, the sudo rule, root's scripts and the settings
+rm ~/.local/bin/onion-site
+sudo rm /etc/sudoers.d/debsway-onion-site /usr/local/libexec/onion-site-session /usr/local/libexec/onion-site-mockvps-kvm /etc/debsway/onion-site.conf
+# (the no-abstract-sockets wrapper only if no other sandbox uses it)
+sudo rm /usr/local/libexec/debsway-no-abstract-sockets
+# The user, its home and the VM (with the site's files and data)
+sudo pkill -KILL -u onion-site
+sudo userdel -r onion-site
+# The packages, marked "automatic": autoremove takes them out only if nothing needs them
+sudo apt-mark auto qemu-system-x86 qemu-utils socat nftables tor openssl
+sudo apt autoremove --purge
+```

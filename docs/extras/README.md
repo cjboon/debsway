@@ -3,8 +3,7 @@
 One page per extra. The short list of all of them is in
 [../extras.md](../extras.md); general advice is in [../opsec.md](../opsec.md).
 
-The pages are being rewritten into one shape (so far: w3m, Tuta Mail,
-encrypted DNS; the others are still the longer, older kind):
+Every page has the same shape:
 
 - **SYNOPSIS**: the commands to install, remove and use it.
 - One paragraph on what it is.

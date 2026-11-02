@@ -14,11 +14,12 @@
 # if changed in the browser; run this again to change them.
 # If prep/fetch-tor-browser.sh saved a copy into ../offline/torbrowser, that copy is
 # checked and installed, so nothing is fetched from torproject.org.
-# Usage: bash tor-browser.sh [--remove]
+# Usage: bash tor-browser.sh [--remove | --manual]
 # summary: Tor Browser with your bridges (bridge lines needed)
 # status: apt:torbrowser-launcher
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/appimage.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 MARK=/etc/apt/debsway-enabled-contrib

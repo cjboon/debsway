@@ -8,10 +8,11 @@
 # shown once, here, for you to copy to the computer you'll connect from.
 # Like apt over Tor, it asks first whether you need a bridge to reach Tor.
 # Run it again to repair it, see the address, or authorize another computer.
-# Usage: bash remote-access.sh [--remove]
+# Usage: bash remote-access.sh [--remove | --manual]
 # summary: ssh in over a Tor onion service (no open port)
 # status: file:/etc/tor/.debsway-remote-access
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 MARK=/etc/tor/.debsway-remote-access

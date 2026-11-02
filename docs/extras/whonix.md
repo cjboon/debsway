@@ -1,76 +1,151 @@
-# Whonix, Tor in a virtual machine (`extras/whonix.sh`)
+# Whonix (`extras/whonix.sh`)
 
-Whonix is a pair of virtual computers that run inside your computer. One of them (the Gateway) runs Tor. The other (the Workstation) is where you browse, and it can reach the internet only through the Gateway. This extra downloads Whonix, checks it, installs the tools to run it, and sets it up so you can start it with one command.
+## SYNOPSIS
 
-## The problem it solves
+```
+bash ~/debsway/extras/whonix.sh            download (if needed), check and install both VMs (asks about a bridge)
+bash ~/debsway/extras/whonix.sh --fetch    only download and check it, for later
+bash ~/debsway/extras/whonix.sh --remove   remove the VMs (asks before deleting their disks)
+bash ~/debsway/extras/whonix.sh --manual   print the manual steps below
 
-Tor Browser hides your real internet address, but it runs as an ordinary program on your computer. If someone broke into the browser, the program could look at your real network connection and tell the attacker your real address.
+whonix             start both VMs and open the Workstation (or Super+d)
+whonix gateway     start the Gateway and open it (Tor settings, bridges)
+whonix stop        shut both down (one still running after 20 seconds is switched off)
+```
 
-Whonix puts the browser in a separate box that has no way out except through Tor. Even a hacked browser inside that box has no real address to find, because the box has never been given one.
+Whonix runs Tor in one virtual machine, the Gateway, and your programs in
+another, the Workstation, whose only network is the Gateway, so even a hacked
+browser in the Workstation can't learn your real address. Everything runs as
+your user under KVM (libvirt's `qemu:///session`), with no root daemon or host
+network setup. The download (about 1.9 GB) is checked against Whonix's signing
+key, pinned in `pins.sh` (`WHONIX_FPR`), and kept in `offline/whonix`. Before
+the first boot, debsway writes into the images, without mounting them (with
+qemu-img and debugfs): a bridge for the Gateway if you need one (obfs4 lines
+you paste, or Snowflake), so its very first connection uses it, or Tor kept
+off until you turn it on; and Tor Browser at Safest with JavaScript off in the
+Workstation (`data/tor-browser-safest.js`).
 
-## The ideas behind it
+## LIMITS
 
-**Tor.** A network of volunteer relays that passes your traffic through three hops so that no single relay knows both who you are and where you are going. `extras/tor-browser.md` explains it in more detail.
+- A bug in KVM or QEMU could reach this computer from a VM.
+- What you type into a site still identifies you if it's about you; Tor hides the address, not the person.
+- `whonix stop` switches off a VM that doesn't shut down in 20 seconds: save your work inside first.
+- Whonix's own updates run inside the VMs: update them there.
 
-**A virtual machine (VM).** A VM is a whole computer simulated by a program. It has its own disk, its own system and its own network card, all pretend. Whatever happens inside stays inside unless the program running it has a bug. It is like a room with its own door and no windows: the outside only sees what you let through.
+## MANUAL INSTALL
 
-**KVM and QEMU.** KVM is a feature of Linux (and of your processor) that lets VMs run at nearly full speed. QEMU is the program that builds the pretend computer. `libvirt` and `virt-manager` are the tools that define VMs and show their screens.
+```
+# KVM must be on: this must list /dev/kvm (if not, turn on VT-x / AMD-V in the firmware settings)
+ls -l /dev/kvm
+# KVM, libvirt and virt-manager (from whonix.org/wiki/KVM, for Debian trixie),
+# and the tools to unpack and edit the images
+sudo apt install --no-install-recommends qemu-system-x86 qemu-system-gui qemu-system-modules-spice qemu-utils \
+    libvirt-daemon libvirt-daemon-driver-qemu libvirt-daemon-driver-storage libvirt-daemon-driver-nodedev \
+    libvirt-clients virt-manager gir1.2-spiceclientgtk-3.0 passt ovmf swtpm swtpm-tools \
+    xz-utils e2fsprogs fdisk acl
+# Your user may use KVM and libvirt (in full from your next login)
+sudo adduser "$(id -un)" kvm
+sudo adduser "$(id -un)" libvirt
+# No core dumps, and no limits libvirt can't set as a normal user
+mkdir -p ~/.config/libvirt
+printf 'max_core = 0\nmax_processes = 0\nmax_files = 0\n' >~/.config/libvirt/qemu.conf
 
-**Gateway and Workstation.** The Gateway has two network connections: one to the real internet, over which it speaks only Tor, and one private link to the Workstation. The Workstation has only the private link. Everything it sends leaves via Tor, or does not leave.
+# The newest version: the highest number on whonix.org's KVM page
+wget -qO- https://www.whonix.org/wiki/KVM | grep -o 'download/libvirt/[0-9.]*/Whonix-LXQt-[0-9.]*\.Intel_AMD64' | sort -uV | tail -1
+V=18.2.4.2
+F=Whonix-LXQt-$V.Intel_AMD64.qcow2.libvirt.xz
+mkdir -p ~/whonix-download && cd ~/whonix-download
+# The image (about 1.9 GB), its signature and the signing key
+wget -c https://www.whonix.org/download/libvirt/$V/$F https://www.whonix.org/download/libvirt/$V/$F.asc
+wget -O derivative.asc @WHONIX_KEY_URL@
+# The key, in a keyring of its own. This must show the fingerprint @WHONIX_FPR@
+mkdir -m 700 gpg
+gpg --homedir gpg --import derivative.asc
+gpg --homedir gpg --fingerprint @WHONIX_FPR@
+# The image is signed by it: this must say "Good signature" with
+# "Primary key fingerprint" @WHONIX_FPR@. Stop here if not.
+gpg --homedir gpg --verify $F.asc $F
 
-**Bridges.** A bridge is a Tor relay that is not on the public list, for networks that block Tor. See "Bridges" in `docs/install-base.md`. The Whonix Gateway can use obfs4 and Snowflake. It cannot use webtunnel or meek, because it has no program for them.
+# Unpack it, and read Whonix's license and disclaimer before going on
+tar -xSf $F
+less WHONIX_BINARY_LICENSE_AGREEMENT WHONIX_DISCLAIMER
+mv Whonix-Gateway-*.qcow2 gw.qcow2 && mv Whonix-Workstation-*.qcow2 ws.qcow2
 
-**A signature check.** A signature is a mathematical stamp made with a secret key that anyone can check with the public key. If a single byte of the download changed, the check fails.
+# Files to put into the images before their first boot:
+# the Workstation's Tor Browser at Safest, JavaScript off
+cp @DEBSWAY_DIR@/data/tor-browser-safest.js user.js
+# A bridge for the Gateway, if you need one, in 50_user.conf: obfs4 lines
+# from bridges.torproject.org (for Snowflake, put "ClientTransportPlugin
+# snowflake exec /usr/bin/snowflake-client" and the Snowflake "Bridge" lines
+# from data/snowflake-bridges.txt instead)
+printf '%s\n' 'UseBridges 1' 'ClientTransportPlugin obfs4 exec /usr/bin/obfs4proxy' \
+    'Bridge obfs4 1.2.3.4:443 FINGERPRINT cert=... iat-mode=0' >50_user.conf
 
-## How it works, step by step
+# put IMAGE FILE DEST: write FILE into the image's root file system as DEST
+# (root's, mode 0644), checked, without mounting it
+put() {
+    qemu-img convert -O raw "$1" "$1.raw"
+    start=$(sfdisk -d "$1.raw" | sed -n 's/.*start= *\([0-9]*\),.*name="primary".*/\1/p')
+    fs="$1.raw?offset=$((start * 512))"
+    dir=$(dirname "$3")
+    debugfs -w -R "mkdir $dir" "$fs"
+    debugfs -w -f - "$fs" <<EOF
+sif $dir uid 0
+sif $dir gid 0
+sif $dir mode 040755
+rm $3
+write $2 $3
+sif $3 uid 0
+sif $3 gid 0
+sif $3 mode 0100644
+EOF
+    # It must be there, as written, and the file system must check out;
+    # if not, the image is left as it was
+    if ! debugfs -R "cat $3" "$fs" | cmp -s - "$2" || ! e2fsck -fn "$fs"; then
+        echo "Couldn't write $3 into $1; it is unchanged." >&2
+        rm "$1.raw"
+        return 1
+    fi
+    qemu-img convert -O qcow2 -o cluster_size=2M,extended_l2=on "$1.raw" "$1.new"
+    rm "$1.raw" && mv "$1.new" "$1"
+}
+put ws.qcow2 user.js /usr/local/etc/torbrowser.d/user.js
+put gw.qcow2 50_user.conf /usr/local/etc/torrc.d/50_user.conf
+# (each must end without "Couldn't write"; stop here if one does)
 
-1. **Needs `/dev/kvm`.** If it is missing, the script stops and tells you to turn on virtualization (VT-x or AMD-V) in the firmware settings.
-2. **Installs the tools:** QEMU, libvirt, `virt-manager`, SPICE, `passt`, `ovmf`, `swtpm`, `qemu-utils`, `xz-utils`, `e2fsprogs`, `fdisk` and `acl` (the list follows Whonix's own KVM instructions for Debian trixie). It adds you to the `kvm` and `libvirt` groups if you are not in them. You don't have to log out first: your desktop session usually has `/dev/kvm` already, and if it doesn't, the script allows it for this boot (an ACL; `acl` is installed for that), so `whonix` works right away. It writes `~/.config/libvirt/qemu.conf` (no core dumps, no limits that a normal user cannot set), unless that file exists.
-3. **Downloads Whonix** (about 1.9 GB, the LXQt edition). It reads the newest version number from whonix.org's KVM page, downloads the image and its signature, and checks the signature against Whonix's signing key, whose fingerprint is pinned in `pins.sh`. If the check fails, the download is deleted. The file is kept in `offline/whonix/`, so a reinstall does not fetch it again. `bash extras/whonix.sh --fetch` does only this step.
-4. **Unpacks it** and shows you where Whonix's license and disclaimer are. You have to confirm that you read and accept them.
-5. **Asks about a bridge** for the Gateway. If you give one, the script writes it into the Gateway's disk image as `/usr/local/etc/torrc.d/50_user.conf`, so its first connection uses it. If you say you need a bridge but have none yet, it writes `DisableNetwork 1` so Tor stays off until you turn it on in the Gateway (`whonix gateway`). If you say no bridge, nothing is written and the Gateway connects directly at its first boot.
-6. **Sets the Workstation's browser** to Safest with JavaScript off, by writing `data/tor-browser-safest.js` into the Workstation image as `/usr/local/etc/torbrowser.d/user.js`.
-7. **Edits the images without mounting them,** using `qemu-img` and `debugfs`. The script reads every written file back to make sure it is correct and checks the filesystem afterwards.
-8. **Defines the VMs** (`Whonix-Gateway` and `Whonix-Workstation`) with libvirt, in a disk pool called `default` pointing at `~/.local/share/libvirt/images`, and installs the `whonix` command.
+# The VMs, as your user: the storage pool, the disks, the definitions
+mkdir -p ~/.local/share/libvirt/images
+virsh -c qemu:///session pool-define-as default dir --target ~/.local/share/libvirt/images
+virsh -c qemu:///session pool-autostart default
+virsh -c qemu:///session pool-start default
+mv gw.qcow2 ~/.local/share/libvirt/images/Whonix-Gateway.qcow2
+mv ws.qcow2 ~/.local/share/libvirt/images/Whonix-Workstation.qcow2
+virsh -c qemu:///session pool-refresh default
+virsh -c qemu:///session define Whonix-Gateway.xml
+virsh -c qemu:///session define Whonix-Workstation.xml
 
-Everything runs as your user, through `qemu:///session`. There is no root service and no network setup on the host.
+# The whonix command
+install -D -m 0755 @DEBSWAY_DIR@/bin/whonix ~/.local/bin/whonix
+cd ~ && rm -rf ~/whonix-download
+whonix
+```
 
-## What it changes on your computer
+To undo:
 
-- Packages: the KVM and libvirt tools listed above.
-- You are added to the groups `kvm` and `libvirt`.
-- `~/.config/libvirt/qemu.conf` (if it did not exist).
-- `offline/whonix/` in the debsway folder: the downloaded archive, its signature and the signing key.
-- `~/.local/share/libvirt/images/Whonix-Gateway.qcow2` and `Whonix-Workstation.qcow2`: the VMs' disks.
-- Two libvirt VM definitions and a libvirt storage pool called `default` (set to start automatically).
-- `~/.local/bin/whonix`.
-- No firewall rules and no services of its own.
-
-## Using it
-
-- `whonix` starts both VMs and opens the Workstation's screen.
-- `whonix gateway` starts the Gateway and opens it, for the Tor settings.
-- `whonix stop` shuts both down. Each VM is asked to shut down first; Whonix's desktop answers that with a shutdown dialog, so a VM still running after 20 seconds is switched off (QEMU closes its disk cleanly, but the system inside doesn't get to shut down, as if its power button were held). Save your work in the Workstation first. `WHONIX_STOP_WAIT=60 whonix stop` waits longer.
-- Started from Super+d, `whonix` shows what went wrong as a notification if a VM can't start.
-- `bash extras/whonix.sh` again: repair, or notes "already installed".
-
-## What it protects against
-
-- **A hacked browser revealing your real address.** The Workstation's only network is the Gateway. This is the main point of the extra and is stated in `THREAT-MODEL.md`.
-- **Your network seeing that you use Tor,** if you chose a bridge. It is set before the first connection.
-- **A tampered download,** thanks to the signature check against a pinned key.
-- **Browser exploits reaching your files,** at least in the usual case: the browser sits in a VM, apart from your home folder.
-
-## What it doesn't protect against
-
-- **A bug in QEMU or the kernel.** The VM is a wall, not a vault. A serious bug could let an attacker out of the VM.
-- **Telling a site who you are.** If you log in, the site knows. Tor hides your address, not your identity.
-- **Habits and mistakes,** such as moving files between the VM and your computer, or using your name.
-- **Your network seeing the first connection to Whonix's website** to fetch the download, as no Tor is available yet.
-- **Whonix's own limits.** This script installs Whonix; it does not change what Whonix does inside.
-- **A laptop that is on or asleep** (`THREAT-MODEL.md`).
-- **A determined, well-funded attacker** who targets you.
-
-## Removing it
-
-`bash extras/whonix.sh --remove` first asks whether to delete the disks (`Whonix-*.qcow2`), which hold everything you saved inside the VMs; the default is no. Then it stops and removes both VM definitions. If you keep the disks, installing Whonix again asks before it puts fresh disks in their place. It removes the `whonix` command and uninstalls the KVM and virt-manager packages, unless another debsway script still needs them. It keeps the downloaded archive in `offline/whonix/` and tells you to delete it yourself if you like. It does not remove `~/.config/libvirt/qemu.conf` or take you out of the `kvm` and `libvirt` groups.
+```
+# Switch the VMs off and forget them
+virsh -c qemu:///session destroy Whonix-Workstation
+virsh -c qemu:///session destroy Whonix-Gateway
+virsh -c qemu:///session undefine Whonix-Workstation
+virsh -c qemu:///session undefine Whonix-Gateway
+# Their disks, and everything saved inside the VMs
+rm ~/.local/share/libvirt/images/Whonix-Gateway.qcow2 ~/.local/share/libvirt/images/Whonix-Workstation.qcow2
+# The command
+rm ~/.local/bin/whonix
+# KVM, libvirt and virt-manager, marked "automatic": autoremove takes them out
+# only if nothing (mockvps-kvm, claude-vm, the onion site) needs them
+sudo apt-mark auto qemu-system-x86 qemu-system-gui qemu-system-modules-spice qemu-utils libvirt-daemon \
+    libvirt-daemon-driver-qemu libvirt-daemon-driver-storage libvirt-daemon-driver-nodedev libvirt-clients \
+    virt-manager gir1.2-spiceclientgtk-3.0 passt ovmf swtpm swtpm-tools
+sudo apt autoremove --purge
+```

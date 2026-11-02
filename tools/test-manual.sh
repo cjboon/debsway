@@ -108,7 +108,17 @@ for doc in "$HERE"/docs/extras/*.md; do
     check "$name --manual: runs nothing (no sudo, apt, systemctl...)" test ! -s "$T/calls"
     check "$name --manual: writes nothing in your home" test -z "$(ls -A "$T/home")"
 done
-check "at least the first three pages have manual steps (w3m, tutamail, secure-dns)" test "$pages" -ge 3
+# Every extra has them, and takes --manual
+missing=()
+for script in "$HERE"/extras/*.sh "$HERE"/extras/firefox-profiles/new-profile.sh; do
+    grep -q -- '= --manual \]' "$script" || missing+=("${script#"$HERE"/}")
+done
+check "every extra takes --manual${missing:+ (not: ${missing[*]})}" test ${#missing[@]} -eq 0
+missing=()
+for script in "$HERE"/extras/*.sh; do
+    grep -qx '## MANUAL INSTALL' "$HERE/docs/extras/$(basename "$script" .sh).md" 2>/dev/null || missing+=("${script##*/}")
+done
+check "every extra has a page with MANUAL INSTALL${missing:+ (not: ${missing[*]})}" test ${#missing[@]} -eq 0
 
 # ---- secure-dns: the manual Unbound settings are the script's ----
 (
@@ -127,6 +137,11 @@ check "at least the first three pages have manual steps (w3m, tutamail, secure-d
     done
     exit "$fails"
 ) || fails=$?
+
+# ---- remote-access: the manual sshd settings are the script's, line for line ----
+script=$(sed -n '/^sudo tee "\$SSHD_CONF" >\/dev\/null <<EOF$/,/^EOF$/p' "$HERE/extras/remote-access.sh" | sed '1d;$d' | grep -v '^#')
+manual=$(HOME=$T/home bash "$R/extras/remote-access.sh" --manual | sed -n '/^sudo tee \/etc\/ssh\/sshd_config.d\/00-debsway-remote-access.conf <<EOF$/,/^EOF$/p' | sed '1d;$d' | grep -v '^#')
+check "remote-access: the manual sshd settings are the script's" bash -c '[ "$(wc -l <<<"$1")" -gt 10 ] && [ "$1" = "$2" ]' _ "$script" "$manual"
 
 # ---- claude-vm: the manual sed fills the provisioning script as the script does ----
 (
