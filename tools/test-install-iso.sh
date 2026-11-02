@@ -201,7 +201,7 @@ apt_fix() { # HTTPS(true|false): apt_sources_ensure's work in $A (for trixie)
           true) is_installed() { return 0; } ;;   # ca-certificates is there
           false) is_installed() { return 1; } ;;  # and it is not
       esac
-      VERSION_CODENAME=trixie DEBSWAY_APT_DIR=$A SUDO= apt_sources_ensure )
+      VERSION_CODENAME=trixie DEBSWAY_APT_DIR=$A SUDO='' apt_sources_ensure )
 }
 sources '# deb cdrom:[Debian GNU/Linux 13.7.0 _Trixie_ - Official]/ trixie main non-free-firmware'
 apt_fix true >/dev/null
@@ -226,7 +226,7 @@ apt_fix false >/dev/null
 check "without ca-certificates the new lines come over http" \
     bash -c '! grep -q "^deb https://" "$1" && grep -q "^deb http://deb.debian.org/debian" "$1"' _ "$A/sources.list"
 n=$(grep -c '' "$A/sources.list")
-( VERSION_CODENAME= DEBSWAY_APT_DIR=$A SUDO= apt_sources_ensure ) >/dev/null 2>&1
+( VERSION_CODENAME='' DEBSWAY_APT_DIR=$A SUDO='' apt_sources_ensure ) >/dev/null 2>&1
 check "the release name is missing: nothing is bolted on (it would be broken)" test "$(grep -c '' "$A/sources.list")" = "$n"
 
 # ---- inside the installer: debsway into ~/debsway ----
