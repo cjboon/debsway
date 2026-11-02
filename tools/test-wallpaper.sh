@@ -109,16 +109,16 @@ jpg "$D/my-own.jpg"
 wp
 check "a picture you copy into the desktop folder later wins over the chosen one" test "$(mine)" = "$D/my-own.jpg"
 rm "$D/my-own.jpg"
-# pick: a pretend wmenu shows what it was given and answers with line 2
+# pick: a pretend wmenu shows what it was given and answers with line 3
 cat >"$T/fake/wmenu" <<EOF
 #!/bin/sh
 cat >"$T/menu"
-sed -n 2p "$T/menu"
+sed -n 3p "$T/menu"
 EOF
 chmod +x "$T/fake/wmenu"
 wp pick
-check "Super+Shift+w: a list newest first, by title (yours by its tidied name)" \
-    bash -c '[ "$(sed -n 1p "$1")" = "1  my mountain lake" ] && [ "$(sed -n 2p "$1")" = "2  NASA: Aurora over the sea" ] && [ "$(sed -n 3p "$1")" = "3  Earth Observatory: A vista of stellar birth" ] && [ "$(wc -l <"$1")" = 3 ]' _ "$T/menu"
+check "Super+Shift+w: \"0  No wallpaper\" first, then newest first, by title (yours by its tidied name)" \
+    bash -c '[ "$(sed -n 1p "$1")" = "0  No wallpaper" ] && [ "$(sed -n 2p "$1")" = "1  my mountain lake" ] && [ "$(sed -n 3p "$1")" = "2  NASA: Aurora over the sea" ] && [ "$(sed -n 4p "$1")" = "3  Earth Observatory: A vista of stellar birth" ] && [ "$(wc -l <"$1")" = 4 ]' _ "$T/menu"
 check "...the line picked becomes the wallpaper" bash -c '[ "$(cat "$1")" = nasa_iss1.png ] && [ -f "$2/chosen.png" ]' _ "$C/chosen-wallpaper" "$D"
 printf '#!/bin/sh\ncat >/dev/null\necho "99  nope"\n' >"$T/fake/wmenu"
 before=$(cat "$C/chosen-wallpaper")
@@ -133,6 +133,27 @@ printf '#!/bin/sh\ncat >"%s/menu"\nexit 1\n' "$T" >"$T/fake/wmenu"
 wp pick
 check "...a file name's escape codes never reach the list" not grep -q "$(printf '\033')" "$T/menu"
 rm -f "$CO"/x*
+# no wallpaper: Super+\, or "0  No wallpaper" in the list
+jpg "$D/my-own.jpg"
+touch -d '2026-01-01' "$D/my-own.jpg"
+wp next
+wp none
+check "Super+\\ (no wallpaper): the chosen picture goes, and sway reloads its own background" \
+    bash -c '[ ! -e "$1/chosen.jpg" ] && [ ! -e "$1/chosen.png" ] && [ "$(cat "$2")" = none ] && grep -qx -- "-q reload" "$3"' _ "$D" "$C/chosen-wallpaper" "$T/sway"
+wp
+check "...at the reload (or the next login) no picture goes up, not even an older one of yours" not grep -q " bg " "$T/sway"
+wp status
+check "...status says no wallpaper" grep -q "Wallpaper: none" "$T/out"
+touch -d 'now + 5 seconds' "$D/my-own.jpg"
+wp
+check "...until you copy a newer picture into the desktop folder" test "$(mine)" = "$D/my-own.jpg"
+rm "$D/my-own.jpg"
+wp next
+printf '#!/bin/sh\ncat >/dev/null\necho "0  No wallpaper"\n' >"$T/fake/wmenu"
+wp pick
+check "...\"0  No wallpaper\" in the list does the same" bash -c '[ "$(cat "$1")" = none ] && [ ! -e "$2/chosen.jpg" ] && [ ! -e "$2/chosen.png" ]' _ "$C/chosen-wallpaper" "$D"
+wp next
+check "...and the next Super+] chooses one again" test -f "$D/chosen.jpg" -o -f "$D/chosen.png"
 rm -rf "${CO:?}" "${D:?}"/* "${C:?}"
 mkdir -p "$D"
 
@@ -155,8 +176,8 @@ P=$T/part
 mkdir -p "$P/home"
 if env -u SWAYSOCK WP_TEST_PATH="$T/fake:$PATH" HOME="$P/home" bash "$R/parts/wallpaper.sh" >"$T/out" 2>&1; then :; fi
 check "the part: sway runs wallpaper at every start and reload" grep -qx "exec_always $P/home/.local/bin/wallpaper" "$P/home/.config/sway/config.d/wallpaper.conf"
-check "...Super+] and Super+[ step through the pictures, Super+Shift+w lists them" \
-    bash -c 'grep -qx "bindsym \$mod+bracketright exec $2/wallpaper next" "$1" && grep -qx "bindsym \$mod+bracketleft exec $2/wallpaper previous" "$1" && grep -qx "bindsym \$mod+Shift+w exec $2/wallpaper pick" "$1"' _ "$P/home/.config/sway/config.d/wallpaper.conf" "$P/home/.local/bin"
+check "...Super+] and Super+[ step through the pictures, Super+Shift+w lists them, Super+\\ is none" \
+    bash -c 'grep -qx "bindsym \$mod+bracketright exec $2/wallpaper next" "$1" && grep -qx "bindsym \$mod+bracketleft exec $2/wallpaper previous" "$1" && grep -qx "bindsym \$mod+Shift+w exec $2/wallpaper pick" "$1" && grep -qx "bindsym \$mod+backslash exec $2/wallpaper none" "$1"' _ "$P/home/.config/sway/config.d/wallpaper.conf" "$P/home/.local/bin"
 check "...the command is installed, the folder made, with a README" \
     bash -c '[ -x "$1/.local/bin/wallpaper" ] && [ -d "$1/Pictures/debsway/desktop" ] && grep -q "Super+Shift+c" "$1/Pictures/debsway/README.txt"' _ "$P/home"
 env -u SWAYSOCK WP_TEST_PATH="$T/fake:$PATH" HOME="$P/home" bash "$R/parts/wallpaper.sh" --remove >"$T/out" 2>&1

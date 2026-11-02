@@ -15,6 +15,7 @@
     Super+?                this page
     Super+m                the debsway menu (or click debsway in the bar)
     Super+] / Super+[      next / previous wallpaper; Super+Shift+w: pick one
+    Super+\                no wallpaper (sway's own background)
 
   IN THE TERMINAL (foot)
     Ctrl+Shift+c / v       copy / paste (Ctrl+c stops a program)

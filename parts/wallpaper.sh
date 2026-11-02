@@ -5,7 +5,8 @@
 # config's own "output * bg" line, or sway's plain background, stays.
 # bin/wallpaper does the work; "wallpaper status" says which picture is used.
 # Super+] and Super+[ step through ~/Pictures/Wallpapers as the wallpaper,
-# Super+Shift+w lists it by name (wmenu); the one chosen stays.
+# Super+Shift+w lists it by name (wmenu); the one chosen stays. Super+\
+# goes back to no wallpaper (sway's own background).
 # (extras/wallpapers.sh fills ~/Pictures/Wallpapers with pictures to pick from.)
 # Usage: bash wallpaper.sh [--remove]
 # status: bin:wallpaper
@@ -37,11 +38,12 @@ desktop/   Put a JPEG or PNG here and it becomes your wallpaper at the next
            file isn't used.
 
 Wallpapers/ (one folder up) is to choose from: Super+] and Super+[ step
-through it on the desktop itself, and Super+Shift+w (or "wallpaper pick")
-lists it by name. The one you stop on is copied here as chosen.jpg, so it
-stays. bash ~/debsway/extras/wallpapers.sh fills it with space and Earth
-pictures (NASA, Webb, Earth Observatory) and Budgie's photos, or just sets
-it up for pictures of your own.
+through it on the desktop itself, Super+Shift+w (or "wallpaper pick")
+lists it by name, and Super+\ goes back to no wallpaper. The one you stop
+on is copied here as chosen.jpg, so it stays.
+bash ~/debsway/extras/wallpapers.sh fills it with space and Earth pictures
+(NASA, Webb, Earth Observatory) and Budgie's photos, or just sets it up for
+pictures of your own.
 EOF
 fi
 # exec_always: at every start and every reload, so a new picture shows on
@@ -52,6 +54,7 @@ exec_always $BIN/wallpaper
 bindsym \$mod+bracketright exec $BIN/wallpaper next
 bindsym \$mod+bracketleft exec $BIN/wallpaper previous
 bindsym \$mod+Shift+w exec $BIN/wallpaper pick
+bindsym \$mod+backslash exec $BIN/wallpaper none
 EOF
 note "Super+] and Super+[ step through ~/Pictures/Wallpapers; Super+Shift+w lists it."
 note "Or put a picture in $PICS/desktop, then press Super+Shift+c."

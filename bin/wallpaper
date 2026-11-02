@@ -7,17 +7,21 @@
 #   wallpaper           put the picture up (or nothing, if there is none)
 #   wallpaper next      the next picture in ~/Pictures/Wallpapers (Super+]),
 #   wallpaper previous  or the one before (Super+[), up at once and kept
-#   wallpaper pick      choose one from ~/Pictures/Wallpapers by name (Super+Shift+w)
+#   wallpaper pick      choose one from ~/Pictures/Wallpapers by name (Super+Shift+w),
+#                       or "0  No wallpaper"
+#   wallpaper none      no wallpaper (Super+\): sway's own background again
 #   wallpaper status    which picture is used, and which files aren't, and why
 # A picture chosen with next, previous or pick is copied into the desktop
 # folder as chosen.jpg (or .png), so it is the newest there and stays after a
-# reboot; a picture you copy in yourself later wins over it.
+# reboot; a picture you copy in yourself later wins over it. "No wallpaper"
+# stays the same way: until you choose one, or copy a newer picture in.
 set -uo pipefail
 
 DIR=${DEBSWAY_WALLPAPER_DIR:-$HOME/Pictures/debsway/desktop}
 COLL=${DEBSWAY_WALLPAPERS:-$HOME/Pictures/Wallpapers}
 CACHE=${XDG_CACHE_HOME:-$HOME/.cache}/debsway
-# the collection's file last chosen, for next and previous
+# the collection's file last chosen, for next and previous ("none": no
+# wallpaper, since this file's time)
 CURRENT=$CACHE/chosen-wallpaper
 MAX_BYTES=$((50 * 1024 * 1024))
 
@@ -86,6 +90,8 @@ label() {
 apply() {
     local pic ext link old
     pic=$(newest) || return 0
+    # "no wallpaper" was chosen after this picture: sway's own background stays
+    if [ "$(cat "$CURRENT" 2>/dev/null)" = none ] && [ ! "$pic" -nt "$CURRENT" ]; then return 0; fi
     # sway reads the path inside a command line, where a quote or a ; in a file
     # name would end it: hand sway a link with a name made of digits only. The
     # name changes with the picture, so sway starts the new one.
@@ -137,21 +143,33 @@ step() {
 }
 
 # pick: a list of the collection by name, newest first, in debsway's wmenu look
+# none: no wallpaper: the chosen picture goes, and sway reloads its own
+# background (its config's "output * bg" line, or its plain one); pictures of
+# your own in the desktop folder stay, but don't go up until one is newer
+none() {
+    mkdir -p "$CACHE"
+    rm -f -- "$DIR/chosen.jpg" "$DIR/chosen.png"
+    echo none >"$CURRENT"
+    swaymsg -q reload
+    if command -v notify-send >/dev/null; then notify-send -t 3000 Wallpaper "No wallpaper" 2>/dev/null || true; fi
+}
+
 pick() {
     local pics=() f sel num
     mapfile -t pics < <(collection | while IFS= read -r f; do printf '%s\t%s\n' "$(stat -c %Y -- "$f")" "$f"; done | sort -rn | cut -f2-)
-    [ ${#pics[@]} -gt 0 ] || { echo "wallpaper: no pictures in $COLL (bash ~/debsway/extras/wallpapers.sh fetches some)" >&2; return 1; }
-    # each line starts with its number, which says which picture it is
-    sel=$(for i in "${!pics[@]}"; do printf '%d  %s\n' "$((i + 1))" "$(label "${pics[i]}")"; done |
+    # each line starts with its number, which says which picture it is (0: none)
+    sel=$({ echo "0  No wallpaper"; for i in "${!pics[@]}"; do printf '%d  %s\n' "$((i + 1))" "$(label "${pics[i]}")"; done; } |
         wmenu -i -l 15 -p "Wallpaper:" -f 'monospace 12' -N 000000 -n ffffff -M 000000 -m ffffff -S ffffff -s 000000) || return 0
     num=${sel%% *}
-    [[ $num =~ ^[0-9]{1,6}$ ]] && [ "$num" -ge 1 ] && [ "$num" -le ${#pics[@]} ] || return 0
-    use "${pics[num - 1]}"
+    [[ $num =~ ^[0-9]{1,6}$ ]] && [ "$num" -le ${#pics[@]} ] || return 0
+    if [ "$num" -eq 0 ]; then none; else use "${pics[num - 1]}"; fi
 }
 
 case ${1:-} in
     status)
-        if pic=$(newest); then
+        if [ "$(cat "$CURRENT" 2>/dev/null)" = none ] && { ! pic=$(newest) || [ ! "$pic" -nt "$CURRENT" ]; }; then
+            echo "Wallpaper: none (sway's own background; Super+] or Super+Shift+w chooses one)"
+        elif pic=$(newest); then
             if [ "${pic##*/}" = chosen.jpg ] || [ "${pic##*/}" = chosen.png ]; then
                 cur=$(cat "$CURRENT" 2>/dev/null)
                 if [ -n "$cur" ] && [ -f "$COLL/$cur" ]; then
@@ -177,6 +195,7 @@ case ${1:-} in
     next) step 1 ;;
     previous | prev) step -1 ;;
     pick) pick ;;
+    none) none ;;
     "") apply ;;
-    *) echo "usage: wallpaper [next | previous | pick | status]" >&2; exit 2 ;;
+    *) echo "usage: wallpaper [next | previous | pick | none | status]" >&2; exit 2 ;;
 esac
