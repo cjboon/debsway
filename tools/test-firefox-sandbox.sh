@@ -205,5 +205,9 @@ check "--remove takes out the hardening, unless incognito stays" \
     grep -qF 'bash "$DEBSWAY_DIR/parts/firefox-hardening.sh" --remove' <<<"$remove"
 check "--remove takes out the packages it installed" grep -qx '    apt_purge' <<<"$remove"
 check "the status screen names this extra for Firefox" grep -qF 'echo "Firefox (extras/firefox-sandbox.sh):"' "$HERE/status.sh"
+for f in firefox-user.js incognito-user.js; do
+    check "$f: WebRTC off (no direct connections a page opens)" grep -qx 'user_pref("media.peerconnection.enabled", false);' "$HERE/data/$f"
+done
+check "...but firefox-regular keeps it, for video calls" not grep -q 'peerconnection' "$HERE/data/firefox-regular-user.js"
 
 [ "$fails" -eq 0 ]

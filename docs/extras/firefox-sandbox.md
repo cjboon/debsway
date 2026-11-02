@@ -31,6 +31,8 @@ with `extras/firefox-profiles/new-profile.sh` each get a user like it.
 
 - What lands in `~/Downloads` comes from the web: treat it as untrusted.
 - The clipboard is shared while its window has focus.
+- No WebRTC, here and in the profiles: video calls and browser-to-browser file
+  transfers don't work. Use `firefox-regular` for those.
 - It shares your kernel: a kernel bug could let a page out of its user.
 - It's your network and your address; and `firefox-esr` runs as you, without any of this.
 

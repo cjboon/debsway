@@ -31,6 +31,7 @@ can't hear your microphone, and a firewall rule on that user
 
 - uBlock's medium mode breaks some sites until you allow them; the JIT being off makes heavy sites slower.
 - `incognito` is still your network and your address: use Tor Browser or a VPN for that.
+- `incognito` has no WebRTC: video calls and browser-to-browser file transfers don't work there.
 - Any window, `incognito` included, can be captured by screenshots.
 - Both share your kernel: a kernel bug could get out of them.
 

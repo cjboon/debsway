@@ -374,8 +374,8 @@ https://example.org/` opens a page. What `parts/incognito.sh` sets up:
 - **Nothing kept**: the profile, cache, cookies and history live in memory
   (`/dev/shm`) and the folder is deleted when you close the window; the
   profile is always in private browsing, with tracking protection and
-  fingerprinting resistance on (`data/incognito-user.js`; some sites break
-  with the latter, turn it off there). debsway's defaults for every profile
+  fingerprinting resistance on and WebRTC off (`data/incognito-user.js`; some
+  sites break with fingerprinting resistance, turn it off there). debsway's defaults for every profile
   still apply: HTTPS-Only Mode, no JavaScript JIT, uBlock Origin.
 - **Sound and video**: YouTube and the like play, with sound. `incognito`
   has no sound card, so it runs its own small audio server (PipeWire) whose

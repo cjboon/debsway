@@ -28,7 +28,10 @@ user_pref("permissions.default.camera", 2);
 user_pref("permissions.default.microphone", 2);
 user_pref("permissions.default.desktop-notification", 2);
 user_pref("dom.push.enabled", false);
-user_pref("media.peerconnection.ice.default_address_only", true);
+// No WebRTC: no direct connections a page opens to other computers (they
+// can show your address, and are a lot of code to attack). Video calls
+// can't work here anyway, and firefox-regular keeps it.
+user_pref("media.peerconnection.enabled", false);
 
 // No guessing ahead
 user_pref("network.dns.disablePrefetch", true);

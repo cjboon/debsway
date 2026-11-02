@@ -57,6 +57,8 @@ this page to decide what else you need.
   files; only `~/Downloads` and the clipboard (while its window has focus) are
   shared, it gets no screen-reading or typing protocols from sway, no audio
   server or microphone, and a firewall rule keeps it off your local network.
+  WebRTC is off in it and in `incognito`: less code for a page to attack, and
+  no direct connections that could show your address if a VPN lets them past.
   A profile made with `firefox-profiles/new-profile.sh` gets a user of its own the
   same way, so profiles cannot read each other either. `incognito` is the same
   idea with nothing kept and no shared clipboard. They
