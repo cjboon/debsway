@@ -56,4 +56,7 @@ else
     note "Signature and checksum are good."
     install_appimage "$NAME" "$tmp/$ASSET" "$tag"
 fi
-write_launcher "$NAME" simplex-chat.sh AppRun
+# Java draws X11 windows as if a window manager framed them, and sway doesn't:
+# without this the window opens drawn at its first size in the top-left
+# corner, and clicks and keys miss (no way to close it)
+write_launcher "$NAME" simplex-chat.sh AppRun _JAVA_AWT_WM_NONREPARENTING=1

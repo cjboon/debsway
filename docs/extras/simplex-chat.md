@@ -17,7 +17,9 @@ phone numbers. debsway installs the official desktop AppImage from GitHub
 SimpleX's release key (`build@simplex.chat`, pinned in `pins.sh` as
 `SIMPLEX_FPR`). It is unpacked into `~/.local/opt/simplex` (no FUSE needed),
 and `simplex` starts it. It is a Java program, and Java's windows are X11, so
-XWayland is installed, with the system libraries its Java and media code use.
+XWayland is installed, with the system libraries its Java and media code use;
+the command tells Java that sway puts no frames around windows, so its
+window fills its space and takes clicks.
 
 ## LIMITS
 
@@ -62,10 +64,11 @@ chmod +x simplex-desktop-x86_64.AppImage
 mkdir -p ~/.local/opt && rm -rf ~/.local/opt/simplex
 mv squashfs-root ~/.local/opt/simplex
 
-# The command, running its AppRun start script
+# The command, running its AppRun start script; the Java setting makes its
+# window fill the space sway gives it (else it is drawn in the top-left corner)
 mkdir -p ~/.local/bin
 printf '%s\n' '#!/bin/sh' 'dir="$HOME/.local/opt/simplex"' \
-    'exec env APPDIR="$dir" "$dir/AppRun" "$@"' >~/.local/bin/simplex
+    'exec env APPDIR="$dir" _JAVA_AWT_WM_NONREPARENTING=1 "$dir/AppRun" "$@"' >~/.local/bin/simplex
 chmod +x ~/.local/bin/simplex
 
 # The download isn't needed any more

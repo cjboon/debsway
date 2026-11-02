@@ -159,4 +159,15 @@ check "remote-access: the manual sshd settings are the script's" bash -c '[ "$(w
     exit "$fails"
 ) || fails=$?
 
+# A launcher's settings (write_launcher VAR=VALUE) are in its manual's one too
+for s in "$HERE"/extras/*.sh; do
+    line=$(grep -m1 '^write_launcher ' "$s") || continue
+    read -r -a w <<<"$line"
+    page=$HERE/docs/extras/$(basename "$s" .sh).md
+    want="exec env APPDIR=\"\$dir\" ${w[*]:4}${w[4]:+ }\"\$dir/${w[3]}\" \"\$@\""
+    check "$(basename "$s"): the manual's launcher runs ${w[3]} with the same settings" grep -qF "'$want'" "$page"
+done
+
+check "simplex: Java told that sway puts no frames around windows" grep -q '^write_launcher .*AppRun _JAVA_AWT_WM_NONREPARENTING=1$' "$HERE/extras/simplex-chat.sh"
+
 [ "$fails" -eq 0 ]
