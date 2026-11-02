@@ -1,8 +1,7 @@
 #!/bin/bash
-# Pick optional programs from a list and install them: arrow keys to move,
-# space bar to check a box, Tab to the Install or No extras button. With
-# dialog (installed with the debsway menu), a click checks a box and a click on
-# Install installs; without it, whiptail draws the list, which takes no clicks. Every
+# Pick optional programs from a list and install them (lib/checklist.sh): arrow
+# keys move (round the ends), Space or a click checks a box, the wheel scrolls,
+# Enter or a click on Install installs.
 # program is a script in extras/. install-base.sh asks right after you agree to
 # the base install and installs what you picked once the base is done; you can
 # run this again whenever you like. Nothing is checked to begin with.
@@ -17,6 +16,7 @@
 #   bash install-extras.sh --remove      a list of what is installed; removes what
 #                                        you check (each extra's --remove), after asking
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
+. "$DEBSWAY_DIR/lib/checklist.sh"
 
 # The groups, most secure first: TIER<TAB>HEADING
 TIERS=$'most\tMOST SECURE: walled off, or it protects you
@@ -57,11 +57,11 @@ fi
 mode=both file=
 # What the list says, and its buttons (--remove changes them)
 TITLE="Optional extras" OK=Install CANCEL="No extras"
-TEXT="Arrow keys move, Space (or a click) checks a box, Tab reaches the buttons.\n* = already installed (checking it runs it again, to repair or update).\nInstall puts the checked ones in; No extras finishes without any."
+TEXT="Arrow keys or the wheel move; Space or a click checks a box.\n* = already installed (checking it runs it again, to repair or update).\nInstall puts the checked ones in; No extras finishes without any."
 case "${1:-}" in
     --remove)
         mode=remove TITLE="Remove apps" OK=Remove CANCEL=Cancel
-        TEXT="These are installed. Check the ones to remove (each keeps your own data, and says so).\nArrow keys move, Space (or a click) checks a box, Tab reaches the buttons."
+        TEXT="These are installed. Check the ones to remove (each keeps your own data, and says so).\nArrow keys or the wheel move; Space or a click checks a box."
         # Only what is installed
         mapfile -t EXTRAS < <(printf '%s\n' "${EXTRAS[@]}" | awk -F'\t' '$3 == 1')
         if [ ${#EXTRAS[@]} -eq 0 ]; then note "No extras are installed, so there is nothing to remove."; exit 0; fi ;;
@@ -76,33 +76,6 @@ if [ "$mode" != install ] && ! { : </dev/tty; } 2>/dev/null; then
     exit 0
 fi
 
-# The checklist in white on black, to match the terminal it opens in, the
-# chosen line reversed. Your own NEWT_COLORS wins if you set one. The same
-# block as bin/nmtui.
-# A button is drawn in compactbutton colors until Tab reaches it, then in button colors:
-# button is the reversed pair so the chosen one shows.
-# newt (whiptail, nmtui) reads #rrggbb colors only when the terminal says it
-# has 24-bit color (COLORTERM=truecolor); otherwise it ignores them all and
-# draws its own blue and red, the chosen line hard to see. foot has 24-bit
-# color, so it is said for it. The Linux console has none and gets color
-# names (its black is black; foot's "black" is a dark teal). Every one of
-# newt's color sets is given: one left out stays red.
-if [ -z "${NEWT_COLORS:-}" ]; then
-    if [ "${TERM:-}" = linux ]; then
-        _w=white _b=black _g=gray
-    else
-        _w='#ffffff' _b='#000000' _g='#aaaaaa'
-        case ${COLORTERM:-} in truecolor | 24bit) ;; *) export COLORTERM=truecolor ;; esac
-    fi
-    NEWT_COLORS="root=$_w,$_b border=$_w,$_b window=$_w,$_b shadow=$_b,$_b title=$_w,$_b"
-    NEWT_COLORS+=" button=$_b,$_w actbutton=$_b,$_w compactbutton=$_w,$_b"
-    NEWT_COLORS+=" checkbox=$_w,$_b actcheckbox=$_b,$_w entry=$_w,$_b disentry=$_g,$_b label=$_w,$_b"
-    NEWT_COLORS+=" listbox=$_w,$_b actlistbox=$_b,$_w sellistbox=$_w,$_b actsellistbox=$_b,$_w"
-    NEWT_COLORS+=" textbox=$_w,$_b acttextbox=$_b,$_w helpline=$_w,$_b roottext=$_w,$_b"
-    NEWT_COLORS+=" emptyscale=$_w,$_b fullscale=$_b,$_w"
-    unset _w _b _g
-fi
-export NEWT_COLORS
 
 # checklist_items: the list's lines, three words each (TAG ITEM OFF), with a
 # heading line before each group (~TIER: checking one does nothing)
@@ -119,39 +92,15 @@ checklist_items() {
     done
 }
 
-# pick_with PROGRAM: the check boxes, drawn by dialog or whiptail (the same
-# options), into chosen. Both draw on the terminal and answer on stderr.
-pick_with() {
-    local prog=$1 rows cols out c keep=() opts=()
+# pick_with_list: the check boxes (lib/checklist.sh), into chosen
+pick_with_list() {
     ITEMS=()
     checklist_items
-    rows=$(stty size </dev/tty 2>/dev/null | cut -d' ' -f1)
-    cols=$(stty size </dev/tty 2>/dev/null | cut -d' ' -f2)
-    rows=${rows:-24} cols=${cols:-80}
-    [ "$rows" -ge 14 ] || rows=14
-    [ "$cols" -ge 76 ] || cols=76
-    [ "$cols" -le 100 ] || cols=100
-    if [ "$prog" = dialog ]; then
-        opts=(--ok-label "$OK" --cancel-label "$CANCEL" --separate-output)
-        # Its colours, as whiptail's below (yours win if you set DIALOGRC)
-        [ -n "${DIALOGRC:-}" ] || export DIALOGRC=$DEBSWAY_DIR/data/dialogrc
-    else
-        opts=(--ok-button "$OK" --cancel-button "$CANCEL" --separate-output)
-    fi
-    if out=$("$prog" --title "$TITLE" "${opts[@]}" \
-        --checklist "$TEXT" \
-        $((rows - 2)) $((cols - 4)) $((rows - 10)) "${ITEMS[@]}" 3>&1 1>&2 2>&3 </dev/tty); then
-        # One name per line (--separate-output); a heading, ~TIER, is no extra
-        while IFS= read -r c; do
-            [ -n "$c" ] && [[ $c != "~"* ]] && keep+=("$c")
-        done <<<"$out"
-        chosen=("${keep[@]}")
-    else
-        chosen=()
-    fi
+    CL_TITLE=$TITLE CL_TEXT=$TEXT CL_OK=$OK CL_CANCEL=$CANCEL
+    checklist || chosen=()
 }
 
-# Without whiptail: numbers typed at a prompt
+# Where the list can't be drawn (no terminal type): numbers typed at a prompt
 pick_with_numbers() {
     local i=0 line name summary installed tier last='' reply n
     echo "$TITLE:"
@@ -177,10 +126,8 @@ if [ "$mode" = install ]; then
     mapfile -t chosen < <(grep . "$file" 2>/dev/null || true)
 else
     say "$TITLE"
-    if command -v dialog >/dev/null && [ -n "${TERM:-}" ] && [ "$TERM" != dumb ]; then
-        pick_with dialog
-    elif command -v whiptail >/dev/null && [ -n "${TERM:-}" ] && [ "$TERM" != dumb ]; then
-        pick_with whiptail
+    if [ -n "${TERM:-}" ] && [ "$TERM" != dumb ]; then
+        pick_with_list
     else
         pick_with_numbers
     fi

@@ -393,8 +393,8 @@ wait = s.index("pause_if_asked")
 assert none < wait and "exit 0" in s[none:wait], "the no-choice exit must come first"
 ' "$HERE/install-extras.sh"
 # shellcheck disable=SC2016  # the inner shells expand their own variables
-check "the install list and nmtui have the same color block" \
-    bash -c 'b() { sed -n "/^# newt (whiptail/,/^export NEWT_COLORS$/p" "$1"; }; [ -n "$(b "$1")" ] && [ "$(b "$1")" = "$(b "$2")" ]' _ "$HERE/install-extras.sh" "$HERE/bin/nmtui"
+check "nmtui has its color block (the install list draws itself now, lib/checklist.sh)" \
+    bash -c '[ -n "$(sed -n "/^# newt (whiptail/,/^export NEWT_COLORS$/p" "$1")" ]' _ "$HERE/bin/nmtui"
 
 # the nmtui wrapper: runs the real program with debsway's colors, unless you set your own
 # shellcheck disable=SC2016  # written into the pretend program, expanded when it runs
@@ -413,8 +413,8 @@ for c in root border window shadow title button actbutton compactbutton checkbox
     grep -qE "(^| )$c=" <<<"${1#colors=}" || exit 1
 done' _ "$(grep '^colors=' <<<"$nm")"
 
-# the real whiptail, as the install list starts it: only black and white come out,
-# the chosen line reversed (white behind it)
+# the real whiptail (newt, as nmtui is), with nmtui's colors: only black and
+# white come out, the chosen line reversed (white behind it)
 if command -v whiptail >/dev/null; then
     cat >"$T/wt.py" <<'PY'
 import os, pty, select, sys, time, fcntl, termios, struct, re
@@ -439,7 +439,7 @@ for term, white_bg in (("foot", b"48;2;255;255;255"), ("linux", b"47")):
     c = run(term)
     print(term, "bw" if c and c <= bw else sorted(c - bw), "reversed" if white_bg in c else "flat")
 PY
-    wt=$(python3 -I "$T/wt.py" "$HERE/install-extras.sh" 2>&1)
+    wt=$(python3 -I "$T/wt.py" "$HERE/bin/nmtui" 2>&1)
     check "the real whiptail in foot: only black and white, the chosen line reversed" grep -qx 'foot bw reversed' <<<"$wt"
     check "...and at the console" grep -qx 'linux bw reversed' <<<"$wt"
 fi
