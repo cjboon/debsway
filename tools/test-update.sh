@@ -17,6 +17,8 @@ not() { ! "$@"; }
 ran() { grep -qxF "$T/L/$1" "$T/ran"; }
 export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t
 export HOME="$T/home" XDG_STATE_HOME="$T/state"
+# no key files of this computer are looked at (lib/apt-keys.sh reads under this folder)
+export DEBSWAY_KEYS_ROOT="$T/no-keys"
 mkdir -p "$HOME"
 
 # The server's working copy W (this checkout's files), the server O, your copy L

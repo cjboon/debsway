@@ -13,9 +13,14 @@
 # The first time, it takes what you have now as already applied: for what you
 # pulled earlier by hand, use --since COMMIT, or --all for everything set up.
 #
+# Each time, it also checks the signing keys of the apt repositories debsway
+# added (lib/apt-keys.sh), and fetches a pinned key again when it has expired
+# or will soon.
+#
 # Usage: bash update.sh [--since COMMIT | --all]
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
 . "$DEBSWAY_DIR/lib/update.sh"
+. "$DEBSWAY_DIR/lib/apt-keys.sh"
 not_root
 
 STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/debsway"
@@ -67,6 +72,9 @@ main() {
     fi
     local now
     now=$(g rev-parse HEAD)
+
+    # Signing keys that expire or are renewed (says nothing when all are fine)
+    apt_keys_refresh || true
 
     # Where this computer's setup was last brought up to
     local old=

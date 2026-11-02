@@ -340,6 +340,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "Signing keys of added apt repositories: checked and renewed"
+if out=$(bash tools/test-apt-keys.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") apt key checks"
+else
+    bad "apt key checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "webtunnel for the system tor: the Tor Project's repository, lyrebird only"
 if out=$(bash tools/test-webtunnel.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") webtunnel checks"

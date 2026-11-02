@@ -269,6 +269,13 @@ never runs `--remove`. If a script fails it says so and offers it again
 next time. A part of the base desktop that is new in an update is offered
 too, even though it isn't set up yet.
 
+Each run also checks the signing keys of the apt repositories debsway added
+(Claude Code, Signal, Mullvad, the Tor Project's for lyrebird). One that has
+expired, or will within 60 days, is fetched again, and the new one goes in
+only if it is exactly the pinned key (`pins.sh`) and lasts longer. Without
+this, a key that runs out would quietly stop that program's updates.
+`status.sh` shows the same check.
+
 The first run takes what you have now as already applied. If you updated by
 hand earlier, `bash update.sh --since COMMIT` offers what changed after that
 commit (`git log` shows it), and `bash update.sh --all` offers everything

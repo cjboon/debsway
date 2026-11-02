@@ -3,6 +3,7 @@
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
 . "$DEBSWAY_DIR/packages.sh"
 . "$DEBSWAY_DIR/lib/secure-dns.sh"
+. "$DEBSWAY_DIR/lib/apt-keys.sh"
 
 show() {
     if is_installed "$1"; then printf '  [x] %s\n' "$1"; else printf '  [ ] %s\n' "$1"; fi
@@ -137,6 +138,10 @@ else
     echo "  apt downloads directly"
 fi
 echo "  $(dns_status)"
+if [ -n "$(apt_keys_installed)" ]; then
+    echo "Signing keys of added apt repositories:"
+    apt_keys_status
+fi
 if [ -f /etc/NetworkManager/conf.d/90-debsway-random-mac.conf ]; then
     echo "  random Wi-Fi MAC address: on"
 else
