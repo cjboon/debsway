@@ -326,6 +326,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "opencode in a VM (extras/opencode-vm.sh): the command, the session, the guest's install"
+if out=$(bash tools/test-opencode-vm.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") opencode-vm checks"
+else
+    bad "opencode-vm checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "The whonix command (bin/whonix), with a pretend virsh"
 if out=$(bash tools/test-whonix-cmd.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") whonix command checks"

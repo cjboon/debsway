@@ -50,6 +50,7 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 - [Claude Code as you, with its own sandbox on](claude-regular.md)
 - [Claude Code in its own user](claude-code.md)
 - [Claude Code inside a disposable virtual machine](claude-vm.md)
+- [opencode inside a disposable virtual machine](opencode-vm.md)
 - [A disposable practice server](mockvps-kvm.md)
 - [Images and video in a sandbox](media.md)
 - [yt-dlp as its own locked-down user](yt-dlp.md)

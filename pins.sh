@@ -89,6 +89,13 @@ TUTA_DESKTOP_URL=https://app.tuta.com/desktop
 SIGNAL_FPR=DBA36B5181D0C816F630E889D980A17457F6FB06
 SIGNAL_KEY_URL=https://updates.signal.org/desktop/apt/keys.asc
 
+# opencode (extras/opencode-vm.sh), installed inside the VM from this GitHub
+# repository's newest release (sst/opencode moved here). Its releases carry no
+# signatures: the guest takes only an immutable release, checked against the
+# SHA-256s GitHub's API gives (data/opencode-vm-provision.sh).
+# checked: 2026-11-02  opencode.ai/docs; api.github.com/repos/sst/opencode redirects here; v1.19.5 immutable
+OPENCODE_REPO=anomalyco/opencode
+
 # Mullvad apt repo (extras/mullvad-vpn.sh, extras/mullvad-browser-regular.sh).
 # Mullvad (code signing) <admin@mullvad.net>.
 # checked: 2026-10-26  mullvad.net/en/help/verifying-signatures; the repo's keyring

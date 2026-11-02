@@ -1,0 +1,58 @@
+#!/bin/bash
+# opencode-vm [connect|shell|status|stop|pubkey|rebuild]: written by debsway
+# extras/opencode-vm.sh
+# opencode inside a disposable virtual machine, not on your computer. The
+# VM has its own disk and no shared folder with you: the agent's only way to
+# hand work back is to push to a git host you pull from (git pull, after a
+# look at what changed: docs/extras/opencode-vm.md says how). It can
+# reach the internet but nothing on your machine or local network.
+#   opencode-vm            start the VM, run opencode in it, power it off on exit
+#   opencode-vm shell      a plain shell in the VM
+#   opencode-vm status     is the VM running?
+#   opencode-vm stop       power the VM off
+#   opencode-vm pubkey     the VM's ssh public key (add it on your git host)
+#   opencode-vm rebuild    throw the VM away and build a fresh one
+# Started from a launcher (wmenu on Super+d), opencode-vm and opencode-vm shell
+# open their own foot window, which stays open after an error so you can read it.
+set -euo pipefail
+
+AGENT=opencode-vm
+SESSION=/usr/local/libexec/opencode-vm-session
+
+# hold: in the window opened below, keep what went wrong on screen until Enter
+hold() {
+    [ -n "${OPENCODE_VM_HOLD:-}" ] || return 0
+    printf '\nPress Enter to close this window.' >&2
+    read -r _ || true
+}
+die() { printf 'opencode-vm: %s\n' "$*" >&2; hold; exit 1; }
+
+[ "$(id -u)" -ne 0 ] || die "run it as your normal user, not root."
+
+cmd=${1:-connect}
+case "$cmd" in
+    connect | shell | status | stop | pubkey | rebuild) ;;
+    -h | --help)
+        sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'
+        exit 0 ;;
+    *) die "unknown command '$1'. Try: opencode-vm --help" ;;
+esac
+
+# Started from wmenu or another launcher there is no terminal to talk in, and
+# ssh would quietly give up: open one in sway and run again inside it
+if [ "$cmd" = connect ] || [ "$cmd" = shell ]; then
+    if [ ! -t 0 ] && [ ! -t 1 ] && [ -n "${WAYLAND_DISPLAY:-}" ] && command -v foot >/dev/null; then
+        exec foot --title="opencode (VM)" env OPENCODE_VM_HOLD=1 "$0" "$cmd"
+    fi
+fi
+
+sudo -n -u "$AGENT" -l "$SESSION" >/dev/null 2>&1 ||
+    die "the VM sandbox isn't set up. Run: bash ~/debsway/extras/opencode-vm.sh"
+
+if [ -n "${OPENCODE_VM_HOLD:-}" ]; then
+    rc=0
+    sudo -n -u "$AGENT" "$SESSION" "$cmd" || rc=$?
+    [ "$rc" -eq 0 ] || hold
+    exit "$rc"
+fi
+exec sudo -n -u "$AGENT" "$SESSION" "$cmd"

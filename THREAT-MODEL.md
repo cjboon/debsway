@@ -88,7 +88,11 @@ this page to decide what else you need.
   pull from. The same kind of firewall, on its `claude-vm` user, keeps the
   guest off your network. The two can be installed together. Use the VM if
   your computer has KVM (`docs/extras.md` says how to check); `claude` is
-  the weaker, lighter choice for computers that can't run it.
+  the weaker, lighter choice for computers that can't run it. `opencode-vm`
+  (`extras/opencode-vm.sh`) puts opencode in the same kind of VM. Its
+  download has no signature, only GitHub's own SHA-256 for an immutable
+  release, so a hijacked maintainer account could slip in a bad one: the VM
+  limits what that reaches, not whether it runs.
 - **A stranger's USB stick running something.** Drives mount with
   `nosuid`, `nodev` and `noexec` (`extras/udiskie.sh`), so nothing on a stick
   can run from it by itself. They still mount the moment they're plugged
