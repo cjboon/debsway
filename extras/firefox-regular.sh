@@ -5,12 +5,14 @@
 # ~/.mozilla/firefox/debsway-regular, whose user.js (data/firefox-regular-user.js)
 # keeps sites fast (the JavaScript JIT on), HTTPS-Only Mode on (one click past
 # it), Firefox's standard tracking protection, and nothing sent to Mozilla.
-# uBlock Origin (from Debian) blocks ads and trackers.
+# uBlock Origin (from Debian) blocking ads and trackers is your choice: it asks
+# (default no). Without it, the profile doesn't load Debian's shared copy, which
+# every other profile still gets.
 # It doesn't touch the sandboxed Firefox, incognito or the per-site profiles:
 # nothing system-wide is written, only this profile, a firefox-regular command
 # and a menu entry. Where Firefox's hardening is set up (with the sandboxed
-# Firefox), uBlock's medium mode applies here too: ublock-allow lets a site
-# through. It offers to open links from other programs.
+# Firefox) and you chose uBlock, its medium mode applies here too: ublock-allow
+# lets a site through. It offers to open links from other programs.
 # It runs as you, so a hacked page can reach your files: the sandboxed Firefox
 # (extras/firefox-sandbox.sh) is the safer one for sites you don't trust.
 # Usage: bash firefox-regular.sh [--remove | --manual]
@@ -41,14 +43,37 @@ if [ "${1:-}" = --remove ]; then
 fi
 
 say "Firefox, for you"
-apt_install firefox-esr libavcodec61 webext-ublock-origin-firefox
+# uBlock Origin: asked, with last time's answer as the default
+ublock_was=n
+if [ -f "$PROFILE/user.js" ] && grep -qs 'Written by debsway' "$PROFILE/user.js" &&
+    ! grep -qs '^user_pref("extensions.enabledScopes", 5);' "$PROFILE/user.js"; then
+    ublock_was=y
+fi
+pkgs=(firefox-esr libavcodec61)
+if ask "Block ads and trackers with uBlock Origin in firefox-regular?" "$ublock_was"; then
+    ublock=true
+    pkgs+=(webext-ublock-origin-firefox)
+else
+    ublock=false
+    # this script no longer needs it (the sandboxed Firefox may still)
+    apt_drop webext-ublock-origin-firefox
+fi
+apt_install "${pkgs[@]}"
 mkdir -p "$PROFILE"
 chmod 700 "$PROFILE"
 # A user.js you wrote yourself stays
 if [ -f "$PROFILE/user.js" ] && ! grep -qs 'Written by debsway' "$PROFILE/user.js"; then
     note "Kept your own $PROFILE/user.js."
 else
-    install -m 0600 "$DEBSWAY_DIR/data/firefox-regular-user.js" "$PROFILE/user.js"
+    {
+        cat "$DEBSWAY_DIR/data/firefox-regular-user.js"
+        if ! $ublock; then
+            printf '\n%s\n%s\n%s\n' \
+                "// No uBlock Origin here (you said no): Debian's copy, which every profile" \
+                "// would load, isn't. 5 = this profile's own add-ons and Firefox's, not the system's." \
+                'user_pref("extensions.enabledScopes", 5);'
+        fi
+    } | install -m 0600 /dev/stdin "$PROFILE/user.js"
 fi
 install_bin firefox-regular
 install -D -m 0644 "$DEBSWAY_DIR/data/$APP" "$DESKTOP"
@@ -68,7 +93,7 @@ elif ask "Open them in firefox-regular?" y; then
 fi
 
 note "Run it with: firefox-regular   (or Super+d)"
-if [ -f /etc/firefox-esr/debsway-hardening.js ]; then
+if $ublock && [ -f /etc/firefox-esr/debsway-hardening.js ]; then
     note "Firefox's hardening is set up here: uBlock blocks scripts from other sites in"
     note "this profile too. A site that breaks: ublock-allow example.com"
 fi

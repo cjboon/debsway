@@ -102,33 +102,41 @@ cp "$HERE/extras/firefox-regular.sh" "$HERE/extras/claude-regular.sh" "$R/extras
 # shellcheck disable=SC2031  # (the PATH set in repo() above stays in its subshell)
 export REGULAR_TEST_PATH="$T/bin:$PATH"
 [ "$(bash -c '. "$1/lib.sh"; command -v sudo' _ "$R")" = "$T/bin/sudo" ] || { echo "  FAIL  the real sudo would run; stopping"; exit 1; }
-run() { # SCRIPT ANSWER [ARGS]
+run() { # SCRIPT ARG ANSWER...: ARG is --remove or empty; one answer per question
+    local script=$1 arg=$2
+    shift 2
     : >"$T/calls"
-    printf '%s\n' "$2" >"$T/answers"
-    HOME=$T/home XDG_STATE_HOME='' DEBSWAY_TEST_ANSWERS=$T/answers bash "$R/extras/$1" "${@:3}" >"$T/out" 2>&1
+    printf '%s\n' "$@" >"$T/answers"
+    HOME=$T/home XDG_STATE_HOME='' DEBSWAY_TEST_ANSWERS=$T/answers bash "$R/extras/$script" ${arg:+"$arg"} >"$T/out" 2>&1
 }
 H=$T/home
 MIME=$H/.config/mimeapps.list
 
-run firefox-regular.sh ''
+run firefox-regular.sh '' '' ''
 P=$H/.mozilla/firefox/debsway-regular
 check "firefox-regular: its own profile, only yours" test "$(stat -c %a "$P")" = 700
-check "...with the friendly user.js" cmp "$HERE/data/firefox-regular-user.js" "$P/user.js"
+check "...with the friendly user.js" bash -c 'head -n "$(wc -l <"$1")" "$2" | cmp -s - "$1"' _ "$HERE/data/firefox-regular-user.js" "$P/user.js"
+check "uBlock: Enter (no) leaves Debian's shared copy out of this profile" grep -qx 'user_pref("extensions.enabledScopes", 5);' "$P/user.js"
+check "...and doesn't install it for this script" not grep -q webext-ublock "$T/calls"
 check "...the JIT back on there (for this profile only)" grep -qx 'user_pref("javascript.options.ion", true);' "$P/user.js"
 check "...the command, runs Firefox as you in that profile" grep -q 'exec /usr/bin/firefox-esr --profile "\$HOME/.mozilla/firefox/debsway-regular"' "$H/.local/bin/firefox-regular"
 check "...and the menu entry" test -f "$H/.local/share/applications/debsway-firefox-regular.desktop"
 check "...nothing system-wide written (the sandbox, hardening, incognito untouched)" not grep -qE '/etc/|/usr/local' "$T/calls"
 check "no default browser yet: Enter makes it the default" grep -qx 'x-scheme-handler/https=debsway-firefox-regular.desktop' "$MIME"
 printf '[Default Applications]\nx-scheme-handler/http=debsway-firefox.desktop\nx-scheme-handler/https=debsway-firefox.desktop\n' >"$MIME"
-run firefox-regular.sh ''
+run firefox-regular.sh '' y ''
+check "uBlock: y loads it in this profile" not grep -q 'extensions.enabledScopes' "$P/user.js"
+run firefox-regular.sh '' '' ''
+check "...and Enter on the next run keeps that answer" not grep -q 'extensions.enabledScopes' "$P/user.js"
 check "with the sandboxed Firefox the default, Enter keeps it" grep -qx 'x-scheme-handler/https=debsway-firefox.desktop' "$MIME"
-run firefox-regular.sh y
+run firefox-regular.sh '' n y
+check "uBlock: n takes it out again" grep -qx 'user_pref("extensions.enabledScopes", 5);' "$P/user.js"
 check "...y switches links to firefox-regular" grep -qx 'x-scheme-handler/https=debsway-firefox-regular.desktop' "$MIME"
 echo 'user_pref("my.own", 1);' >"$P/user.js"
-run firefox-regular.sh n
+run firefox-regular.sh '' '' n
 check "a user.js you wrote yourself stays" grep -qx 'user_pref("my.own", 1);' "$P/user.js"
 printf '[Default Applications]\nx-scheme-handler/https=debsway-firefox.desktop\ntext/html=debsway-firefox-regular.desktop\n' >"$MIME"
-run firefox-regular.sh '' --remove
+run firefox-regular.sh --remove ''
 check "--remove: the command and menu entry go" bash -c '[ ! -e "$1/.local/bin/firefox-regular" ] && [ ! -e "$1/.local/share/applications/debsway-firefox-regular.desktop" ]' _ "$H"
 check "...its defaults go, the sandboxed Firefox's stay" bash -c '! grep -q firefox-regular "$1" && grep -qx "x-scheme-handler/https=debsway-firefox.desktop" "$1"' _ "$MIME"
 check "...the profile stays unless you say so" test -d "$P"
@@ -144,7 +152,7 @@ check "...says claude is it, without the sandboxed claude" grep -q 'Run it with:
 : >"$T/sandbox-mark"
 run claude-regular.sh ''
 check "...with the sandboxed claude, says claude-regular" grep -q 'claude is the sandboxed one' "$T/out"
-run claude-regular.sh '' --remove
+run claude-regular.sh --remove
 check "--remove: only debsway's settings go" jq_has "$H/.claude/settings.json" 'd == {"permissions": {"deny": ["Read(~/mine)"]}}'
 check "...the command goes, and the repository only if unused" bash -c '[ ! -e "$1/.local/bin/claude-regular" ] && grep -qx remove-repo-if-unused "$2"' _ "$H" "$T/calls"
 
