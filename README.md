@@ -101,7 +101,9 @@ debsway/
 ```
 
 `offline/` holds the large downloads: `debs/` (Wi-Fi packages and their
-signed Debian lists), `torbrowser/` and `whonix/`. Run every script with
+signed Debian lists), `torbrowser/` and `whonix/`. When debsway runs from a
+folder you can't write to (the package's root-owned `/usr/share/debsway`),
+they go in `~/.local/share/debsway/offline` instead. Run every script with
 `bash script.sh`; that works even when a USB stick's filesystem drops the
 executable bit.
 

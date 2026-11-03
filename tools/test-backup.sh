@@ -15,12 +15,12 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 }
 not() { ! "$@"; }
 
-HOME=$T/home DEBSWAY_DIR=$T/debsway
+HOME=$T/home DEBSWAY_DIR=$T/debsway OFFLINE_DIR=$T/debsway/offline
 eval "$(sed -n '/^write_excludes() {/,/^}/p' "$HERE/extras/backup.sh")"
 F=$T/excludes
 
 write_excludes "$F"
-for line in "$HOME/.cache" "$HOME/.local/share/Trash" "$HOME/.local/share/libvirt/images" "$HOME/vpskvm" "$DEBSWAY_DIR/offline"; do
+for line in "$HOME/.cache" "$HOME/.local/share/Trash" "$HOME/.local/share/libvirt/images" "$HOME/vpskvm" "$OFFLINE_DIR"; do
     check "a new list leaves out ${line#"$T"/}" grep -qxF "$line" "$F"
 done
 
@@ -29,7 +29,7 @@ printf '%s\n' "# Left out of backups (written by debsway extras/backup.sh)" "$HO
     "$HOME/.local/share/libvirt/images" "$HOME/Videos" >"$F"
 write_excludes "$F"
 check "an existing list gains mockvps-kvm's VM disks (~/vpskvm)" grep -qxF "$HOME/vpskvm" "$F"
-check "...and the saved downloads" grep -qxF "$DEBSWAY_DIR/offline" "$F"
+check "...and the saved downloads" grep -qxF "$OFFLINE_DIR" "$F"
 check "...keeps the line you added" grep -qxF "$HOME/Videos" "$F"
 check "...and doesn't put back the line you took out" not grep -qxF "$HOME/.cache" "$F"
 write_excludes "$F"

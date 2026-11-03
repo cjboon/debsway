@@ -77,14 +77,14 @@ reload_wifi_drivers() {
 # first matched to Debian's signed package lists (lib/offline.sh).
 install_offline_debs() {
     local tmp p want=() rc=0
-    [ -f "$DEBSWAY_DIR/offline/debs/Packages" ] || return 1
+    [ -f "$OFFLINE_DIR/debs/Packages" ] || return 1
     tmp=$(mktemp -d)
     # Check and install the same copy
-    cp -r "$DEBSWAY_DIR/offline/debs" "$tmp/repo"
+    cp -r "$OFFLINE_DIR/debs" "$tmp/repo"
     if [ ! -d "$tmp/repo/verify" ] ||
         ! verify_offline_lists "$tmp/repo/verify" "$tmp/sums" ||
         ! check_offline_debs "$tmp/repo" "$tmp/sums"; then
-        warn "The packages in $DEBSWAY_DIR/offline/debs can't be matched to Debian's signed"
+        warn "The packages in $OFFLINE_DIR/debs can't be matched to Debian's signed"
         warn "lists, so they were not installed. Make them again on a machine you trust:"
         warn "  bash prep/fetch-offline-debs.sh"
         rm -rf "$tmp"
@@ -103,7 +103,7 @@ install_offline_debs() {
         rm -rf "$tmp"
         return 1
     fi
-    say "Installing from $DEBSWAY_DIR/offline/debs: ${want[*]}"
+    say "Installing from $OFFLINE_DIR/debs: ${want[*]}"
     apt-get "${opts[@]}" update >/dev/null &&
         apt-get "${opts[@]}" install -y --no-install-recommends "${want[@]}" || rc=$?
     rm -rf "$tmp"
@@ -125,7 +125,7 @@ find_iface() {
         dmesg 2>/dev/null | grep -i 'firmware' | grep -iE 'fail|error' | tail -5 >&2 || true
         die "Still no Wi-Fi device. Check for a hardware Wi-Fi switch, or copy the
    firmware package for your card (e.g. firmware-iwlwifi, firmware-realtek)
-   into $DEBSWAY_DIR/offline/debs and run this again. A reboot may also be needed."
+   into $OFFLINE_DIR/debs and run this again. A reboot may also be needed."
     fi
     IF=${list[0]}
     if [ ${#list[@]} -gt 1 ]; then

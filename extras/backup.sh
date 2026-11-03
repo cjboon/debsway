@@ -84,7 +84,7 @@ write_excludes() {
             "$HOME/.cache" "$HOME/.local/share/Trash" "$HOME/.local/share/libvirt/images" >"$f"
     fi
     # Added to debsway's list later (a line you deleted from the first three stays deleted)
-    for line in "$HOME/vpskvm" "$DEBSWAY_DIR/offline"; do
+    for line in "$HOME/vpskvm" "$OFFLINE_DIR"; do
         grep -qxF "$line" "$f" || echo "$line" >>"$f"
     done
 }

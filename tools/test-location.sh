@@ -58,4 +58,22 @@ check "debsway list works from there" grep -q 'vim' <<<"$out"
 check "a message during an install names that folder, not ~/debsway" bash -c '
     grep -q "bash \$DEBSWAY_DIR/extras/autologin.sh --remove" "$1" && [ "$(bash -c ". \"\$1/lib.sh\"; echo \"\$DEBSWAY_DIR\"" _ "$2")" = "$2" ]' _ "$HERE/extras/autologin.sh" "$C"
 
+# 4. Saved downloads (offline/: Whonix, Tor Browser, the Wi-Fi packages): in the
+# folder when it has them or can be written, else in your home
+od() { env -u OFFLINE_DIR HOME="$T/home" XDG_DATA_HOME= bash -c '. "$1/lib.sh"; echo "$OFFLINE_DIR"' _ "$1"; }
+check "a copy you can write: its own offline/" test "$(od "$C")" = "$C/offline"
+mkdir -p "$T/ro"
+cp -r "$C" "$T/ro/debsway"
+rm -rf "$T/ro/debsway/offline"
+chmod a-w "$T/ro/debsway"
+check "a read-only copy (the package's): ~/.local/share/debsway/offline" test "$(od "$T/ro/debsway")" = "$T/home/.local/share/debsway/offline"
+chmod u+w "$T/ro/debsway"
+mkdir "$T/ro/debsway/offline"
+chmod a-w "$T/ro/debsway"
+check "a read-only stick that has offline/ (mounted by root): that one, so wifi.sh finds its packages" test "$(od "$T/ro/debsway")" = "$T/ro/debsway/offline"
+chmod u+w "$T/ro/debsway"
+found=$(grep -rnE '\$\{?DEBSWAY_DIR\}?"?/offline' --include='*.sh' lib parts extras prep bin ./*.sh | grep -v '^lib/core.sh:' |
+    grep -v '\${OFFLINE_DIR:-\$DEBSWAY_DIR/offline}')
+check "every script keeps its saved downloads in OFFLINE_DIR${found:+: $(head -2 <<<"$found" | cut -c1-100 | paste -sd'|')}" test -z "$found"
+
 [ "$fails" -eq 0 ]

@@ -105,13 +105,13 @@ git -C "$DEBSWAY_DIR" archive --format=tar HEAD | tar -x --no-same-permissions -
 # A stick's filesystem may not keep permissions, which is why the README
 # says to run scripts with bash.
 
-if [ -d "$DEBSWAY_DIR/offline" ]; then
+if [ -d "$OFFLINE_DIR" ]; then
     say "Copying the saved downloads (offline/)"
     mkdir -p "$target/offline"
-    cp -ru --no-preserve=mode,ownership "$DEBSWAY_DIR/offline"/. "$target/offline"/
+    cp -ru --no-preserve=mode,ownership "$OFFLINE_DIR"/. "$target/offline"/
     # Downloads that were replaced or deleted here
     (cd "$target/offline" && find . -type f | while read -r f; do
-        [ -e "$DEBSWAY_DIR/offline/$f" ] || rm -f "$f"
+        [ -e "$OFFLINE_DIR/$f" ] || rm -f "$f"
     done)
 fi
 sync

@@ -114,7 +114,7 @@ if ! command -v xorriso >/dev/null; then
     DEBSWAY_OWNER=$XORRISO_OWNER apt_install xorriso
 fi
 
-SAVED=$DEBSWAY_DIR/offline/install-iso
+SAVED=$OFFLINE_DIR/install-iso
 mkdir -p "$SAVED"
 work=$(mktemp -d)
 
@@ -173,9 +173,9 @@ if [ -n "$scripts" ]; then cp -R "$scripts" "$stage/debsway-install/scripts"; no
 # debsway: the last commit, then offline/ but the installers themselves
 git -C "$DEBSWAY_DIR" archive --format=tar HEAD | tar -x -C "$stage/debsway" ||
     die "Couldn't take debsway's last commit (is $DEBSWAY_DIR a git checkout?)."
-if [ -d "$DEBSWAY_DIR/offline" ]; then
+if [ -d "$OFFLINE_DIR" ]; then
     mkdir -p "$stage/debsway/offline"
-    (cd "$DEBSWAY_DIR/offline" && find . -mindepth 1 -maxdepth 1 ! -name install-iso ! -name tails -exec cp -R {} "$stage/debsway/offline/" \;)
+    (cd "$OFFLINE_DIR" && find . -mindepth 1 -maxdepth 1 ! -name install-iso ! -name tails -exec cp -R {} "$stage/debsway/offline/" \;)
 fi
 note "debsway $(git -C "$DEBSWAY_DIR" describe --always --dirty 2>/dev/null), user $user, keyboard $keymap, $locale, time zone $timezone, $($encrypt || echo "NOT encrypted, ")$($encrypt && [ "$erase" = true ] && echo "the disk filled with random data first" || echo "no random fill")$($autologin && echo ", logged in on tty1 without a password")$($simplesway && echo ", one workspace")"
 [ -z "$(git -C "$DEBSWAY_DIR" status --porcelain 2>/dev/null)" ] ||

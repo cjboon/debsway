@@ -943,23 +943,23 @@ fi
 # --------------------------------------------------------------------
 section "Saved offline copies"
 any=false
-for f in offline/torbrowser/tor-browser-linux-*.tar.xz; do
+for f in "$OFFLINE_DIR"/torbrowser/tor-browser-linux-*.tar.xz; do
     [ -f "$f" ] || continue
     any=true
-    verify_detached "$TB_FPR" offline/torbrowser/tor-browser-developers.asc "$f.asc" "$f" 2>/dev/null &&
+    verify_detached "$TB_FPR" "$OFFLINE_DIR"/torbrowser/tor-browser-developers.asc "$f.asc" "$f" 2>/dev/null &&
         ok "$f verifies" || bad "$f doesn't verify: run prep/fetch-tor-browser.sh again"
 done
-for f in offline/whonix/Whonix-*.libvirt.xz; do
+for f in "$OFFLINE_DIR"/whonix/Whonix-*.libvirt.xz; do
     [ -f "$f" ] || continue
     any=true
-    verify_detached "$WHONIX_FPR" offline/whonix/derivative.asc "$f.asc" "$f" 2>/dev/null &&
+    verify_detached "$WHONIX_FPR" "$OFFLINE_DIR"/whonix/derivative.asc "$f.asc" "$f" 2>/dev/null &&
         ok "$f verifies" || bad "$f doesn't verify: run extras/whonix.sh --fetch again"
 done
-if [ -f offline/debs/Packages ]; then
+if [ -f "$OFFLINE_DIR"/debs/Packages ]; then
     any=true
-    if [ -d offline/debs/verify ] && verify_offline_lists offline/debs/verify "$TMP/sums" 2>"$TMP/err" &&
-        check_offline_debs offline/debs "$TMP/sums" 2>>"$TMP/err"; then
-        ok "offline/debs: $(grep -c '^Package:' offline/debs/Packages) packages for wifi.sh, all in Debian's signed lists"
+    if [ -d "$OFFLINE_DIR"/debs/verify ] && verify_offline_lists "$OFFLINE_DIR"/debs/verify "$TMP/sums" 2>"$TMP/err" &&
+        check_offline_debs "$OFFLINE_DIR"/debs "$TMP/sums" 2>>"$TMP/err"; then
+        ok "offline/debs: $(grep -c '^Package:' "$OFFLINE_DIR"/debs/Packages) packages for wifi.sh, all in Debian's signed lists"
     else
         bad "offline/debs doesn't check out ($(head -1 "$TMP/err")): run prep/fetch-offline-debs.sh again"
     fi

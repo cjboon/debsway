@@ -3,6 +3,16 @@
 
 BIN="$HOME/.local/bin"
 
+# Where saved downloads are kept (offline/: the Wi-Fi packages, Tor Browser,
+# Whonix, Tails, the install image): in the debsway folder when it has them
+# already (a stick, your own copy) or you can write there; from the package's
+# read-only copy in /usr/share/debsway, in your own ~/.local/share/debsway/offline
+if [ -d "$DEBSWAY_DIR/offline" ] || [ -w "$DEBSWAY_DIR" ]; then
+    OFFLINE_DIR=$DEBSWAY_DIR/offline
+else
+    OFFLINE_DIR=${XDG_DATA_HOME:-$HOME/.local/share}/debsway/offline
+fi
+
 # (DEBSWAY_SUDO: a test points this at a pretend sudo)
 if [ "$(id -u)" -eq 0 ]; then SUDO=; else SUDO=${DEBSWAY_SUDO:-sudo}; fi
 

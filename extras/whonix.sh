@@ -32,7 +32,7 @@ need_user
 # WHONIX_FPR (pins.sh): Patrick Schleizer, signs all Whonix releases
 KEY_URL=$WHONIX_KEY_URL
 EDITION=LXQt
-SAVED="$DEBSWAY_DIR/offline/whonix"
+SAVED="$OFFLINE_DIR/whonix"
 KEY="$SAVED/derivative.asc"
 IMAGES="$HOME/.local/share/libvirt/images"
 VIRSH=(virsh -c qemu:///session)

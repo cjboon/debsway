@@ -14,7 +14,7 @@
 # years, so the current key is saved next to the download for
 # extras/tor-browser.sh to check against offline.
 KEY_URL=$TB_KEY_URL
-OUT="$DEBSWAY_DIR/offline/torbrowser"
+OUT="$OFFLINE_DIR/torbrowser"
 KEY="$OUT/tor-browser-developers.asc"
 ARCH=$(uname -m)
 

@@ -103,7 +103,7 @@ USERJS="$PROFILE/user.js"
 JS_BEGIN='// >>> debsway extras/tor-browser.sh >>>'
 JS_END='// <<< debsway <<<'
 
-OFFLINE="$DEBSWAY_DIR/offline/torbrowser"
+OFFLINE="$OFFLINE_DIR/torbrowser"
 TBL_SETTINGS="$HOME/.config/torbrowser/settings.json"
 
 # Unpack the copy prep/fetch-tor-browser.sh saved, checked against the key it

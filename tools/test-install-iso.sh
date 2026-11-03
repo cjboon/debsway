@@ -84,7 +84,7 @@ echo "fetch \$*" >>"$T/fetched"
 [ -z "\${FETCH_FAILS:-}" ] || exit 1
 mkdir -p "$O/offline/debs/verify/debian" && echo "Date: Mon, 02 Nov 2026 00:00:00 UTC" >"$O/offline/debs/verify/debian/InRelease"
 EOF
-refresh() { : >"$T/fetched"; (DEBSWAY_DIR=$O DEBSWAY_NOW=$(date -d '2026-11-02 12:00 UTC' +%s) offline_debs_refresh) >"$T/said" 2>&1; }
+refresh() { : >"$T/fetched"; (DEBSWAY_DIR=$O OFFLINE_DIR=$O/offline DEBSWAY_NOW=$(date -d '2026-11-02 12:00 UTC' +%s) offline_debs_refresh) >"$T/said" 2>&1; }
 . "$HERE/lib/offline.sh"
 inrelease debian 'Sat, 12 Sep 2026 07:55:41 UTC'
 inrelease security 'Sat, 31 Oct 2026 22:02:52 UTC' 'Sat, 07 Nov 2026 22:02:52 UTC'

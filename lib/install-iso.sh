@@ -45,7 +45,7 @@ fill_preseed() {
 # until when they're good. Never stops the build: a stick still installs over
 # a cable or a phone.
 offline_debs_refresh() {
-    local debs=$DEBSWAY_DIR/offline/debs fetch=$DEBSWAY_DIR/prep/fetch-offline-debs.sh
+    local debs=${OFFLINE_DIR:-$DEBSWAY_DIR/offline}/debs fetch=$DEBSWAY_DIR/prep/fetch-offline-debs.sh
     local now until min=${DEBSWAY_OFFLINE_MIN_DAYS:-5} fw=() f
     now=${DEBSWAY_NOW:-$(date +%s)}
     until=$(offline_good_until "$debs/verify")

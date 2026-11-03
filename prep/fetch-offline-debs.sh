@@ -18,7 +18,7 @@
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/offline.sh"
 
-OUT="$DEBSWAY_DIR/offline/debs"
+OUT="$OFFLINE_DIR/debs"
 # What it needs, installed now if missing: gpgv and Debian's keyring check the
 # signed lists, apt-ftparchive (apt-utils) makes the folder a local apt repo
 need_tools gpgv:gpgv apt-ftparchive:apt-utils wget:wget xz:xz-utils \

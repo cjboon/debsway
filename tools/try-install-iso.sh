@@ -70,9 +70,9 @@ if [ "$mode" = remove ]; then
 fi
 
 if [ -z "$iso" ]; then
-    iso=$(find "$DEBSWAY_DIR/offline/install-iso" -maxdepth 1 -name '*-debsway.iso' -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
+    iso=$(find "$OFFLINE_DIR/install-iso" -maxdepth 1 -name '*-debsway.iso' -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
     [ -n "$iso" ] || $print || [ "$mode" = boot ] ||
-        die "No built image in $DEBSWAY_DIR/offline/install-iso. Make one: bash prep/make-install-iso.sh"
+        die "No built image in $OFFLINE_DIR/install-iso. Make one: bash prep/make-install-iso.sh"
 fi
 [ "$mode" = boot ] || [ -f "$iso" ] || $print || die "No image $iso."
 

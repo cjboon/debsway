@@ -105,7 +105,7 @@ for part in "${PARTS[@]}"; do status_of "$DEBSWAY_DIR/parts/$part.sh"; done
 
 echo "Extras (optional, extras/):"
 for f in "$DEBSWAY_DIR"/extras/*.sh; do status_of "$f"; done
-for f in "$DEBSWAY_DIR"/offline/torbrowser/tor-browser-linux-*.tar.xz "$DEBSWAY_DIR"/offline/whonix/Whonix-*.libvirt.xz; do
+for f in "$OFFLINE_DIR"/torbrowser/tor-browser-linux-*.tar.xz "$OFFLINE_DIR"/whonix/Whonix-*.libvirt.xz; do
     [ -f "$f" ] && printf '      saved: %s\n' "${f#"$DEBSWAY_DIR"/}"
 done
 
