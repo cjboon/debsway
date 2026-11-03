@@ -103,6 +103,24 @@ Install it on a computer with `sudo apt install ./debsway_VERSION_all.deb`.
 newer package is installed the same way, until the signed apt repository below
 delivers it.
 
+## The signed apt repository
+
+`bash tools/make-apt-repo.sh --key FINGERPRINT --out FOLDER debsway_*.deb`
+makes an apt repository (`pool/`, `dists/trixie/`) of debsway's packages and
+signs it, on your own computer, with your key (the pinned `DEBSWAY_SIGNING_FPR`
+once it is set; gpg asks for the passphrase or the token). Upload FOLDER as it
+is to any web server or mirror (`rsync -a --delete FOLDER/ server:/var/www/debian/`);
+`tools/test-apt-repo.sh` checks it with throwaway keys and Debian's own apt.
+
+- **The server can't change a package.** apt checks every file against
+  `InRelease`, and `InRelease` against your key. Whoever runs the server can
+  only hold updates back.
+- **Nor serve an old one for long:** `InRelease` is good for 14 days
+  (`--valid-days N`, 1 to 90), after which apt refuses the repository. Sign it
+  again within that time, even when nothing changed.
+- **Only debsway's packages** go in (`debsway` and `debsway-*`); the script
+  refuses anything else.
+
 ## Other scripts
 
 - `prep/setup-sudo.sh USER` (as root): installs sudo and adds USER to the

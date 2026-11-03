@@ -198,6 +198,16 @@ tag: `bash tools/build-deb.sh --commit TAG --version VERSION`.
 
 ## Phase 2: a signed apt repository
 
+Started: `tools/make-apt-repo.sh` makes and signs the repository on your own
+computer (with `apt-ftparchive` and gpg, which Debian has, instead of
+reprepro), only for debsway's packages, good for 14 days; Debian's own apt
+takes it, and refuses it signed with another key, past its Valid-Until or
+with a changed package list (`tools/test-apt-repo.sh`). Still to do: the
+keyring package, the part that adds the repository on a debsway computer
+(pinned key, and an apt pin so it can only bring debsway's packages), and
+update.sh through apt. They wait for the key (Phase 0) and an address.
+
+
 - **The archive tool:** `reprepro` builds a Debian archive (the `dists/`
   and `pool/` folders) and signs its `InRelease` file with your signing
   subkey. **Signing happens on your computer**, never on the server.
