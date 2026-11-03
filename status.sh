@@ -12,6 +12,55 @@ show() {
 # Encrypted if any layer under the device is dm-crypt (LUKS)
 on_crypt() { lsblk -s -no TYPE "$1" 2>/dev/null | grep -qx crypt; }
 
+# Security at a glance: the few things that matter most, each checked here,
+# with what to run when one isn't done. [x] yes, [~] partly, [ ] no. The
+# details follow below. (DEBSWAY_ETC, DEBSWAY_FX_CLIENT and
+# DEBSWAY_FIREFOX_DIST: where /etc, the firefox command and Firefox's
+# policies are, for tests.)
+glance() { printf '  [%s] %s\n' "$1" "$2"; }
+ETC=${DEBSWAY_ETC:-/etc}
+FX=${DEBSWAY_FX_CLIENT:-/usr/local/bin/firefox}
+FX_POLICY=${DEBSWAY_FIREFOX_DIST:-/usr/share/firefox-esr/distribution}/policies.json
+echo "Security at a glance:"
+root_src=$(findmnt -no SOURCE / 2>/dev/null | sed 's/\[.*//')
+if [ -n "$root_src" ] && on_crypt "$root_src"; then
+    glance x "Disk encrypted: without your passphrase nobody can read it"
+else
+    glance " " "Disk NOT encrypted: anyone with the computer can read your files (reinstall with encrypted LVM)"
+fi
+if ! command -v swaylock >/dev/null; then
+    glance " " "No screen lock: bash parts/swaylock.sh"
+elif [ -f "$SWAY_SNIPPETS/idle.conf" ]; then
+    glance x "Screen locks by itself when you're away (Super+Escape locks it now)"
+else
+    glance "~" "Screen locks only when you lock it (Super+Escape): bash parts/swayidle.sh locks it when idle"
+fi
+if systemctl is-active --quiet ufw 2>/dev/null; then
+    glance x "Firewall on: nothing from outside can connect in"
+else
+    glance " " "Firewall off: bash parts/ufw.sh"
+fi
+if is_installed unattended-upgrades && grep -qs 'Unattended-Upgrade "1"' "$ETC/apt/apt.conf.d/20auto-upgrades"; then
+    glance x "Security updates install by themselves"
+else
+    glance " " "Security updates don't install by themselves: bash parts/unattended-upgrades.sh"
+fi
+if [ -x "$FX" ] && [ "$(sed -n 's|^x-scheme-handler/https=||p' "$HOME/.config/mimeapps.list" 2>/dev/null | head -1)" = debsway-firefox.desktop ]; then
+    glance x "Web links open in the sandboxed Firefox"
+elif [ -x "$FX" ]; then
+    glance "~" "The sandboxed Firefox is there, but links open in another browser: bash extras/firefox-sandbox.sh"
+else
+    glance " " "No sandboxed browser: bash extras/firefox-sandbox.sh"
+fi
+if secure_dns_on; then
+    glance x "DNS encrypted, for every program"
+elif [ -x "$FX" ] && grep -qs '"DNSOverHTTPS": { "Enabled": true' "$FX_POLICY"; then
+    glance "~" "DNS encrypted for Firefox only: bash extras/secure-dns.sh, for every program"
+else
+    glance " " "DNS not encrypted: your network sees which sites you look up (bash extras/secure-dns.sh)"
+fi
+echo
+
 echo "Disk encryption:"
 plain=()
 for m in / /home; do

@@ -64,8 +64,10 @@ sudo mount -L DEBSWAY /mnt && bash /mnt/debsway/start.sh
    the space bar check the ones you want. Add more later with
    `bash install-extras.sh`, or one directly: `bash extras/keepassxc.sh`.
 
-`bash status.sh` shows what's set up; `bash test.sh` checks that it all
-still works.
+`bash status.sh` (Status in the debsway menu) shows what's set up. It starts
+with "Security at a glance": disk encryption, screen lock, firewall, automatic
+updates, the sandboxed browser and encrypted DNS, each [x] done, [~] partly or
+[ ] not, with what to run. `bash test.sh` checks that it all still works.
 
 ## Folder layout
 
@@ -76,7 +78,7 @@ debsway/
 ├── install-base.sh          the core desktop: explains and asks, packages, sway, bar, every part, then the extras list
 ├── install-extras.sh        pick optional programs from a list (install-base.sh ends with it)
 ├── wifi.sh                  get online over Wi-Fi, whatever is installed
-├── status.sh                what's installed; warns if the disk isn't encrypted
+├── status.sh                security at a glance first, then what's installed
 ├── update.sh                bring debsway up to date and rerun the scripts whose files changed
 ├── test.sh                  checks scripts, packages, downloads and keys still work
 ├── packages.sh              the core's package list and the order of the parts

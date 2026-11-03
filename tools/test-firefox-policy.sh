@@ -63,6 +63,7 @@ allow --refresh
 check "without the secure DNS extra: Firefox's own DNS over HTTPS, to Quad9" \
     bash -c '[ "$1" = true ] && [ "$2" = "\"https://dns.quad9.net/dns-query\"" ]' _ "$(policy DNSOverHTTPS Enabled)" "$(policy DNSOverHTTPS ProviderURL)"
 check "...strict: no fallback to plain DNS (debsway's default)" test "$(policy DNSOverHTTPS Fallback)" = false
+check "...written as status.sh's summary looks for it" grep -qF '"DNSOverHTTPS": { "Enabled": true' "$POLICY"
 check "...and locked" test "$(policy DNSOverHTTPS Locked)" = true
 echo dns=fallback >"$T/firefox.conf"
 allow --refresh

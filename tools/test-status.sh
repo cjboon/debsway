@@ -1,6 +1,8 @@
 #!/bin/bash
 # Checks status.sh's Screen lock line: it says the screen never locks when
-# swaylock isn't installed, whatever the idle settings say. status.sh only
+# swaylock isn't installed, whatever the idle settings say; and its "Security
+# at a glance" lines, all done and none done, with pretend disks, firewall,
+# packages and Firefox. status.sh only
 # reads; it runs here in a temp home, once with swaylock, once with a PATH
 # that has everything else. Run by test.sh, or:  bash tools/test-status.sh
 # shellcheck disable=SC2016  # sed expands its own variables
@@ -34,5 +36,36 @@ lockline() { HOME=$T/home STATUS_TEST_PATH=$1 bash "$R/status.sh" 2>/dev/null | 
 
 check "with swaylock: it locks after the idle minutes" grep -q 'after 30 minutes idle' <<<"$(lockline "$T/bin:$T/nolock")"
 check "without swaylock: it says the screen never locks" grep -q "swaylock isn't installed, so the screen never locks" <<<"$(lockline "$T/nolock")"
+
+# ---- Security at a glance
+G=$T/g
+mkdir -p "$G/bin" "$G/etc/apt/apt.conf.d" "$G/etc/unbound/unbound.conf.d" "$G/dist" "$T/home/.config"
+# a root on encryption, the firewall up, unattended-upgrades installed
+printf '#!/bin/sh\necho /dev/mapper/root\n' >"$G/bin/findmnt"
+printf '#!/bin/sh\n[ -e %s/plain ] && echo part || { echo crypt; echo part; }\n' "$G" >"$G/bin/lsblk"
+printf '#!/bin/sh\n[ "$1 $2 $3" = "is-active --quiet ufw" ] && [ ! -e %s/fw-off ]\n' "$G" >"$G/bin/systemctl"
+printf '#!/bin/sh\necho "install ok installed"\n' >"$G/bin/dpkg-query"
+printf '#!/bin/sh\n' >"$G/firefox"
+chmod +x "$G/bin/"* "$G/firefox"
+printf 'APT::Periodic::Unattended-Upgrade "1";\n' >"$G/etc/apt/apt.conf.d/20auto-upgrades"
+printf '[Default Applications]\nx-scheme-handler/https=debsway-firefox.desktop\n' >"$T/home/.config/mimeapps.list"
+: >"$G/etc/unbound/unbound.conf.d/debsway-secure-dns.conf"
+glance() { HOME=$T/home DEBSWAY_ETC=$G/etc DEBSWAY_FX_CLIENT=$1 DEBSWAY_FIREFOX_DIST=$G/dist STATUS_TEST_PATH="$G/bin:$T/bin:$T/nolock" bash "$R/status.sh" 2>/dev/null | sed -n '/^Security at a glance:/,/^$/p'; }
+out=$(glance "$G/firefox")
+check "at a glance, all done: six [x] lines, first in the screen" bash -c '[ "$(grep -c "^  \[x\]" <<<"$1")" = 6 ] && [ "$(head -1 <<<"$1")" = "Security at a glance:" ]' _ "$out"
+first=$(HOME=$T/home DEBSWAY_ETC=$G/etc DEBSWAY_FX_CLIENT=$G/firefox DEBSWAY_FIREFOX_DIST=$G/dist STATUS_TEST_PATH="$G/bin:$T/bin:$T/nolock" bash "$R/status.sh" 2>/dev/null | head -1)
+check "...and it is the first thing Status shows" test "$first" = "Security at a glance:"
+# nothing done: a plain disk, no firewall, no automatic updates, no sandboxed Firefox, plain DNS
+: >"$G/plain"; : >"$G/fw-off"
+rm -f "$G/etc/apt/apt.conf.d/20auto-upgrades" "$G/etc/unbound/unbound.conf.d/debsway-secure-dns.conf" "$T/home/.config/sway/config.d/idle.conf"
+out=$(glance "$G/none")
+check "...none done: each says so, with what to run" bash -c '
+    grep -q "\[ \] Disk NOT encrypted" <<<"$1" && grep -q "\[~\] Screen locks only when you lock it" <<<"$1" &&
+    grep -q "\[ \] Firewall off: bash parts/ufw.sh" <<<"$1" && grep -q "\[ \] Security updates don.t install by themselves" <<<"$1" &&
+    grep -q "\[ \] No sandboxed browser" <<<"$1" && grep -q "\[ \] DNS not encrypted" <<<"$1"' _ "$out"
+# the sandboxed Firefox with its own encrypted DNS, no secure DNS extra
+printf '{\n  "policies": {\n    "DNSOverHTTPS": { "Enabled": true, "ProviderURL": "https://dns.quad9.net/dns-query", "Fallback": false, "Locked": true },\n  }\n}\n' >"$G/dist/policies.json"
+out=$(glance "$G/firefox")
+check "...Firefox's own encrypted DNS without the secure DNS extra: partly ([~])" grep -q '\[~\] DNS encrypted for Firefox only' <<<"$out"
 
 [ "$fails" -eq 0 ]
