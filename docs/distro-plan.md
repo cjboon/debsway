@@ -6,13 +6,20 @@
 2. `debsway install NAME`, with Tab completion. (Done.)
 3. A `.deb` that installs debsway root-owned in `/usr/share/debsway`. (Done.)
 4. A signed apt repository. Signing happens on your own computer, so a
-   broken-into VPS can't forge updates.
+   broken-into VPS can't forge updates. (The tools are done:
+   `tools/make-apt-repo.sh`, `parts/debsway-repo.sh`, and `update.sh` for the
+   package. They wait for the key and an address.)
 5. A static website on a hardened VPS, with an onion mirror.
 6. An installer ISO, built on Debian's own installer and signed shim.
 7. DistroWatch.
 
 About seven to nine working sessions in all. Start with step 2: it is useful
 at once, and everything later builds on it.
+
+**Where it stands (2026-11-03):** steps 2 and 3 are done, and the tools for
+step 4. Besides, `update.sh` brings in only what your key signed once the key
+is pinned. What waits on you: step 1 (the name, and the key, which only you
+can make), the address for the repository, then the server (step 5).
 
 ---
 
