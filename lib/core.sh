@@ -233,8 +233,8 @@ install_bin() {
 }
 
 # The wrapper that keeps a sandbox user off X11's abstract socket (see
-# bin/no-abstract-sockets). One copy, root's, shared by incognito, claude-code
-# and claude-vm; the last one to be removed takes it away.
+# bin/no-abstract-sockets). One copy, root's, shared by the sandboxes; the last
+# one to be removed takes it away.
 NO_ABSTRACT=/usr/local/libexec/wren-no-abstract-sockets
 install_no_abstract() {
     sudo install -d -o root -g root -m 0755 /usr/local/libexec
@@ -242,9 +242,11 @@ install_no_abstract() {
 }
 remove_no_abstract() {
     local s
-    for s in incognito-session claude-session claude-vm-session opencode-vm-session firefox-session; do
+    for s in incognito-session claude-session claude-vm-session opencode-vm-session firefox-session onion-site-session yt-dlp-session; do
         [ ! -e "/usr/local/libexec/$s" ] || return 0
     done
+    # (a media viewer given a web address; this one is yours, in ~/.local/bin)
+    [ ! -e "$BIN/media-sandbox" ] || return 0
     sudo rm -f "$NO_ABSTRACT"
 }
 

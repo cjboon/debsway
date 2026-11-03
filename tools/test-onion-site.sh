@@ -188,6 +188,21 @@ check "onion-site start says when Tor is off, and how to turn it on" \
 printf '#!/bin/sh\nexit 0\n' >"$T/fake/systemctl"
 check "...and nothing when it runs" bash -c '! grep -q "Tor is not running" <<<"$1"' _ "$(os start 2>&1 </dev/null)"
 
+# The shared no-abstract-sockets wrapper goes only when nothing uses it: the
+# function on a temp folder, with a pretend sudo. (Without it onion-site's boot
+# service fails, and the site is down without a word.)
+gone_with() { # USER-OF-THE-WRAPPER: is the wrapper still there after remove_no_abstract?
+    rm -rf "$T/nx" && mkdir -p "$T/nx/libexec" "$T/nx/bin"
+    : >"$T/nx/libexec/wren-no-abstract-sockets"
+    case $1 in media-sandbox) : >"$T/nx/bin/media-sandbox" ;; *) : >"$T/nx/libexec/$1" ;; esac
+    bash -c 'sudo() { "$@"; }; BIN=$2/bin; eval "$(sed -n "/^NO_ABSTRACT=/p; /^remove_no_abstract() {/,/^}/p" "$1/lib/core.sh" | sed "s|/usr/local/libexec|$2/libexec|g")"; remove_no_abstract' _ "$HERE" "$T/nx"
+    [ -e "$T/nx/libexec/wren-no-abstract-sockets" ]
+}
+for u in onion-site-session yt-dlp-session firefox-session incognito-session media-sandbox; do
+    check "the wrapper stays while $u needs it" gone_with "$u"
+done
+check "...and goes when nothing does" not gone_with nobody
+
 # remove_bin takes out only a command that says "written by Wren Linux" (on one
 # line): one that said it over two was left behind by --remove
 check "every command Wren Linux installs (install_bin's) says it is Wren Linux's, on one line (remove_bin needs it)" bash -c '
