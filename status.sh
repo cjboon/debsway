@@ -132,11 +132,18 @@ if [ -f /etc/firefox-esr/wren-hardening.js ]; then
 else
     echo "  [ ] HTTPS-Only Mode, JavaScript JIT off"
 fi
-if [ -f /usr/share/firefox-esr/distribution/.wren-written ]; then
-    n=$(grep -cv '^#' /etc/firefox-esr/wren-ublock-allow 2>/dev/null || true)
-    echo "  [x] uBlock Origin medium mode (${n:-0} sites allowed: ublock-allow --list)"
+FX_ETC=${WREN_FIREFOX_ETC:-/etc/firefox-esr}
+if [ -f "${WREN_FIREFOX_DIST:-/usr/share/firefox-esr/distribution}/.wren-written" ]; then
+    # (no file: medium, as Wren Linux was before the choice)
+    mode=$(cat "$FX_ETC/wren-ublock-mode" 2>/dev/null || true)
+    if [ "$mode" = standard ]; then
+        echo "  [x] uBlock Origin standard mode (ublock-allow --mode medium also blocks other sites' scripts)"
+    else
+        n=$(grep -cv '^#' "$FX_ETC/wren-ublock-allow" 2>/dev/null || true)
+        echo "  [x] uBlock Origin medium mode (${n:-0} sites allowed: ublock-allow --list)"
+    fi
 else
-    echo "  [ ] uBlock Origin medium mode"
+    echo "  [ ] uBlock Origin"
 fi
 if systemctl --user is-enabled --quiet firefox-restart-check.timer 2>/dev/null; then
     echo "  [x] notice when Firefox needs a restart after an update"

@@ -77,4 +77,14 @@ check "...Firefox's own encrypted DNS without secure DNS: partly ([~])" grep -q 
 out=$(glance "$G/firefox")
 check "...secure DNS set up but switched off: partly ([~]), and it says so" grep -q '\[~\] Secure DNS switched off' <<<"$out"
 
+# uBlock's mode, as chosen at install: only medium is called medium
+FX=$T/fxetc; mkdir -p "$FX"; : >"$G/dist/.wren-written"
+ub() { HOME=$T/home WREN_ETC=$G/etc WREN_FX_CLIENT=$G/firefox WREN_FIREFOX_DIST=$G/dist WREN_FIREFOX_ETC=$FX STATUS_TEST_PATH="$G/bin:$T/bin:$T/nolock" bash "$R/status.sh" 2>/dev/null | grep 'uBlock Origin'; }
+echo standard >"$FX/wren-ublock-mode"
+check "uBlock in standard mode: it says standard, not medium" bash -c '[[ $1 == *"[x] uBlock Origin standard mode"* ]]' _ "$(ub)"
+echo medium >"$FX/wren-ublock-mode"
+check "...in medium mode: medium" bash -c '[[ $1 == *"[x] uBlock Origin medium mode"* ]]' _ "$(ub)"
+rm "$FX/wren-ublock-mode"
+check "...none chosen (before the choice): medium" bash -c '[[ $1 == *"[x] uBlock Origin medium mode"* ]]' _ "$(ub)"
+
 [ "$fails" -eq 0 ]
