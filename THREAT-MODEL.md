@@ -163,7 +163,10 @@ With the extras:
 - **Anything running as you.** If you run a malicious program, or an
   attack escapes the browser, it can read all your files, every Firefox
   profile's logins and your wallets. debsway doesn't sandbox your own
-  user. Only install software you trust. `claude-regular`
+  user. Only install software you trust. (With the debsway package
+  installed, the scripts debsway runs with sudo are root's files in
+  `/usr/share/debsway`, so such a program can't change them to wait for your
+  password; from your own copy in `~/debsway` it could.) `claude-regular`
   (`extras/claude-regular.sh`) and `mullvad-browser-regular` run as you on
   purpose, for ease: a hacked page in Mullvad Browser reaches your files, and
   so does `firefox-esr` started by name. `claude-regular`'s

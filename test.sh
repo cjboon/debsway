@@ -513,6 +513,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "The debsway package (tools/build-deb.sh), unpacked in a temp folder"
+if out=$(bash tools/test-build-deb.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") package checks"
+else
+    bad "package checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "debsway from wherever it is (not only ~/debsway)"
 if out=$(bash tools/test-location.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") location checks"

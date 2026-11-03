@@ -1,0 +1,129 @@
+#!/bin/bash
+# build-deb.sh: builds the debsway package (.deb) from a git commit, never from
+# files that aren't committed. It installs debsway root-owned and read-only in
+# /usr/share/debsway, the debsway command in /usr/bin, its man page and Tab
+# completion; nothing else. It has no install scripts: installing it changes
+# no setting and runs nothing as root. The parts and extras still run as you,
+# from /usr/share/debsway, when you ask for them (debsway part NAME, debsway
+# install NAME). The same commit always gives the same file, byte for byte
+# (every date is the commit's), so anyone can check a published package
+# against the source: build it again and compare the SHA-256.
+#   bash tools/build-deb.sh [--commit REV] [--version VERSION] [--out FOLDER]
+# Defaults: HEAD; a version from the commit's date and id (0~gitYYYYMMDD.ID);
+# the current folder. Needs dpkg-deb and git only; lintian checks the result if
+# it is installed. Changes nothing outside FOLDER and a temp folder.
+set -euo pipefail
+HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+
+die() { printf 'build-deb: %s\n' "$*" >&2; exit 1; }
+
+rev=HEAD version='' out=$PWD
+while [ $# -gt 0 ]; do
+    case $1 in
+        --commit) rev=${2:?}; shift 2 ;;
+        --version) version=${2:?}; shift 2 ;;
+        --out) out=${2:?}; shift 2 ;;
+        *) die "usage: build-deb.sh [--commit REV] [--version VERSION] [--out FOLDER]" ;;
+    esac
+done
+command -v dpkg-deb >/dev/null || die "dpkg-deb is missing (package dpkg)."
+g() { git -C "$HERE" "$@"; }
+commit=$(g rev-parse --verify --quiet "$rev^{commit}") || die "no commit $rev here."
+# every date in the package is the commit's: the same commit, the same file
+SOURCE_DATE_EPOCH=$(g log -1 --format=%ct "$commit")
+export SOURCE_DATE_EPOCH
+if [ -z "$version" ]; then
+    version="0~git$(date -u -d "@$SOURCE_DATE_EPOCH" +%Y%m%d).$(g rev-parse --short=10 "$commit")"
+fi
+[[ $version =~ ^[0-9][A-Za-z0-9.+~-]*$ ]] || die "a Debian version starts with a digit and has only letters, digits and . + ~ -: $version"
+maint=$(g log -1 --format='%an <%ae>' "$commit")
+
+T=$(mktemp -d)
+trap 'rm -rf "$T"' EXIT
+R=$T/root
+SHARE=$R/usr/share/debsway
+mkdir -p "$SHARE"
+# What is committed, nothing else; not the project's own CI and notes
+g archive --format=tar "$commit" | tar -C "$SHARE" -xf -
+rm -rf "$SHARE/.github" "$SHARE/.gitignore" "$SHARE/CLAUDE.md"
+
+# The command, its man page and its Tab completion where Debian looks for them
+install -D -m 0755 "$SHARE/bin/debsway" "$R/usr/bin/debsway"
+mkdir -p "$R/usr/share/man/man1"
+gzip -9n <"$SHARE/data/debsway.1" >"$R/usr/share/man/man1/debsway.1.gz"
+install -D -m 0644 "$SHARE/data/debsway-completion.bash" "$R/usr/share/bash-completion/completions/debsway"
+
+# Debian's documentation files: the licenses, and a changelog
+DOC=$R/usr/share/doc/debsway
+mkdir -p "$DOC"
+{
+    echo "Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/"
+    echo "Upstream-Name: debsway"
+    echo "Source: https://github.com/cjboon/debsway"
+    echo
+    echo "Files: *"
+    echo "Copyright: the debsway authors"
+    echo "License: MIT"
+    echo
+    echo "Files: usr/share/debsway/vendor/mockvps-kvm/*"
+    echo "Copyright: the mockvps-kvm authors"
+    echo "License: MIT"
+    echo
+    echo "License: MIT"
+    sed 's/^$/./; s/^/ /' "$SHARE/LICENSE"
+} >"$DOC/copyright"
+{
+    echo "debsway ($version) unstable; urgency=medium"
+    echo
+    echo "  * Built from commit $commit."
+    echo
+    echo " -- $maint  $(date -u -R -d "@$SOURCE_DATE_EPOCH")"
+} | gzip -9n >"$DOC/changelog.gz"
+
+# Root's files, read-only to everyone else: directories 0755, files 0644, and
+# 0755 only for what git records as executable (a USB copy can lose the bit,
+# git can't). Nothing setuid, nothing writable by others.
+find "$R" -type d -exec chmod 0755 {} +
+find "$R" -type f -exec chmod 0644 {} +
+chmod 0755 "$R/usr/bin/debsway"
+while IFS= read -r f; do
+    chmod 0755 "$SHARE/$f"
+done < <(g ls-tree -r "$commit" | awk '$1 == "100755" { sub(/^[^\t]*\t/, ""); print }' | grep -vx -e '.github/.*' -e CLAUDE.md || true)
+
+mkdir -p "$R/DEBIAN"
+installed_kb=$(du -sk --exclude=DEBIAN "$R" | cut -f1)
+cat >"$R/DEBIAN/control" <<EOF
+Package: debsway
+Version: $version
+Architecture: all
+Maintainer: $maint
+Installed-Size: $installed_kb
+Depends: bash, sudo, git, gpg, wget, python3, acl, nftables
+Recommends: bash-completion
+Section: admin
+Priority: optional
+Homepage: https://github.com/cjboon/debsway
+Description: small, privacy-minded sway desktop for Debian, as plain scripts
+ debsway turns a bare Debian 13 install into a small sway desktop with careful
+ defaults: a firewall, kernel hardening, automatic security updates, encrypted
+ DNS, and sandboxes for the browser, coding assistants and media. It is shell
+ scripts you can read; this package puts them, root-owned, in
+ /usr/share/debsway, with the debsway command. Installing it changes nothing
+ else: run "debsway" to set up the desktop and its optional programs.
+EOF
+(cd "$R" && find . -path ./DEBIAN -prune -o -type f -print0 | sort -z | xargs -0 md5sum | sed 's|  \./|  |') >"$R/DEBIAN/md5sums"
+chmod 0755 "$R/DEBIAN"
+chmod 0644 "$R/DEBIAN/control" "$R/DEBIAN/md5sums"
+# the same date on every file, so the archive is the same each time
+find "$R" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
+
+mkdir -p "$out"
+deb=$out/debsway_${version}_all.deb
+dpkg-deb --root-owner-group -Zxz --build "$R" "$deb" >/dev/null
+echo "$deb"
+sha256sum "$deb" | cut -d' ' -f1 | sed 's/^/SHA-256: /'
+if command -v lintian >/dev/null; then
+    lintian --no-tag-display-limit "$deb" || echo "(lintian has remarks: see above)"
+else
+    echo "(lintian isn't installed, so the package wasn't checked by it: sudo apt install lintian)"
+fi

@@ -4,7 +4,7 @@
 
 1. Decide the name, and make an offline signing key.
 2. `debsway install NAME`, with Tab completion. (Done.)
-3. A `.deb` that installs debsway root-owned in `/usr/share/debsway`.
+3. A `.deb` that installs debsway root-owned in `/usr/share/debsway`. (Done.)
 4. A signed apt repository. Signing happens on your own computer, so a
    broken-into VPS can't forge updates.
 5. A static website on a hardened VPS, with an onion mirror.
@@ -129,7 +129,14 @@ or name the folder the script runs from; `tools/test-location.sh` checks it.
 
 *Cost:* half a session.
 
-### 1c. The package
+### 1c. The package (done)
+
+Done, a little differently from below: `tools/build-deb.sh` builds it with
+`dpkg-deb` from a commit, without debhelper (the package is files only, and a
+short script is easier to read and to build the same way every time). It has
+no install scripts at all. `tools/test-build-deb.sh` checks it; lintian runs
+when it is installed. See docs/maintaining.md, "The debsway package".
+
 
 Build with Debian's own tools: `debhelper` (`dh`), `dpkg-buildpackage`, and
 `lintian` to check the result. A `debian/` folder in the repository holds:
@@ -170,7 +177,13 @@ like the sessions. Do that one at a time, each with its test, later.
 
 *Cost:* one to two sessions, most of it the first lintian-clean build.
 
-### 1d. Building it the same way every time
+### 1d. Building it the same way every time (done)
+
+Done: every date in the package is the commit's, so two builds of one commit
+are the same file (a test builds it twice and compares), and CI builds it on
+every push as part of `test.sh --offline`. Build a release from its signed
+tag: `bash tools/build-deb.sh --commit TAG --version VERSION`.
+
 
 - **Make target:** `make deb` (or `tools/build-deb.sh`) builds in a clean
   folder from a git tag only, never from uncommitted files.

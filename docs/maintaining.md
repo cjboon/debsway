@@ -73,6 +73,36 @@ commit that with the old subkey's signature, before it expires. A key that has
 expired or been revoked fails the check, and updates stop until a copy with
 the new key is brought in by hand.
 
+## The debsway package
+
+`bash tools/build-deb.sh` builds `debsway_VERSION_all.deb` from a commit
+(`--commit REV`, by default HEAD; never from files that aren't committed).
+`--version` sets the version; without it the version is `0~git`, the commit's
+date and its id. `tools/test-build-deb.sh` checks it.
+
+- **What it installs:** the scripts in `/usr/share/debsway`, owned by root and
+  writable by no one else; the `debsway` command in `/usr/bin`; its man page and
+  Tab completion; the licenses. Nothing outside `/usr`, nothing setuid.
+- **What it runs when installed:** nothing. It has no install scripts, so
+  installing it changes no setting. The desktop is set up as before, as you:
+  `debsway part NAME`, `debsway install NAME`, `bash /usr/share/debsway/install-base.sh`.
+- **Why:** with the scripts root's, a program running as you can no longer
+  change one and wait for you to run it with sudo. The `debsway` command uses
+  `/usr/share/debsway` whenever it is there (`DEBSWAY_DIR=~/debsway debsway ...`
+  uses your own copy instead).
+- **The same file every time:** every date in it is the commit's, so two builds
+  of one commit are the same, byte for byte; the build prints the SHA-256.
+  Publish that next to the package: anyone can build it again and compare.
+- **lintian** checks it when installed (`sudo apt install lintian`); it isn't
+  needed to build. Debian's debhelper isn't used: the package is files only,
+  and `dpkg-deb` with a short script is easier to read and to build the same
+  way every time.
+
+Install it on a computer with `sudo apt install ./debsway_VERSION_all.deb`.
+`debsway update` doesn't update a package yet (it needs a git checkout): a
+newer package is installed the same way, until the signed apt repository below
+delivers it.
+
 ## Other scripts
 
 - `prep/setup-sudo.sh USER` (as root): installs sudo and adds USER to the

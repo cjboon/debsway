@@ -44,8 +44,12 @@ main() {
         *) die "Usage: bash update.sh [--since COMMIT | --all]" ;;
     esac
 
-    g rev-parse --is-inside-work-tree >/dev/null 2>&1 ||
+    if ! g rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        # the debsway package's copy: root's, and no git
+        [ -w "$DEBSWAY_DIR" ] ||
+            die "This debsway ($DEBSWAY_DIR) is the debsway package's, read-only: a newer package brings what is new (sudo apt install ./debsway_VERSION_all.deb). To update a copy of your own instead: DEBSWAY_DIR=/path/to/that/copy debsway update"
         die "$DEBSWAY_DIR isn't a git checkout, so there is nothing to update from. Get debsway again with: git clone <its address>"
+    fi
     # A hooks folder that came in with the update would run as you
     [ -z "$(g config core.hooksPath)" ] ||
         die "core.hooksPath is set in $DEBSWAY_DIR; remove it first: git -C $DEBSWAY_DIR config --unset core.hooksPath"
