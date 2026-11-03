@@ -55,8 +55,9 @@ fi
 
 if [ "$cmd" = upload ]; then
     # No shared folder: the files go to the VM as one stream (owner and
-    # permissions of yours aren't carried over)
-    tar -C "$3" --owner=0 --group=0 -cf - . | sudo -n -u "$AGENT" "$SESSION" upload "$2"
+    # permissions of yours aren't carried over, nor when you edited a file,
+    # which the site would show visitors; .git isn't sent: it names its authors)
+    tar -C "$3" --owner=0 --group=0 --exclude=.git --mtime='2000-01-01 00:00:00 UTC' -cf - . | sudo -n -u "$AGENT" "$SESSION" upload "$2"
     exit
 fi
 exec sudo -n -u "$AGENT" "$SESSION" "$cmd"

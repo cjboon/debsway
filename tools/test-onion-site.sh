@@ -50,6 +50,13 @@ check "upload hands the session a tar of the folder" \
     grep -qx "sudo -n -u onion-site /usr/local/libexec/onion-site-session upload static" "$T/calls"
 check "...with the folder's files in it" bash -c 'tar -tf "$1" | grep -qx "./css/a.css"' _ "$T/stdin"
 check "...owned by nobody of yours" bash -c '! tar -tvf "$1" | grep -v " root/root "' _ "$T/stdin"
+mkdir -p "$T/site/.git"; echo "name = Me" >"$T/site/.git/config"
+touch -d '2026-06-15 12:00' "$T/site/index.html"
+: >"$T/calls"
+os upload static "$T/site"
+check "...without .git, which names its authors" bash -c '! tar -tf "$1" | grep -q "\.git"' _ "$T/stdin"
+check "...and not saying when you edited a file (the site would show visitors)" bash -c '! tar -tvf "$1" --full-time | grep -q "2026-06-15"' _ "$T/stdin"
+rm -rf "$T/site/.git"
 check "address says so when there is none" not os address
 mkdir -p "$T/state/wren"
 echo "abcdefghijklmnopqrstuvwxyz234567abcdefghijklmnopqrstuv.onion" >"$T/state/wren/onion-site-address"
@@ -166,6 +173,7 @@ done
 check "VM: time zone UTC" grep -q 'zoneinfo/UTC /etc/localtime' "$P"
 check "VM: nginx shows no version and keeps no access log" \
     bash -c 'grep -q "server_tokens off;" "$1" && grep -q "access_log off;" "$1"' _ "$P"
+check "VM: hidden files are never served, .well-known is" grep -qF 'location ~ /\.(?!well-known(/|$)) { return 404; }' "$P"
 check "VM: everything but static files goes to the app on 127.0.0.1:8000" grep -q 'proxy_pass http://127.0.0.1:8000;' "$P"
 check "VM: the Python app is gunicorn on 127.0.0.1:8000, locked down" \
     bash -c 'grep -q "gunicorn --bind 127.0.0.1:8000" "$1" && grep -q "ProtectSystem=strict" "$1" && grep -q "NoNewPrivileges=yes" "$1"' _ "$P"

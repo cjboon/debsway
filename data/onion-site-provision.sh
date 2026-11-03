@@ -64,6 +64,8 @@ server {
     add_header X-Content-Type-Options nosniff always;
     add_header Referrer-Policy no-referrer always;
     add_header X-Frame-Options SAMEORIGIN always;
+    # Hidden files are never served (an uploaded .git names its author); .well-known is for visitors
+    location ~ /\.(?!well-known(/|$)) { return 404; }
 
     # A file in /srv/site/static if there is one, else the app
     location / {

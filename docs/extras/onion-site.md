@@ -35,6 +35,7 @@ at every boot, and gets security updates through this computer's Tor with
 - The site is up only while this computer is on: that pattern can link it to you.
 - A hole in your app gets the VM and the site's data (not this computer).
 - The app has no network: no fonts, images or email from the internet.
+- An upload leaves out `.git` and your edit times, and hidden files aren't served, but what is in the files themselves (a photo's metadata, a name in a page) goes out as it is. A VM built before these rules keeps serving hidden files until `onion-site rebuild`.
 - Whoever has `/var/lib/tor/wren-onion-site` can be this address: back it up as root, and keep it private.
 
 ## MANUAL INSTALL
