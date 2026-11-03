@@ -3,6 +3,7 @@
 # sudo, so no user is made and nothing is run as anyone else. It does not boot
 # a VM. Run by test.sh, or:
 #   bash tools/test-claude-vm.sh
+# shellcheck disable=SC2016  # the inner shells and pretend programs expand their own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 
 T=$(mktemp -d)
@@ -15,11 +16,11 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 }
 
 mkdir -p "$T/fake"
-# a pretend sudo: "-l" says whether the rule exists (when $T/rule is there), else it writes down
+# a pretend sudo: "-l" says whether the rule for the user after -u exists ($T/rule-USER), else it writes down
 # the call (and fails if $T/sudo-fails is there); a pretend foot writes down how it was started
 cat >"$T/fake/sudo" <<EOF
 #!/bin/sh
-case "\$*" in *" -l "*) [ -e "$T/rule" ] ;; *) echo "sudo \$*" >>"$T/calls"; [ ! -e "$T/sudo-fails" ] ;; esac
+case "\$*" in *" -l "*) [ -e "$T/rule-\$3" ] ;; *) echo "sudo \$*" >>"$T/calls"; [ ! -e "$T/sudo-fails" ] ;; esac
 EOF
 printf '#!/bin/sh\necho "foot $*" >>"%s/calls"\n' "$T" >"$T/fake/foot"
 chmod +x "$T/fake/sudo" "$T/fake/foot"
@@ -30,7 +31,7 @@ run() { bash "$HERE/bin/claude-vm" "$@"; }
 
 check "claude-vm says what to do when the sandbox isn't set up" \
     bash -c "! out=\$(bash '$HERE/bin/claude-vm' 2>&1) && [[ \$out == *claude-vm.sh* ]]"
-touch "$T/rule"
+touch "$T/rule-claude-vm"
 check "claude-vm rejects an unknown command" \
     bash -c "! out=\$(bash '$HERE/bin/claude-vm' bogus 2>&1) && [[ \$out == *'unknown command'* ]]"
 check "a rejected command starts nothing" test ! -e "$T/calls"
@@ -78,7 +79,7 @@ check "claude-vm-session refuses anyone but the claude-vm user" \
 # exception line ("ip daddr 127.0.0.1 tcp dport N accept") must use the port
 # the session forwards to, or the host could not reach the guest's console.
 port_fw=$(grep -oE 'daddr 127\.0\.0\.1 tcp dport [0-9]+' "$HERE/data/claude-vm-firewall.nft" | grep -oE '[0-9]+$' | head -1)
-port_se=$(sed -n 's/^export SSH_HOST_PORT=//p' "$HERE/bin/claude-vm-session" | head -1)
+port_se=$(sed -n 's/^port=\([0-9]*\).*/\1/p' "$HERE/bin/claude-vm-session" | head -1)
 check "the firewall's guest-SSH port matches the session's" test -n "$port_fw" -a "$port_fw" = "$port_se"
 
 # mockvps and guest_ssh are shell functions; exec only runs programs, so
@@ -91,12 +92,16 @@ check "the session never execs one of its own functions" \
 # mockvps and ssh. $S/vm-running says whether the pretend VM is up.
 S=$T/session
 mkdir -p "$S/home/vm" "$S/home/.config/claude-vm" "$S/bin"
-sed -e "s|/home/claude-vm|$S/home|g" \
+sed -e "s|/home/claude-vm|$S/home|g" -e "s|\"/home/\$me\"|\"$S/home\"|" \
+    -e "s|/etc/debsway/claude-vm-ports|$S/ports|" \
     -e "s|/usr/local/libexec/claude-vm-mockvps-kvm|$S/bin/mockvps|" \
     -e "s|^export PATH=.*|export PATH=$S/bin:\$PATH|" \
     "$HERE/bin/claude-vm-session" >"$S/claude-vm-session"
 # shellcheck disable=SC2016  # expanded by the pretend id, not here
-printf '#!/bin/sh\n[ "$1" = -un ] && echo claude-vm || exec /usr/bin/id "$@"\n' >"$S/bin/id"
+printf '#!/bin/sh\n[ "$1" = -un ] && { cat "%s/me" 2>/dev/null || echo claude-vm; } || exec /usr/bin/id "$@"\n' "$S" >"$S/bin/id"
+# (the home folder comes from the user database: here, always $S/home)
+printf '#!/bin/sh\necho "$2:x:1:1::%s/home:/bin/bash"\n' "$S" >"$S/bin/getent"
+chmod +x "$S/bin/getent"
 cat >"$S/bin/mockvps" <<MOCK
 #!/bin/sh
 echo "mockvps \$*" >>"$S/calls"
@@ -186,5 +191,67 @@ check "it adds the line when there is none" grep -qx GRUB_TIMEOUT=0 "$T/grub-bar
 check "then it runs update-grub" grep -qx updated "$T/grub.log"
 check "provisioning calls it on the guest's real file" \
     grep -q '^grub_no_wait /etc/default/grub' "$HERE/data/claude-vm-provision.sh"
+
+# ---- Another account's VM: claude-vm-NAME, its own console port
+: >"$S/calls"
+echo claude-vm-work >"$S/me"
+out=$(session status 2>&1)
+check "an account without a console port (not set up by root) starts nothing, and says how" \
+    bash -c '[[ $1 == *"claude-vm.sh --account work"* ]] && [ ! -s "$2" ]' _ "$out" "$S/calls"
+printf 'other 2251\nwork 2250\n' >"$S/ports"
+touch "$S/vm-running"; echo disk >"$S/home/vm/claude-vm-work.qcow2"
+session connect >/dev/null 2>&1
+check "...with its port: it logs in to its own VM, on that port" grep -q "^ssh .*-p 2250 agent@127.0.0.1" "$S/calls"
+check "...the VM named after its user" grep -q "HostKeyAlias=claude-vm-work" "$S/calls"
+printf 'work 22\n' >"$S/ports"
+: >"$S/calls"
+check "...a port outside 2250-2299 is refused (2242 is claude-vm's, 2244 opencode-vm's)" bash -c '! session status' 
+echo nobody >"$S/me"
+check "the session refuses users that aren't claude-vm or claude-vm-NAME" bash -c '! session status'
+rm -f "$S/me" "$S/home/vm/claude-vm-work.qcow2"
+
+# claude-vm --account NAME
+: >"$T/calls"
+rm -f "$T/rule-claude-vm-work"
+check "claude-vm --account: not set up yet, it says how, and starts nothing" bash -c "
+    ! out=\$(bash '$HERE/bin/claude-vm' --account work status 2>&1) && [[ \$out == *'claude-vm.sh --account work'* ]] && [ ! -s '$T/calls' ]"
+touch "$T/rule-claude-vm-work"
+bash "$HERE/bin/claude-vm" --account work status >/dev/null 2>&1
+check "...set up: the session runs as claude-vm-work" grep -qx "sudo -n -u claude-vm-work /usr/local/libexec/claude-vm-session status" "$T/calls"
+check "...a name that isn't one is refused" bash -c "! bash '$HERE/bin/claude-vm' --account ../x status 2>/dev/null"
+
+# The firewall: each account user goes through the same rules, reaching only its own console port
+printf '%s\n' 'claude-vm:x:900:900::/home/claude-vm:/bin/bash' 'claude-vm-work:x:901:901::/home/claude-vm-work:/bin/bash' \
+    'claude-vm-home:x:902:902::/home/claude-vm-home:/bin/bash' 'claude-vm-Bad:x:903:903::/x:/bin/sh' >"$T/passwd"
+printf 'work 2250\n' >"$T/ports"
+fw=$(DEBSWAY_PASSWD=$T/passwd DEBSWAY_CLAUDE_VM_PORTS=$T/ports bash -c '. "$1/lib/claude-accounts.sh"; claude_vm_firewall_text "$1/data/claude-vm-firewall.nft"' _ "$HERE")
+check "firewall: each account user through claude-vm's rules" bash -c '
+    grep -qx "        meta skuid 901 jump claude_vm  # claude-vm-work" <<<"$1" && grep -qx "        meta skuid 902 jump claude_vm  # claude-vm-home" <<<"$1"' _ "$fw"
+check "...reaching its own console port only (claude-vm keeps 2242 to itself)" bash -c '
+    grep -qx "        meta skuid 901 ip daddr 127.0.0.1 tcp dport 2250 accept  # claude-vm-work" <<<"$1" &&
+    grep -qx "        meta skuid \"claude-vm\" ip daddr 127.0.0.1 tcp dport 2242 accept" <<<"$1" &&
+    [ "$(grep -c "127.0.0.1 tcp dport [0-9]* accept" <<<"$1")" = 2 ]' _ "$fw"
+check "...none for a user that only looks like one" bash -c '! grep -q "skuid 903" <<<"$1"' _ "$fw"
+: >"$T/empty.nft"
+if unshare -rn /usr/sbin/nft -c -f "$T/empty.nft" >/dev/null 2>&1; then
+    sed "s/\"claude-vm\"/\"$(id -un)\"/g" <<<"$fw" >"$T/fw.nft"
+    check "...which nft accepts" unshare -rn /usr/sbin/nft -c -f "$T/fw.nft"
+fi
+check "a free port: the lowest of 2250-2299 no account has" bash -c '
+    printf "a 2250\nb 2251\n" >"$1"; [ "$(DEBSWAY_CLAUDE_VM_PORTS=$1 bash -c ". \"$2/lib/claude-accounts.sh\"; claude_vm_free_port")" -ge 2252 ]' _ "$T/ports2" "$HERE"
+
+# The install script: an account needs claude-vm set up; its port is written
+# (by root) before its firewall line; removing one takes the port out and
+# writes the firewall again afterwards; each rule is checked first
+c=$HERE/extras/claude-vm.sh
+check "install: an account needs the claude-vm sandbox set up first" grep -q 'die "Set up the claude-vm sandbox first' "$c"
+check "...its port is written before the firewall, which nft checks before it replaces the old one" bash -c '
+    a=$(sed -n "/^if \[ \"\${1:-}\" = --account \]/,/^fi$/p" "$1"); [[ $a == *"set_port \"\$2\" \"\$port\""*write_firewall* ]] &&
+    w=$(sed -n "/^write_firewall() {/,/^}/p" "$1") && [[ $w == *"nft -c -f"*"install -o root"* ]]' _ "$c"
+check "...removing an account: user and port first, then the firewall" bash -c '
+    a=$(sed -n "/^if \[ \"\${1:-}\" = --account \]/,/^fi$/p" "$1"); [[ $a == *remove_account*write_firewall* ]] &&
+    sed -n "/^remove_account() {/,/^}/p" "$1" | grep -qx "    set_port \"\$1\""' _ "$c"
+check "...each account has its own sudo rule, checked by visudo" bash -c '
+    grep -q "ACCOUNT_SUDOERS=/etc/sudoers.d/debsway-claude-vm-\$1" "$1" && sed -n "/^sudoers_rule() {/,/^}/p" "$1" | grep -q "visudo -cf"' _ "$c"
 
 [ "$fails" -eq 0 ]

@@ -6,10 +6,24 @@
 # qemu-system-x86_64 process, via the bundled mockvps-kvm) and logs you into
 # the guest. Running as claude-vm is what keeps the guest off your network:
 # QEMU's sockets are claude-vm's, and a firewall rule on that user allows the
-# internet only (data/claude-vm-firewall.nft).
+# internet only (data/claude-vm-firewall.nft). Another account's user,
+# claude-vm-NAME (claude-vm --account NAME), runs its own VM the same way, with
+# the console port root gave it in /etc/debsway/claude-vm-ports.
 set -euo pipefail
 
-[ "$(id -un)" = claude-vm ] || { echo "claude-vm-session: only for the claude-vm user." >&2; exit 1; }
+me=$(id -un)
+[[ $me == claude-vm || $me =~ ^claude-vm-[a-z][a-z0-9]{0,14}$ ]] ||
+    { echo "claude-vm-session: only for the claude-vm users." >&2; exit 1; }
+# (|| true: with set -e, a failed lookup would end this without a word)
+home=$(getent passwd "$me" | cut -d: -f6) || true
+[ "$home" = "/home/$me" ] || { echo "claude-vm-session: unexpected home folder for $me." >&2; exit 1; }
+port=2242 setup_arg=
+if [ "$me" != claude-vm ]; then
+    setup_arg=" --account ${me#claude-vm-}"
+    port=$(awk -v n="${me#claude-vm-}" '$1 == n && $2 ~ /^[0-9]+$/ && $2 >= 2250 && $2 <= 2299 { print $2; exit }' \
+        /etc/debsway/claude-vm-ports 2>/dev/null) || true
+    [ -n "$port" ] || { echo "claude-vm-session: no console port for $me; run: bash ~/debsway/extras/claude-vm.sh$setup_arg" >&2; exit 1; }
+fi
 
 # Run again without a way to reach XWayland's abstract socket, which any user
 # can connect to (qemu and ssh below inherit this)
@@ -20,19 +34,20 @@ if [ -z "${DEBSWAY_NOABS:-}" ]; then
     exec "$noabs" "$0" "$@"
 fi
 
-# Fixed configuration. The port must match data/claude-vm-firewall.nft.
-export HOME=/home/claude-vm
+# Fixed configuration. The port must match the firewall rule (data/claude-vm-firewall.nft,
+# and for an account the line extras/claude-vm.sh adds).
+export HOME=$home
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export LANG=${LANG:-C.UTF-8}
 # The VM engine reads SUDO_USER to decide whose kvm-group membership to check;
 # we are already claude-vm (in the kvm group), so make it see that and never
 # try to change another user's groups with a sudo it does not have.
 unset SUDO_USER
-export USER=claude-vm LOGNAME=claude-vm
-export VM_NAME=claude-vm
+export USER=$me LOGNAME=$me
+export VM_NAME=$me
 export VM_USER=agent
 export SSH_HOST_IP=127.0.0.1
-export SSH_HOST_PORT=2242
+export SSH_HOST_PORT=$port
 export WORKDIR=$HOME/vm
 export WEB_TUNNEL=0
 
@@ -51,7 +66,7 @@ guest_ssh() {
 }
 
 ensure_up() {
-    is_installed || die "no VM yet. Set it up first: bash ~/debsway/extras/claude-vm.sh"
+    is_installed || die "no VM yet. Set it up first: bash ~/debsway/extras/claude-vm.sh${setup_arg}"
     if ! mockvps --status 2>/dev/null | grep -q Running; then
         # Say why the window is quiet: mockvps's own steps ("==> Waiting for
         # SSH"...) and errors, but not the summary it ends with

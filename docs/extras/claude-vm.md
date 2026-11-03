@@ -6,6 +6,8 @@
 bash ~/debsway/extras/claude-vm.sh            set it up and build the VM (keeps a VM already built)
 bash ~/debsway/extras/claude-vm.sh --remove   remove it (asks before deleting the user and its VM)
 bash ~/debsway/extras/claude-vm.sh --manual   print the manual steps below
+bash ~/debsway/extras/claude-vm.sh --account NAME          another account, in a VM of its own
+bash ~/debsway/extras/claude-vm.sh --remove-account NAME   remove it (asks before deleting its user and VM)
 
 claude-vm              Claude Code inside the VM (boots it; powers it off when you exit)
 claude-vm shell        a plain shell in the VM
@@ -13,6 +15,7 @@ claude-vm status | stop
 claude-vm pubkey       the VM's ssh public key (add it on your git host)
 claude-vm rebuild      throw the VM away and build a fresh one
 claude-pull            in your copy of a repository: shows what the agent pushed, brings it in on y
+claude-vm --account NAME [shell|status|stop|pubkey|rebuild]   the same, for that account's VM
 ```
 
 Claude Code inside a disposable Debian virtual machine (QEMU/KVM), so a
@@ -30,7 +33,12 @@ its installer checked against Debian's signed lists, then provisioned
 repository, checked against the same pinned key (`ANTHROPIC_FPR`), and its
 own git identity and ssh key. Your user may run exactly one thing as
 `claude-vm`, the `claude-vm-session` script, through a rule in
-`/etc/sudoers.d`. It needs KVM.
+`/etc/sudoers.d`. It needs KVM. Another account (a second Claude login)
+gets a VM of its own, run by its own locked user, `claude-vm-NAME`: its own
+disk, keys and login, its own console port (2250-2299, written by root in
+`/etc/debsway/claude-vm-ports`), a sudo rule, and firewall lines that let
+that user reach its own port and nobody else's. Each VM takes its own disk
+space (several GB) and memory while it runs.
 
 ## LIMITS
 
@@ -38,6 +46,7 @@ own git identity and ssh key. Your user may run exactly one thing as
 - It reaches the internet, so what it reads can leave the VM.
 - Treat what it pushes as untrusted until you have read it (`claude-pull` shows it first).
 - Its ssh key on your git host can push wherever you allow: a deploy key on one repository is the narrowest.
+- Two accounts' VMs are as far apart as two VMs on one computer: a bug in QEMU or KVM is the way between them too.
 
 ## MANUAL INSTALL
 
@@ -96,6 +105,36 @@ claude-vm
 
 The `sed` line fills the placeholders in `data/claude-vm-provision.sh` with
 the pinned key; `--manual` prints it with the pinned values in place.
+
+Another account, NAME (small letters and digits), after the steps above:
+
+```
+# Its user, locked, in the kvm group only
+sudo useradd --create-home --home-dir /home/claude-vm-NAME --shell /bin/bash --user-group --comment "debsway Claude Code VM" claude-vm-NAME
+sudo usermod --lock claude-vm-NAME && sudo chmod 700 /home/claude-vm-NAME && sudo usermod -aG kvm claude-vm-NAME
+# Its console port: one of 2250-2299 that nothing uses (ss -ltn shows those in use)
+echo "NAME 2250" | sudo tee -a /etc/debsway/claude-vm-ports
+# Its firewall lines, by number (nft refuses the whole file over a user name
+# that doesn't exist), with the number from: id -u claude-vm-NAME
+# below the line  meta skuid "claude-vm" jump claude_vm  in /etc/debsway/claude-vm.nft:
+#         meta skuid NUMBER jump claude_vm  # claude-vm-NAME
+# and below the line  meta skuid "claude-vm" ip daddr 127.0.0.1 tcp dport 2242 accept:
+#         meta skuid NUMBER ip daddr 127.0.0.1 tcp dport 2250 accept  # claude-vm-NAME
+sudo nft -c -f /etc/debsway/claude-vm.nft && sudo systemctl restart debsway-claude-vm-firewall
+# Its provisioning script: as above, into /home/claude-vm-NAME/.config/claude-vm/provision.sh, owned by claude-vm-NAME
+# Your user may run the session script, and nothing else, as it (checked first)
+printf '%s ALL=(claude-vm-NAME) NOPASSWD: /usr/local/libexec/claude-vm-session\n' "$(id -un)" >/tmp/debsway-claude-vm-NAME
+sudo visudo -cf /tmp/debsway-claude-vm-NAME && sudo install -o root -g root -m 0440 /tmp/debsway-claude-vm-NAME /etc/sudoers.d/debsway-claude-vm-NAME
+rm /tmp/debsway-claude-vm-NAME
+sudo -u claude-vm-NAME /usr/local/libexec/claude-vm-session install
+claude-vm --account NAME
+```
+
+To undo an account: `sudo rm /etc/sudoers.d/debsway-claude-vm-NAME`,
+`sudo pkill -KILL -u claude-vm-NAME`, `sudo userdel -r claude-vm-NAME` (its
+VM goes with it), its line out of `/etc/debsway/claude-vm-ports` and its two
+lines out of `/etc/debsway/claude-vm.nft`, then
+`sudo systemctl restart debsway-claude-vm-firewall`.
 
 To undo:
 

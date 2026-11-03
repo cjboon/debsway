@@ -94,7 +94,9 @@ this page to decide what else you need.
   would let `claude-agent` escape its user boundary reaches only a VM you can
   throw away, and the agent hands work back only by pushing to a git host you
   pull from. The same kind of firewall, on its `claude-vm` user, keeps the
-  guest off your network. The two can be installed together. Use the VM if
+  guest off your network. Another account (`--account NAME`) is another VM,
+  run by its own user `claude-vm-NAME`, whose firewall lines let it reach
+  only its own guest's console port, not the first VM's. The two can be installed together. Use the VM if
   your computer has KVM (`docs/extras.md` says how to check); `claude` is
   the weaker, lighter choice for computers that can't run it. `opencode-vm`
   (`extras/opencode-vm.sh`) puts opencode in the same kind of VM. Its

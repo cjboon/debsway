@@ -9,7 +9,7 @@ set -euo pipefail
 me=$(id -un)
 [[ $me == claude-agent || $me =~ ^claude-agent-[a-z][a-z0-9]{0,14}$ ]] ||
     { echo "claude-session: only for the claude-agent users." >&2; exit 1; }
-home=$(getent passwd "$me" | cut -d: -f6)
+home=$(getent passwd "$me" | cut -d: -f6) || true
 [ "$home" = "/home/$me" ] || { echo "claude-session: unexpected home folder for $me." >&2; exit 1; }
 [ $# -ge 1 ] || { echo "usage: claude-session DIR [ARGS...]" >&2; exit 2; }
 dir=$1

@@ -32,7 +32,8 @@ table inet debsway_claude_vm {
         udp dport 53 accept
         tcp dport 53 accept
         # The guest's SSH console on the host loopback, and nothing else on it
-        ip daddr 127.0.0.1 tcp dport 2242 accept
+        # (another account's VM, claude-vm-NAME, reaches only its own port)
+        meta skuid "claude-vm" ip daddr 127.0.0.1 tcp dport 2242 accept
         # Anything addressed to this computer itself goes out through "lo",
         # whichever of its addresses is used (127.0.0.1, its LAN address, its
         # public IPv4 or IPv6 address), so this catches them all
