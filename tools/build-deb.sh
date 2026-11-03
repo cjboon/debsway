@@ -125,5 +125,5 @@ sha256sum "$deb" | cut -d' ' -f1 | sed 's/^/SHA-256: /'
 if command -v lintian >/dev/null; then
     lintian --no-tag-display-limit "$deb" || echo "(lintian has remarks: see above)"
 else
-    echo "(lintian isn't installed, so the package wasn't checked by it: sudo apt install lintian)"
+    echo "(lintian isn't installed, so the package wasn't checked by it: debsway install debsway-dev)"
 fi

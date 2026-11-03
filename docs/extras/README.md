@@ -90,6 +90,7 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 ## Everyday tools
 
 - [git, to track changes to files](git.md)
+- [Tools for working on debsway: lintian and shellcheck](debsway-dev.md)
 - [Thunar, a file manager](file-manager.md)
 - [Mousepad, a plain text editor](mousepad.md)
 - [Screenshots](grim-slurp.md)

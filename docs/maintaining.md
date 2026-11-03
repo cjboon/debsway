@@ -93,7 +93,7 @@ date and its id. `tools/test-build-deb.sh` checks it.
 - **The same file every time:** every date in it is the commit's, so two builds
   of one commit are the same, byte for byte; the build prints the SHA-256.
   Publish that next to the package: anyone can build it again and compare.
-- **lintian** checks it when installed (`sudo apt install lintian`); it isn't
+- **lintian** checks it when installed (`debsway install debsway-dev`); it isn't
   needed to build. Debian's debhelper isn't used: the package is files only,
   and `dpkg-deb` with a short script is easier to read and to build the same
   way every time.
