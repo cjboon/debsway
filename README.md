@@ -292,6 +292,7 @@ that is set up.
 - [docs/extras/](docs/extras/README.md): one page per extra: its commands, what it is, what it doesn't protect against, and every step to install it by hand (`bash extras/NAME.sh --manual` prints them)
 - [docs/opsec.md](docs/opsec.md): operations security in general: laptops, USB drives, networks, passwords, encryption, private communication, physical security, and what to do when something goes wrong
 - [docs/maintaining.md](docs/maintaining.md): `test.sh`, `pins.sh`, shellcheck, the other scripts
+- [docs/distro-plan.md](docs/distro-plan.md): the plan from these scripts to a Debian-based distribution: a package, a signed apt repository, a website, an installer image
 - [THREAT-MODEL.md](THREAT-MODEL.md): what this protects against, and what it doesn't
 
 ## Removing things
