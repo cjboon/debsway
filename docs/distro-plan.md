@@ -84,6 +84,24 @@ if the next one waits.
 4. **Security contact.** A `SECURITY.md`: how to report a problem privately
    (an email address, the key's fingerprint), and what you promise in return
    (an answer within days, a fix in the next release).
+5. **The project's identity, apart from yours.** The maintainer is public (the
+   git history names them), and that can't be undone. So the danger isn't
+   being found, it is being made to sign: whoever holds the key can be
+   pressured, threatened or legally compelled to publish a bad update, and for
+   people who use debsway against a government that is the cheapest attack.
+   Make the project its own thing, so that pressure has less to grip:
+   - **A project address, not yours**, on the key, the website and the
+     security contact: say "<name> signing key <security@project-domain>".
+     Every signature carries the key's name and email, for good.
+   - **A project account** on the git host (an organization), and no personal
+     address in new commits (GitHub's "keep my email addresses private").
+   - **Write down now what happens if you are pressured**: you won't sign a
+     backdoor; you would rather stop publishing, and say so, than publish one.
+     Say it publicly in `SECURITY.md`, so a demand to sign is also a demand to
+     break a public promise.
+   - **Make a forced backdoor easy to see.** Builds are already reproducible:
+     anyone can rebuild a release from its tag and compare. Keep it that way,
+     and ask a few people to check each release (see Ongoing).
 
 ---
 
@@ -324,6 +342,13 @@ systemd, architecture amd64).
 ---
 
 ## Ongoing: keeping a distribution safe
+
+- **More than one signer, as soon as there is a second maintainer.** One key
+  held by one person is one person to coerce. With two or more maintainers:
+  each keeps their own key; a release needs signatures from at least two of
+  them (update.sh and the apt repository then check for that); and each
+  release is rebuilt and compared by someone other than the one who built it.
+  Then forcing one person isn't enough to reach users.
 
 - **Releases:** every release is a signed tag, a reproducible package, a
   re-signed repository, and an ISO when the installer changes.
