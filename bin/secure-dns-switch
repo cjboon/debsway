@@ -62,17 +62,22 @@ hands_back() {
     reload_nm
 }
 
-# resolv.conf back as it was, or (no copy) NetworkManager writes it again
+# resolv.conf back: the copy, for a computer without NetworkManager; with it,
+# NetworkManager writes it again, as the copy is from where secure DNS was
+# switched on and this may be another network by now (a cafe, with the home
+# router's address in the copy, and its sign-in page out of reach)
 resolv_back() {
     if [ -e "$BACKUP" ]; then
         mv "$BACKUP" "$RESOLV"
     elif is_on; then
         rm -f "$RESOLV"
-        if systemctl is-active --quiet NetworkManager; then
-            nmcli general reload dns-full >/dev/null 2>&1 || systemctl restart NetworkManager
-        else
-            say "There was no copy of the old $RESOLV: no DNS server until this computer reconnects."
-        fi
+    else
+        return 0
+    fi
+    if systemctl is-active --quiet NetworkManager; then
+        nmcli general reload dns-full >/dev/null 2>&1 || systemctl restart NetworkManager
+    elif [ ! -e "$RESOLV" ]; then
+        say "There was no copy of the old $RESOLV: no DNS server until this computer reconnects."
     fi
 }
 

@@ -156,6 +156,8 @@ check "...status: on" test "$(sw status)" = on
 : >"$W/calls"
 sw off >/dev/null 2>&1
 check "off: the network's DNS server back" grep -qx "nameserver 192.168.1.1" "$W/etc/resolv.conf"
+check "...and NetworkManager writes it again now: the copy is from where it was switched on, maybe another network" \
+    grep -qx "nmcli general reload dns-full" "$W/calls"
 check "...NetworkManager may write it again" test ! -e "$W/etc/NetworkManager/conf.d/90-wren-secure-dns.conf"
 check "...the firewall rule off, also at boot" grep -qx "systemctl disable --now wren-secure-dns-firewall.service" "$W/calls"
 : >"$W/no-dns"; : >"$W/calls"
