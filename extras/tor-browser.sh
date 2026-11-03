@@ -15,7 +15,7 @@
 # If prep/fetch-tor-browser.sh saved a copy into ../offline/torbrowser, that copy is
 # checked and installed, so nothing is fetched from torproject.org.
 # Usage: bash tor-browser.sh [--remove | --manual]
-# summary: Tor Browser with your bridges (bridge lines needed)
+# summary: Tor Browser, with a bridge if you need one
 # security: most
 # status: apt:torbrowser-launcher
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"

@@ -20,7 +20,7 @@ Where debsway is now, where it could go, and the order that gets there with
 the least rework, without loosening any security debsway already gives.
 
 **Now:** a git checkout in `~/debsway`, run as you, with root steps through
-sudo. 31 base parts, 47 extras, 94 test groups, about 430 files, MIT licensed.
+sudo. 32 base parts, 47 extras, 62 test scripts, about 360 files, MIT licensed.
 `update.sh` pulls from GitHub and re-runs what changed.
 
 **The goal:**
@@ -219,7 +219,7 @@ There's nothing to break into but ssh and the web server.
    - ssh with keys only, no root login, and a non-standard port if you like
      (that only cuts down log noise).
    - unattended-upgrades, the firewall open for 22, 80 and 443 only.
-   - debsway's own sshd checks (`extras/sshd.sh`) are a good start.
+   - debsway's sshd settings (`extras/remote-access.sh`) are a good start.
 2. **The web server:** Caddy (automatic HTTPS) or nginx with Let's Encrypt.
    - HTTPS only, HSTS, and a strict Content-Security-Policy, since a static
      site needs no scripts from elsewhere.
@@ -249,8 +249,8 @@ debsway's base on an encrypted disk.
 
 - **Build on Debian's own installer:** debian-installer with a preseed file
   (answers built in), packed with `simple-cdd` or by repacking Debian's
-  netinst ISO. debsway already has `bin/make-install-usb` and an offline
-  install path to start from.
+  netinst ISO. debsway already has `prep/make-install-iso.sh` (a preseeded
+  install from Debian's live image) and an offline install path to start from.
 - **The preseed:**
   - Encrypted LVM as the default, and the debsway repository and its key.
   - A late command that installs the `debsway` package and runs the base at

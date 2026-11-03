@@ -7,7 +7,7 @@
 # claude-regular: it runs as you, with no sandbox from debsway.
 # Usage: bash mullvad-browser-regular.sh [--remove | --manual]
 # summary: Mullvad Browser, as you (no Tor: use a VPN)
-# security: some
+# security: least
 # status: apt:mullvad-browser
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/mullvad-repo.sh"

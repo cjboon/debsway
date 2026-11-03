@@ -17,8 +17,9 @@ The sandboxed Firefox sets up Firefox ESR the debsway way for every profile
 at install: standard (ads, trackers and known malware sites blocked) or medium
 (scripts and frames from other sites blocked too, which is where most malicious
 ads come from); the JavaScript JIT off, which most serious Firefox exploits
-target; HTTPS-Only Mode; Firefox's DNS encrypted (the system's with the secure DNS
-extra, else its own to Quad9, strict or with fallback); a blank New Tab;
+target; HTTPS-Only Mode; Firefox's DNS encrypted (the system's while secure DNS
+is on, else its own to Quad9, strict or with fallback); a New Tab with no
+shortcuts, sponsored items or weather;
 and a notice when Firefox was updated while running and needs a restart. The
 prefs are `data/firefox-hardening.js`, the policies come from
 `bin/ublock-allow`. It also sets up `incognito` (`parts/incognito.sh`): a

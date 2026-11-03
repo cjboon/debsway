@@ -6,7 +6,7 @@
 # the first install list.
 # Usage: bash one-workspace.sh [--remove | --manual]
 # summary: One workspace: no workspace keys or buttons
-# security: most
+# security: some
 # status: file:~/.config/sway/config.d/one-workspace.conf
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi

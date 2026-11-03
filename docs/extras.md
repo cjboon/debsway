@@ -41,7 +41,6 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `tails-usb.sh` | `tails-usb`: downloads the newest Tails (through Tor when Tor runs here), uses it only if it is signed by the pinned Tails key and is the current release, writes it to a USB stick you pick and type the name of, and reads it back to check. See [extras/tails-usb.md](extras/tails-usb.md) |
 | `remote-access.sh` | ssh into this computer from another one over a Tor onion service, with no firewall port opened. sshd listens on 127.0.0.1 only (keys only, your user only) and the onion service needs a client key. Shows the address and the exact setup lines for the other computer. See below |
 | `mullvad-vpn.sh` | Mullvad VPN (app and `mullvad` command), from Mullvad's signed apt repo. Prints `mullvad` examples |
-| `secure-dns.sh` | Encrypted, checked DNS: Unbound on this computer checks every answer with DNSSEC and asks one resolver you pick (Quad9, Digitale Gesellschaft or Applied Privacy) over DNS over TLS; only Unbound may send DNS out, and nothing falls back to unencrypted DNS. Wi-Fi sign-in pages don't work while it's on. See below |
 | `mullvad-browser-regular.sh` | Mullvad Browser as you: Tor Browser's anti-tracking without Tor, for use with a VPN (no sandbox from debsway) |
 | `sparrow-wallet.sh` | Sparrow Bitcoin wallet, the signed official .deb. Command: `sparrow` |
 | `electrum.sh` | Electrum Bitcoin wallet, from Debian |
