@@ -103,7 +103,7 @@ chmod +x "$T/fakegit"
 check "one made by claude-agent gets safe.directory for that command" grep -q -- "-c safe.directory=$P -c safe.directory=$P/\* status" "$T/calls"
 : >"$T/calls"
 (cd "$P" && WREN_REAL_GIT="$T/fakegit" WREN_AGENT_USER=nobody-here bash "$GUARD" status)
-check "one made by you gets nothing added" grep -qx "status" "$T/calls"
+check "one made by you gets no trust added, only the refusal of bare repositories" grep -qx -- "-c safe.bareRepository=explicit status" "$T/calls"
 : >"$T/calls"
 (cd "$T/home/other" && WREN_REAL_GIT="$T/fakegit" WREN_AGENT_USER=$(id -un) bash "$GUARD" status)
 check "outside ~/projects nothing is ever added" grep -qx "status" "$T/calls"
@@ -112,6 +112,25 @@ printf '#!/bin/sh\n' >"$P/.git/hooks/pre-commit"
 (cd "$P" && WREN_REAL_GIT="$T/fakegit" WREN_AGENT_USER=$(id -un) bash "$GUARD" status 2>/dev/null)
 check "a bad repository is not trusted, and git is not run" bash -c "! grep -q status '$T/calls'"
 rm -f "$P/.git/hooks/pre-commit"
+
+# A bare repository needs no .git: claude-agent can write HEAD, objects, refs and
+# a config into any folder here. Git must not take it for a repository.
+bare() { /usr/bin/git init -q --bare "$1" && /usr/bin/git -C "$1" config alias.pwn "!touch $T/bare-ran"; }
+bare "$T/home/projects/evil"
+(cd "$T/home/projects/evil" && git pwn) >/dev/null 2>&1
+check "a bare repository planted in ~/projects doesn't run its settings" test ! -e "$T/bare-ran"
+rm -f "$T/bare-ran"
+bare "$P/planted"
+(cd "$P/planted" && git pwn) >/dev/null 2>&1
+check "...nor one planted inside a clean repository" test ! -e "$T/bare-ran"
+rm -rf "$P/planted"
+bare "$T/home/projects-work/evil"
+(cd "$T/home/projects-work/evil" && git pwn) >/dev/null 2>&1
+check "...nor one in another account's folder" test ! -e "$T/bare-ran"
+check "...while one you name yourself still works (--git-dir)" bash -c "bash '$GUARD' --git-dir='$T/home/projects/evil' rev-parse --is-bare-repository | grep -qx true"
+: >"$T/calls"
+(cd "$T/home/other" && WREN_REAL_GIT="$T/fakegit" bash "$GUARD" status)
+check "...and outside ~/projects nothing is added" grep -qx "status" "$T/calls"
 
 # explicit choices pass straight through
 check "--git-dir is left alone" bash -c "cd '$P' && printf '#!/bin/sh\n' >.git/hooks/pre-commit && bash '$GUARD' --git-dir='$P/.git' status; r=\$?; rm -f .git/hooks/pre-commit; exit \$r"

@@ -27,7 +27,7 @@ the script that starts Claude Code (`bin/claude-session`, through a rule in
 and your local network: it can reach the internet, nothing else. It gets its
 own ssh key and git identity, and Debian's git, ssh, ripgrep, jq, shellcheck
 and python venv. Because it can change any file in `~/projects`, your own git
-gets a guard there (`bin/git`) that refuses a repository whose `.git/config`
+gets a guard there (`bin/git`) that refuses a bare repository you did not name, and a repository whose `.git/config`
 or hooks could run a program as you. This is the lighter of the two Claude
 Code sandboxes: it shares your kernel; `extras/claude-vm.sh` is the stronger.
 Another account (a second Claude login: work and personal, say) gets a user

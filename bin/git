@@ -6,7 +6,9 @@
 # ~/projects, before git runs, this looks at the repository's .git/config and
 # .git/hooks, and refuses if it finds anything that can run a program. A repository
 # that claude-agent made also gets git's "dubious ownership" warning; when the
-# check passes, this trusts that one repository for that one command.
+# check passes, this trusts that one repository for that one command. A bare
+# repository has no .git to look at, and claude-agent can make one in any folder
+# there, so git is told to use one only when you name it (--git-dir).
 # The same in ~/projects-NAME, the folder of another account (claude-agent-NAME,
 # extras/claude-code.sh --account). Everywhere else it is plain git.
 # /usr/bin/git skips the guard.
@@ -18,7 +20,8 @@ REAL=${WREN_REAL_GIT:-/usr/bin/git}
 AGENT=${WREN_AGENT_USER:-claude-agent}
 PROJECTS=${WREN_PROJECTS:-$HOME/projects}
 
-plain() { exec "$REAL" "$@"; }
+no_bare=()
+plain() { exec "$REAL" "${no_bare[@]}" "$@"; }
 
 [ -z "${GIT_DIR:-}" ] || plain "$@"
 
@@ -41,6 +44,10 @@ while [ $i -lt ${#args[@]} ]; do
     esac
     i=$((i + 1))
 done
+
+case $dir in
+    "$PROJECTS" | "$PROJECTS"/* | "$PROJECTS"-* ) no_bare=(-c safe.bareRepository=explicit) ;;
+esac
 
 # The top of the repository that holds that folder
 top=$dir
@@ -128,4 +135,4 @@ agent_owned() { local o; o=$(stat -c %U "$1" 2>/dev/null) && [[ $o == "$AGENT" |
 if agent_owned "$top/.git" || agent_owned "$top"; then
     extra=(-c "safe.directory=$top" -c "safe.directory=$top/*")
 fi
-exec "$REAL" "${extra[@]}" "$@"
+exec "$REAL" "${no_bare[@]}" "${extra[@]}" "$@"

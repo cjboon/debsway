@@ -220,7 +220,7 @@ With the extras:
   there is untrusted: read scripts before you run them, and look at
   `.git/config` and `.git/hooks` before you tell your own git to trust a
   repository it made. Wren Linux puts a guard in front of your git inside
-  `~/projects` (`bin/git`): it refuses to run when a repository's
+  `~/projects` (`bin/git`): it refuses a bare repository you did not name, and refuses to run when a repository's
   `.git/config` or `.git/hooks` could run a program as you. A file could
   change between that check and the run, so it stops a confused assistant,
   not one racing your keystrokes. Don't switch git's own "dubious
