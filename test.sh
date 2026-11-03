@@ -545,6 +545,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "update.sh in the debsway package's copy (no git), with a pretend upgrade"
+if out=$(bash tools/test-update-package.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") package update checks"
+else
+    bad "package update checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "update.sh: only what debsway's own key signed, with throwaway keys"
 if out=$(bash tools/test-update-signed.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") signed update checks"

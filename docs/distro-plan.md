@@ -205,10 +205,10 @@ takes it, and refuses it signed with another key, past its Valid-Until or
 with a changed package list (`tools/test-apt-repo.sh`). `parts/debsway-repo.sh`
 adds it on a debsway computer: the pinned key only, and an apt pin so it can
 bring nothing but the debsway package (checked with real apt). It changes
-nothing until pins.sh names the key and the address. Still to do: re-running
-the parts whose files changed after apt upgrades the package (update.sh does
-it from git today), and adding the part to the base list once the repository
-is live. A separate keyring package isn't needed: the key comes with debsway
+nothing until pins.sh names the key and the address. After apt upgrades the
+package, `update.sh` runs again the parts whose files changed, from a record of
+every file it keeps (no git needed). Still to do: adding the part to the base
+list once the repository is live. A separate keyring package isn't needed: the key comes with debsway
 itself, checked against the pin.
 
 

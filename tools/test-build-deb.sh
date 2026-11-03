@@ -73,7 +73,7 @@ check "...and lists the extras from it" bash -c 'grep -q "vim" <<<"$1"' _ "$(ds 
 
 chmod -R a-w "$T/root"
 out=$(HOME="$T/home" bash "$S/update.sh" 2>&1)
-check "debsway update from the package's copy says a newer package brings updates" grep -q "debsway package's, read-only" <<<"$out"
+check "debsway update from the package's copy: apt brings what is new, and it runs again what that changed" grep -q "installed here as the debsway package" <<<"$out"
 chmod -R u+w "$T/root"
 
 [ "$fails" -eq 0 ]

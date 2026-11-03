@@ -108,9 +108,14 @@ update_pin_vars() {
 # update_affected OLD NEW: the scripts (all, installed or not) that the change
 # from commit OLD to commit NEW touches, in running order
 update_affected() {
-    local old=$1 new=$2 changed vars script
-    changed=$(git -C "$DEBSWAY_DIR" diff --name-only "$old" "$new" --)
-    vars=$(update_pin_vars "$old" "$new")
+    update_affected_by "$(git -C "$DEBSWAY_DIR" diff --name-only "$1" "$2" --)" "$(update_pin_vars "$1" "$2")"
+}
+
+# update_affected_by CHANGED VARS: the same, from a list of changed files and
+# of changed pins.sh names (one per line each), however they were found: git
+# for a checkout, the record of the last run for the package (update_manifest)
+update_affected_by() {
+    local changed=$1 vars=$2 script
     local inputs=()
     while IFS= read -r script; do
         mapfile -t inputs < <(update_inputs "$script")
@@ -123,6 +128,42 @@ update_affected() {
             echo "$script"
         fi
     done < <(update_scripts)
+}
+
+# The debsway package's copy has no git: what changed is found by comparing it
+# with a record of every file, kept when the setup was last brought up to date
+# (update_manifest_save), and a copy of pins.sh from then.
+# update_manifest: "SHA-256  path" for every file of this copy, sorted
+update_manifest() {
+    (cd "$DEBSWAY_DIR" && find . -path ./.git -prune -o -path ./offline -prune -o -path ./ignore -prune -o -type f -print0 |
+        sort -z | xargs -0 -r sha256sum | sed 's|  \./|  |')
+}
+# update_manifest_save DIR: the record, and pins.sh as it is, into DIR
+update_manifest_save() {
+    mkdir -p "$1"
+    update_manifest >"$1/applied-files"
+    # (install, not cp: a new file of yours, whatever the mode of the original)
+    install -m 0644 "$DEBSWAY_DIR/pins.sh" "$1/applied-pins.sh"
+}
+# update_manifest_changed DIR: the files that differ from the record in DIR
+# (changed, new or gone), one per line
+update_manifest_changed() {
+    diff <(cat "$1/applied-files") <(update_manifest) | sed -n 's/^[<>] [0-9a-f]\{64\}  //p' | sort -u
+}
+# update_manifest_pin_vars DIR: the names in pins.sh whose lines changed since
+update_manifest_pin_vars() {
+    diff "$1/applied-pins.sh" "$DEBSWAY_DIR/pins.sh" | sed -n 's/^[<>] \([A-Z][A-Z0-9_]*\)=.*/\1/p' | sort -u
+}
+# update_manifest_new_parts DIR: base parts (PARTS) that weren't there then
+update_manifest_new_parts() {
+    local f p
+    # shellcheck disable=SC1091  # PARTS is the list in packages.sh
+    . "$DEBSWAY_DIR/packages.sh"
+    while IFS= read -r f; do
+        p=${f#parts/}
+        p=${p%.sh}
+        case " ${PARTS[*]} " in *" $p "*) echo "$f" ;; esac
+    done < <(comm -13 <(sed 's/^[0-9a-f]\{64\}  //' "$1/applied-files" | sort) <(update_manifest | sed 's/^[0-9a-f]\{64\}  //' | sort) | grep '^parts/[^/]*\.sh$')
 }
 
 # update_new_parts OLD NEW: parts of the base desktop (the PARTS list in

@@ -99,9 +99,13 @@ date and its id. `tools/test-build-deb.sh` checks it.
   way every time.
 
 Install it on a computer with `sudo apt install ./debsway_VERSION_all.deb`.
-`debsway update` doesn't update a package yet (it needs a git checkout): a
-newer package is installed the same way, until the signed apt repository below
-delivers it.
+apt brings a newer one (the same way, or from the signed apt repository
+below); `debsway update` then runs again the parts and extras whose files
+changed, as it does for a git copy. Without git it compares the files with a
+record it keeps after each run (`~/.local/state/debsway/applied-files`, and a
+copy of `pins.sh`); the first run takes what is set up as up to date
+(`debsway update --all` offers everything). `tools/test-update-package.sh`
+checks it.
 
 ## The signed apt repository
 

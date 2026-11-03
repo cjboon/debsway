@@ -20,6 +20,10 @@
 # added (lib/apt-keys.sh), and fetches a pinned key again when it has expired
 # or will soon.
 #
+# In the debsway package's copy (/usr/share/debsway: root's, no git) apt brings
+# what is new; update.sh then finds what changed against a record of every
+# file it keeps after each run, and offers those scripts in the same way.
+#
 # Usage: bash update.sh [--since COMMIT | --all]
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
 . "$DEBSWAY_DIR/lib/update.sh"
@@ -45,10 +49,14 @@ main() {
     esac
 
     if ! g rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        # the debsway package's copy: root's, and no git
-        [ -w "$DEBSWAY_DIR" ] ||
-            die "This debsway ($DEBSWAY_DIR) is the debsway package's, read-only: a newer package brings what is new (sudo apt install ./debsway_VERSION_all.deb). To update a copy of your own instead: DEBSWAY_DIR=/path/to/that/copy debsway update"
-        die "$DEBSWAY_DIR isn't a git checkout, so there is nothing to update from. Get debsway again with: git clone <its address>"
+        [ ! -w "$DEBSWAY_DIR" ] ||
+            die "$DEBSWAY_DIR isn't a git checkout, so there is nothing to update from. Get debsway again with: git clone <its address>"
+        # The debsway package's copy: root's, no git. apt brings what is new;
+        # this reruns what it changed
+        [ -z "$since" ] || die "--since is for a git copy of debsway; the package's has no commits."
+        package_offers "$everything"
+        run_offered
+        return
     fi
     # A hooks folder that came in with the update would run as you
     [ -z "$(g config core.hooksPath)" ] ||
@@ -86,7 +94,6 @@ main() {
     else
         note "debsway is up to date with the server."
     fi
-    local now
     now=$(g rev-parse HEAD)
 
     # Signing keys that expire or are renewed (says nothing when all are fine)
@@ -102,7 +109,7 @@ main() {
         old=$before
     fi
 
-    local script offered=() core
+    local script core
     if $everything; then
         while IFS= read -r script; do
             if update_installed "$script"; then offered+=("$script"); fi
@@ -129,6 +136,13 @@ main() {
         done < <(update_stale)
     fi
 
+    run_offered
+}
+
+# run_offered: offers the scripts in offered, runs them one after the other if
+# you say so, and on success records that the setup is up to date (save_state)
+run_offered() {
+    local script
     if [ ${#offered[@]} -eq 0 ]; then
         save_state "$now"
         say "Nothing to run again."
@@ -166,12 +180,44 @@ main() {
     say "Up to date."
 }
 
-# save_state COMMIT: this computer's setup now matches COMMIT
+# save_state [COMMIT]: this computer's setup now matches COMMIT (a git copy),
+# and every file as it is now (the record a package's copy is compared with)
 save_state() {
     mkdir -p "$STATE_DIR"
-    printf '%s\n' "$1" >"$STATE"
+    [ -z "${1:-}" ] || printf '%s\n' "$1" >"$STATE"
+    update_manifest_save "$STATE_DIR"
 }
 
+# package_offers ALL: for the debsway package's copy, which has no git: the
+# scripts set up here whose files changed since the last run (the record
+# save_state keeps), or all set up with ALL=true; into offered
+package_offers() {
+    local script
+    note "debsway is installed here as the debsway package ($DEBSWAY_DIR): apt brings what is new"
+    note "(unattended-upgrades every day, or: sudo apt update && sudo apt upgrade). This runs again what it changed."
+    apt_keys_refresh || true
+    if $1; then
+        while IFS= read -r script; do
+            if update_installed "$script"; then offered+=("$script"); fi
+        done < <(update_scripts)
+        return 0
+    fi
+    if [ -r "$STATE_DIR/applied-files" ] && [ -r "$STATE_DIR/applied-pins.sh" ]; then
+        while IFS= read -r script; do
+            if update_installed "$script"; then offered+=("$script"); fi
+        done < <(update_affected_by "$(update_manifest_changed "$STATE_DIR")" "$(update_manifest_pin_vars "$STATE_DIR")")
+        while IFS= read -r script; do
+            case " ${offered[*]} " in *" $script "*) ;; *) offered+=("$script") ;; esac
+        done < <(update_manifest_new_parts "$STATE_DIR")
+    else
+        note "The first run from the package: what is set up now counts as up to date (bash update.sh --all offers all of it)."
+    fi
+    while IFS= read -r script; do
+        case " ${offered[*]} " in *" $script "*) ;; *) offered+=("$script") ;; esac
+    done < <(update_stale)
+}
+
+offered=() now=
 # Everything runs inside main: git may replace this very file while it runs
 main "$@"
 rc=$?
