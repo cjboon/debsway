@@ -207,7 +207,7 @@ for th in evening morning; do
     jpg "$T/build/budgie-backgrounds/usr/share/backgrounds/budgie/$th/1920x1080.jpg"
 done
 mkdir -p "$T/debs"
-dpkg-deb -Zxz --root-owner-group --build "$T/build/budgie-backgrounds" "$T/debs/budgie-backgrounds.deb" >/dev/null
+chmod -R go+rX "$T/build" && dpkg-deb -Zxz --root-owner-group --build "$T/build/budgie-backgrounds" "$T/debs/budgie-backgrounds.deb" >/dev/null
 cat >"$T/fake/apt-get" <<EOF
 #!/bin/sh
 echo "apt-get \$*" >>"$T/apt"

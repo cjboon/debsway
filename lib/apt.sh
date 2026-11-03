@@ -34,6 +34,9 @@ marker_build() {
     deps=$(printf '%s\n' "$@" | sort -u | paste -sd, - | sed 's/,/, /g')
     root=$(mktemp -d)
     mkdir -p "$root/DEBIAN"
+    # dpkg-deb refuses a control folder others can't read, and with the private
+    # umask (parts/home-private.sh: 077) a new folder is yours alone
+    chmod 0755 "$root" "$root/DEBIAN"
     {
         echo "Package: $marker"
         # Newer than any earlier one, so a second call replaces the first
@@ -49,6 +52,8 @@ marker_build() {
         echo " --remove) lets apt autoremove the ones nothing else needs."
     } >"$root/DEBIAN/control"
     dpkg-deb --root-owner-group --build "$root" "$dir/$marker.deb" >/dev/null
+    # apt reads it as its own user, _apt
+    chmod 0644 "$dir/$marker.deb"
     rm -rf "$root"
 }
 

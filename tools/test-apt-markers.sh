@@ -113,8 +113,10 @@ check "DEBSWAY_OWNER wins" test "$(DEBSWAY_OWNER=Whonix bash -c '. "$1/lib.sh"; 
 
 echo "Building a marker"
 mkdir "$ST/b"
-marker_build debsway-demo "$ST/b" mat2 mpv mat2
-check "it is a valid package" dpkg-deb -I "$ST/b/debsway-demo.deb"
+# with the private umask parts/home-private.sh sets (077), as in a real login
+(umask 077; marker_build debsway-demo "$ST/b" mat2 mpv mat2)
+check "it is a valid package, also with umask 077" dpkg-deb -I "$ST/b/debsway-demo.deb"
+check "...readable by apt's own user (_apt)" test "$(stat -c %a "$ST/b/debsway-demo.deb")" = 644
 check "it depends on the sorted, unique packages" test "$(dpkg-deb -f "$ST/b/debsway-demo.deb" Depends)" = "mat2, mpv"
 if [ -x /usr/bin/apt-get ]; then
     check "apt can resolve it" /usr/bin/apt-get -s -o Debug::NoLocking=1 install --no-install-recommends "$ST/b/debsway-demo.deb"
@@ -150,6 +152,7 @@ echo "Packages from a .deb file"
 mkdir "$ST/f"
 printf 'Package: fakeapp\nVersion: 1\nArchitecture: all\nMaintainer: x\nDescription: x\n' >/dev/null
 mkdir -p "$ST/f/root/DEBIAN"
+chmod 0755 "$ST/f/root" "$ST/f/root/DEBIAN"
 printf 'Package: fakeapp\nVersion: 1\nArchitecture: all\nMaintainer: x <x@localhost>\nDescription: test\n' >"$ST/f/root/DEBIAN/control"
 dpkg-deb --root-owner-group --build "$ST/f/root" "$ST/f/fakeapp.deb" >/dev/null
 export DEBSWAY_OWNER=gamma
