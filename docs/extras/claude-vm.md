@@ -3,11 +3,11 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/claude-vm.sh            set it up and build the VM (keeps a VM already built)
-bash ~/debsway/extras/claude-vm.sh --remove   remove it (asks before deleting the user and its VM)
-bash ~/debsway/extras/claude-vm.sh --manual   print the manual steps below
-bash ~/debsway/extras/claude-vm.sh --account NAME          another account, in a VM of its own
-bash ~/debsway/extras/claude-vm.sh --remove-account NAME   remove it (asks before deleting its user and VM)
+debsway install claude-vm                         set it up and build the VM (keeps a VM already built)
+debsway remove claude-vm                          remove it (asks before deleting the user and its VM)
+debsway manual claude-vm                          print the manual steps below
+debsway install claude-vm --account NAME          another account, in a VM of its own
+debsway install claude-vm --remove-account NAME   remove it (asks before deleting its user and VM)
 
 claude-vm              Claude Code inside the VM (boots it; powers it off when you exit)
 claude-vm shell        a plain shell in the VM

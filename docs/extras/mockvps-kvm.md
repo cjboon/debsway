@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/mockvps-kvm.sh            install what it needs and the mockvps-kvm command
-bash ~/debsway/extras/mockvps-kvm.sh --remove   remove the command (VMs stay: mockvps-kvm --uninstall first)
-bash ~/debsway/extras/mockvps-kvm.sh --manual   print the manual steps below
+debsway install mockvps-kvm                     install what it needs and the mockvps-kvm command
+debsway remove mockvps-kvm                      remove the command (VMs stay: mockvps-kvm --uninstall first)
+debsway manual mockvps-kvm                      print the manual steps below
 
 mockvps-kvm                    install a fresh Debian VM (5-15 min)
 ssh mockvps-kvm                log in to it (key only)

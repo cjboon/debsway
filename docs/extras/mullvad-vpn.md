@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/mullvad-vpn.sh            install it
-bash ~/debsway/extras/mullvad-vpn.sh --remove   disconnect and remove it (and Mullvad's repository, if Mullvad Browser isn't installed)
-bash ~/debsway/extras/mullvad-vpn.sh --manual   print the manual steps below
+debsway install mullvad-vpn                     install it
+debsway remove mullvad-vpn                      disconnect and remove it (and Mullvad's repository, if Mullvad Browser isn't installed)
+debsway manual mullvad-vpn                      print the manual steps below
 
 mullvad account login 1234123412341234    log in with your account number
 mullvad relay set location se [mma]       a country (se = Sweden), or a city in it

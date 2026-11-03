@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/wallpapers.sh            pick sources, or none ("I'll find my own"); pictures go in ~/Pictures/Wallpapers
-bash ~/debsway/extras/wallpapers.sh --remove   take out what it downloaded (your own pictures stay)
-bash ~/debsway/extras/wallpapers.sh --manual   print the manual steps below
+debsway install wallpapers                     pick sources, or none ("I'll find my own"); pictures go in ~/Pictures/Wallpapers
+debsway remove wallpapers                      take out what it downloaded (your own pictures stay)
+debsway manual wallpapers                      print the manual steps below
 
 Super+] / Super+[                              step through them as your wallpaper
 wallpaper pick                                 choose one by name

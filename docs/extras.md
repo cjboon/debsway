@@ -1,10 +1,11 @@
 # extras/
 
-Run one with `bash extras/NAME.sh`; run it again to repair it or, for
-downloaded apps, update to the newest release; undo it with `--remove`.
+Install one with `debsway install NAME` (Tab completes the name; it runs
+`extras/NAME.sh`); run it again to repair it or, for downloaded apps, update
+to the newest release; undo it with `debsway remove NAME`.
 The debsway menu's Install apps and Remove apps (`bash install-extras.sh`,
 `bash install-extras.sh --remove`) do the same from a list.
-`bash extras/NAME.sh --manual` prints the steps to do it all by hand instead,
+`debsway manual NAME` prints the steps to do it all by hand instead,
 and changes nothing. Each one has a page in [extras/](extras/README.md): its
 commands, what it is, what it doesn't protect against, and those manual steps.
 Removing an app never deletes its data: wallets, chats and keyrings stay.
@@ -54,7 +55,7 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `metadata-cleaner.sh` | Metadata Cleaner, the graphical program Tails ships, and the `mat2` command: removes hidden metadata from photos, PDFs and documents before you share them. Prints examples |
 | `media.sh` | imv (images) and mpv (video, music), each started in a bubblewrap sandbox that sees only the files you open. Prints examples and keys |
 | `yt-dlp.sh` | yt-dlp, the video downloader, as its own locked-down user (`ytdlp`): `yt-dlp URL` works as usual and the files land in `~/Downloads`, copied out as you. The official release, checked against yt-dlp's pinned signing key and installed as root's file (it can't change itself); YouTube's JavaScript runs in Debian's QuickJS, as `ytdlp`; config files ignored; a firewall rule keeps it off your local network. Run it again to update yt-dlp. See [extras/yt-dlp.md](extras/yt-dlp.md) |
-| `mockvps-kvm.sh` | `mockvps-kvm`: a disposable Debian "VPS" in a local QEMU/KVM VM for trying out server setups, with snapshots and one-command removal. See `vendor/mockvps-kvm/README.md`. Run `bash extras/mockvps-kvm.sh` once, then use the `mockvps-kvm` command; the script in `vendor/` is the program itself and refuses to run directly until that setup is done (`MOCKVPS_FORCE=1` overrides) |
+| `mockvps-kvm.sh` | `mockvps-kvm`: a disposable Debian "VPS" in a local QEMU/KVM VM for trying out server setups, with snapshots and one-command removal. See `vendor/mockvps-kvm/README.md`. Run `debsway install mockvps-kvm` once, then use the `mockvps-kvm` command; the script in `vendor/` is the program itself and refuses to run directly until that setup is done (`MOCKVPS_FORCE=1` overrides) |
 | `mousepad.sh` | Mousepad, a simple graphical text editor (made the default for text files). It also sets its look: white text on black in the terminal's colours with dark menus, DejaVu Sans Mono 14, tabs of 4 spaces, line numbers, matching braces highlighted and a line at column 80 (`data/mousepad.settings`, `data/mousepad-dark.xml`); later runs leave your changes alone unless debsway's settings changed |
 | `file-manager.sh` | Thunar, a light graphical file manager, with Trash and thumbnails (made the default for folders). Prints its keys |
 
@@ -275,7 +276,7 @@ Installs Firefox ESR with the video codecs and uBlock Origin, runs the
 hardening below, runs it as its own locked-down user (`firefox`), and sets up
 `incognito` too. `firefox-esr` still runs the same Firefox as you, for the odd
 page the sandbox's firewall blocks (your router's, say).
-`bash extras/firefox-sandbox.sh --remove` takes all of it out again (it asks
+`debsway remove firefox-sandbox` takes all of it out again (it asks
 about incognito; your profiles stay).
 
 ### Firefox hardening

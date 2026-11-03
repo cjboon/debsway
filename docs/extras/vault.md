@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/vault.sh            install it and make the vault (asks for its password)
-bash ~/debsway/extras/vault.sh --remove   remove the command (the encrypted files stay)
-bash ~/debsway/extras/vault.sh --manual   print the manual steps below
+debsway install vault                     install it and make the vault (asks for its password)
+debsway remove vault                      remove the command (the encrypted files stay)
+debsway manual vault                      print the manual steps below
 
 vault open                 open ~/Vault for an hour (asks for its password)
 vault open --for 2h        ...for two hours (30m, 90 for minutes)

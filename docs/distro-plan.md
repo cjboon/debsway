@@ -3,7 +3,7 @@
 ## In short
 
 1. Decide the name, and make an offline signing key.
-2. `debsway install NAME`, with Tab completion.
+2. `debsway install NAME`, with Tab completion. (Done.)
 3. A `.deb` that installs debsway root-owned in `/usr/share/debsway`.
 4. A signed apt repository. Signing happens on your own computer, so a
    broken-into VPS can't forge updates.
@@ -85,7 +85,7 @@ if the next one waits.
 The repository stays your workshop in `~/debsway`: you edit and test there
 as now. Installed systems get a built package instead.
 
-### 1a. One command, `debsway`, in front of everything
+### 1a. One command, `debsway`, in front of everything (done)
 
 The `debsway` command already exists (the menu, `--apps`, `--update`).
 Extend it before anything moves, so the docs can switch to it early:

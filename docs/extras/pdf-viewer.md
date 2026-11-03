@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/pdf-viewer.sh            install it
-bash ~/debsway/extras/pdf-viewer.sh --remove   remove it
-bash ~/debsway/extras/pdf-viewer.sh --manual   print the manual steps below
+debsway install pdf-viewer                     install it
+debsway remove pdf-viewer                      remove it
+debsway manual pdf-viewer                      print the manual steps below
 
 zathura paper.pdf              open a PDF, in its sandbox
 zathura -P 5 paper.pdf         open at page 5

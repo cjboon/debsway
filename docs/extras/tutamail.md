@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/tutamail.sh            install it, or update to the newest release
-bash ~/debsway/extras/tutamail.sh --remove   remove it (its data stays)
-bash ~/debsway/extras/tutamail.sh --manual   print the manual steps below
+debsway install tutamail                     install it, or update to the newest release
+debsway remove tutamail                      remove it (its data stays)
+debsway manual tutamail                      print the manual steps below
 
 tuta                                         start it (or Super+d, then tuta)
 bash ~/debsway/test.sh                       says when a newer release is out

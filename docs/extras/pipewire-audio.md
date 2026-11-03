@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/pipewire-audio.sh            install it
-bash ~/debsway/extras/pipewire-audio.sh --remove   remove it
-bash ~/debsway/extras/pipewire-audio.sh --manual   print the manual steps below
+debsway install pipewire-audio                     install it
+debsway remove pipewire-audio                      remove it
+debsway manual pipewire-audio                      print the manual steps below
 
 volume up|down|mute|micmute [STEP]    5% steps, never above 100%
   the volume and mute keys, or Super+F10 (mute), Super+F11 (down), Super+F12 (up)

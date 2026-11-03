@@ -138,7 +138,7 @@ Three rough levels, to place yourself:
   fix. debsway installs Debian's security fixes every day; restart programs
   (and the computer, after a kernel update) when you're told to.
 - **Install less.** Every program is more code that can have a hole. Remove
-  what you don't use (`bash extras/NAME.sh --remove`).
+  what you don't use (`debsway remove NAME`).
 - **Run risky things apart from you.** Open untrusted websites in `incognito`
   or the sandboxed `firefox`, images and videos with debsway's sandboxed `imv`
   and `mpv`, and AI coding agents in `claude-vm`. Anything running *as you* can

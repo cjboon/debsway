@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/media.sh            install them
-bash ~/debsway/extras/media.sh --remove   remove them
-bash ~/debsway/extras/media.sh --manual   print the manual steps below
+debsway install media                     install them
+debsway remove media                      remove them
+debsway manual media                      print the manual steps below
 
 imv photo.jpg | imv ~/Pictures | imv -r ~/Pictures | imv -t 5 ~/Pictures (slideshow)
   Left/Right previous/next   i/o zoom   a actual size   f fullscreen   q quit

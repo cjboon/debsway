@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/seahorse.sh            install it (edits /etc/pam.d/login)
-bash ~/debsway/extras/seahorse.sh --remove   take the login lines out and remove it
-bash ~/debsway/extras/seahorse.sh --manual   print the manual steps below
+debsway install seahorse                     install it (edits /etc/pam.d/login)
+debsway remove seahorse                      take the login lines out and remove it
+debsway manual seahorse                      print the manual steps below
 
 seahorse            "Passwords and Keys": look at what is stored (or Super+d)
 ```

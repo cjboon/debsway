@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/console-only.sh            log in to tmux from now on (from sway, it leaves sway)
-bash ~/debsway/extras/console-only.sh --remove   log in to sway again (from tmux, it starts sway)
-bash ~/debsway/extras/console-only.sh --manual   print the manual steps below
+debsway install console-only                     log in to tmux from now on (from sway, it leaves sway)
+debsway remove console-only                      log in to sway again (from tmux, it starts sway)
+debsway manual console-only                      print the manual steps below
 
 Alt+1 ... Alt+0      workspace 1 ... 10 (Alt+Shift+1 ... sends the pane)
 Alt+Enter / Alt+v    split beside / below     Alt+h j k l or arrows: move

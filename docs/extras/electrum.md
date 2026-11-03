@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/electrum.sh            install it
-bash ~/debsway/extras/electrum.sh --remove   remove it (wallets in ~/.electrum stay)
-bash ~/debsway/extras/electrum.sh --manual   print the manual steps below
+debsway install electrum                     install it
+debsway remove electrum                      remove it (wallets in ~/.electrum stay)
+debsway manual electrum                      print the manual steps below
 
 electrum                                     start it (or Super+d, then electrum)
 ```

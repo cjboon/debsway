@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/tor-browser.sh            install it, or change its bridge (asks if you need one)
-bash ~/debsway/extras/tor-browser.sh --remove   remove it (asks before deleting the downloaded browser)
-bash ~/debsway/extras/tor-browser.sh --manual   print the manual steps below
+debsway install tor-browser                     install it, or change its bridge (asks if you need one)
+debsway remove tor-browser                      remove it (asks before deleting the downloaded browser)
+debsway manual tor-browser                      print the manual steps below
 
 torbrowser-launcher       start Tor Browser (or Super+d); the first start downloads it
 ```

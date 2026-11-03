@@ -285,5 +285,5 @@ fi
 cat <<'EOF'
 
     The firewall is unchanged: nothing is open for it. Turn it off with:
-      bash extras/remote-access.sh --remove
+      debsway remove remote-access
 EOF

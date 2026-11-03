@@ -3,10 +3,10 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/whonix.sh            download (if needed), check and install both VMs (asks about a bridge)
-bash ~/debsway/extras/whonix.sh --fetch    only download and check it, for later
-bash ~/debsway/extras/whonix.sh --remove   remove the VMs (asks before deleting their disks)
-bash ~/debsway/extras/whonix.sh --manual   print the manual steps below
+debsway install whonix                     download (if needed), check and install both VMs (asks about a bridge)
+debsway install whonix --fetch             only download and check it, for later
+debsway remove whonix                      remove the VMs (asks before deleting their disks)
+debsway manual whonix                      print the manual steps below
 
 whonix             start both VMs and open the Workstation (or Super+d)
 whonix gateway     start the Gateway and open it (Tor settings, bridges)

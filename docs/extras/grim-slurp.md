@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/grim-slurp.sh            install it
-bash ~/debsway/extras/grim-slurp.sh --remove   remove it
-bash ~/debsway/extras/grim-slurp.sh --manual   print the manual steps below
+debsway install grim-slurp                     install it
+debsway remove grim-slurp                      remove it
+debsway manual grim-slurp                      print the manual steps below
 
 Print        or Super+Shift+p   the whole screen, to ~/Pictures
 Shift+Print  or Super+Shift+s   drag a region, to ~/Pictures

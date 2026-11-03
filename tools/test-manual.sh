@@ -88,7 +88,9 @@ for doc in "$HERE"/docs/extras/*.md; do
     grep -qx '## MANUAL INSTALL' "$doc" || continue
     name=$(basename "$doc" .md)
     # The script whose --manual prints this page, from the SYNOPSIS
-    rel=$(sed -n '/^## SYNOPSIS/,/^## LIMITS/s|.*bash ~/debsway/\([^ ]*\.sh\) --manual.*|\1|p' "$doc" | head -1)
+    # (debsway manual NAME is extras/NAME.sh --manual)
+    rel=$(sed -n -e '/^## SYNOPSIS/,/^## LIMITS/s|.*bash ~/debsway/\([^ ]*\.sh\) --manual.*|\1|p' \
+        -e '/^## SYNOPSIS/,/^## LIMITS/s|^debsway manual \([a-z0-9-]*\) .*|extras/\1.sh|p' "$doc" | head -1)
     script=$HERE/$rel
     pages=$((pages + 1))
     order=$(grep -nx '## SYNOPSIS\|## LIMITS\|## MANUAL INSTALL' "$doc" | cut -d: -f2 | paste -sd,)

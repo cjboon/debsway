@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/onionshare.sh            install it (asks about a bridge, and the graphical app)
-bash ~/debsway/extras/onionshare.sh --remove   remove it (settings and received files stay)
-bash ~/debsway/extras/onionshare.sh --manual   print the manual steps below
+debsway install onionshare                     install it (asks about a bridge, and the graphical app)
+debsway remove onionshare                      remove it (settings and received files stay)
+debsway manual onionshare                      print the manual steps below
 
 onionshare-cli report.pdf photos/      share files; stops after the first download
 onionshare-cli --no-autostop-sharing report.pdf    keep sharing after downloads

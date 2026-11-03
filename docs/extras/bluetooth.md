@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/bluetooth.sh            install it (the adapter is off at every boot)
-bash ~/debsway/extras/bluetooth.sh --remove   remove it
-bash ~/debsway/extras/bluetooth.sh --manual   print the manual steps below
+debsway install bluetooth                     install it (the adapter is off at every boot)
+debsway remove bluetooth                      remove it
+debsway manual bluetooth                      print the manual steps below
 
 debsway --bluetooth on|off     switch the adapter (or the debsway menu > Bluetooth)
 bluetoothctl                   pair a device: type

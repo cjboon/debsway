@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/phone-tethering.sh            install it
-bash ~/debsway/extras/phone-tethering.sh --remove   remove it
-bash ~/debsway/extras/phone-tethering.sh --manual   print the manual steps below
+debsway install phone-tethering                     install it
+debsway remove phone-tethering                      remove it
+debsway manual phone-tethering                      print the manual steps below
 
 Android: plug it in, then Settings > Network > Hotspot & tethering > USB tethering
 iPhone:  plug it in, tap Trust, then Settings > Personal Hotspot

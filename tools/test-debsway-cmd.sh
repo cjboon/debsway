@@ -2,6 +2,7 @@
 # Checks bin/debsway (the debsway command) and its man page, with a pretend
 # debsway folder whose scripts only write down how they were called. Changes
 # nothing. Run by test.sh, or:  bash tools/test-debsway-cmd.sh
+# shellcheck disable=SC2016  # the inner shells and pretend programs expand their own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 CMD=$HERE/bin/debsway
 
@@ -78,6 +79,60 @@ check "an unknown option exits 2" test "$rc" -eq 2
 check "...and says which one, with the help" grep -q 'unknown option "--nonsense"' "$T/err"
 check "a missing folder is explained" grep -q "can't find the debsway folder" <(env HOME="$T/home" DEBSWAY_DIR="$T/nowhere" bash "$CMD" --update 2>&1)
 check "--help works without the folder" env HOME="$T/home" DEBSWAY_DIR="$T/nowhere" bash "$CMD" --help
+
+# install, remove, manual NAME; list; part NAME: only debsway's own scripts, by exact name
+mkdir -p "$T/dir/extras" "$T/dir/parts" "$T/dir/elsewhere"
+for s in extras/vim extras/claude-vm parts/ufw elsewhere/evil; do
+    # shellcheck disable=SC2016  # written into the pretend scripts, expanded when they run
+    printf '#!/bin/bash\necho "%s $*" >>"%s/ran"\n' "$s" "$T" >"$T/dir/$s.sh"
+done
+d install vim
+check "install NAME runs that extra" grep -qx 'extras/vim ' "$T/ran"
+d --install vim
+check "...--install too" grep -qx 'extras/vim ' "$T/ran"
+d remove vim
+check "remove NAME runs it with --remove" grep -qx 'extras/vim --remove' "$T/ran"
+d manual vim
+check "manual NAME runs it with --manual" grep -qx 'extras/vim --manual' "$T/ran"
+d install claude-vm --account work
+check "options after NAME go to the script" grep -qx 'extras/claude-vm --account work' "$T/ran"
+d remove claude-vm --account work
+check "...after --remove too" grep -qx 'extras/claude-vm --remove --account work' "$T/ran"
+d list
+check "list prints the extras (install-extras.sh --list)" grep -qx 'install-extras --list' "$T/ran"
+d part ufw
+check "part NAME runs that part" grep -qx 'parts/ufw ' "$T/ran"
+for bad in ../elsewhere/evil ../parts/ufw 'vim;id' 'vim ' Vim -vim nosuch ''; do
+    d install "$bad" >/dev/null 2>&1; rc=$?
+    check "install \"$bad\" is refused and runs nothing" bash -c '[ "$1" -ne 0 ] && [ ! -s "$2" ]' _ "$rc" "$T/ran"
+done
+d install >/dev/null 2>"$T/err"
+check "...with no name it asks which" grep -q 'which extra?' "$T/err"
+d install nosuch >/dev/null 2>"$T/err"
+check "...an unknown one is named, with where to look" grep -q 'no extra called "nosuch". debsway --list' "$T/err"
+d part vim >/dev/null 2>&1; rc=$?
+check "part takes parts only, not an extra" bash -c '[ "$1" -ne 0 ] && [ ! -s "$2" ]' _ "$rc" "$T/ran"
+d part ../extras/vim >/dev/null 2>&1; rc=$?
+check "...nor a path" bash -c '[ "$1" -ne 0 ] && [ ! -s "$2" ]' _ "$rc" "$T/ran"
+d part ufw extra >/dev/null 2>&1; rc=$?
+check "...and one name only" bash -c '[ "$1" -ne 0 ] && [ ! -s "$2" ]' _ "$rc" "$T/ran"
+
+# Tab completion, with a pretend debsway that answers --help and --dir
+COMP=$HERE/data/debsway-completion.bash
+mkdir -p "$T/cbin"
+# shellcheck disable=SC2016
+printf '#!/bin/sh\ncase "$1" in --dir) echo "%s/dir" ;; --help) DEBSWAY_DIR=%s/dir bash %s --help ;; esac\n' "$T" "$T" "$CMD" >"$T/cbin/debsway"
+chmod +x "$T/cbin/debsway"
+comp() { PATH="$T/cbin:$PATH" bash -c '. "$1"; shift; COMP_WORDS=("$@"); COMP_CWORD=$(($# - 1)); _debsway; printf "%s\n" "${COMPREPLY[@]}"' _ "$COMP" "$@" | sort | paste -sd' '; }
+check "Tab after debsway: the options, with and without dashes" bash -c '[[ " $1 " == *" install "* && " $1 " == *" --install "* && " $1 " == *" part "* ]]' _ "$(comp debsway '')"
+check "...a start of one completes it" test "$(comp debsway ins)" = install
+check "Tab after install: the extras" test "$(comp debsway install '')" = "claude-vm vim"
+check "...after --remove and manual too" bash -c '[ "$1" = "vim" ] && [ "$2" = "claude-vm vim" ]' _ "$(comp debsway --remove v)" "$(comp debsway manual '')"
+check "Tab after part: the parts" test "$(comp debsway part '')" = ufw
+check "Tab after --mic: on and off" test "$(comp debsway --mic '')" = "off on"
+check "nothing after the name" test -z "$(comp debsway install vim '')"
+check "the part installs the completion where bash-completion looks" \
+    grep -q '"$DEBSWAY_DIR/data/debsway-completion.bash" "$COMPLETION"' "$HERE/parts/debsway-menu.sh"
 
 # the help text and the man page say the same
 help_opts=$(bash "$CMD" --help | grep -o '^  --[a-z]*' | tr -d ' ' | sort -u)

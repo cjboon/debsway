@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/emoji-font.sh            install it
-bash ~/debsway/extras/emoji-font.sh --remove   remove it
-bash ~/debsway/extras/emoji-font.sh --manual   print the manual steps below
+debsway install emoji-font                     install it
+debsway remove emoji-font                      remove it
+debsway manual emoji-font                      print the manual steps below
 
 (nothing to run: restart Firefox and foot, and emoji show in color)
 ```

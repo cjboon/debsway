@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/remote-access.sh            set it up, repair it, see the address, or authorize another computer
-bash ~/debsway/extras/remote-access.sh --remove   take it out (deletes the onion address for good; asks first)
-bash ~/debsway/extras/remote-access.sh --manual   print the manual steps below
+debsway install remote-access                     set it up, repair it, see the address, or authorize another computer
+debsway remove remote-access                      take it out (deletes the onion address for good; asks first)
+debsway manual remote-access                      print the manual steps below
 
 ssh debsway        on the other computer, once it has the client key and ~/.ssh/config lines
 ```

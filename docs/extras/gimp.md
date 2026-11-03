@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/gimp.sh            install it
-bash ~/debsway/extras/gimp.sh --remove   remove it (~/.config/GIMP and ~/Pictures stay)
-bash ~/debsway/extras/gimp.sh --manual   print the manual steps below
+debsway install gimp                     install it
+debsway remove gimp                      remove it (~/.config/GIMP and ~/Pictures stay)
+debsway manual gimp                      print the manual steps below
 
 gimp                           start GIMP, in its sandbox (Super+d too)
 gimp ~/Pictures/photo.jpg      open a picture

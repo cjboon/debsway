@@ -9,7 +9,7 @@ Every page has the same shape:
 - One paragraph on what it is.
 - **LIMITS**: what it does not protect against.
 - **MANUAL INSTALL**: every step to do by hand what the script does, each with
-  what it is for. `bash ~/debsway/extras/NAME.sh --manual` prints this section
+  what it is for. `debsway manual NAME` prints this section
   and changes nothing. In the page, `@NAME@` stands for a value from `pins.sh`
   or the script (a key's fingerprint, an address, a package list) and
   `@DEBSWAY_DIR@` for your debsway folder; `--manual` fills them in.

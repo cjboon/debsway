@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/tails-usb.sh            set up the tails-usb command, and say how to use it
-bash ~/debsway/extras/tails-usb.sh --remove   remove it (offers to delete the saved image)
-bash ~/debsway/extras/tails-usb.sh --manual   print the manual steps below
+debsway install tails-usb                     set up the tails-usb command, and say how to use it
+debsway remove tails-usb                      remove it (offers to delete the saved image)
+debsway manual tails-usb                      print the manual steps below
 
 tails-usb          download (or reuse) the newest Tails, check it, write it to a stick you pick
 ```

@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/sparrow-wallet.sh            install it, or update to the newest release
-bash ~/debsway/extras/sparrow-wallet.sh --remove   remove it (wallets in ~/.sparrow stay)
-bash ~/debsway/extras/sparrow-wallet.sh --manual   print the manual steps below
+debsway install sparrow-wallet                     install it, or update to the newest release
+debsway remove sparrow-wallet                      remove it (wallets in ~/.sparrow stay)
+debsway manual sparrow-wallet                      print the manual steps below
 
 sparrow                                            start it (or Super+d, then sparrow)
 bash ~/debsway/test.sh                             says when a newer release is out

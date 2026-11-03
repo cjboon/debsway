@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/metadata-cleaner.sh            install it
-bash ~/debsway/extras/metadata-cleaner.sh --remove   remove it
-bash ~/debsway/extras/metadata-cleaner.sh --manual   print the manual steps below
+debsway install metadata-cleaner                     install it
+debsway remove metadata-cleaner                      remove it
+debsway manual metadata-cleaner                      print the manual steps below
 
 metadata-cleaner               the window (or Super+d): add files, look, clean
 mat2 --show photo.jpg          list the metadata it finds (removes nothing)

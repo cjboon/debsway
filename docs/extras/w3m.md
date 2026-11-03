@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/w3m.sh            install it
-bash ~/debsway/extras/w3m.sh --remove   remove it (~/.w3m stays)
-bash ~/debsway/extras/w3m.sh --manual   print the manual steps below
+debsway install w3m                     install it
+debsway remove w3m                      remove it (~/.w3m stays)
+debsway manual w3m                      print the manual steps below
 
 w3m https://example.org                 open a page (w3m duckduckgo.com works too)
 w3m -no-cookie https://example.org      no cookies at all, for one run

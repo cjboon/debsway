@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/autologin.sh            log in on tty1 without the password, from the next boot
-bash ~/debsway/extras/autologin.sh --remove   tty1 asks for the password again
-bash ~/debsway/extras/autologin.sh --manual   print the manual steps below
+debsway install autologin                     log in on tty1 without the password, from the next boot
+debsway remove autologin                      tty1 asks for the password again
+debsway manual autologin                      print the manual steps below
 
 bash ~/debsway/prep/make-install-iso.sh --autologin   an install stick that sets this up
 ```

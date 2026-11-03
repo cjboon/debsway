@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/mousepad.sh            install it and set its look
-bash ~/debsway/extras/mousepad.sh --remove   remove it (your Mousepad settings stay)
-bash ~/debsway/extras/mousepad.sh --manual   print the manual steps below
+debsway install mousepad                     install it and set its look
+debsway remove mousepad                      remove it (your Mousepad settings stay)
+debsway manual mousepad                      print the manual steps below
 
 mousepad [FILE]       open it (or Super+d); text files open in it too
 ```

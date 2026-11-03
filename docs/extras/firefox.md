@@ -3,10 +3,10 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/firefox-sandbox.sh            sets these up, with the sandboxed Firefox
+debsway install firefox-sandbox                     sets these up, with the sandboxed Firefox
 bash ~/debsway/parts/firefox-hardening.sh           only the hardening; --remove takes it out
 bash ~/debsway/parts/incognito.sh                   only incognito; --remove takes it out
-bash ~/debsway/extras/firefox-sandbox.sh --manual   print the manual steps below, then the sandbox's
+debsway manual firefox-sandbox                      print the manual steps below, then the sandbox's
 
 ublock-allow example.com      let a site that breaks run scripts and frames from other sites
 incognito [URL]               a throwaway Firefox that keeps nothing (incognito --no-audio: no sound)

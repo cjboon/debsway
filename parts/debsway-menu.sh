@@ -4,8 +4,9 @@
 # Install apps (install-extras.sh), Update (update.sh) and Status (status.sh).
 # Arrow keys and Enter choose, or click; Esc closes. What you choose runs in
 # that same window. Super+? still opens the cheat sheet straight away.
-# Also the debsway command (debsway --help, --update, --apps, --status...) and
-# its man page, so the same things are one word away in a terminal.
+# Also the debsway command (debsway --help, --update, --apps, debsway install
+# NAME...), its man page and its Tab completion, so the same things are one
+# word away in a terminal.
 # Usage: bash debsway-menu.sh [--remove]
 # status: bin:debsway-menu
 # files: bin/sway-status data/keys.txt
@@ -14,13 +15,15 @@ need_user
 
 KEYS="$HOME/.local/share/debsway/keys.txt"
 MAN="$HOME/.local/share/man/man1/debsway.1"
+# where Debian's bash-completion looks for a user's own completions
+COMPLETION="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/debsway"
 
 if [ "${1:-}" = --remove ]; then
     remove_snippet debsway-menu
     remove_bin debsway-menu
     remove_bin radios
     remove_bin debsway
-    rm -f "$MAN"
+    rm -f "$MAN" "$COMPLETION"
     # rfkill goes too, unless another script still needs it
     apt_purge
     # The bar keeps its "debsway" label; a click then opens the key cheat sheet
@@ -42,6 +45,8 @@ install_bin radios
 # the debsway command and man debsway (man-db finds ~/.local/share/man from ~/.local/bin)
 install_bin debsway
 install -D -m 0644 "$DEBSWAY_DIR/data/debsway.1" "$MAN"
+# Tab completes debsway install NAME (and the options) in a new terminal
+install -D -m 0644 "$DEBSWAY_DIR/data/debsway-completion.bash" "$COMPLETION"
 # the cheat sheet command: shows it with the menu's pager, so Esc closes it
 install_bin keys
 # The bar (the "debsway" item) and the cheat sheet that mentions it
@@ -57,4 +62,4 @@ put_snippet debsway-menu <<'EOF'
 bindsym $mod+m exec ~/.local/bin/sway-status --menu
 EOF
 note "Click \"debsway\" in the bar: Help, Install apps, Update, Status."
-note "In a terminal: debsway --help, debsway --update, debsway --apps (man debsway)."
+note "In a terminal: debsway --help, debsway update, debsway install NAME (Tab lists them; man debsway)."

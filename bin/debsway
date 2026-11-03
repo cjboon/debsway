@@ -15,6 +15,12 @@ usage: debsway [OPTION]
   --update     bring debsway up to date, then rerun the scripts whose files
                changed (more: --update --since COMMIT, --update --all)
   --apps       pick optional programs to install (--apps --list lists them)
+  --install NAME        install the extra NAME, or repair or update it (Tab
+                        completes NAME); options after NAME go to its script
+  --remove NAME         remove the extra NAME (your own data stays)
+  --manual NAME         print the steps to set up the extra NAME by hand
+  --list       the extras: what each is, and whether it is installed
+  --part NAME           run one part of the base desktop again (repairs it)
   --status     show what debsway has set up on this computer
   --test       check that the scripts, packages, downloads and keys still work
   --wifi [on|off]       switch Wi-Fi on or off (no word: say whether it is on)
@@ -26,6 +32,7 @@ usage: debsway [OPTION]
   --dir        where the debsway folder is
   --help       this help
 
+Each works without its dashes too: debsway update, debsway install vim.
 More: man debsway, and README.md in the debsway folder.
 TEXT
 }
@@ -36,6 +43,19 @@ die() { printf 'debsway: %s\n' "$*" >&2; exit 1; }
 need_dir() {
     [ -f "$DIR/lib.sh" ] ||
         die "can't find the debsway folder ($DIR). Set DEBSWAY_DIR to where it is, or get it again: git clone <address> ~/debsway"
+}
+
+# script_for extras|parts NAME: the path of that script, only if NAME is
+# exactly the name of one (lowercase letters, digits and dashes): nothing
+# but a script of debsway's own is ever run
+script_for() {
+    local kind=extra list="debsway --list shows the extras."
+    [ "$1" = extras ] || kind=part list="The parts are in $DIR/parts."
+    [ -n "${2:-}" ] || die "which $kind? $list"
+    if [[ ! $2 =~ ^[a-z0-9][a-z0-9-]*$ ]] || [ ! -f "$DIR/$1/$2.sh" ]; then
+        die "there is no $kind called \"$2\". $list"
+    fi
+    echo "$DIR/$1/$2.sh"
 }
 
 MENU=$HOME/.local/bin/debsway-menu
@@ -59,6 +79,21 @@ case $cmd in
     --update | update) need_dir; exec bash "$DIR/update.sh" "$@" ;;
     --apps | apps) need_dir; exec bash "$DIR/install-extras.sh" "$@" ;;
     --status | status) need_dir; exec bash "$DIR/status.sh" "$@" ;;
+    --install | install | --remove | remove | --manual | manual)
+        # one name; anything after it goes to the script (--account NAME...)
+        need_dir
+        script=$(script_for extras "${1:-}") || exit 1
+        shift
+        case $cmd in
+            *install) exec bash "$script" "$@" ;;
+            *) exec bash "$script" "--${cmd#--}" "$@" ;;
+        esac ;;
+    --list | list) need_dir; exec bash "$DIR/install-extras.sh" --list ;;
+    --part | part)
+        need_dir
+        [ $# -le 1 ] || die "one name at a time (debsway part NAME)."
+        script=$(script_for parts "${1:-}") || exit 1
+        exec bash "$script" ;;
     --test | test) need_dir; cd "$DIR" && exec bash test.sh "$@" ;;
     --wifi | --bluetooth | --mic | --camera)
         [ -x "$HOME/.local/bin/radios" ] || die "the radio switch isn't installed (bash $DIR/parts/debsway-menu.sh)."

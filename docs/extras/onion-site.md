@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/onion-site.sh            set it up and build its VM (asks: which kind, public or private, a bridge)
-bash ~/debsway/extras/onion-site.sh --remove   take it out (asks before deleting the address and the VM)
-bash ~/debsway/extras/onion-site.sh --manual   print the manual steps below
+debsway install onion-site                     set it up and build its VM (asks: which kind, public or private, a bridge)
+debsway remove onion-site                      take it out (asks before deleting the address and the VM)
+debsway manual onion-site                      print the manual steps below
 
 onion-site start | stop | status    the site is up while its VM runs (it starts at every boot)
 onion-site upload static FOLDER     your files, served as they are

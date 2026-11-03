@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/webcam.sh            set it up (the webcam is off at every boot and when plugged in)
-bash ~/debsway/extras/webcam.sh --remove   take it out (the webcam is on again)
-bash ~/debsway/extras/webcam.sh --manual   print the manual steps below
+debsway install webcam                     set it up (the webcam is off at every boot and when plugged in)
+debsway remove webcam                      take it out (the webcam is on again)
+debsway manual webcam                      print the manual steps below
 
 debsway --camera on|off     switch it (or the debsway menu > Webcam)
 ```

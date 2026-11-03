@@ -3,11 +3,11 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/claude-regular.sh            install it, with its sandbox on
-bash ~/debsway/extras/claude-regular.sh --remove   remove it (your Claude login and settings stay)
-bash ~/debsway/extras/claude-regular.sh --manual   print the manual steps below
-bash ~/debsway/extras/claude-regular.sh --account NAME          another account (its own login and memories)
-bash ~/debsway/extras/claude-regular.sh --remove-account NAME   take it out (asks before deleting its login)
+debsway install claude-regular                         install it, with its sandbox on
+debsway remove claude-regular                          remove it (your Claude login and settings stay)
+debsway manual claude-regular                          print the manual steps below
+debsway install claude-regular --account NAME          another account (its own login and memories)
+debsway install claude-regular --remove-account NAME   take it out (asks before deleting its login)
 
 cd ~/code/project && claude-regular   Claude Code as you, in that folder
 claude                                the same, unless extras/claude-code.sh is set up (then claude is the sandboxed one)

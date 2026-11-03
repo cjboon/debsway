@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/archive-tools.sh            install them
-bash ~/debsway/extras/archive-tools.sh --remove   remove them (bzip2 stays: it is part of Debian's standard system)
-bash ~/debsway/extras/archive-tools.sh --manual   print the manual steps below
+debsway install archive-tools                     install them
+debsway remove archive-tools                      remove them (bzip2 stays: it is part of Debian's standard system)
+debsway manual archive-tools                      print the manual steps below
 
 unzip -l file.zip              list what is inside first
 unzip file.zip -d folder       unpack into "folder"

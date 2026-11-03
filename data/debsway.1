@@ -11,6 +11,10 @@ This command is the one place to use it from: it opens the menu, brings the
 scripts up to date and runs the others.
 It does nothing a script in the debsway folder does not already do; it only
 starts them.
+Every option works without its dashes too:
+.B debsway install vim
+is
+.BR "debsway \-\-install vim" .
 .PP
 With no option it opens the menu: a window on a sway screen, or right in the
 terminal on a text console or over ssh. With no terminal at all it shows the
@@ -49,6 +53,43 @@ A star marks one that is already set up; choosing it again repairs or updates
 it.
 .B \-\-apps \-\-list
 only prints the list.
+.TP
+.B \-\-install
+.I NAME
+Install the extra
+.IR NAME ,
+a script in the
+.I extras
+folder (Tab completes the name), or run it again to repair it or bring a
+downloaded app up to date.
+Only the exact name of an extra is accepted, so nothing else is ever run.
+Options after
+.I NAME
+go to its script, as in
+.BR "debsway install claude-vm \-\-account work" .
+.TP
+.B \-\-remove
+.I NAME
+Remove the extra
+.IR NAME .
+Your own data (wallets, chats, profiles) stays, and packages another script
+still needs are kept.
+.TP
+.B \-\-manual
+.I NAME
+Print every step to set up the extra
+.I NAME
+by hand, and change nothing.
+.TP
+.B \-\-list
+List the extras: what each one is, in three groups from most to least secure,
+and which are installed.
+.TP
+.B \-\-part
+.I NAME
+Run one part of the base desktop again (a script in the
+.I parts
+folder), to repair it.
 .TP
 .B \-\-status
 Show what debsway has set up: disk encryption, the base packages, the parts
@@ -114,6 +155,9 @@ The commit the last update brought this computer to.
 .TP
 .I ~/.local/share/debsway/keys.txt
 The key cheat sheet.
+.TP
+.I ~/.local/share/bash-completion/completions/debsway
+Tab completion for this command (Debian's bash-completion loads it).
 .SH ENVIRONMENT
 .TP
 .B DEBSWAY_DIR

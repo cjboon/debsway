@@ -3,11 +3,11 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/claude-code.sh            install it and the claude-agent user
-bash ~/debsway/extras/claude-code.sh --remove   remove it (asks before deleting the user)
-bash ~/debsway/extras/claude-code.sh --manual   print the manual steps below
-bash ~/debsway/extras/claude-code.sh --account NAME          another account, apart from the first
-bash ~/debsway/extras/claude-code.sh --remove-account NAME   remove it (asks before deleting its user)
+debsway install claude-code                         install it and the claude-agent user
+debsway remove claude-code                          remove it (asks before deleting the user)
+debsway manual claude-code                          print the manual steps below
+debsway install claude-code --account NAME          another account, apart from the first
+debsway install claude-code --remove-account NAME   remove it (asks before deleting its user)
 
 cd ~/projects/NAME && claude     Claude Code as claude-agent, in that folder
 cd ~/projects-NAME/X && claude --account NAME   the other account, in its own folder

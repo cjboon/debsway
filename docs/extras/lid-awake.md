@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/lid-awake.sh            set it up
-bash ~/debsway/extras/lid-awake.sh --remove   closing the lid suspends again
-bash ~/debsway/extras/lid-awake.sh --manual   print the manual steps below
+debsway install lid-awake                     set it up
+debsway remove lid-awake                      closing the lid suspends again
+debsway manual lid-awake                      print the manual steps below
 
 close the lid     the screen locks and the laptop's panel goes off; everything keeps running
 open the lid      the panel comes back on (unlock as usual)

@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/simplex-chat.sh            install it, or update to the newest release
-bash ~/debsway/extras/simplex-chat.sh --remove   remove it (your chats stay)
-bash ~/debsway/extras/simplex-chat.sh --manual   print the manual steps below
+debsway install simplex-chat                     install it, or update to the newest release
+debsway remove simplex-chat                      remove it (your chats stay)
+debsway manual simplex-chat                      print the manual steps below
 
 simplex                                          start it (or Super+d, then simplex)
 bash ~/debsway/test.sh                           says when a newer release is out

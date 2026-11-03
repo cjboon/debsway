@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/signal.sh            install it
-bash ~/debsway/extras/signal.sh --remove   remove it (your messages stay in ~/.config/Signal)
-bash ~/debsway/extras/signal.sh --manual   print the manual steps below
+debsway install signal                     install it
+debsway remove signal                      remove it (your messages stay in ~/.config/Signal)
+debsway manual signal                      print the manual steps below
 
 signal-desktop     start it (or Super+d, or the debsway menu > Signal)
                    the first time: scan its QR code with Signal on your phone

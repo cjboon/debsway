@@ -680,7 +680,7 @@ fi
 if [ -f /etc/apparmor.d/torbrowser.Tor.tor ]; then
     grep -qs 'debsway' /etc/apparmor.d/local/torbrowser.Tor.tor &&
         ok "Tor Browser's AppArmor profile has the DNS fix" ||
-        meh "Tor Browser's AppArmor profile lacks the DNS fix: bash extras/tor-browser.sh"
+        meh "Tor Browser's AppArmor profile lacks the DNS fix: debsway install tor-browser"
 fi
 if [ -f "$SWAY_CONFIG" ] && command -v sway >/dev/null; then
     check_sway_config 2>"$TMP/sway" && ok "your sway config has no errors" ||
@@ -816,7 +816,7 @@ if online; then
         ok "Tuta Mail $v: release file, AppImage and signature (extras/tutamail.sh)"
         have=$(installed_version tuta)
         if [ -n "$have" ] && [ "$have" != "$v" ]; then
-            meh "tuta $have is installed, $v is out: bash extras/tutamail.sh"
+            meh "tuta $have is installed, $v is out: debsway install tutamail"
         fi
     else
         bad "Tuta Mail ${v:-?}: release file, AppImage or signature not as expected at $TUTA_DESKTOP_URL"
@@ -852,7 +852,7 @@ LIST
         have=${have%-*}
         v=$(latest_github_tag sparrowwallet/sparrow)
         if [ -n "$v" ] && [ "$v" != "$have" ]; then
-            meh "sparrow $have is installed, $v is out: bash extras/sparrow-wallet.sh"
+            meh "sparrow $have is installed, $v is out: debsway install sparrow-wallet"
         fi
     fi
     # Apps from other apt repositories only update by themselves if allowed

@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/keepassxc.sh            install it (switches a full build to the minimal one)
-bash ~/debsway/extras/keepassxc.sh --remove   remove it (your .kdbx files stay)
-bash ~/debsway/extras/keepassxc.sh --manual   print the manual steps below
+debsway install keepassxc                     install it (switches a full build to the minimal one)
+debsway remove keepassxc                      remove it (your .kdbx files stay)
+debsway manual keepassxc                      print the manual steps below
 
 keepassxc                                     start it (or Super+d, then keepassxc)
   Ctrl+C on an entry copies its password: paste it into the page

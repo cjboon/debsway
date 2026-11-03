@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/firefox-sandbox.sh            install it (with Firefox's hardening and incognito)
-bash ~/debsway/extras/firefox-sandbox.sh --remove   remove it (asks about incognito and the profile)
-bash ~/debsway/extras/firefox-sandbox.sh --manual   print the manual steps (firefox.md's, then these)
+debsway install firefox-sandbox                     install it (with Firefox's hardening and incognito)
+debsway remove firefox-sandbox                      remove it (asks about incognito and the profile)
+debsway manual firefox-sandbox                      print the manual steps (firefox.md's, then these)
 
 firefox [URL]       the sandboxed Firefox, as a normal window (links from other programs open in it)
 firefox-esr         the same Firefox run as you, with everything you can reach

@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/backup.sh            set it up (asks where backups go, and the password)
-bash ~/debsway/extras/backup.sh --remove   remove it (the backups themselves stay)
-bash ~/debsway/extras/backup.sh --manual   print the manual steps below
+debsway install backup                     set it up (asks where backups go, and the password)
+debsway remove backup                      remove it (the backups themselves stay)
+debsway manual backup                      print the manual steps below
 
 backup                         back up your home folder now
 backup snapshots               list your backups

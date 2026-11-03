@@ -63,7 +63,7 @@ sudo mount -L DEBSWAY /mnt && bash /mnt/debsway/start.sh
    `keys` in a terminal, or the file `~/KEYS.txt`).
 4. `install-base.sh` ends with a list of optional programs: arrow keys and
    the space bar check the ones you want. Add more later with
-   `bash install-extras.sh`, or one directly: `bash extras/keepassxc.sh`.
+   `bash install-extras.sh`, or one directly: `debsway install keepassxc`.
 
 `bash status.sh` (Status in the debsway menu) shows what's set up. It starts
 with "Security at a glance": disk encryption, screen lock, firewall, automatic
@@ -255,6 +255,14 @@ set up, `debsway --test` runs the checks, `debsway --welcome` shows the key
 cheat sheet again. On a sway screen, `debsway` alone (or a click on
 **debsway** in the bar) opens the menu.
 
+One extra at a time: `debsway install NAME` installs it (or repairs or
+updates it), `debsway remove NAME` takes it out, `debsway manual NAME` prints
+the steps to do it by hand, and `debsway list` lists them all. Tab completes
+the name. Only the exact name of an extra is accepted, so nothing else is
+run; options after the name go to its script (`debsway install claude-vm
+--account work`). `debsway part NAME` runs one part of the base again. Each
+option works with or without its dashes (`debsway update`, `debsway --update`).
+
 ## Updating
 
 ```bash
@@ -289,7 +297,7 @@ that is set up.
 - [docs/wifi.md](docs/wifi.md): `wifi.sh`, and how the packages on the stick are checked
 - [docs/install-base.md](docs/install-base.md): what `install-base.sh` sets up, and every part
 - [docs/extras.md](docs/extras.md): the optional apps, Firefox with its hardening and `incognito`, Firefox profiles
-- [docs/extras/](docs/extras/README.md): one page per extra: its commands, what it is, what it doesn't protect against, and every step to install it by hand (`bash extras/NAME.sh --manual` prints them)
+- [docs/extras/](docs/extras/README.md): one page per extra: its commands, what it is, what it doesn't protect against, and every step to install it by hand (`debsway manual NAME` prints them)
 - [docs/opsec.md](docs/opsec.md): operations security in general: laptops, USB drives, networks, passwords, encryption, private communication, physical security, and what to do when something goes wrong
 - [docs/maintaining.md](docs/maintaining.md): `test.sh`, `pins.sh`, shellcheck, the other scripts
 - [docs/distro-plan.md](docs/distro-plan.md): the plan from these scripts to a Debian-based distribution: a package, a signed apt repository, a website, an installer image
@@ -297,8 +305,8 @@ that is set up.
 
 ## Removing things
 
-`bash parts/NAME.sh --remove` and `bash extras/NAME.sh --remove` undo one
-piece. Several pieces need the same packages (QEMU for Whonix and
+`debsway remove NAME` (for an extra; `bash extras/NAME.sh --remove` does the
+same) and `bash parts/NAME.sh --remove` undo one piece. Several pieces need the same packages (QEMU for Whonix and
 mockvps-kvm, XWayland for every app that only speaks X11), so a script
 doesn't install its packages directly. It installs a tiny package of its
 own, `debsway-NAME`, that depends on them. `--remove` removes that package
@@ -375,7 +383,7 @@ main ones:
 - **You want a plain shell on tty1**: use Ctrl+Alt+F2. To stop the
   autostart, delete the `debsway autostart` block in `~/.profile`.
 - **A part failed during install-base.sh**: re-run just that one, e.g.
-  `bash parts/NAME.sh` (or `bash extras/NAME.sh`).
+  `debsway part NAME` (or `debsway install NAME` for an extra).
 - **Wi-Fi gone after install-base.sh**: NetworkManager took it over. Run
   `nmtui` to pick the network, or `bash wifi.sh` to rescue it.
 - **A Wi-Fi login page keeps asking again**: that's the random MAC; see

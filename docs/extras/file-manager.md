@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/file-manager.sh            install it
-bash ~/debsway/extras/file-manager.sh --remove   remove it
-bash ~/debsway/extras/file-manager.sh --manual   print the manual steps below
+debsway install file-manager                     install it
+debsway remove file-manager                      remove it
+debsway manual file-manager                      print the manual steps below
 
 thunar                 open your home folder (or Super+d, then thunar)
 thunar ~/Downloads     open a folder

@@ -19,8 +19,8 @@ command_not_found_handle() {
         done
     fi
     if [ -n "$script" ]; then
-        printf '%s: not installed. debsway installs it with:\n    bash %s/extras/%s\n(or the debsway menu: Install apps)\n' \
-            "$1" "${dir/#"$HOME"/\~}" "$script" >&2
+        printf '%s: not installed. debsway installs it with:\n    debsway install %s\n(or the debsway menu: Install apps)\n' \
+            "$1" "${script%.sh}" >&2
         return 127
     fi
     if [ -x /usr/lib/command-not-found ]; then

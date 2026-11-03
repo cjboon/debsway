@@ -20,8 +20,8 @@ sed "s|@DEBSWAY_DIR@|$HERE|" "$HERE/data/command-hints.bash" >"$T/hints"
 hint() { (cd "$T" && bash -c '. "$1"; command_not_found_handle "$2"' _ "$T/hints" "$1" 2>&1); }
 st() { (cd "$T" && bash -c '. "$1"; command_not_found_handle "$2"' _ "$T/hints" "$1" >/dev/null 2>&1); echo $?; }
 
-check "claude-vm, not installed: it names extras/claude-vm.sh" grep -q 'bash .*/extras/claude-vm.sh' <<<"$(hint claude-vm)"
-check "gimp: extras/gimp.sh" grep -q 'extras/gimp.sh' <<<"$(hint gimp)"
+check "claude-vm, not installed: it says debsway install claude-vm" grep -qx '    debsway install claude-vm' <<<"$(hint claude-vm)"
+check "gimp: debsway install gimp" grep -qx '    debsway install gimp' <<<"$(hint gimp)"
 check "...and status 127, as for any missing command" test "$(st gimp)" = 127
 check "a name no extra provides: command not found, 127" bash -c '[[ $1 == *"no-such-thing-x: command not found"* ]] && [ "$2" = 127 ]' _ "$(hint no-such-thing-x)" "$(st no-such-thing-x)"
 check "odd names aren't looked up, and nothing runs" bash -c '
@@ -65,7 +65,7 @@ part
 check "the part: one block in ~/.bashrc after a re-run" test "$(grep -c '^# >>> debsway command hints >>>$' "$T/home/.bashrc")" = 1
 check "...loading the installed file, which has this repository's folder" bash -c '
     grep -qx "\[ -r $1/command-hints.bash \] && . $1/command-hints.bash" "$2" && grep -q "local dir=$3 " "$1/command-hints.bash"' _ "$T/usr" "$T/home/.bashrc" "$R"
-check "...and a new terminal gets the hints" bash -c 'HOME=$1 bash -ic "command_not_found_handle gimp" 2>&1 | grep -q extras/gimp.sh' _ "$T/home"
+check "...and a new terminal gets the hints" bash -c 'HOME=$1 bash -ic "command_not_found_handle gimp" 2>&1 | grep -q "debsway install gimp"' _ "$T/home"
 part --remove
 check "--remove: the block is gone, the rest of ~/.bashrc stays" bash -c '[ "$(cat "$1")" = "alias ll=\"ls -l\"" ]' _ "$T/home/.bashrc"
 check "...and the file" test ! -e "$T/usr/command-hints.bash"

@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/yt-dlp.sh            install it, or update yt-dlp to the newest release
-bash ~/debsway/extras/yt-dlp.sh --remove   remove it
-bash ~/debsway/extras/yt-dlp.sh --manual   print the manual steps below
+debsway install yt-dlp                     install it, or update yt-dlp to the newest release
+debsway remove yt-dlp                      remove it
+debsway manual yt-dlp                      print the manual steps below
 
 yt-dlp URL                      download a video into ~/Downloads
 yt-dlp -x --audio-format mp3 URL     only the sound

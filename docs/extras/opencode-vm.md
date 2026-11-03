@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/opencode-vm.sh            set it up and build the VM (keeps a VM already built)
-bash ~/debsway/extras/opencode-vm.sh --remove   remove it (asks before deleting the user and its VM)
-bash ~/debsway/extras/opencode-vm.sh --manual   print the manual steps below
+debsway install opencode-vm                     set it up and build the VM (keeps a VM already built)
+debsway remove opencode-vm                      remove it (asks before deleting the user and its VM)
+debsway manual opencode-vm                      print the manual steps below
 
 opencode-vm              opencode inside the VM (boots it; powers it off when you exit)
 opencode-vm shell        a plain shell in the VM

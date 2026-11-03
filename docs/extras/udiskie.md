@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/udiskie.sh            install it
-bash ~/debsway/extras/udiskie.sh --remove   remove it (cryptsetup stays: the system disk needs it)
-bash ~/debsway/extras/udiskie.sh --manual   print the manual steps below
+debsway install udiskie                     install it
+debsway remove udiskie                      remove it (cryptsetup stays: the system disk needs it)
+debsway manual udiskie                      print the manual steps below
 
 plug in a stick          it appears in /media/$USER/NAME (an encrypted one asks for its passphrase)
 udiskie-umount -a        unmount every drive before you pull it out

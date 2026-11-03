@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/git.sh            install git (it asks about gh, your name and email)
-bash ~/debsway/extras/git.sh --remove   remove git and gh (~/.gitconfig and ~/.config/gh stay)
-bash ~/debsway/extras/git.sh --manual   print the manual steps below
+debsway install git                     install git (it asks about gh, your name and email)
+debsway remove git                      remove git and gh (~/.gitconfig and ~/.config/gh stay)
+debsway manual git                      print the manual steps below
 
 git clone URL / git status / git commit -a / git push
 gh auth login && gh auth setup-git      log in to GitHub later

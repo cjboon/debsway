@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-bash ~/debsway/extras/vim.sh            install it
-bash ~/debsway/extras/vim.sh --remove   remove it (vim-tiny stays; a ~/.vimrc of your own too)
-bash ~/debsway/extras/vim.sh --manual   print the manual steps below
+debsway install vim                     install it
+debsway remove vim                      remove it (vim-tiny stays; a ~/.vimrc of your own too)
+debsway manual vim                      print the manual steps below
 
 vim FILE                                open FILE (vi does the same)
   i  type text   Esc  stop typing   :w  save   :q  quit   :wq  both   u  undo
