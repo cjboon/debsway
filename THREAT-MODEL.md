@@ -85,7 +85,10 @@ this page to decide what else you need.
   and can't read your home folder, ssh keys, passwords or browser
   profiles; it works in `~/projects`, which you share with it. A firewall
   rule on that user keeps it off your router, printers and the programs
-  listening on this machine; it reaches the internet only. For a stronger
+  listening on this machine; it reaches the internet only. Another account
+  (`--account NAME`) is another such user, `claude-agent-NAME`, with its own
+  home, firewall line and folder (`~/projects-NAME`); accounts can't read
+  each other's logins, memories or folders, but share the one kernel. For a stronger
   boundary, `claude-vm` (`extras/claude-vm.sh`) runs the agent inside a
   disposable Debian VM (QEMU/KVM) with no shared folder: a kernel bug that
   would let `claude-agent` escape its user boundary reaches only a VM you can

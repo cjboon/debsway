@@ -33,6 +33,14 @@ check "from a subfolder too" bash -c "mkdir -p '$P/sub' && cd '$P/sub' && bash '
 check "with -C" bash -c "cd '$T' && bash '$GUARD' -C '$P' status"
 check "git init in ~/projects (no repository yet) works" bash -c "mkdir -p '$T/home/projects/new' && cd '$T/home/projects/new' && bash '$GUARD' init -q"
 
+# Another account's folder, ~/projects-NAME, is guarded the same way
+A=$T/home/projects-work/app
+mkdir -p "$A" && (cd "$A" && real init -q && echo hi >a && real add a && real commit -qm first)
+printf '#!/bin/sh\necho planted\n' >"$A/.git/hooks/pre-commit"
+check "in another account's folder (~/projects-work) a hook is refused too" bash -c "cd '$A' && ! bash '$GUARD' status"
+rm "$A/.git/hooks/pre-commit"
+check "...and a clean one works" bash -c "cd '$A' && bash '$GUARD' status"
+
 refused() { # DESCRIPTION: the repository now has something bad; git there must refuse
     check "$1" bash -c "cd '$P' && ! bash '$GUARD' status"
 }

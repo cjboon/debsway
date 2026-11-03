@@ -7,7 +7,9 @@
 # .git/hooks, and refuses if it finds anything that can run a program. A repository
 # that claude-agent made also gets git's "dubious ownership" warning; when the
 # check passes, this trusts that one repository for that one command.
-# Everywhere else it is plain git. /usr/bin/git skips the guard.
+# The same in ~/projects-NAME, the folder of another account (claude-agent-NAME,
+# extras/claude-code.sh --account). Everywhere else it is plain git.
+# /usr/bin/git skips the guard.
 #
 # (A file could change between the check and the run; it is a guard against a
 # sloppy or confused assistant, not against one racing your keystrokes.)
@@ -48,7 +50,7 @@ while [ ! -e "$top/.git" ]; do
     [ -n "$top" ] || top=/
 done
 case $top in
-    "$PROJECTS" | "$PROJECTS"/*) ;;
+    "$PROJECTS" | "$PROJECTS"/* | "$PROJECTS"-* ) ;;
     *) plain "$@" ;;
 esac
 
@@ -121,7 +123,9 @@ fi
 
 # Clean. A repository claude-agent made would otherwise be refused for its owner
 extra=()
-if [ "$(stat -c %U "$top/.git" 2>/dev/null)" = "$AGENT" ] || [ "$(stat -c %U "$top" 2>/dev/null)" = "$AGENT" ]; then
+# (or an account's user, claude-agent-NAME)
+agent_owned() { local o; o=$(stat -c %U "$1" 2>/dev/null) && [[ $o == "$AGENT" || $o =~ ^"$AGENT"-[a-z][a-z0-9]*$ ]]; }
+if agent_owned "$top/.git" || agent_owned "$top"; then
     extra=(-c "safe.directory=$top" -c "safe.directory=$top/*")
 fi
 exec "$REAL" "${extra[@]}" "$@"

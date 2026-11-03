@@ -6,8 +6,11 @@
 bash ~/debsway/extras/claude-code.sh            install it and the claude-agent user
 bash ~/debsway/extras/claude-code.sh --remove   remove it (asks before deleting the user)
 bash ~/debsway/extras/claude-code.sh --manual   print the manual steps below
+bash ~/debsway/extras/claude-code.sh --account NAME          another account, apart from the first
+bash ~/debsway/extras/claude-code.sh --remove-account NAME   remove it (asks before deleting its user)
 
 cd ~/projects/NAME && claude     Claude Code as claude-agent, in that folder
+cd ~/projects-NAME/X && claude --account NAME   the other account, in its own folder
 claude-unsandboxed               Claude Code as you, with all your files
 claude-pull                      in your copy of a repository: shows what Claude pushed, brings it in on y
 ```
@@ -27,6 +30,11 @@ and python venv. Because it can change any file in `~/projects`, your own git
 gets a guard there (`bin/git`) that refuses a repository whose `.git/config`
 or hooks could run a program as you. This is the lighter of the two Claude
 Code sandboxes: it shares your kernel; `extras/claude-vm.sh` is the stronger.
+Another account (a second Claude login: work and personal, say) gets a user
+of its own, `claude-agent-NAME`, with its own home (login, settings,
+memories), ssh key, sudo rule and firewall line, and its own folder,
+`~/projects-NAME`: no account can enter another's home or folder, the first
+one's included.
 
 ## LIMITS
 
@@ -34,6 +42,7 @@ Code sandboxes: it shares your kernel; `extras/claude-vm.sh` is the stronger.
 - It reaches the internet, so what it reads in `~/projects` can leave this computer.
 - Treat what it leaves in `~/projects` as untrusted before you run it; the git guard checks git's own files, not the code.
 - `/usr/bin/git` skips the guard, and `claude-unsandboxed` has all your files.
+- Accounts are kept apart by Linux users, on one kernel: the same kernel-bug limit applies between them. Anything you copy from one account's folder to another's crosses over.
 
 ## MANUAL INSTALL
 
@@ -106,6 +115,39 @@ for c in claude claude-unsandboxed claude-pull git; do install -D -m 0755 @DEBSW
 sudo cat /home/claude-agent/.ssh/id_ed25519.pub
 cd ~/projects && mkdir -p NAME && cd NAME && claude
 ```
+
+Another account, NAME (small letters and digits), after the steps above:
+
+```
+# Its user, locked, with its own home, notes, git identity and ssh key
+sudo useradd --create-home --home-dir /home/claude-agent-NAME --shell /bin/bash --user-group --comment "debsway Claude Code" claude-agent-NAME
+sudo usermod --lock claude-agent-NAME && sudo chmod 700 /home/claude-agent-NAME
+sudo install -d -o claude-agent-NAME -g claude-agent-NAME -m 0700 /home/claude-agent-NAME/.claude /home/claude-agent-NAME/.ssh
+sed "s|~/projects|~/projects-NAME|g" @DEBSWAY_DIR@/data/claude-agent-CLAUDE.md | sudo install -o claude-agent-NAME -g claude-agent-NAME -m 0644 /dev/stdin /home/claude-agent-NAME/.claude/CLAUDE.md
+sudo cp /home/claude-agent/.gitconfig /home/claude-agent-NAME/.gitconfig && sudo chown claude-agent-NAME: /home/claude-agent-NAME/.gitconfig
+sudo -u claude-agent-NAME -H bash -c 'cd && ssh-keygen -q -t ed25519 -N "" -C "$(id -un)@$(hostname)" -f .ssh/id_ed25519'
+# Its line in the firewall rule, by number (nft refuses the whole file over a
+# user name that doesn't exist): below the claude-agent line in
+# /etc/debsway/claude.nft add, with the number from: id -u claude-agent-NAME
+#         meta skuid NUMBER jump claude  # claude-agent-NAME
+sudo nft -c -f /etc/debsway/claude.nft && sudo systemctl restart debsway-claude-firewall
+# Its folder, shared with you only
+mkdir -p ~/projects-NAME
+setfacl -m u:claude-agent-NAME:--x ~
+setfacl -R -m "u:claude-agent-NAME:rwX,u:$(id -un):rwX" ~/projects-NAME
+setfacl -R -d -m "u:claude-agent-NAME:rwX,u:$(id -un):rwX,m::rwX" ~/projects-NAME
+# Your user may run the start script, and nothing else, as it (checked first)
+printf '%s ALL=(claude-agent-NAME) NOPASSWD: /usr/local/libexec/claude-session\n' "$(id -un)" >/tmp/debsway-claude-NAME
+sudo visudo -cf /tmp/debsway-claude-NAME && sudo install -o root -g root -m 0440 /tmp/debsway-claude-NAME /etc/sudoers.d/debsway-claude-NAME
+rm /tmp/debsway-claude-NAME
+cd ~/projects-NAME && mkdir -p X && cd X && claude --account NAME
+```
+
+To undo an account: `sudo rm /etc/sudoers.d/debsway-claude-NAME`, its
+`setfacl -x` on `~` and `~/projects-NAME` (as below, with its user name),
+`sudo pkill -KILL -u claude-agent-NAME`, `sudo userdel -r claude-agent-NAME`,
+then its line out of `/etc/debsway/claude.nft` and
+`sudo systemctl restart debsway-claude-firewall`. `~/projects-NAME` stays.
 
 To undo:
 

@@ -4,6 +4,10 @@
 # ~/projects and nowhere else of yours: no ssh keys, no passwords, no browser
 # profiles. Run it from a folder inside ~/projects. To run it as yourself,
 # with your files, use: claude-unsandboxed
+#   claude --account NAME [ARGS...]   another account (its own login and
+#                                     memories), as claude-agent-NAME, in
+#                                     ~/projects-NAME; set up with
+#                                     extras/claude-code.sh --account NAME
 set -euo pipefail
 
 AGENT=claude-agent
@@ -13,8 +17,21 @@ PROJECTS=$HOME/projects
 die() { printf 'claude: %s\n' "$*" >&2; exit 1; }
 
 [ "$(id -u)" -ne 0 ] || die "run it as your normal user, not root."
+account=
+case ${1:-} in
+    --account) [ $# -ge 2 ] || die "--account needs a name: claude --account NAME"; account=$2; shift 2 ;;
+    --account=*) account=${1#--account=}; shift ;;
+esac
+if [ -n "$account" ]; then
+    [[ $account =~ ^[a-z][a-z0-9]{0,14}$ ]] || die "an account name is small letters and digits, a letter first."
+    AGENT=claude-agent-$account
+    PROJECTS=$HOME/projects-$account
+    sudo -n -u "$AGENT" -l "$SESSION" >/dev/null 2>&1 ||
+        die "the account $account isn't set up. Run: bash ~/debsway/extras/claude-code.sh --account $account"
+fi
 sudo -n -u "$AGENT" -l "$SESSION" >/dev/null 2>&1 ||
     die "the sandbox isn't set up. Run: bash ~/debsway/extras/claude-code.sh   (claude-unsandboxed runs it as you.)"
+where=${PROJECTS/#$HOME/\~}
 
 here=$(pwd -P)
 case $here in
@@ -23,7 +40,7 @@ case $here in
         # asking for the version or help needs no project
         case ${1:-} in
             -v | --version | -h | --help) here=$PROJECTS ;;
-            *) die "it only works inside ~/projects. Try: cd ~/projects/NAME   (mkdir ~/projects/NAME for a new one), or use claude-unsandboxed." ;;
+            *) die "it only works inside $where. Try: cd $where/NAME   (mkdir $where/NAME for a new one), or use claude-unsandboxed." ;;
         esac ;;
 esac
 

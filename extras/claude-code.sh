@@ -35,13 +35,19 @@
 # Use this one when KVM isn't available, or you want the light setup.
 # What it still shares with you: the internet, and anything in ~/projects.
 # Treat what it leaves there as untrusted before you run it. See THREAT-MODEL.md.
-# Usage: bash claude-code.sh [--remove | --manual]
+# Another account (a second Claude login, apart from the first): --account
+# NAME makes the user claude-agent-NAME, with its own home (login, settings,
+# memories), ssh key, firewall line and folder, ~/projects-NAME, which the
+# other accounts can't enter; claude --account NAME runs it there.
+# --remove-account NAME takes it out again (your files in its folder stay).
+# Usage: bash claude-code.sh [--remove | --manual | --account NAME | --remove-account NAME]
 # summary: Claude Code, sandboxed in its own user
 # security: most
-# files: bin/no-abstract-sockets
+# files: bin/no-abstract-sockets lib/claude-accounts.sh
 # status: bin:claude bin:claude-unsandboxed bin:git file:/usr/local/libexec/claude-session
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$DEBSWAY_DIR/lib/claude-repo.sh"
+. "$DEBSWAY_DIR/lib/claude-accounts.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
@@ -53,7 +59,185 @@ FIREWALL=/etc/debsway/claude.nft
 UNIT=/etc/systemd/system/debsway-claude-firewall.service
 PROJECTS=$HOME/projects
 
+# write_firewall: the rule file, with a line for each account, checked by nft
+# before it replaces the old one, then loaded (RESTART=no: only written)
+write_firewall() {
+    local rules
+    rules=$(mktemp)
+    claude_firewall_text "$DEBSWAY_DIR/data/claude-firewall.nft" >"$rules"
+    if ! sudo nft -c -f "$rules" >/dev/null; then
+        rm -f "$rules"
+        die "nft didn't accept the new firewall rule, so the old one stays."
+    fi
+    sudo install -d -o root -g root -m 0755 "${FIREWALL%/*}"
+    sudo install -o root -g root -m 0644 "$rules" "$FIREWALL"
+    rm -f "$rules"
+    [ "${1:-}" = no ] && return 0
+    sudo systemctl restart debsway-claude-firewall.service ||
+        warn "Couldn't load the firewall rule; check: systemctl status debsway-claude-firewall"
+}
+
+# setup_agent: the locked user $AGENT, its notes and git settings, its ssh
+# key, and its folder $PROJECTS, shared with you and nobody else
+setup_agent() {
+    say "The $AGENT user"
+    if ! id "$AGENT" >/dev/null 2>&1; then
+        sudo useradd --create-home --home-dir "$AGENT_HOME" --shell /bin/bash --user-group \
+            --comment "debsway Claude Code" "$AGENT"
+    fi
+    # No password, so nobody can log in as it; only the sudo rule starts anything
+    sudo usermod --lock "$AGENT"
+    sudo chmod 700 "$AGENT_HOME"
+    note "$AGENT: no password, no login, and no group but its own."
+
+    # Its own notes and git settings. Git there trusts any folder: the
+    # repositories it will meet in its folder are yours or its own, and the
+    # risk git guards against (hooks planted by another user) runs the other
+    # way, from it to you
+    sudo install -d -o "$AGENT" -g "$AGENT" -m 0700 "$AGENT_HOME/.claude"
+    local note_file gitconfig
+    note_file=$(mktemp)
+    # (an account's folder is ~/projects-NAME: its notes say so)
+    sed "s|~/projects|~/${PROJECTS##*/}|g" "$DEBSWAY_DIR/data/claude-agent-CLAUDE.md" >"$note_file"
+    agent_file "$note_file" "$AGENT_HOME/.claude/CLAUDE.md"
+    rm -f "$note_file"
+    gitconfig=$(mktemp)
+    printf '# Written by debsway extras/claude-code.sh\n[user]\n\tname = Claude\n\temail = noreply@anthropic.com\n[init]\n\tdefaultBranch = main\n[safe]\n\tdirectory = *\n' >"$gitconfig"
+    agent_file "$gitconfig" "$AGENT_HOME/.gitconfig"
+    rm -f "$gitconfig"
+
+    say "Its own ssh key"
+    sudo install -d -o "$AGENT" -g "$AGENT" -m 0700 "$AGENT_HOME/.ssh"
+    if ! sudo test -e "$AGENT_HOME/.ssh/id_ed25519"; then
+        # no passphrase: it has to be able to use the key by itself
+        sudo -u "$AGENT" -H bash -c 'cd && ssh-keygen -q -t ed25519 -N "" -C "$(id -un)@$(hostname)" -f .ssh/id_ed25519'
+        note "Made its ssh key."
+    else
+        note "It already has an ssh key."
+    fi
+    # GitHub's own list of its host keys, over https, so the first push doesn't have to guess
+    if ! sudo test -e "$AGENT_HOME/.ssh/known_hosts"; then
+        local hosts known
+        if command -v python3 >/dev/null &&
+            hosts=$(curl -fsS --max-time 20 https://api.github.com/meta 2>/dev/null |
+                python3 -c 'import json,sys; [print("github.com " + k) for k in json.load(sys.stdin)["ssh_keys"]]' 2>/dev/null) &&
+            [ -n "$hosts" ]; then
+            known=$(mktemp)
+            printf '%s\n' "$hosts" >"$known"
+            sudo install -o "$AGENT" -g "$AGENT" -m 0644 "$known" "$AGENT_HOME/.ssh/known_hosts"
+            rm -f "$known"
+            note "Wrote GitHub's host keys to its known_hosts."
+        else
+            warn "Couldn't fetch GitHub's host keys; the first ssh to GitHub will ask about its key."
+        fi
+    fi
+
+    say "Its folder"
+    mkdir -p "$PROJECTS"
+    # It may walk through your home folder to its folder (not list or read
+    # it), and read and write there; new files there are open to both of you
+    if ! { setfacl -m "u:$AGENT:--x" "$HOME" &&
+        setfacl -R -m "u:$AGENT:rwX,u:$(id -un):rwX" "$PROJECTS" &&
+        setfacl -R -d -m "u:$AGENT:rwX,u:$(id -un):rwX,m::rwX" "$PROJECTS"; }; then
+        die "Couldn't set access on $PROJECTS (does this file system support ACLs?)."
+    fi
+    note "$PROJECTS is shared with $AGENT."
+}
+agent_file() { # SOURCE DESTINATION [MODE]: as $AGENT, unless you changed it
+    if ! sudo test -e "$2" || sudo grep -qis 'written by debsway' "$2"; then
+        sudo install -D -o "$AGENT" -g "$AGENT" -m "${3:-0644}" "$1" "$2"
+    else
+        note "Kept your $2"
+    fi
+}
+
+# sudoers_rule FILE: your user may run the session script, and nothing else,
+# as $AGENT. A broken sudoers file locks you out of sudo, so visudo checks it first
+sudoers_rule() {
+    local rule
+    rule=$(mktemp)
+    printf '# Written by debsway extras/claude-code.sh. %s may run the claude-session script,\n# and nothing else, as the user %s.\n%s ALL=(%s) NOPASSWD: %s\n' \
+        "$(id -un)" "$AGENT" "$(id -un)" "$AGENT" "$SESSION" >"$rule"
+    if ! sudo visudo -cf "$rule" >/dev/null; then
+        rm -f "$rule"
+        die "The sudoers rule didn't pass visudo's check, so it wasn't installed."
+    fi
+    sudo install -o root -g root -m 0440 "$rule" "$1"
+    rm -f "$rule"
+    note "Wrote $1"
+}
+
+# account NAME: sets AGENT, AGENT_HOME, PROJECTS and the sudoers file for it
+account() {
+    claude_account_valid "$1" || die "An account name is small letters and digits, a letter first, at most 15 (e.g. work)."
+    AGENT=$CLAUDE_ACCOUNT_PREFIX$1
+    AGENT_HOME=/home/$AGENT
+    PROJECTS=$HOME/projects-$1
+    ACCOUNT_SUDOERS=/etc/sudoers.d/debsway-claude-$1
+}
+
+# remove_account NAME: its sudo rule, its access to your folders, and (if you
+# say so) the user and its home; what it made in its folder becomes yours
+remove_account() {
+    account "$1"
+    sudo rm -f "$ACCOUNT_SUDOERS"
+    if command -v setfacl >/dev/null; then
+        setfacl -x "u:$AGENT" "$HOME" 2>/dev/null || true
+        [ -d "$PROJECTS" ] && setfacl -R -x "u:$AGENT,d:u:$AGENT" "$PROJECTS" 2>/dev/null
+    fi
+    if id "$AGENT" >/dev/null 2>&1; then
+        if ask "Delete the user $AGENT and its home folder $AGENT_HOME (its Claude login, memories, ssh key and settings)?" n; then
+            sudo pkill -KILL -u "$AGENT" 2>/dev/null || true
+            [ -d "$PROJECTS" ] && sudo find "$PROJECTS" -user "$AGENT" -exec chown -h "$(id -un):$(id -gn)" {} +
+            sudo userdel -r "$AGENT" 2>/dev/null || sudo userdel "$AGENT"
+            note "Removed the user $AGENT."
+        else
+            sudo pkill -KILL -u "$AGENT" 2>/dev/null || true
+            note "Kept the user $AGENT and $AGENT_HOME (it can't be started: its sudo rule is gone)."
+        fi
+    fi
+    note "${PROJECTS/#$HOME/\~} stays, with your files."
+}
+
+if [ "${1:-}" = --account ] || [ "${1:-}" = --remove-account ]; then
+    [ -n "${2:-}" ] || die "Usage: bash claude-code.sh $1 NAME"
+    account "$2"
+    if [ "$1" = --remove-account ]; then
+        remove_account "$2"
+        # (after the user is gone, so the rule doesn't name it)
+        if [ -f "$FIREWALL" ]; then write_firewall; fi
+        note "The account $2 is gone."
+        exit
+    fi
+    { [ -x "$SESSION" ] && id claude-agent >/dev/null 2>&1; } ||
+        die "Set up the sandboxed Claude first: bash $DEBSWAY_DIR/extras/claude-code.sh"
+    setup_agent
+    say "Keeping $AGENT off your network"
+    write_firewall
+    note "$AGENT can reach the internet, not your router, printers or your own local services."
+    say "Its sudo rule"
+    sudoers_rule "$ACCOUNT_SUDOERS"
+    cat <<EOF
+
+    claude --account $2    Claude Code as $AGENT, its own login and memories.
+                           Run it from a folder in ${PROJECTS/#$HOME/\~}:
+                           cd ${PROJECTS/#$HOME/\~}/NAME   (mkdir for a new one)
+
+    The first time, it shows a login link: log in with the other account.
+    It can't enter ~/projects or another account's folder, and they can't
+    enter its. Its ssh public key, for GitHub:
+
+EOF
+    sudo cat "$AGENT_HOME/.ssh/id_ed25519.pub" | sed 's/^/        /'
+    echo
+    exit
+fi
+
 if [ "${1:-}" = --remove ]; then
+    # the other accounts first, each with its own question
+    mapfile -t accounts < <(claude_account_users | cut -d: -f1)
+    for u in "${accounts[@]}"; do remove_account "${u#"$CLAUDE_ACCOUNT_PREFIX"}"; done
+    AGENT=claude-agent AGENT_HOME=/home/claude-agent PROJECTS=$HOME/projects
     remove_bin claude
     remove_bin claude-unsandboxed
     # claude-pull is shared with extras/claude-vm.sh; keep it if that sandbox
@@ -98,61 +282,11 @@ say "Installing Claude Code"
 # the rest: what it uses day to day (it can't install anything itself)
 apt_install claude-code acl nftables git openssh-client ripgrep jq shellcheck python3-venv
 
-say "The $AGENT user"
-if ! id "$AGENT" >/dev/null 2>&1; then
-    sudo useradd --create-home --home-dir "$AGENT_HOME" --shell /bin/bash --user-group \
-        --comment "debsway Claude Code" "$AGENT"
-fi
-# No password, so nobody can log in as it; only the sudo rule below starts anything
-sudo usermod --lock "$AGENT"
-sudo chmod 700 "$AGENT_HOME"
-note "$AGENT: no password, no login, and no group but its own."
-
-# Its own notes and git settings. Git there trusts any folder: the repositories
-# it will meet in ~/projects are yours or its own, and the risk git guards
-# against (hooks planted by another user) runs the other way, from it to you
-agent_file() { # SOURCE DESTINATION [MODE]: as claude-agent, unless you changed it
-    if ! sudo test -e "$2" || sudo grep -qis 'written by debsway' "$2"; then
-        sudo install -D -o "$AGENT" -g "$AGENT" -m "${3:-0644}" "$1" "$2"
-    else
-        note "Kept your $2"
-    fi
-}
-sudo install -d -o "$AGENT" -g "$AGENT" -m 0700 "$AGENT_HOME/.claude"
-agent_file "$DEBSWAY_DIR/data/claude-agent-CLAUDE.md" "$AGENT_HOME/.claude/CLAUDE.md"
-gitconfig=$(mktemp)
-printf '# Written by debsway extras/claude-code.sh\n[user]\n\tname = Claude\n\temail = noreply@anthropic.com\n[init]\n\tdefaultBranch = main\n[safe]\n\tdirectory = *\n' >"$gitconfig"
-agent_file "$gitconfig" "$AGENT_HOME/.gitconfig"
-rm -f "$gitconfig"
-
-say "Its own ssh key"
-sudo install -d -o "$AGENT" -g "$AGENT" -m 0700 "$AGENT_HOME/.ssh"
-if ! sudo test -e "$AGENT_HOME/.ssh/id_ed25519"; then
-    # no passphrase: it has to be able to use the key by itself
-    sudo -u "$AGENT" -H bash -c 'cd && ssh-keygen -q -t ed25519 -N "" -C "claude-agent@$(hostname)" -f .ssh/id_ed25519'
-    note "Made its ssh key."
-else
-    note "It already has an ssh key."
-fi
-# GitHub's own list of its host keys, over https, so the first push doesn't have to guess
-if ! sudo test -e "$AGENT_HOME/.ssh/known_hosts"; then
-    if command -v python3 >/dev/null &&
-        hosts=$(curl -fsS --max-time 20 https://api.github.com/meta 2>/dev/null |
-            python3 -c 'import json,sys; [print("github.com " + k) for k in json.load(sys.stdin)["ssh_keys"]]' 2>/dev/null) &&
-        [ -n "$hosts" ]; then
-        known=$(mktemp)
-        printf '%s\n' "$hosts" >"$known"
-        sudo install -o "$AGENT" -g "$AGENT" -m 0644 "$known" "$AGENT_HOME/.ssh/known_hosts"
-        rm -f "$known"
-        note "Wrote GitHub's host keys to its known_hosts."
-    else
-        warn "Couldn't fetch GitHub's host keys; the first ssh to GitHub will ask about its key."
-    fi
-fi
+setup_agent
 
 say "Keeping $AGENT off your network"
-sudo install -d -o root -g root -m 0755 "${FIREWALL%/*}"
-sudo install -o root -g root -m 0644 "$DEBSWAY_DIR/data/claude-firewall.nft" "$FIREWALL"
+# (with a line for each other account)
+write_firewall no
 # Loaded before the network comes up, at every boot
 printf '%s\n' '# Written by debsway extras/claude-code.sh' '[Unit]' \
     'Description=Keep the claude-agent user off the local network (debsway)' \
@@ -169,32 +303,11 @@ sudo systemctl enable debsway-claude-firewall.service >/dev/null &&
     warn "Couldn't load the firewall rule; check: systemctl status debsway-claude-firewall"
 note "$AGENT can reach the internet, not your router, printers or your own local services."
 
-say "The projects folder"
-mkdir -p "$PROJECTS"
-# It may walk through your home folder to ~/projects (not list or read it),
-# and read and write in ~/projects; new files there are open to both of you
-if ! { setfacl -m "u:$AGENT:--x" "$HOME" &&
-    setfacl -R -m "u:$AGENT:rwX,u:$(id -un):rwX" "$PROJECTS" &&
-    setfacl -R -d -m "u:$AGENT:rwX,u:$(id -un):rwX,m::rwX" "$PROJECTS"; }; then
-    die "Couldn't set access on $PROJECTS (does this file system support ACLs?)."
-fi
-note "$PROJECTS is shared with $AGENT."
-
 say "The claude command"
 sudo install -d -o root -g root -m 0755 /usr/local/libexec
 sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/claude-session" "$SESSION"
 install_no_abstract
-rule=$(mktemp)
-printf '# Written by debsway extras/claude-code.sh. %s may run the claude-session script,\n# and nothing else, as the user %s.\n%s ALL=(%s) NOPASSWD: %s\n' \
-    "$(id -un)" "$AGENT" "$(id -un)" "$AGENT" "$SESSION" >"$rule"
-# A broken sudoers file locks you out of sudo, so it is checked first
-if ! sudo visudo -cf "$rule" >/dev/null; then
-    rm -f "$rule"
-    die "The sudoers rule didn't pass visudo's check, so it wasn't installed."
-fi
-sudo install -o root -g root -m 0440 "$rule" "$SUDOERS"
-rm -f "$rule"
-note "Wrote $SUDOERS"
+sudoers_rule "$SUDOERS"
 install_bin claude
 install_bin claude-unsandboxed
 install_bin claude-pull

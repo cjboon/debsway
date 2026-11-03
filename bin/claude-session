@@ -2,16 +2,21 @@
 # claude-session DIR [ARGS...]: written by debsway extras/claude-code.sh
 # Installed as /usr/local/libexec/claude-session. Your user may run exactly this,
 # as claude-agent, and nothing else (a rule in /etc/sudoers.d). The claude
-# command calls it from a folder inside ~/projects.
+# command calls it from a folder inside ~/projects. The same goes for another
+# account's user, claude-agent-NAME (claude --account NAME), with its own home.
 set -euo pipefail
 
-[ "$(id -un)" = claude-agent ] || { echo "claude-session: only for the claude-agent user." >&2; exit 1; }
+me=$(id -un)
+[[ $me == claude-agent || $me =~ ^claude-agent-[a-z][a-z0-9]{0,14}$ ]] ||
+    { echo "claude-session: only for the claude-agent users." >&2; exit 1; }
+home=$(getent passwd "$me" | cut -d: -f6)
+[ "$home" = "/home/$me" ] || { echo "claude-session: unexpected home folder for $me." >&2; exit 1; }
 [ $# -ge 1 ] || { echo "usage: claude-session DIR [ARGS...]" >&2; exit 2; }
 dir=$1
 shift
 cd -- "$dir" 2>/dev/null || { echo "claude-session: can't enter $dir" >&2; exit 1; }
 
-export HOME=/home/claude-agent PATH=/home/claude-agent/.local/bin:/usr/local/bin:/usr/bin:/bin
+export HOME=$home PATH=$home/.local/bin:/usr/local/bin:/usr/bin:/bin
 export LANG=${LANG:-C.UTF-8}
 # Without a way to reach XWayland's abstract socket, which any user can connect to
 noabs=/usr/local/libexec/debsway-no-abstract-sockets
