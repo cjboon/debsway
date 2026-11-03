@@ -39,7 +39,8 @@ check "a version that isn't one is refused" bash -c '! bash "$1" --out "$2" --ve
 
 f() { dpkg-deb -f "$D" "$1"; }
 check "the package is Wren Linux, for every architecture" bash -c '[ "$1" = wren-linux ] && [ "$2" = all ]' _ "$(f Package)" "$(f Architecture)"
-check "...it depends on what the parts need before they run" bash -c 'for d in bash sudo git gpg python3 acl nftables; do grep -qw "$d" <<<"$1" || exit 1; done' _ "$(f Depends)"
+check "...it depends only on bash and sudo, which every Debian install has: the install stick puts it in with no network" test "$(f Depends)" = "bash, sudo"
+check "...and recommends the tools the parts install themselves" bash -c 'for d in gpg git wget python3 acl nftables; do grep -qw "$d" <<<"$1" || exit 1; done' _ "$(f Recommends)"
 check "no install scripts: installing it runs nothing as root" test "$(dpkg-deb --ctrl-tarfile "$D" | tar -t | sort | paste -sd' ')" = "./ ./control ./md5sums"
 
 dpkg-deb -c "$D" >"$T/list"

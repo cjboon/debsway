@@ -98,8 +98,8 @@ Version: $version
 Architecture: all
 Maintainer: $maint
 Installed-Size: $installed_kb
-Depends: bash, sudo, git, gpg, wget, python3, acl, nftables
-Recommends: bash-completion
+Depends: bash, sudo
+Recommends: gpg, git, wget, python3, acl, nftables, bash-completion
 Section: admin
 Priority: optional
 Homepage: https://github.com/cjboon/wren-linux

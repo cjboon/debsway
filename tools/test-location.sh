@@ -87,4 +87,20 @@ check "...the install stick is still made there (make-install-iso.sh doesn't ask
     bash -c '! grep -q "^need_user" "$1" && grep -q "^not_root" "$1"' _ "$HERE/prep/make-install-iso.sh"
 check "a computer set up as Wren Linux: no stop" grep -q passed <<<"$(env HOME="$T/home" WREN_SUDO=true bash -c '. "$1/lib.sh"; need_user && echo passed' _ "$HERE" 2>&1)"
 
+# 6. The documentation in ~/Documents/wren-docs, links into the copy in use
+dl() { env HOME="$1" WREN_DIR="$2" bash -c 'note() { :; }; eval "$(sed -n "/^DOCS=/p; /^docs_links() {/,/^}/p" "$3")"; docs_links' _ "$1" "$2" "$HERE/parts/core-commands.sh"; }
+mkdir -p "$T/dh"
+dl "$T/dh" "$C"
+check "Documents/wren-docs in your home links to the README, the threat model and the guides of the copy in use" bash -c '
+    [ "$(readlink "$1/README.md")" = "$2/README.md" ] && [ "$(readlink "$1/THREAT-MODEL.md")" = "$2/THREAT-MODEL.md" ] &&
+    [ "$(readlink "$1/guides")" = "$2/docs" ] && [ -f "$1/guides/install-base.md" ]' _ "$T/dh/Documents/wren-docs" "$C"
+dl "$T/dh" "$T/sys"
+check "...and follows when the copy in use changes (the package's, after it is installed)" test "$(readlink "$T/dh/Documents/wren-docs/guides")" = "$T/sys/docs"
+mkdir -p "$T/mine/Documents/wren-docs"
+echo "my notes" >"$T/mine/Documents/wren-docs/notes.txt"
+dl "$T/mine" "$C"
+check "a ~/Documents/wren-docs of your own is left alone" bash -c '[ ! -e "$1/README.md" ] && [ "$(ls "$1")" = notes.txt ]' _ "$T/mine/Documents/wren-docs"
+check "--remove takes the links out, only if Wren Linux made them" bash -c '
+    s=$(sed -n "/^if \[ \"\${1:-}\" = --remove \]; then/,/^fi/p" "$1"); grep -q "DOCS/.wren-docs" <<<"$s" && grep -q "rmdir" <<<"$s"' _ "$HERE/parts/core-commands.sh"
+
 [ "$fails" -eq 0 ]

@@ -9,10 +9,15 @@
 # will do and asks before changing anything.
 # From the copy in your home folder it skips the copying:
 #   bash ~/wren/start.sh
+# From the Wren Linux package (the install stick puts it in /usr/share/wren,
+# root's) nothing is copied: it is used where it is:
+#   bash /usr/share/wren/start.sh
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
 not_root
 
 dest="$HOME/wren"
+# The package's copy, root's: used where it is, never copied into your home
+if [ "$WREN_DIR" = "${WREN_SYSTEM_DIR:-/usr/share/wren}" ]; then dest=$WREN_DIR; fi
 
 # Run from the copy, to unmount the stick the first run came from: a drive
 # can't be unmounted while a script is still running from it

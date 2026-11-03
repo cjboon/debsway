@@ -176,13 +176,18 @@ cat <<'EOF'
     What to check:
       - It asks for the disk passphrase at start, then shows a login.
       - You can log in with your user; sudo true works with your password.
-      - ls ~/wren shows Wren Linux (bash ~/wren/start.sh sets the rest up).
+      - Wren Linux is the package, root's, in /usr/share/wren, and not in your home:
+        dpkg -s wren-linux says "install ok installed", ls -ld /usr/share/wren
+        shows root, and there is no ~/wren.
+      - "Set it up now?" at the first login runs /usr/share/wren/start.sh; after it,
+        ~/Documents/wren-docs has the docs, and wrenctl --dir says /usr/share/wren.
 EOF
 if $no_net; then
     cat <<'EOF'
-      - It was installed without a network, so also: bash ~/wren/install-base.sh
-        puts deb.debian.org into /etc/apt/sources.list, and `sudo apt-get update`
-        works after the wifi is on (bash ~/wren/wifi.sh).
+      - It was installed without a network, so also: the setup puts deb.debian.org
+        into /etc/apt/sources.list, and `sudo apt-get update` works after the wifi
+        is on (bash /usr/share/wren/wifi.sh, with the packages saved in
+        ~/.local/share/wren/offline).
 EOF
 fi
 cat <<'EOF'

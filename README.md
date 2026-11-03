@@ -141,11 +141,14 @@ itself, and can write it to a USB stick. Booted from it, "Automatic install
 with Wren Linux" installs Debian as below (encrypted LVM over the whole disk, no
 root password; the installer copies the live system, and the base install's
 `parts/no-live-extras.sh` takes out what that brings and Wren Linux doesn't use,
-such as avahi and printing) and puts Wren Linux in `~/wren`; it asks only
+such as avahi and printing) and installs Wren Linux as its package, root's,
+in `/usr/share/wren` (nothing of it in your home; the saved downloads go to
+`~/.local/share/wren/offline`, the docs are linked in `~/Documents/wren-docs`);
+it asks only
 for the disk passphrase, your password, and the final "write the changes to
 disks?", which names the disk it erases (the stick itself is never offered).
 At the first login on the console it asks once "Set it up now?": Enter runs
-`bash ~/wren/start.sh` (the usual introduction and questions), n leaves it
+`bash /usr/share/wren/start.sh` (the usual introduction and questions), n leaves it
 for later. Options: `--user NAME`,
 `--keymap de`, `--locale de_DE.UTF-8`, `--timezone Europe/Berlin` (the clock's
 time zone; by default the one of the computer building the image), `--no-erase`

@@ -297,22 +297,26 @@ n=$(grep -c '' "$A/sources.list")
 ( VERSION_CODENAME='' WREN_APT_DIR=$A SUDO='' apt_sources_ensure ) >/dev/null 2>&1
 check "the release name is missing: nothing is bolted on (it would be broken)" test "$(grep -c '' "$A/sources.list")" = "$n"
 
-# ---- inside the installer: Wren Linux into ~/wrenctl ----
+# ---- inside the installer: Wren Linux's package into the new system ----
 L=$T/late.sh
 sed -e "s|/cdrom|$T/cdrom|g" -e "s|/target|$T/target|g" "$HERE/data/install-iso-late.sh" >"$L"
-mkdir -p "$T/cdrom/wren/bin" "$T/cdrom/wren/extras" "$T/cdrom/wren-install/scripts" "$T/target/home/me" "$T/fake"
-echo x >"$T/cdrom/wren/README.md"; echo x >"$T/cdrom/wren/start.sh"; echo x >"$T/cdrom/wren/bin/keys"
+mkdir -p "$T/cdrom/wren-install/scripts" "$T/cdrom/wren-install/offline/debs" "$T/target/home/me" "$T/target/tmp" "$T/fake"
+echo "the package" >"$T/cdrom/wren-install/wren-linux_1.0_all.deb"
+echo x >"$T/cdrom/wren-install/offline/debs/Packages"
 echo x >"$T/cdrom/wren-install/scripts/mine.txt"
 cp "$HERE/data/install-iso-first-login.sh" "$T/cdrom/wren-install/first-login.sh"
 printf '%s\n' '# ~/.profile: Debian'"'"'s own' 'PATH="$HOME/.local/bin:$PATH"' >"$T/target/home/me/.profile"
 chmod -R a-w "$T/cdrom"
-printf '#!/bin/sh\necho "in-target $*" >>"%s/intarget"\n' "$T" >"$T/fake/in-target"
+# a pretend in-target: writes down what ran; dpkg -i fails while $T/dpkg-fails exists
+printf '#!/bin/sh\necho "in-target $*" >>"%s/intarget"\ncase "$*" in "dpkg -i "*) rm -f "%s/installed.deb"; cp "%s/target$3" "%s/installed.deb"; [ ! -e "%s/dpkg-fails" ] ;; esac\n' "$T" "$T" "$T" "$T" "$T" >"$T/fake/in-target"
 chmod +x "$T/fake/in-target"
 PATH="$T/fake:$PATH" sh "$L" me
-check "Wren Linux is copied to ~/wren" test -f "$T/target/home/me/wren/start.sh"
-check "...with scripts runnable and files writable again" \
-    bash -c '[ "$(stat -c %a "$1/start.sh")" = 755 ] && [ "$(stat -c %a "$1/bin/keys")" = 755 ] && [ "$(stat -c %a "$1/README.md")" = 644 ]' _ "$T/target/home/me/wren"
-check "...owned by the new user" grep -qx 'in-target chown -R me:me /home/me/wren' "$T/intarget"
+check "the package goes into the new system (dpkg -i, inside it)" \
+    bash -c 'grep -qx "in-target dpkg -i /tmp/wren-linux.deb" "$1" && cmp -s "$2/installed.deb" "$3"' _ "$T/intarget" "$T" "$T/cdrom/wren-install/wren-linux_1.0_all.deb"
+check "...and nothing of Wren Linux goes into the home folder" test ! -e "$T/target/home/me/wren"
+check "...no copy of the package is left behind" test ! -e "$T/target/tmp/wren-linux.deb"
+check "the saved downloads go to ~/.local/share/wren/offline, the user's" \
+    bash -c '[ -f "$1/.local/share/wren/offline/debs/Packages" ] && grep -qx "in-target chown -R me:me /home/me/.local" "$2"' _ "$T/target/home/me" "$T/intarget"
 check "your own scripts go to ~/scripts" test -f "$T/target/home/me/scripts/mine.txt"
 check "a bad user name is refused" not env PATH="$T/fake:$PATH" sh "$L" '../x'
 check "the new user's .profile gets the first-login question, after what it had" \
@@ -333,19 +337,31 @@ chmod -R a-w "$T/cdrom"
 PATH="$T/fake:$PATH" sh "$L" me
 check "with --simplesway, the first install list gets one-workspace ticked, owned by the user" \
     bash -c 'grep -qx one-workspace "$1/.config/wren/preselect" && grep -qx "in-target chown -R me:me /home/me/.config" "$2"' _ "$T/target/home/me" "$T/intarget"
+# the package doesn't install: it stops and says so, and copies nothing into the home instead
+: >"$T/dpkg-fails"
+out=$(PATH="$T/fake:$PATH" sh "$L" me 2>&1); rc=$?
+check "the package doesn't install: the step fails, saying so, with nothing in the home folder instead" \
+    bash -c '[ "$1" -ne 0 ] && grep -q "didn.t install" <<<"$2" && [ ! -e "$3/wren" ]' _ "$rc" "$out" "$T/target/home/me"
+rm -f "$T/dpkg-fails"
 chmod -R u+w "$T/cdrom"
+rm -f "$T/cdrom/wren-install"/wren-linux_*.deb
+out=$(PATH="$T/fake:$PATH" sh "$L" me 2>&1); rc=$?
+check "no package on the image: the step fails, saying so" bash -c '[ "$1" -ne 0 ] && grep -q "no Wren Linux package" <<<"$2"' _ "$rc" "$out"
 
 # ---- the first login: asks once, on the console ----
 F=$T/first
 login() { # TTY ANSWER: a login shell reading that ~/.profile; what it printed in $T/said
     printf '%s\n' '# ~/.profile: Debian'"'"'s own' 'echo before' >"$F/.profile"
-    cat "$HERE/data/install-iso-first-login.sh" >>"$F/.profile"
+    # (the package's folder, /usr/share/wren, is $F/wren here)
+    sed "s|/usr/share/wren/start.sh|$F/wren/start.sh|g" "$HERE/data/install-iso-first-login.sh" >>"$F/.profile"
     echo 'echo after' >>"$F/.profile"
     printf '%s\n' "$2" | HOME=$F WREN_TTY=$1 sh -c '. "$HOME/.profile"' >"$T/said" 2>&1
 }
 mkdir -p "$F/wren"
 printf '#!/bin/sh\necho "start.sh ran as $(id -un)"\n' >"$F/wren/start.sh"
 login /dev/tty1 ''
+check "the first login runs the package's start.sh, in /usr/share/wren" \
+    bash -c 'grep -q "bash /usr/share/wren/start.sh" "$1" && ! grep -q "HOME/wren" "$1"' _ "$HERE/data/install-iso-first-login.sh"
 check "first login on the console: asks \"Set it up now?\", and Enter runs start.sh" \
     bash -c 'grep -q "Set it up now? \[Y/n\]" "$1" && grep -q "start.sh ran as" "$1"' _ "$T/said"
 check "...then the question is gone from ~/.profile, the rest kept" \
@@ -353,13 +369,13 @@ check "...then the question is gone from ~/.profile, the rest kept" \
 check "...and the login goes on" grep -qx after "$T/said"
 login /dev/tty1 n
 check "no: start.sh doesn't run, it says how to later, and doesn't ask again" \
-    bash -c '! grep -q "start.sh ran" "$1" && grep -q "Later: bash ~/wren/start.sh" "$1" && ! grep -q "Wren Linux first login" "$2"' _ "$T/said" "$F/.profile"
+    bash -c '! grep -q "start.sh ran" "$1" && grep -q "Later: bash .*/wren/start.sh" "$1" && ! grep -q "Wren Linux first login" "$2"' _ "$T/said" "$F/.profile"
 login /dev/pts/0 ''
 check "a login over ssh or in a terminal window doesn't ask, and keeps the question for the console" \
     bash -c '! grep -q "Set it up" "$1" && grep -q "Wren Linux first login" "$2"' _ "$T/said" "$F/.profile"
 mv "$F/wren" "$F/gone"
 login /dev/tty1 ''
-check "without ~/wren it says nothing, and takes the question out" \
+check "without the package it says nothing, and takes the question out" \
     bash -c '! grep -q "Set it up" "$1" && ! grep -q "Wren Linux first login" "$2"' _ "$T/said" "$F/.profile"
 
 # ---- trying the image in a VM (tools/try-install-iso.sh), its commands only ----

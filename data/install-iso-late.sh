@@ -1,26 +1,42 @@
 #!/bin/sh
 # preseed/late_command for Wren Linux's install ISO (prep/make-install-iso.sh):
 # runs inside the Debian installer at the end, with the new system in /target.
-# It copies Wren Linux from the ISO to the new user's ~/wren, owned by them,
-# with the folders and scripts as they should be, and adds to ~/.profile a
-# question asked once at the first login on the console: set Wren Linux up now?
-# (yes runs bash ~/wren/start.sh, as the user, on the running system).
+# It installs Wren Linux's package from the ISO into the new system: root's,
+# read-only to the user, in /usr/share/wren (nothing of it in the home
+# folder). The saved downloads (the Wi-Fi packages, Tor Browser...) go to the
+# user's ~/.local/share/wren/offline. It adds to ~/.profile a question asked
+# once at the first login on the console: set Wren Linux up now? (yes runs
+# bash /usr/share/wren/start.sh, as the user, on the running system).
 # With --autologin, tty1 then logs the user in without the password.
 #   late.sh USERNAME
 set -e
 user=$1
 case $user in '' | *[!a-z0-9_-]*) echo "late.sh: bad user name '$user'" >&2; exit 1 ;; esac
-src=/cdrom/wren
-dest=/target/home/$user/wren
-[ -d "$src" ] || exit 0
+inst=/cdrom/wren-install
+[ -d "$inst" ] || exit 0
 [ -d "/target/home/$user" ] || { echo "late.sh: /home/$user is missing in the new system" >&2; exit 1; }
-rm -rf "$dest"
-cp -R "$src" "$dest"
-# The ISO's files are all read-only; give them the usual modes back
-find "$dest" -type d -exec chmod 755 {} \;
-find "$dest" -type f -exec chmod 644 {} \;
-find "$dest" -type f \( -name '*.sh' -o -path "$dest/bin/*" \) -exec chmod 755 {} \;
-in-target chown -R "$user:$user" "/home/$user/wren"
+# The package: only bash and sudo are needed, which the new system has, so it
+# installs without a network. It has no install scripts: it only puts files
+# in place. If it doesn't go in, say so and stop: Wren Linux is never copied
+# into the home folder instead.
+set -- "$inst"/wren-linux_*_all.deb
+[ -f "$1" ] || { echo "late.sh: there is no Wren Linux package on the ISO" >&2; exit 1; }
+cp "$1" /target/tmp/wren-linux.deb
+if ! in-target dpkg -i /tmp/wren-linux.deb; then
+    echo "late.sh: the Wren Linux package didn't install; after the first boot: sudo apt install /media/.../wren-install/${1##*/}" >&2
+    rm -f /target/tmp/wren-linux.deb
+    exit 1
+fi
+rm -f /target/tmp/wren-linux.deb
+# The saved downloads, the user's
+if [ -d "$inst/offline" ]; then
+    mkdir -p "/target/home/$user/.local/share/wren"
+    rm -rf "/target/home/$user/.local/share/wren/offline"
+    cp -R "$inst/offline" "/target/home/$user/.local/share/wren/offline"
+    find "/target/home/$user/.local/share/wren/offline" -type d -exec chmod 755 {} \;
+    find "/target/home/$user/.local/share/wren/offline" -type f -exec chmod 644 {} \;
+    in-target chown -R "$user:$user" "/home/$user/.local"
+fi
 # The first-login question (once, even if this runs again)
 profile=/target/home/$user/.profile
 if [ -f /cdrom/wren-install/first-login.sh ] && ! grep -q '^# >>> Wren Linux first login >>>$' "$profile" 2>/dev/null; then

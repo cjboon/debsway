@@ -1,9 +1,10 @@
 #!/bin/bash
 # Builds a Debian 13 install image that installs Debian the way Wren Linux's
 # README says (encrypted LVM over the whole disk, no root password, no
-# desktop) and puts Wren Linux in ~/wren. At the first
-# login on the console it asks once "Set it up now?": yes runs
-# bash ~/wren/start.sh, as you, on the running system (not inside the
+# desktop) and installs Wren Linux as its package (tools/build-deb.sh, from the
+# last commit), root's, in /usr/share/wren: nothing of it goes into your home.
+# At the first login on the console it asks once "Set it up now?": yes runs
+# bash /usr/share/wren/start.sh, as you, on the running system (not inside the
 # installer, where nothing runs yet and nobody can be asked).
 #
 # It asks you, at install time, for the three things that must be yours:
@@ -158,7 +159,7 @@ offline_debs_refresh
 
 say "What goes on it"
 stage=$work/stage
-mkdir -p "$stage/wren-install" "$stage/wren" "$stage/isolinux" "$stage/boot/grub"
+mkdir -p "$stage/wren-install" "$stage/isolinux" "$stage/boot/grub"
 fill_preseed "$WREN_DIR/data/install-iso-preseed.cfg" "$user" "$locale" "$keymap" "$erase" "$timezone" \
     "$($encrypt && echo crypto || echo regular)" >"$stage/wren-install/preseed.cfg"
 # late.sh installs it if it is there
@@ -170,12 +171,22 @@ cp "$WREN_DIR/data/install-iso-net.sh" "$stage/wren-install/net.sh"
 cp "$WREN_DIR/data/install-iso-late.sh" "$stage/wren-install/late.sh"
 cp "$WREN_DIR/data/install-iso-first-login.sh" "$stage/wren-install/first-login.sh"
 if [ -n "$scripts" ]; then cp -R "$scripts" "$stage/wren-install/scripts"; note "Your scripts: $scripts -> ~/scripts"; fi
-# Wren Linux: the last commit, then offline/ but the installers themselves
-git -C "$WREN_DIR" archive --format=tar HEAD | tar -x -C "$stage/wren" ||
+# Wren Linux as its package, built from the last commit (tools/build-deb.sh):
+# late.sh installs it into the new system, root's, in /usr/share/wren, and
+# nothing of it goes into your home. Then offline/ (the Wi-Fi packages, Tor
+# Browser, Whonix), but not the installers themselves: late.sh puts it in
+# ~/.local/share/wren/offline, where Wren Linux looks when its own folder is
+# read-only
+git -C "$WREN_DIR" rev-parse --verify --quiet HEAD >/dev/null ||
     die "Couldn't take Wren Linux's last commit (is $WREN_DIR a git checkout?)."
+bash "$WREN_DIR/tools/build-deb.sh" --commit HEAD --out "$stage/wren-install" >"$work/deb.out" 2>&1 ||
+    { cat "$work/deb.out" >&2; die "Couldn't build the Wren Linux package."; }
+deb=$(head -1 "$work/deb.out")
+[ -f "$deb" ] || die "The Wren Linux package wasn't built ($deb)."
+note "The package: ${deb##*/} ($(sed -n 's/^SHA-256: //p' "$work/deb.out" | cut -c1-16)...)"
 if [ -d "$OFFLINE_DIR" ]; then
-    mkdir -p "$stage/wren/offline"
-    (cd "$OFFLINE_DIR" && find . -mindepth 1 -maxdepth 1 ! -name install-iso ! -name tails -exec cp -R {} "$stage/wren/offline/" \;)
+    mkdir -p "$stage/wren-install/offline"
+    (cd "$OFFLINE_DIR" && find . -mindepth 1 -maxdepth 1 ! -name install-iso ! -name tails -exec cp -R {} "$stage/wren-install/offline/" \;)
 fi
 note "Wren Linux $(git -C "$WREN_DIR" describe --always --dirty 2>/dev/null), user $user, keyboard $keymap, $locale, time zone $timezone, $($encrypt || echo "NOT encrypted, ")$($encrypt && [ "$erase" = true ] && echo "the disk filled with random data first" || echo "no random fill")$($autologin && echo ", logged in on tty1 without a password")$($simplesway && echo ", one workspace")"
 [ -z "$(git -C "$WREN_DIR" status --porcelain 2>/dev/null)" ] ||
@@ -193,7 +204,7 @@ chmod u+w "$stage/boot/grub/grub.cfg" "$stage/isolinux/menu.cfg" "$stage/isolinu
 grub_add_entry "$stage/boot/grub/grub.cfg" || die "The image's GRUB menu isn't as expected (a new Debian release?); nothing was built."
 isolinux_edit "$stage/isolinux/menu.cfg" "$stage/isolinux/$second" || die "The image's BIOS menu isn't as expected; nothing was built."
 isolinux_entry >"$stage/isolinux/wren.cfg"
-(cd "$stage" && find wren-install wren -type f | sed 's|^|./|') >"$work/added"
+(cd "$stage" && find wren-install -type f | sed 's|^|./|') >"$work/added"
 mapfile -t added <"$work/added"
 md5_update "$stage/md5sum.txt" "$stage" ./boot/grub/grub.cfg ./isolinux/menu.cfg "./isolinux/$second" ./isolinux/wren.cfg "${added[@]}"
 note "\"Automatic install with Wren Linux\" is the first entry, and the default, in both menus."
@@ -202,7 +213,6 @@ say "Building $out"
 rm -f "$out"
 xorriso -indev "$iso" -outdev "$out" \
     -map "$stage/wren-install" /wren-install \
-    -map "$stage/wren" /wren \
     -map "$stage/boot/grub/grub.cfg" /boot/grub/grub.cfg \
     -map "$stage/isolinux/menu.cfg" /isolinux/menu.cfg \
     -map "$stage/isolinux/$second" "/isolinux/$second" \
