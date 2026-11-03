@@ -28,6 +28,7 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 - [Firefox as its own locked-down user](firefox-sandbox.md)
 - [One Firefox profile per site](firefox-profiles.md)
 - [PDF viewer in a sandbox](pdf-viewer.md): `docs/extras/pdf-viewer.md`
+- [GIMP image editor, in a sandbox](gimp.md)
 - [Archive tools](archive-tools.md): `docs/extras/archive-tools.md`
 - [Console-only, tmux instead of sway](console-only.md): `docs/extras/console-only.md`
 - [w3m, a web browser for the terminal](w3m.md): `docs/extras/w3m.md`

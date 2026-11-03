@@ -3,6 +3,7 @@
 # wayland-restrict that only write down how they were called: what the
 # program is shown, and which kinds of address switch the network on.
 # Changes nothing. Run by test.sh, or:  bash tools/test-media-sandbox.sh
+# shellcheck disable=SC2016  # the inner shells expand their own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 
 T=$(mktemp -d)
@@ -44,5 +45,27 @@ check "an option with a file:// address gives no network" not grep -qx -e --shar
 
 run mpv "--sub-file=https://example.org/s.srt"
 check "an option with an https address turns the network on" grep -qx -e --share-net "$T/bwrap.args"
+
+# GIMP: ~/Pictures to open and save in, its settings, ~/Downloads read-only, never the network
+# (bind SRC DEST: the pair in bwrap's arguments, after OPTION)
+pair() { python3 -I -c 'import sys; a = open(sys.argv[1]).read().split("\n"); o, src = sys.argv[2], sys.argv[3]
+sys.exit(0 if any(a[i] == o and a[i + 1] == src and a[i + 2] == src for i in range(len(a) - 2)) else 1)' "$T/bwrap.args" "$@"; }
+mkdir -p "$T/home/Downloads"
+echo x >"$T/home/Downloads/photo.jpg"
+mkdir -p "$T/elsewhere"; echo x >"$T/elsewhere/other.png"
+run gimp-3.0 "$T/home/Downloads/photo.jpg" "$T/elsewhere/other.png"
+check "gimp: ~/Pictures read and write, to open and save in" pair --bind "$T/home/Pictures"
+check "...its own settings read and write" pair --bind "$T/home/.config/GIMP"
+check "...~/Downloads read-only" pair --ro-bind "$T/home/Downloads"
+check "...a picture from elsewhere read-only" pair --ro-bind "$T/elsewhere/other.png"
+check "...no network" not grep -qx -e --share-net "$T/bwrap.args"
+run gimp-3.0 https://example.org/evil.png
+check "...not even for a web address" not grep -qx -e --share-net "$T/bwrap.args"
+run mpv "$T/video.mp4"
+check "mpv, zathura, imv: no ~/Pictures" not grep -qxF "$T/home/Pictures" "$T/bwrap.args"
+check "the gimp command runs GIMP through the sandbox, as the menu entry does" bash -c '
+    grep -qx "exec \"\$HOME/.local/bin/media-sandbox\" /usr/bin/gimp-3.0 \"\$@\"" "$1" &&
+    grep -q "s|^Exec=gimp-3.0|Exec=\$BIN/gimp|" "$2"' _ "$HERE/bin/gimp" "$HERE/extras/gimp.sh"
+check "the media and PDF extras keep the sandbox while GIMP uses it" bash -c 'grep -q "BIN/gimp" "$1" && grep -q "BIN/gimp" "$2"' _ "$HERE/extras/media.sh" "$HERE/extras/pdf-viewer.sh"
 
 [ "$fails" -eq 0 ]

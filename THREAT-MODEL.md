@@ -77,7 +77,10 @@ this page to decide what else you need.
 - **A booby-trapped image or video, or a coding assistant that goes wrong,
   reaching your files.** `imv` and `mpv` (`extras/media.sh`) start inside
   bubblewrap: they see only the files you open, read-only, and have no
-  network unless you give mpv a URL. `claude` (`extras/claude-code.sh`)
+  network unless you give mpv a URL. zathura (`extras/pdf-viewer.sh`) runs in
+  the same sandbox, and so does GIMP (`extras/gimp.sh`), which besides gets
+  `~/Pictures` read-write to save in, and never the network: a crafted
+  picture in GIMP can reach `~/Pictures`, but not the rest of your files. `claude` (`extras/claude-code.sh`)
   runs Claude Code as its own user, `claude-agent`, which has no password
   and can't read your home folder, ssh keys, passwords or browser
   profiles; it works in `~/projects`, which you share with it. A firewall

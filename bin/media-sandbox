@@ -1,9 +1,12 @@
 #!/bin/bash
 # media-sandbox COMMAND [ARGS...]: written by debsway extras/media.sh (also extras/pdf-viewer.sh)
-# Runs imv, mpv or zathura inside bubblewrap, so a booby-trapped image, video or
-# PDF can't read your files. The program sees only the files and folders you name on
-# its command line (read-only), its own empty home, and your screen. It has
-# no network unless you give mpv a URL, and your sound is available to mpv only.
+# Runs imv, mpv, zathura or GIMP inside bubblewrap, so a booby-trapped image,
+# video or PDF can't read your files. The program sees only the files and
+# folders you name on its command line (read-only), its own empty home, and
+# your screen. It has no network unless you give mpv (or imv, zathura) a URL,
+# and your sound is available to mpv only. GIMP, which saves its work, also
+# gets ~/Pictures read-write, its own settings (~/.config/GIMP) and ~/Downloads
+# read-only, and never the network.
 # It gets a restricted Wayland socket (bin/wayland-restrict), not your real
 # one: sway doesn't offer it the screen-reading or typing protocols.
 # Set DEBSWAY_NO_SANDBOX=1 to run the program plainly.
@@ -44,6 +47,15 @@ done
 for d in "$HOME/.config/mpv" "$HOME/.config/imv" "$HOME/.config/zathura"; do
     [ -d "$d" ] && args+=(--ro-bind "$d" "$d")
 done
+# GIMP: ~/Pictures to open and save in, its own settings, ~/Downloads to open from
+name=$(basename -- "$cmd")
+gimp=false
+case $name in gimp | gimp-3.0) gimp=true ;; esac
+if $gimp; then
+    mkdir -p "$HOME/Pictures" "$HOME/.config/GIMP"
+    args+=(--bind "$HOME/Pictures" "$HOME/Pictures" --bind "$HOME/.config/GIMP" "$HOME/.config/GIMP")
+    [ -d "$HOME/Downloads" ] && args+=(--ro-bind "$HOME/Downloads" "$HOME/Downloads")
+fi
 # sound for mpv: your audio server's socket (it could also listen to the microphone)
 if [ "$(basename -- "$cmd")" = mpv ]; then
     for s in pipewire-0 pulse/native; do
@@ -60,7 +72,8 @@ for a in "$@"; do
     case $a in
         # an option that points at a file:// address gets no network either
         -*=file://*) newargs+=("$a") ;;
-        *://*) args+=(--share-net --ro-bind-try /etc/ssl /etc/ssl); newargs+=("$a") ;;
+        # (never for GIMP: it has no business on the network)
+        *://*) $gimp || args+=(--share-net --ro-bind-try /etc/ssl /etc/ssl); newargs+=("$a") ;;
         # an option can name a file too (mpv --sub-file=subs.srt)
         -*=*)
             v=${a#*=}
@@ -75,7 +88,11 @@ for a in "$@"; do
         *)
             if [ -e "$a" ]; then
                 p=$(realpath -- "$a")
-                args+=(--ro-bind "$p" "$p")
+                # (for GIMP, ~/Pictures and ~/Downloads are already there, as they are)
+                case $p in
+                    "$HOME/Pictures"/* | "$HOME/Downloads"/*) $gimp || args+=(--ro-bind "$p" "$p") ;;
+                    *) args+=(--ro-bind "$p" "$p") ;;
+                esac
                 newargs+=("$p")
             else
                 newargs+=("$a")

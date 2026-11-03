@@ -17,7 +17,7 @@ if [ "${1:-}" = --remove ]; then
     remove_bin zathura
     unset_default_app org.pwmt.zathura.desktop
     # the media extra and incognito need the sandbox too
-    if [ ! -f "$BIN/imv" ] && [ ! -f "$BIN/mpv" ]; then
+    if [ ! -f "$BIN/imv" ] && [ ! -f "$BIN/mpv" ] && [ ! -f "$BIN/gimp" ]; then
         remove_bin media-sandbox
         [ -x /usr/local/bin/incognito ] || remove_bin wayland-restrict
     fi

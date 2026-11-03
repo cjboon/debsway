@@ -1,0 +1,5 @@
+#!/bin/sh
+# gimp: written by debsway extras/gimp.sh
+# GIMP, run in a sandbox: no network, none of your files but ~/Pictures (to
+# open and save), ~/Downloads (to open) and its own settings.
+exec "$HOME/.local/bin/media-sandbox" /usr/bin/gimp-3.0 "$@"
