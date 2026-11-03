@@ -34,7 +34,9 @@ FAKE
 printf '#!/bin/sh\necho "swaylock $*" >>"%s/calls"\n' "$T" >"$T/fake/swaylock"
 printf '#!/bin/sh\nexit 1\n' >"$T/fake/pgrep"
 chmod +x "$T/fake/"*
-lid() { PATH="$T/fake:$PATH" sh "$HERE/bin/lid" "$@"; }
+# (a home of its own: the lock screen's color comes from the theme there, not yours)
+mkdir -p "$T/home"
+lid() { HOME=$T/home XDG_CONFIG_HOME=$T/home/.config PATH="$T/fake:$PATH" sh "$HERE/bin/lid" "$@"; }
 
 lid close
 check "closing the lid locks the screen" grep -qx 'swaylock -f -c 000000' "$T/calls"
@@ -57,5 +59,15 @@ check "sway runs bin/lid on the lid switch, also while locked" \
     grep -q 'bindswitch --reload --locked lid:on exec ~/.local/bin/lid close' "$E"
 check "logind is told to read its settings again, not restarted (that could end the session)" \
     grep -q 'systemctl kill -s HUP systemd-logind' "$E"
+
+# the light theme (bin/theme): the lock screen in its color
+mkdir -p "$T/home/.local/bin" "$T/home/.local/share/debsway/themes" "$T/home/.config/debsway"
+cp "$HERE/bin/theme" "$T/home/.local/bin/theme"
+cp "$HERE/data/themes/dark" "$HERE/data/themes/light" "$T/home/.local/share/debsway/themes/"
+echo light >"$T/home/.config/debsway/theme"
+printf '#!/bin/sh\nexit 1\n' >"$T/fake/pgrep"
+: >"$T/calls"
+lid close
+check "in the light theme the lock screen is light" grep -qx 'swaylock -f -c f2efe9' "$T/calls"
 
 [ "$fails" -eq 0 ]
