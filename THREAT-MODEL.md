@@ -37,6 +37,17 @@ this page to decide what else you need.
   (`parts/random-mac.sh`).
 - **Your network seeing which packages you install**, if you chose to
   download through Tor (`parts/apt-tor.sh`, with a bridge if you need one).
+- **A tampered debsway update**, once debsway's signing key is pinned
+  (`DEBSWAY_SIGNING_FPR` in `pins.sh`, the key in
+  `data/debsway-signing-key.asc`). `update.sh` runs what it brings in with
+  sudo, so whoever could change what GitHub serves (a taken-over account, or
+  someone on the way) could otherwise run anything as root. With the key
+  pinned, `update.sh` brings a change in only if the newest commit has a good
+  signature from that key, checked with the key and pin of the copy you
+  already have, never ones that come with the change. Not covered: the copy
+  you first got (a stick, or the download in the README) is trusted as it is;
+  someone in the way can still hold updates back; and until the key is
+  pinned, updates come in unchecked (`update.sh` says so each time).
 - **Tampered downloads.** Everything debsway downloads from outside
   Debian is checked against the project's signing key, pinned by
   fingerprint in `pins.sh`, before it's used. `test.sh` re-checks them.

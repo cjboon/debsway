@@ -40,6 +40,39 @@ can change what the scripts rely on.
   no git hook for it: a hook is a file in the project that runs as you on
   every commit, and the project's files can come from someone else.
 
+## Signing debsway's commits
+
+`update.sh` runs what it brings in, with sudo. To make sure it is yours, sign
+your commits and pin the key: from then on every debsway computer brings in a
+change only when the newest commit carries a good signature from that key
+(`update_signed` in `lib/update.sh`, tested by `tools/test-update-signed.sh`
+with throwaway keys). One signed commit on top vouches for everything under
+it, since each commit's id covers the ones before it.
+
+1. Make the key on a computer you trust, best one that is offline: a primary
+   key that only certifies, and a signing subkey for every day.
+   `gpg --quick-generate-key "debsway signing key <you@example.org>" ed25519 cert never`,
+   then `gpg --quick-add-key FINGERPRINT ed25519 sign 2y`.
+   Keep a revocation certificate and a backup of the primary key apart from
+   the computer (an encrypted stick, and on paper with `paperkey`).
+2. Put the public half in the repository and pin the **primary** key's
+   fingerprint (a signature by a subkey counts for its primary key, so the
+   subkey can be renewed or replaced without a new pin):
+   `gpg --export --armor FINGERPRINT >data/debsway-signing-key.asc`, and
+   `DEBSWAY_SIGNING_FPR=FINGERPRINT` in `pins.sh`. `bash test.sh` checks the
+   file is exactly that key and can still sign.
+3. Sign from then on: `git config commit.gpgsign true` and
+   `git config user.signingkey FINGERPRINT` in `~/debsway`. Check one with
+   `git log --show-signature -1`.
+4. Commit and push all of this as one signed commit. Computers that update to
+   it take it unchecked (their copy has no pin yet); every update after that
+   is checked.
+
+A new subkey: export the key again into `data/debsway-signing-key.asc` and
+commit that with the old subkey's signature, before it expires. A key that has
+expired or been revoked fails the check, and updates stop until a copy with
+the new key is brought in by hand.
+
 ## Other scripts
 
 - `prep/setup-sudo.sh USER` (as root): installs sudo and adds USER to the

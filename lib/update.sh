@@ -12,6 +12,24 @@
 
 UPDATE_CORE_FILES="lib.sh lib/core.sh lib/apt.sh lib/sway.sh lib/net.sh lib/tor.sh lib/mime.sh lib/update.sh packages.sh install-base.sh install-extras.sh update.sh"
 
+# update_signed COMMIT: COMMIT carries a good signature from debsway's own key,
+# DEBSWAY_SIGNING_FPR (pins.sh), taken from this copy's
+# data/debsway-signing-key.asc: never from what is coming in, so a change can't
+# bring its own key. Only that one key goes into the throwaway keyring
+# (_keyring, lib/appimage.sh), so a second key slipped into the file doesn't
+# count, and an expired or revoked key's signature fails (_good_sig). gpg is run
+# as gpg whatever your git config's gpg.program says. Needs lib/appimage.sh.
+update_signed() {
+    local home rc=0 key=$DEBSWAY_DIR/data/debsway-signing-key.asc
+    [ -f "$key" ] || { warn "pins.sh names debsway's key, but $key is missing."; return 1; }
+    home=$(_keyring "$DEBSWAY_SIGNING_FPR" "$key") || return 1
+    GNUPGHOME=$home git -C "$DEBSWAY_DIR" -c gpg.format=openpgp -c gpg.program=gpg -c gpg.openpgp.program=gpg \
+        verify-commit --raw "$1" >/dev/null 2>"$home/status" || true
+    _good_sig "$DEBSWAY_SIGNING_FPR" "$home/status" || rc=1
+    _keyring_done "$home"
+    return "$rc"
+}
+
 # update_inputs SCRIPT: the repo files SCRIPT (parts/X.sh or extras/X.sh)
 # installs or reads, one per line, itself included.
 update_inputs() {

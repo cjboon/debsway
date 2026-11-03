@@ -513,6 +513,21 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "update.sh: only what debsway's own key signed, with throwaway keys"
+if out=$(bash tools/test-update-signed.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") signed update checks"
+else
+    bad "signed update checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+if [ -n "${DEBSWAY_SIGNING_FPR:-}" ]; then
+    if key_ok data/debsway-signing-key.asc "$DEBSWAY_SIGNING_FPR"; then
+        ok "data/debsway-signing-key.asc is exactly the pinned key, and can sign"
+    else
+        bad "data/debsway-signing-key.asc isn't exactly the key DEBSWAY_SIGNING_FPR in pins.sh, or it has expired"
+    fi
+fi
+
+# --------------------------------------------------------------------
 section "The debsway menu in the bar (bin/debsway-menu), with a pretend wmenu and foot"
 if out=$(bash tools/test-debsway-menu.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") debsway menu checks"

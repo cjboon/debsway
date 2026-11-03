@@ -13,6 +13,9 @@
 # The first time, it takes what you have now as already applied: for what you
 # pulled earlier by hand, use --since COMMIT, or --all for everything set up.
 #
+# Once pins.sh names debsway's signing key (DEBSWAY_SIGNING_FPR), it brings
+# in only a newest commit with a good signature from that key.
+#
 # Each time, it also checks the signing keys of the apt repositories debsway
 # added (lib/apt-keys.sh), and fetches a pinned key again when it has expired
 # or will soon.
@@ -20,6 +23,8 @@
 # Usage: bash update.sh [--since COMMIT | --all]
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
 . "$DEBSWAY_DIR/lib/update.sh"
+# (its signature helpers check debsway's own commits too: update_signed)
+. "$DEBSWAY_DIR/lib/appimage.sh"
 . "$DEBSWAY_DIR/lib/apt-keys.sh"
 not_root
 
@@ -62,7 +67,14 @@ main() {
             g --no-pager log --stat --format='%n%C(yellow)%h%Creset %s%n%b' 'HEAD..@{upstream}'
             echo
             note "Every changed line: git -C $DEBSWAY_DIR diff HEAD..@{upstream}"
-            # (a signature check on what comes in belongs here, before the merge)
+            # Only what debsway's own key signed (pins.sh), checked before the merge
+            if [ -n "${DEBSWAY_SIGNING_FPR:-}" ]; then
+                update_signed "$upstream" ||
+                    die "The newest commit on the server isn't signed by debsway's key ($DEBSWAY_SIGNING_FPR), so nothing was brought in. Someone may have changed what the server gives you: don't bring it in by hand either."
+                note "The newest commit is signed by debsway's key ($DEBSWAY_SIGNING_FPR); it vouches for everything above."
+            else
+                note "(Its signature is not checked: no signing key is pinned in pins.sh yet, so this is as the server gives it.)"
+            fi
             ask "Bring these in?" n || { note "Nothing changed."; return 0; }
             g merge --ff-only --quiet '@{upstream}' ||
                 die "Couldn't bring it in (your files in $DEBSWAY_DIR conflict with it?). Look at: git -C $DEBSWAY_DIR status"

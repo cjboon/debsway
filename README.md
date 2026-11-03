@@ -273,6 +273,10 @@ or click **debsway** at the left of the status bar and choose Update. Install ap
 
 It fetches what's new, shows you every change, and asks before bringing it
 in (only a plain fast-forward, so your own edits are never overwritten).
+Once `pins.sh` names debsway's signing key (`DEBSWAY_SIGNING_FPR`), it brings
+a change in only if the newest commit carries a good signature from exactly
+that key, checked with the key in the copy you already have; until then it
+says that it didn't check.
 Then it lists the parts and extras you have set up whose files changed and
 offers to run them again, one after the other: running a script again is
 how a change reaches `/usr/local`, the firewall or Firefox's policy. It
