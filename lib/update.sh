@@ -33,6 +33,23 @@ update_inputs() {
     done
 }
 
+# update_stale: the scripts set up here one of whose commands in ~/.local/bin
+# (install_bin) is debsway's but not this copy's: brought in by hand before
+# update.sh first ran (it takes what is there then as done), or a run that
+# was cut short. Offered whatever changed upstream, so no fix is left behind.
+update_stale() {
+    local script name
+    while IFS= read -r script; do
+        update_installed "$script" || continue
+        while IFS= read -r name; do
+            if grep -qis 'written by debsway' "$BIN/$name" && ! cmp -s "$DEBSWAY_DIR/bin/$name" "$BIN/$name"; then
+                echo "$script"
+                break
+            fi
+        done < <(sed -n 's/^[[:space:]]*install_bin[[:space:]][[:space:]]*\([A-Za-z0-9._-][A-Za-z0-9._-]*\).*/\1/p' "$DEBSWAY_DIR/$script")
+    done < <(update_scripts)
+}
+
 # update_scripts: every part, then every extra, as parts/X.sh and extras/X.sh,
 # in the order they are meant to run
 update_scripts() {

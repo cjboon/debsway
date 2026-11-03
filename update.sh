@@ -106,6 +106,13 @@ main() {
         fi
     fi
 
+    # and those whose installed commands are older than this copy
+    if ! $everything; then
+        while IFS= read -r script; do
+            case " ${offered[*]} " in *" $script "*) ;; *) offered+=("$script") ;; esac
+        done < <(update_stale)
+    fi
+
     if [ ${#offered[@]} -eq 0 ]; then
         save_state "$now"
         say "Nothing to run again."

@@ -94,6 +94,19 @@ check "...and kept fresh in the background while they run" grep -q '^sudo -n tru
 ARGS='' out=$(upd)
 check "a second run finds nothing to do" test ! -s "$T/ran"
 
+# 3b. a command debsway installed that is older than this copy (pulled by hand
+# before update.sh first ran): its script is offered, though nothing changed
+mkdir -p "$HOME/.local/bin"
+printf '#!/bin/sh\n# imv: written by debsway extras/media.sh (an older one)\n' >"$HOME/.local/bin/imv"
+ARGS='' out=$(upd y)
+check "an installed command older than this copy: its script is offered again" ran extras/media.sh
+cp "$T/L/bin/imv" "$HOME/.local/bin/imv"
+printf '#!/bin/sh\n# my own\n' >"$HOME/.local/bin/media-sandbox"
+: >"$T/ran"
+ARGS='' out=$(upd y)
+check "...not once it is this copy's, nor for a file of your own by that name" test ! -s "$T/ran"
+rm -f "$HOME/.local/bin/imv" "$HOME/.local/bin/media-sandbox"
+
 # 4. --since offers again what changed after a commit
 ARGS="--since $FIRST" out=$(upd y)
 check "--since runs again what changed after that commit" ran parts/incognito.sh
