@@ -157,6 +157,11 @@ fi
 
 # --------------------------------------------------------------------
 section "The claude command (sandboxed Claude Code), with a pretend sudo"
+if out=$(bash tools/test-home-private.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") private home checks"
+else
+    bad "private home checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
 if out=$(bash tools/test-command-hints.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") command hint checks"
 else

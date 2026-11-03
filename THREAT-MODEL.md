@@ -183,6 +183,14 @@ With the extras:
   is the stronger kind.
 - **Being identified while logged in.** A VPN, Tor or Mullvad Browser
   hides your IP address, not who you are to a site you've logged into.
+- **Your home, from the sandbox users.** The sandboxed Firefox's and
+  Claude's users pass through your home to the one folder they share with
+  you; they can't list it, but could open any file in it whose name they
+  guess if "others" may read it, which Debian's default umask allows.
+  `parts/home-private.sh` closes everything directly in your home to others
+  (shared folders keep their named user) and makes new files private
+  (umask 077). Something you open up yourself later (chmod o+r) is open to
+  them again.
 - **What you share with the sandboxes.** `claude-agent` and you both
   read and write `~/projects`, and it has your network. Anything it leaves
   there is untrusted: read scripts before you run them, and look at

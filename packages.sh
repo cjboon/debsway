@@ -12,7 +12,7 @@ PKGS=(sway foot libgl1-mesa-dri gpg age diceware)
 # the order install-base.sh runs them in. network-manager goes near the
 # end: moving Wi-Fi over to it briefly drops the connection. random-mac
 # needs it.
-PARTS=(core-commands clock no-live-extras unattended-upgrades wmenu swaylock swayidle brightnessctl
+PARTS=(core-commands home-private clock no-live-extras unattended-upgrades wmenu swaylock swayidle brightnessctl
     wl-clipboard mako foot-config wallpaper theme ufw power-profiles-daemon
     power-menu debsway-menu command-hints console-tmux needrestart sysctl-hardening module-blacklist boot-hardening grub-colors
     network-manager secure-dns random-mac usb)
