@@ -18,7 +18,7 @@ installed (`~/.local/bin`), and other users exist (e.g. `onion-site`). So:
 - `~/debsway` is a git repo tracking `origin/main` (https://github.com/cjboon/debsway.git).
   There is no `~/.ssh` here; pushing uses the owner's own credential, so the owner pushes.
   Commit each finished item of work as soon as its tests pass (one commit per item);
-  never push.
+  push only when the owner asks.
 - The test suite works in a temp folder with a pretend sudo. Still check a test doesn't
   touch the real home or desktop before running it here.
 
