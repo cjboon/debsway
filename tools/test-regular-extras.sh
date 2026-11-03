@@ -1,11 +1,9 @@
 #!/bin/bash
-# Checks extras/firefox-regular.sh and extras/claude-regular.sh, and what keeps
-# them from getting in the way of the sandboxed Firefox and Claude Code:
+# Checks extras/claude-regular.sh, and what keeps it from getting in the way
+# of the sandboxed Claude Code:
 #  - lib/claude-settings.py adds debsway's Claude Code settings next to yours
 #    and takes out only what it added;
-#  - lib/claude-repo.sh keeps Anthropic's repository while either extra uses it;
-#  - firefox-regular writes only its own profile, command and menu entry, and
-#    never takes links away from the sandboxed Firefox without asking.
+#  - lib/claude-repo.sh keeps Anthropic's repository while either extra uses it.
 # The extras run with a pretend sudo (it only logs), a pretend dpkg-query (their
 # packages "already installed") and a pretend repository, in a temp home, so
 # nothing on this computer changes. Run by test.sh, or:
@@ -98,7 +96,7 @@ CLAUDE_REGULAR_MARK=\$HOME/.local/bin/claude-regular
 add_claude_repo() { echo add-repo >>"$T/calls"; }
 remove_claude_repo_if_unused() { echo remove-repo-if-unused >>"$T/calls"; }
 EOF
-cp "$HERE/extras/firefox-regular.sh" "$HERE/extras/claude-regular.sh" "$R/extras/"
+cp "$HERE/extras/claude-regular.sh" "$R/extras/"
 # shellcheck disable=SC2031  # (the PATH set in repo() above stays in its subshell)
 export REGULAR_TEST_PATH="$T/bin:$PATH"
 [ "$(bash -c '. "$1/lib.sh"; command -v sudo' _ "$R")" = "$T/bin/sudo" ] || { echo "  FAIL  the real sudo would run; stopping"; exit 1; }
@@ -110,42 +108,6 @@ run() { # SCRIPT ARG ANSWER...: ARG is --remove or empty; one answer per questio
     HOME=$T/home XDG_STATE_HOME='' DEBSWAY_TEST_ANSWERS=$T/answers bash "$R/extras/$script" ${arg:+"$arg"} >"$T/out" 2>&1
 }
 H=$T/home
-MIME=$H/.config/mimeapps.list
-
-run firefox-regular.sh '' '' ''
-P=$H/.mozilla/firefox/debsway-regular
-check "firefox-regular: its own profile, only yours" test "$(stat -c %a "$P")" = 700
-check "...with the friendly user.js" bash -c 'head -n "$(wc -l <"$1")" "$2" | cmp -s - "$1"' _ "$HERE/data/firefox-regular-user.js" "$P/user.js"
-check "uBlock: Enter (no) leaves Debian's shared copy out of this profile" grep -qx 'user_pref("extensions.enabledScopes", 5);' "$P/user.js"
-check "...and doesn't install it for this script" not grep -q webext-ublock "$T/calls"
-check "...the JIT back on there (for this profile only)" grep -qx 'user_pref("javascript.options.ion", true);' "$P/user.js"
-check "...the command, runs Firefox as you in that profile" grep -q 'exec /usr/bin/firefox-esr --profile "\$HOME/.mozilla/firefox/debsway-regular"' "$H/.local/bin/firefox-regular"
-check "...and the menu entry" test -f "$H/.local/share/applications/debsway-firefox-regular.desktop"
-check "...and a firefox-esr command (what Super+d offers) that opens the same profile" \
-    grep -q 'exec /usr/bin/firefox-esr --profile "\$HOME/.mozilla/firefox/debsway-regular" "\$@"' "$H/.local/bin/firefox-esr"
-mkdir -p "$T/ff"; printf '#!/bin/sh\necho "$@"\n' >"$T/ff/firefox-esr"; chmod +x "$T/ff/firefox-esr"
-ffargs() { sed "s|/usr/bin/firefox-esr|$T/ff/firefox-esr|g" "$H/.local/bin/firefox-esr" | HOME=$H sh -s -- "$@"; }
-check "...for a link too" test "$(ffargs https://x.example)" = "--profile $H/.mozilla/firefox/debsway-regular https://x.example"
-check "...but a profile you name is the one it opens" test "$(ffargs -P work)" = "-P work"
-check "...nothing system-wide written (the sandbox, hardening, incognito untouched)" not grep -qE '/etc/|/usr/local' "$T/calls"
-check "no default browser yet: Enter makes it the default" grep -qx 'x-scheme-handler/https=debsway-firefox-regular.desktop' "$MIME"
-printf '[Default Applications]\nx-scheme-handler/http=debsway-firefox.desktop\nx-scheme-handler/https=debsway-firefox.desktop\n' >"$MIME"
-run firefox-regular.sh '' y ''
-check "uBlock: y loads it in this profile" not grep -q 'extensions.enabledScopes' "$P/user.js"
-run firefox-regular.sh '' '' ''
-check "...and Enter on the next run keeps that answer" not grep -q 'extensions.enabledScopes' "$P/user.js"
-check "with the sandboxed Firefox the default, Enter keeps it" grep -qx 'x-scheme-handler/https=debsway-firefox.desktop' "$MIME"
-run firefox-regular.sh '' n y
-check "uBlock: n takes it out again" grep -qx 'user_pref("extensions.enabledScopes", 5);' "$P/user.js"
-check "...y switches links to firefox-regular" grep -qx 'x-scheme-handler/https=debsway-firefox-regular.desktop' "$MIME"
-echo 'user_pref("my.own", 1);' >"$P/user.js"
-run firefox-regular.sh '' '' n
-check "a user.js you wrote yourself stays" grep -qx 'user_pref("my.own", 1);' "$P/user.js"
-printf '[Default Applications]\nx-scheme-handler/https=debsway-firefox.desktop\ntext/html=debsway-firefox-regular.desktop\n' >"$MIME"
-run firefox-regular.sh --remove ''
-check "--remove: the commands and menu entry go" bash -c '[ ! -e "$1/.local/bin/firefox-regular" ] && [ ! -e "$1/.local/bin/firefox-esr" ] && [ ! -e "$1/.local/share/applications/debsway-firefox-regular.desktop" ]' _ "$H"
-check "...its defaults go, the sandboxed Firefox's stay" bash -c '! grep -q firefox-regular "$1" && grep -qx "x-scheme-handler/https=debsway-firefox.desktop" "$1"' _ "$MIME"
-check "...the profile stays unless you say so" test -d "$P"
 
 mkdir -p "$H/.claude"
 echo '{"permissions": {"deny": ["Read(~/mine)"]}}' >"$H/.claude/settings.json"
@@ -162,14 +124,5 @@ run claude-regular.sh --remove
 check "--remove: only debsway's settings go" jq_has "$H/.claude/settings.json" 'd == {"permissions": {"deny": ["Read(~/mine)"]}}'
 check "...the command goes, and the repository only if unused" bash -c '[ ! -e "$1/.local/bin/claude-regular" ] && grep -qx remove-repo-if-unused "$2"' _ "$H" "$T/calls"
 
-# the owner's New Tab page, in firefox-regular's own settings (it has them
-# without the sandboxed Firefox's system-wide ones): the fox, which Firefox
-# 140+ shows only with user.enabled, and no shortcuts, weather or search box
-check "firefox-regular's New Tab: the fox shown, no shortcuts, weather or search box (no logo)" bash -c '
-    for p in "newtabWallpapers.user.enabled\", true" "newtabWallpapers.enabled\", true" "newtabWallpapers.wallpaper\", \"dark-fox-anniversary\"" \
-             "feeds.topsites\", false" "showWeather\", false" "showSearch\", false"; do
-        grep -qF "browser.newtabpage.activity-stream.$p" "$1" || exit 1
-    done' _ "$HERE/data/firefox-regular-user.js"
-check "...and the sandboxed one shows its fox too (user.enabled)" grep -qF 'pref("browser.newtabpage.activity-stream.newtabWallpapers.user.enabled", true);' "$HERE/data/firefox-hardening.js"
 
 [ "$fails" -eq 0 ]

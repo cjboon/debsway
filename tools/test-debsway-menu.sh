@@ -206,15 +206,15 @@ check "...also with a click" grep -qx 'swaymsg exec foot' "$T/ran"
 check "no browser or editor installed: no lines for them" not grep -qE '^DREWAPPS.*(Web browser|Text editor)' <<<"$out"
 # A web browser and a text editor: the default browser (mimeapps.list) is the one opened
 mkdir -p "$T/apps" "$T/home/.config"
-for a in firefox firefox-regular firefox-esr mousepad; do printf '#!/bin/sh\n' >"$T/apps/$a"; chmod +x "$T/apps/$a"; done
-export DEBSWAY_MENU_BROWSERS="$T/apps/firefox $T/apps/firefox-regular $T/apps/firefox-esr" DEBSWAY_MENU_EDITORS="$T/apps/mousepad"
-printf '[Default Applications]\nx-scheme-handler/https=debsway-firefox-regular.desktop\n' >"$T/home/.config/mimeapps.list"
+for a in firefox firefox-esr mousepad; do printf '#!/bin/sh\n' >"$T/apps/$a"; chmod +x "$T/apps/$a"; done
+export DEBSWAY_MENU_BROWSERS="$T/apps/firefox-esr $T/apps/firefox" DEBSWAY_MENU_EDITORS="$T/apps/mousepad"
+printf '[Default Applications]\nx-scheme-handler/https=debsway-firefox.desktop\n' >"$T/home/.config/mimeapps.list"
 menu sway-browser
 check "inside sway: Web browser and Text editor, after Terminal" grep -q 'DREWAPPS Help|Terminal|Web browser|Text editor|Install apps' <<<"$out"
-check "...Web browser opens the default browser (here firefox-regular), through sway" grep -qx "swaymsg exec $T/apps/firefox-regular" "$T/ran"
+check "...Web browser opens the default browser (the sandboxed firefox, though listed second), through sway" grep -qx "swaymsg exec $T/apps/firefox" "$T/ran"
 rm "$T/home/.config/mimeapps.list"
 menu sway-browser
-check "...with no default set, the first one installed (the sandboxed firefox)" grep -qx "swaymsg exec $T/apps/firefox" "$T/ran"
+check "...with no default set, the first one installed" grep -qx "swaymsg exec $T/apps/firefox-esr" "$T/ran"
 menu sway-editor
 check "...Text editor opens Mousepad" grep -qx "swaymsg exec $T/apps/mousepad" "$T/ran"
 export DEBSWAY_MENU_EDITORS=/nonexistent

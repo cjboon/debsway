@@ -254,6 +254,12 @@ check "the status screen names this extra for Firefox" grep -qF 'echo "Firefox (
 for f in firefox-user.js incognito-user.js; do
     check "$f: WebRTC off (no direct connections a page opens)" grep -qx 'user_pref("media.peerconnection.enabled", false);' "$HERE/data/$f"
 done
-check "...but firefox-regular keeps it, for video calls" not grep -q 'peerconnection' "$HERE/data/firefox-regular-user.js"
+# the owner's New Tab page, for every sandboxed Firefox: the fox, which Firefox
+# 140+ shows only with user.enabled, and no shortcuts, weather or search box
+check "the New Tab page: the fox shown, no shortcuts, weather or search box (no logo)" bash -c '
+    for p in "newtabWallpapers.user.enabled\", true" "newtabWallpapers.enabled\", true" "newtabWallpapers.wallpaper\", \"dark-fox-anniversary\"" \
+             "feeds.topsites\", false" "showWeather\", false" "showSearch\", false"; do
+        grep -qF "pref(\"browser.newtabpage.activity-stream.$p" "$1" || exit 1
+    done' _ "$HERE/data/firefox-hardening.js"
 
 [ "$fails" -eq 0 ]

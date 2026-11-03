@@ -4,7 +4,7 @@
 # fingerprinting but without Tor. Meant for use with a VPN (Mullvad's or
 # another), and it forgets everything when closed. It's built on Tor
 # Browser, which runs on X11, so XWayland is installed. "-regular" as in
-# firefox-regular: it runs as you, with no sandbox from debsway.
+# claude-regular: it runs as you, with no sandbox from debsway.
 # Usage: bash mullvad-browser-regular.sh [--remove | --manual]
 # summary: Mullvad Browser, as you (no Tor: use a VPN)
 # security: some

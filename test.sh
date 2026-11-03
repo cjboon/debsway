@@ -300,7 +300,7 @@ else
 fi
 
 # --------------------------------------------------------------------
-section "Firefox and Claude Code as you (extras/*-regular.sh), next to the sandboxed ones"
+section "Claude Code as you (extras/claude-regular.sh), next to the sandboxed one"
 if out=$(bash tools/test-regular-extras.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") regular extras checks"
 else

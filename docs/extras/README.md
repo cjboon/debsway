@@ -24,7 +24,6 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 
 ## Browsing
 
-- [Firefox as you, with friendly defaults](firefox-regular.md)
 - [Firefox's hardening, and a throwaway window](firefox.md)
 - [Firefox as its own locked-down user](firefox-sandbox.md)
 - [One Firefox profile per site](firefox-profiles.md)

@@ -37,7 +37,7 @@ user_pref("webgl.disabled", true);
 user_pref("media.eme.enabled", false);
 // No WebRTC: no direct connections a page opens to other computers (they
 // can show your address, and are a lot of code to attack). Video calls
-// can't work here anyway, and firefox-regular keeps it.
+// can't work here anyway (no microphone or camera).
 user_pref("media.peerconnection.enabled", false);
 
 // No guessing ahead, no reports
