@@ -9,6 +9,7 @@
 # summary: GIMP image editor, in a sandbox
 # security: most
 # status: apt:gimp bin:gimp
+# files: bin/no-abstract-sockets
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
@@ -26,6 +27,7 @@ if [ "${1:-}" = --remove ]; then
         remove_bin media-sandbox
         [ -x /usr/local/bin/incognito ] || remove_bin wayland-restrict
     fi
+    remove_no_abstract
     apt_purge gimp bubblewrap
     note "Your GIMP settings stay in ~/.config/GIMP, your pictures in ~/Pictures."
     exit
@@ -36,6 +38,7 @@ say "Installing GIMP"
 apt_install gimp bubblewrap python3
 install_bin wayland-restrict
 install_bin media-sandbox
+install_no_abstract
 install_bin gimp
 mkdir -p "$HOME/Pictures" "$HOME/.config/GIMP"
 if [ -f /usr/share/applications/gimp.desktop ]; then

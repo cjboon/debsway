@@ -37,6 +37,9 @@ mpv starts with no sound set up, it says so once.
 sudo apt install --no-install-recommends imv mpv bubblewrap python3
 # The restricted Wayland socket, the sandbox, and the commands that use it
 for c in wayland-restrict media-sandbox imv mpv; do install -D -m 0755 @WREN_DIR@/bin/$c ~/.local/bin/$c; done
+# With a web address, the sandbox keeps the program off X11 with this wrapper
+sudo install -d -o root -g root -m 0755 /usr/local/libexec
+sudo install -o root -g root -m 0755 @WREN_DIR@/bin/no-abstract-sockets /usr/local/libexec/wren-no-abstract-sockets
 # ~/.local/bin must come before /usr/bin, so "mpv" is the sandboxed one:
 # this must print ~/.local/bin/mpv
 command -v mpv
@@ -49,6 +52,8 @@ To undo:
 rm ~/.local/bin/imv ~/.local/bin/mpv
 # Only if neither the PDF viewer nor incognito uses them: the sandbox and the socket
 rm ~/.local/bin/media-sandbox ~/.local/bin/wayland-restrict
+# (the no-abstract-sockets wrapper only if no other sandbox uses it)
+sudo rm /usr/local/libexec/wren-no-abstract-sockets
 # imv and mpv; bubblewrap is marked "automatic" instead of purged, since other
 # programs can need it: autoremove takes it out only if nothing does
 sudo apt purge imv mpv

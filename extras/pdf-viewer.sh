@@ -9,6 +9,7 @@
 # summary: zathura PDF viewer, in a sandbox
 # security: most
 # status: apt:zathura apt:zathura-pdf-poppler bin:zathura
+# files: bin/no-abstract-sockets
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
@@ -21,6 +22,7 @@ if [ "${1:-}" = --remove ]; then
         remove_bin media-sandbox
         [ -x /usr/local/bin/incognito ] || remove_bin wayland-restrict
     fi
+    remove_no_abstract
     apt_purge zathura zathura-pdf-poppler bubblewrap
     exit
 fi
@@ -29,6 +31,7 @@ say "Installing zathura"
 apt_install zathura zathura-pdf-poppler bubblewrap python3
 install_bin wayland-restrict
 install_bin media-sandbox
+install_no_abstract
 install_bin zathura
 set_default_app org.pwmt.zathura.desktop application/pdf
 

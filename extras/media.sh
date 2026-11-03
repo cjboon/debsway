@@ -8,6 +8,7 @@
 # summary: imv and mpv, each in a sandbox
 # security: most
 # status: apt:imv apt:mpv bin:imv bin:mpv bin:media-sandbox
+# files: bin/no-abstract-sockets
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
@@ -19,6 +20,7 @@ if [ "${1:-}" = --remove ]; then
     [ -f "$BIN/zathura" ] || [ -f "$BIN/gimp" ] || remove_bin media-sandbox
     # incognito needs wayland-restrict too
     [ -f "$BIN/media-sandbox" ] || [ -x /usr/local/bin/incognito ] || remove_bin wayland-restrict
+    remove_no_abstract
     apt_purge imv mpv bubblewrap
     exit
 fi
@@ -27,6 +29,7 @@ say "Installing imv and mpv"
 apt_install imv mpv bubblewrap python3
 install_bin wayland-restrict
 install_bin media-sandbox
+install_no_abstract
 install_bin imv
 install_bin mpv
 

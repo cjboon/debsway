@@ -38,6 +38,9 @@ sudo apt install --no-install-recommends gimp bubblewrap python3
 # The restricted Wayland socket, the sandbox, and the gimp command that uses it
 install -D -m 0755 @WREN_DIR@/bin/wayland-restrict ~/.local/bin/wayland-restrict
 install -D -m 0755 @WREN_DIR@/bin/media-sandbox ~/.local/bin/media-sandbox
+# With a web address, the sandbox keeps the program off X11 with this wrapper
+sudo install -d -o root -g root -m 0755 /usr/local/libexec
+sudo install -o root -g root -m 0755 @WREN_DIR@/bin/no-abstract-sockets /usr/local/libexec/wren-no-abstract-sockets
 install -D -m 0755 @WREN_DIR@/bin/gimp ~/.local/bin/gimp
 mkdir -p ~/Pictures ~/.config/GIMP
 # Its menu entry, starting the sandboxed gimp
@@ -52,6 +55,8 @@ To undo:
 rm ~/.local/bin/gimp ~/.local/share/applications/gimp.desktop
 # Only if neither the media extra (imv, mpv), the PDF viewer nor incognito uses them
 rm ~/.local/bin/media-sandbox ~/.local/bin/wayland-restrict
+# (the no-abstract-sockets wrapper only if no other sandbox uses it)
+sudo rm /usr/local/libexec/wren-no-abstract-sockets
 # GIMP; bubblewrap is marked "automatic" instead of purged, since other
 # programs can need it: autoremove takes it out only if nothing does
 sudo apt purge gimp

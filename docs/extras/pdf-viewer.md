@@ -36,6 +36,9 @@ sudo apt install --no-install-recommends zathura zathura-pdf-poppler bubblewrap 
 # The restricted Wayland socket, the sandbox, and the zathura command that uses it
 install -D -m 0755 @WREN_DIR@/bin/wayland-restrict ~/.local/bin/wayland-restrict
 install -D -m 0755 @WREN_DIR@/bin/media-sandbox ~/.local/bin/media-sandbox
+# With a web address, the sandbox keeps the program off X11 with this wrapper
+sudo install -d -o root -g root -m 0755 /usr/local/libexec
+sudo install -o root -g root -m 0755 @WREN_DIR@/bin/no-abstract-sockets /usr/local/libexec/wren-no-abstract-sockets
 install -D -m 0755 @WREN_DIR@/bin/zathura ~/.local/bin/zathura
 # Make it the default for PDFs (in ~/.config/mimeapps.list, under
 # [Default Applications], replacing an older default)
@@ -52,6 +55,8 @@ rm ~/.local/bin/zathura
 sed -i '/=org\.pwmt\.zathura\.desktop$/d' ~/.config/mimeapps.list
 # Only if neither the media extra (imv, mpv) nor incognito uses them: the sandbox and the socket
 rm ~/.local/bin/media-sandbox ~/.local/bin/wayland-restrict
+# (the no-abstract-sockets wrapper only if no other sandbox uses it)
+sudo rm /usr/local/libexec/wren-no-abstract-sockets
 # zathura; bubblewrap is marked "automatic" instead of purged, since other
 # programs can need it: autoremove takes it out only if nothing does
 sudo apt purge zathura zathura-pdf-poppler

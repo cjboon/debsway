@@ -25,7 +25,11 @@ echo x >"$T/video.mp4"
 export PATH="$T/fake:$PATH" HOME="$T/home" XDG_RUNTIME_DIR="$T/run" WAYLAND_DISPLAY=wayland-1
 : >"$T/run/wayland-1"
 
-run() { rm -f "$T/bwrap.args"; bash "$HERE/bin/media-sandbox" "$@"; }
+# (a copy that uses a pretend no-abstract-sockets wrapper, which writes down that it ran)
+printf '#!/bin/sh\necho wrapped >"%s/noabs.ran"\nexec "$@"\n' "$T" >"$T/fake/noabs"
+chmod +x "$T/fake/noabs"
+sed "s|/usr/local/libexec/wren-no-abstract-sockets|$T/fake/noabs|" "$HERE/bin/media-sandbox" >"$T/media-sandbox"
+run() { rm -f "$T/bwrap.args" "$T/noabs.ran"; bash "$T/media-sandbox" "$@"; }
 args() { cat "$T/bwrap.args"; }
 
 run mpv "$T/video.mp4"
@@ -35,6 +39,14 @@ check "the program gets the restricted socket, not the real one" not grep -qxF "
 
 run mpv https://example.org/v.mp4
 check "an https address turns the network on" grep -qx -e --share-net "$T/bwrap.args"
+check "...and then the program can't reach X11's abstract socket (the wrapper runs bubblewrap)" test -e "$T/noabs.ran"
+sed "s|/usr/local/libexec/wren-no-abstract-sockets|$T/nothing|" "$HERE/bin/media-sandbox" >"$T/media-sandbox-nowrap"
+rm -f "$T/bwrap.args"
+out=$(bash "$T/media-sandbox-nowrap" mpv https://example.org/v.mp4 2>&1)
+check "...without the wrapper a web address is refused, saying how to fix it, and nothing starts" \
+    bash -c '[[ $1 == *"wrenctl install media"* ]] && [ ! -e "$2" ]' _ "$out" "$T/bwrap.args"
+bash "$T/media-sandbox-nowrap" mpv "$T/video.mp4"
+check "...a file needs no wrapper (no network, so no way to that socket)" test -e "$T/bwrap.args"
 
 run mpv "file://$T/video.mp4"
 check "a file:// address is shown as the file" grep -qxF "$T/video.mp4" "$T/bwrap.args"
@@ -66,6 +78,11 @@ check "mpv, zathura, imv: no ~/Pictures" not grep -qxF "$T/home/Pictures" "$T/bw
 check "the gimp command runs GIMP through the sandbox, as the menu entry does" bash -c '
     grep -qx "exec \"\$HOME/.local/bin/media-sandbox\" /usr/bin/gimp-3.0 \"\$@\"" "$1" &&
     grep -q "s|^Exec=gimp-3.0|Exec=\$BIN/gimp|" "$2"' _ "$HERE/bin/gimp" "$HERE/extras/gimp.sh"
+for e in media pdf-viewer gimp; do
+    check "extras/$e.sh installs the wrapper, as root's, and update.sh knows it uses it" \
+        bash -c 'grep -qx "install_no_abstract" "$1" && grep -q "^# files:.*bin/no-abstract-sockets" "$1" && grep -q "remove_no_abstract" "$1"' _ "$HERE/extras/$e.sh"
+    check "...its manual steps too" grep -q 'wren-no-abstract-sockets' "$HERE/docs/extras/$e.md"
+done
 check "the media and PDF extras keep the sandbox while GIMP uses it" bash -c 'grep -q "BIN/gimp" "$1" && grep -q "BIN/gimp" "$2"' _ "$HERE/extras/media.sh" "$HERE/extras/pdf-viewer.sh"
 
 [ "$fails" -eq 0 ]

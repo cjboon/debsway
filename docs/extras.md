@@ -387,7 +387,8 @@ DNS off only while it is open. What `parts/incognito.sh` sets up:
 - **No way into X11**: XWayland (installed for Tor Browser, Feather and
   other X11-only apps) listens on an "abstract" socket that every user on
   the computer can connect to, and anyone connected to X11 can read its
-  windows and type into them. `incognito`, `claude` and `claude-vm` start
+  windows and type into them. `incognito`, `claude`, `claude-vm`, the sandboxed
+  Firefox, the onion site, `yt-dlp` and a media viewer given a web address start
   through `/usr/local/libexec/wren-no-abstract-sockets`, which uses the
   kernel's Landlock (Linux 6.12 or newer, Debian 13's own) to stop them
   connecting to abstract sockets made outside them. Files, the network and

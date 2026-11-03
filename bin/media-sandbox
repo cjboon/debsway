@@ -8,7 +8,9 @@
 # gets ~/Pictures read-write, its own settings (~/.config/GIMP) and ~/Downloads
 # read-only, and never the network.
 # It gets a restricted Wayland socket (bin/wayland-restrict), not your real
-# one: sway doesn't offer it the screen-reading or typing protocols.
+# one: sway doesn't offer it the screen-reading or typing protocols. With the
+# network it shares this computer's network namespace, where XWayland's abstract
+# socket can be reached, so it then starts through wren-no-abstract-sockets.
 # Set WREN_NO_SANDBOX=1 to run the program plainly.
 set -euo pipefail
 
@@ -65,6 +67,7 @@ fi
 
 # every file or folder named on the command line, read-only; a URL (other than
 # file://) gives mpv the network
+network=false
 newargs=()
 for a in "$@"; do
     # file:///path is a file, not the network: treat it as the path
@@ -73,7 +76,7 @@ for a in "$@"; do
         # an option that points at a file:// address gets no network either
         -*=file://*) newargs+=("$a") ;;
         # (never for GIMP: it has no business on the network)
-        *://*) $gimp || args+=(--share-net --ro-bind-try /etc/ssl /etc/ssl); newargs+=("$a") ;;
+        *://*) $gimp || { network=true; args+=(--share-net --ro-bind-try /etc/ssl /etc/ssl); }; newargs+=("$a") ;;
         # an option can name a file too (mpv --sub-file=subs.srt)
         -*=*)
             v=${a#*=}
@@ -100,7 +103,15 @@ for a in "$@"; do
     esac
 done
 
+# With the network, never without the wrapper (a sandbox from before it was added)
+wrapper=()
+if $network; then
+    noabs=/usr/local/libexec/wren-no-abstract-sockets
+    [ -x "$noabs" ] || die "$noabs is missing, and it's needed for a web address. Run: wrenctl install media"
+    wrapper=("$noabs")
+fi
+
 # not exec: the restricted socket has to stay up while the program runs
 rc=0
-bwrap "${args[@]}" -- "$cmd" "${newargs[@]}" || rc=$?
+"${wrapper[@]}" bwrap "${args[@]}" -- "$cmd" "${newargs[@]}" || rc=$?
 exit "$rc"
