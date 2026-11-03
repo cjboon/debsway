@@ -175,6 +175,9 @@ if __name__ == "__main__":
         "vault-closed": [click_on("Vault: closed"), "\r", "\x1b"],
         "vault-open": [click_on("Vault: open"), "\x1b"],
         "backup": [click_on("Back up now"), "\r", "\x1b"],
+        "sway-switches-space": ["k", " ", "\r", "\x1b"],
+        "sway-securedns-click": [click_on("Secure DNS"), "\r", "\x1b"],
+        "sway-theme-click": [click_on("Theme"), "\x1b"],
     }
     drawn, status = run(script, env, scenarios[scenario])
     if len(sys.argv) > 7:
@@ -269,6 +272,27 @@ menu vault-open
 check "Vault: open, chosen: it closes, and the menu stays" bash -c 'grep -qx "vault close" "$1" && [ ! -e "$2" ]' _ "$T/ran" "$T/vault-open"
 menu backup
 check "Back up now runs backup in the window" grep -qx 'backup ' "$T/ran"
+# The theme and secure DNS switches: each only when installed, last in the list
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+printf '#!/bin/sh\necho "theme $*" >>"%s/ran"\n[ -n "$1" ] || echo "Theme: light"\n' "$T" >"$T/apps/theme"
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+printf '#!/bin/sh\necho "secure-dns $*" >>"%s/ran"\n[ "$1" != status ] || echo off\n' "$T" >"$T/apps/secure-dns"
+chmod +x "$T/apps/theme" "$T/apps/secure-dns"
+DEBSWAY_MENU_APPS="$DEBSWAY_MENU_APPS $T/apps/theme $T/apps/secure-dns"
+: >"$T/ran"
+menu sway-switches-space
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+check "inside sway the Theme and Secure DNS lines are listed, with their state" bash -c 'grep -q "Theme: Light" "$1" && grep -q "Secure DNS: off" "$1"' _ "$T/screen"
+check "Space on Secure DNS (the last line) switches it, in the window" grep -qx "secure-dns toggle" "$T/ran"
+: >"$T/ran"
+menu sway-securedns-click
+check "...a click on it too" grep -qx "secure-dns toggle" "$T/ran"
+: >"$T/ran"
+menu sway-theme-click
+check "a click on Theme switches the theme" grep -qx "theme toggle" "$T/ran"
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+check "the menu looks for theme and secure-dns where they are installed" bash -c '
+    grep "^APPS=" "$1" | grep -q "\$HOME/.local/bin/theme \$HOME/.local/bin/secure-dns}"' _ "$HERE/bin/debsway-menu"
 unset DEBSWAY_MENU_APPS
 rm -f "$T/fake/swaymsg"
 menu enter

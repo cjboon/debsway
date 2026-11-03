@@ -64,7 +64,7 @@ checked with `sway -C` before it's kept.
 | `wallpaper.sh` | (none) | Your own wallpaper: the newest JPEG or PNG in `~/Pictures/debsway/desktop` goes up at every login and sway reload (Super+Shift+c); with the folder empty, your sway config's own `output * bg` line or sway's plain background stays. Super+] and Super+[ step through `~/Pictures/Wallpapers` as the wallpaper and Super+Shift+w lists it by name, with "0  No wallpaper" first (wmenu; the one chosen is copied into the desktop folder, so it stays), and Super+\ goes back to no wallpaper (the theme's plain background, until you choose one or copy in a newer picture). A JPEG or PNG in `~/Pictures/debsway/firefox` is the sandboxed Firefox's New Tab background instead of the fox (a checked copy is handed over at each start: Firefox never sees the folder). `wallpaper status` says which picture is used and why a file isn't (a file that only says it is a JPEG or PNG, over 50 MB). sway gets a link named with digits, never your file name. `extras/wallpapers.sh` fills `~/Pictures/Wallpapers` with pictures from NASA, ESA's Webb, NASA Earth Observatory and Budgie to choose from, or sets it up for your own |
 | `theme.sh` | (none) | Light or dark, from one place (`theme light`, `theme dark`, `theme toggle`, or the debsway menu's Theme line; dark is the default and debsway's look as before). Light has warm light backgrounds (#f2efe9) and dark text: the bar (see-through), the plain background with no wallpaper, foot, the debsway menu and its lists, nmtui, the launcher (Super+d), the power menu, notifications and the lock screen; GTK apps prefer light too (`settings.ini` for GTK 3 and 4, and the color-scheme setting libadwaita apps read, through `gsettings`), and the sandboxed Firefox and incognito take Firefox's light or dark theme at their next start, websites that offer one their light or dark version, and the light or dark fox. The colors are `data/themes/dark` and `light`, read strictly (colors only); only debsway's own foot.ini and mako config are changed. Windows open now keep their colors until they open again; the text console (tmux) stays dark. The lock screen falls back to black if the theme can't say |
 | `console-tmux.sh` | tmux | tmux dressed like the desktop, always installed: `~/.config/tmux/tmux.conf` (plain settings) loads `console.conf` (the bar on top: workspace numbers, then debsway, wifi, vol, bright, bat, timer, date, with the same clicks and scrolls; black and gray; Alt+1 … Alt+0 workspaces, Alt+Shift+1 … sends the pane, Alt+m the debsway menu) only on a text console, so a tmux in a foot window under sway stays plain. `console-click` handles the bar clicks. The console-only extra starts it at login |
-| `debsway-menu.sh` | wmenu, rfkill | `debsway-menu`: click "debsway" at the left of the bar, or press Super+m (again closes it), for a black-and-gray menu in a floating window over what you were doing (arrows and Enter, or click; Space flips a switch; Esc closes every screen, the install list and the help page included) with Help (the key cheat sheet, in the menu's own pager, which also opens on Super+?), Terminal (a terminal window, as Super+Enter opens; only inside sway), Web browser (the one links open in, or the first installed), Text editor (Mousepad), File manager (Thunar), Password manager (KeePassXC), Mail (Tuta), Signal, SimpleX, Claude and opencode (opencode-vm) (claude-vm, else the sandboxed claude in `~/projects`, else claude-regular, in a window of its own), each only inside sway and only when installed, Back up now (with the backup extra), Install apps (`install-extras.sh`, its list in grays too, in three groups: most secure, somewhat secure, least secure; a click checks a box, the wheel scrolls, and the arrow keys go round from the last line to the first), Remove apps (`install-extras.sh --remove`: only what is installed; what you check is removed with its own `--remove`, after a question), Update (`update.sh`) and Status (`status.sh`), then the switches with their state: Wi-Fi, Bluetooth (with the Bluetooth extra), Microphone, Webcam and, with the vault extra, Vault (choosing it closes it, or asks for its password and opens it for an hour). What you pick runs in that window, which closes when it ends; the install and update screens wait for Enter first if they did something |
+| `debsway-menu.sh` | wmenu, rfkill | `debsway-menu`: click "debsway" at the left of the bar, or press Super+m (again closes it), for a black-and-gray menu in a floating window over what you were doing (arrows and Enter, or click; Space flips a switch; Esc closes every screen, the install list and the help page included) with Help (the key cheat sheet, in the menu's own pager, which also opens on Super+?), Terminal (a terminal window, as Super+Enter opens; only inside sway), Web browser (the one links open in, or the first installed), Text editor (Mousepad), File manager (Thunar), Password manager (KeePassXC), Mail (Tuta), Signal, SimpleX, Claude and opencode (opencode-vm) (claude-vm, else the sandboxed claude in `~/projects`, else claude-regular, in a window of its own), each only inside sway and only when installed, Back up now (with the backup extra), Install apps (`install-extras.sh`, its list in grays too, in three groups: most secure, somewhat secure, least secure; a click checks a box, the wheel scrolls, and the arrow keys go round from the last line to the first), Remove apps (`install-extras.sh --remove`: only what is installed; what you check is removed with its own `--remove`, after a question), Update (`update.sh`) and Status (`status.sh`), then the switches with their state: Wi-Fi, Bluetooth (with the Bluetooth extra), Microphone, Webcam, with the vault extra Vault (choosing it closes it, or asks for its password and opens it for an hour), Theme (light or dark; inside sway) and Secure DNS (off for a Wi-Fi sign-in page, on again after). What you pick runs in that window, which closes when it ends; the install and update screens wait for Enter first if they did something |
 | `power-menu.sh` | wmenu | `powermenu`: lock, suspend, log out, reboot or power off from a small menu on Super+Shift+Escape |
 | `needrestart.sh` | needrestart, libnotify-bin | After every update, lists the running programs that still use outdated libraries (list only: it never restarts anything). Check any time: `sudo needrestart` |
 | `sysctl-hardening.sh` | (none) | Kernel and network settings in the spirit of Kicksecure (`data/sysctl-hardening.conf`): kernel addresses hidden, only your own child programs can be traced, no kexec, SysRq limited, stricter file and network defaults. Applies now and at every boot. See [Kernel hardening](#kernel-hardening) |
@@ -75,6 +75,7 @@ checked with `sway -C` before it's kept.
 | `power-profiles-daemon.sh` | power-profiles-daemon | `powerprofilesctl set power-saver \| balanced \| performance` (skips itself if tlp is installed) |
 | `network-manager.sh` | network-manager, wpasupplicant, wireless-regdb, polkitd | Moves the Wi-Fi from the installer or wifi.sh into NetworkManager; `nmtui` (in debsway's white-on-black colors, like the install list; your own `NEWT_COLORS` wins) to switch networks |
 | `usb.sh` | udisks2, polkitd | The `usb` command: `usb` lists sticks, `usb mount [NAME]` mounts one as you under `/media/$USER/` (`nosuid,nodev,noexec`; FAT, exFAT and NTFS readable by you alone; an encrypted one asks for its passphrase), `usb unmount` unmounts, locks and switches it off. A FAT stick mounted with `sudo mount` is root's, so you can't write to it: `usb mount` offers to mount it again as you. Nothing mounts by itself (that is `extras/udiskie.sh`) |
+| `secure-dns.sh` | unbound, dns-root-data, nftables | Encrypted DNS: Unbound on this computer checks every answer with DNSSEC and asks the resolver you pick (Enter: Quad9) over DNS over TLS; a firewall rule lets only Unbound send DNS out. A switch for Wi-Fi sign-in pages: the debsway menu's Secure DNS line, or `secure-dns on`/`off`. See [Encrypted DNS](#encrypted-dns-with-a-switch-partssecure-dnssh) |
 | `random-mac.sh` | (NetworkManager) | A made-up Wi-Fi MAC address on every connection and while scanning, no computer name sent to the network, temporary IPv6 addresses: networks can't recognise the laptop from place to place |
 
 **USB drives and `noexec`:** a drive can't run programs from itself
@@ -85,6 +86,68 @@ checked with `sway -C` before it's kept.
 ask again after reconnecting, and your home router sees a new device
 each time. For one made-up address per network instead, change `random`
 to `stable` in `/etc/NetworkManager/conf.d/90-debsway-random-mac.conf`.
+
+## Encrypted DNS, with a switch (`parts/secure-dns.sh`)
+
+Without it, every name the computer looks up goes unencrypted to the DNS server
+the network hands out (usually the router): the network and your ISP see each
+one and anyone on the way can answer falsely. With it:
+
+- **Unbound** runs on this computer, answering only `127.0.0.1`, and
+  `/etc/resolv.conf` points at it. It checks every answer with **DNSSEC**
+  (Debian's own root key, `dns-root-data`): an answer proven false is refused.
+- It asks **one resolver you choose**, over **DNS over TLS** (port 853), and
+  only if that resolver's certificate is for its name. The choices are in
+  `pins.sh` (`DOT_*`), each checked against its own site:
+
+  | Resolver | Where, who | Notes |
+  |---|---|---|
+  | `dns.quad9.net` | Switzerland, the Quad9 Foundation | also blocks known malware sites |
+  | `dns.digitale-gesellschaft.ch` | Switzerland, an association | no filtering; says it logs no queries |
+  | `dot1.applied-privacy.net` | Austria, the Foundation for Applied Privacy | no filtering; one server |
+
+  The resolver sees the names you look up; your network and ISP no longer
+  do. Enter picks Quad9, the one Firefox uses for its own when this is
+  switched off. (Mullvad's public DNS isn't offered: it
+  shuts down on 2 November 2026. Mullvad VPN's own DNS, inside the tunnel,
+  is a different thing and keeps working.)
+- **It fails closed.** A firewall rule (`data/secure-dns-firewall.nft`) lets
+  only Unbound send DNS out (ports 53 and 853), so a program that asks another
+  DNS server itself is refused, and if the resolver can't be reached names stop
+  resolving rather than going out unencrypted. That holds for the sandboxes
+  too: the sandboxed Claude's users and the VMs (claude-vm, opencode-vm, and
+  their accounts) can only ask Unbound while it is on.
+- NetworkManager (`dns=none`), dhclient, dhcpcd and `wifi.sh` stop rewriting
+  `/etc/resolv.conf`. The old one is kept as `/etc/resolv.conf.debsway-secure-dns.bak`.
+- **A VPN:** Mullvad VPN points `/etc/resolv.conf` at its own DNS server inside
+  its tunnel while connected, and the firewall rule lets tunnels (`wg*`,
+  `tun*`) through; when it disconnects, Unbound takes over again.
+- **The switch.** Wi-Fi sign-in pages (cafés, hotels, trains) need the
+  network's own DNS, so they don't work while it's on: switch it off in the
+  debsway menu (the Secure DNS line: Space or Enter) or with `secure-dns off`,
+  sign in, and switch it on again (`secure-dns on`). Switching on checks that
+  names resolve first and stays off if they don't. Your user may switch it
+  without a password: a sudo rule allows exactly `on` and `off` of the switch
+  script (`bin/secure-dns-switch`), so a program running as you could switch
+  it off too (Status then says so).
+- **While it is off**, other programs use the network's DNS, unencrypted.
+  debsway's Firefox encrypts its own instead (DNS over HTTPS to Quad9; its
+  policy follows the switch at its next start): strict by default, so a
+  sign-in page doesn't load in Firefox even then, unless "fallback" was
+  chosen at the sandboxed Firefox's install.
+- **DNS over HTTPS** looks like any web traffic, so no firewall can stop it.
+  Firefox's own is off while this is on; Mullvad Browser keeps its own.
+
+It is part of the base install and switches on the first time. Something
+else running DNS here (systemd-resolved, resolvconf, another server on port
+53) makes it skip itself with a note. Run it again to pick another resolver;
+a re-run keeps the switch where you left it. `bash status.sh` shows whether
+it is on and which resolver is in use. `--remove` takes it out.
+
+LIMITS: the resolver you choose sees every name you look up, from your
+address; the sites you then connect to are still seen by your network (by
+address, and usually by name in the TLS handshake); a computer whose clock is
+far off can't check DNSSEC, so names stop resolving until the clock is right.
 
 ## Kernel hardening
 

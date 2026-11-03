@@ -115,7 +115,7 @@ MULLVAD_KEY_URL=https://repository.mullvad.net/deb/mullvad-keyring.asc
 # checked: 2026-10-27  Tor Browser 15.0.26
 SNOWFLAKE_BRIDGES_SOURCE="Tor Browser 15.0.26 pt_config.json"
 
-# DNS-over-TLS resolvers that extras/secure-dns.sh offers (lib/secure-dns.sh
+# DNS-over-TLS resolvers that parts/secure-dns.sh offers (lib/secure-dns.sh
 # says what each one is): the name its certificate must carry, then its
 # addresses. Checked against the provider's own page, and with openssl on port
 # 853 that the certificate matches the name (IPv4 addresses; IPv6 wasn't

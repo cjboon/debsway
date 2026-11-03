@@ -22,7 +22,7 @@ updates. It runs on X11, so XWayland is installed.
 - It doesn't hide your address: without a VPN, sites see it and your network sees where you go.
 - It isn't Tor, and hiding your address doesn't hide who you are to a site you log in to.
 - It runs as you, with no sandbox from debsway (the sandboxed Firefox and `incognito` are that).
-- It keeps its own DNS over HTTPS, which `extras/secure-dns.sh` can't stop.
+- It keeps its own DNS over HTTPS, which secure DNS (`parts/secure-dns.sh`) can't stop.
 
 ## MANUAL INSTALL
 

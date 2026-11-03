@@ -38,7 +38,6 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 
 ## Anonymity and network privacy
 
-- [Encrypted, checked DNS](secure-dns.md)
 - [Mullvad VPN](mullvad-vpn.md)
 - [Whonix, Tor in a virtual machine](whonix.md)
 - [Share files over Tor with OnionShare](onionshare.md)

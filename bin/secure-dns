@@ -1,0 +1,24 @@
+#!/bin/bash
+# secure-dns [status|on|off|toggle]: written by debsway parts/secure-dns.sh
+# Encrypted DNS (Unbound, DNSSEC, DNS over TLS) on or off. Off is for Wi-Fi
+# with a sign-in page (cafés, hotels, trains): sign in, then switch it on
+# again. While it is off, debsway's Firefox encrypts its own lookups. The
+# debsway menu's Secure DNS line does the same.
+set -euo pipefail
+
+SWITCH=/usr/local/libexec/debsway-secure-dns
+RESOLV=${DEBSWAY_RESOLV_CONF:-/etc/resolv.conf}
+die() { printf 'secure-dns: %s\n' "$*" >&2; exit 1; }
+
+state() { if grep -qsE '^# Written by debsway (parts|extras)/secure-dns\.sh' "$RESOLV"; then echo on; else echo off; fi; }
+
+cmd=${1:-status}
+[ "$cmd" != toggle ] || { if [ "$(state)" = on ]; then cmd=off; else cmd=on; fi; }
+case $cmd in
+    status) state ;;
+    on | off)
+        [ -x "$SWITCH" ] || die "it isn't set up. Run: bash ~/debsway/parts/secure-dns.sh"
+        exec sudo -n "$SWITCH" "$cmd" ;;
+    -h | --help) sed -n '2,6p' "$0" | sed 's/^# \{0,1\}//' ;;
+    *) die "usage: secure-dns [status|on|off|toggle]" ;;
+esac

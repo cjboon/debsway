@@ -13,7 +13,7 @@
 #                   for apt (through socat, one connection at a time)
 # Tor reaches the site through 127.0.0.1:18080, which this user listens on;
 # the answers are "established" connections and pass.
-# DNS stays open (it goes to your resolver, or Unbound with extras/secure-dns.sh).
+# DNS stays open (it goes to your resolver, or Unbound while secure DNS is on).
 
 table inet debsway_onion_site
 delete table inet debsway_onion_site

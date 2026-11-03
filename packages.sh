@@ -15,4 +15,4 @@ PKGS=(sway foot libgl1-mesa-dri gpg age diceware)
 PARTS=(core-commands clock no-live-extras unattended-upgrades wmenu swaylock swayidle brightnessctl
     wl-clipboard mako foot-config wallpaper theme ufw power-profiles-daemon
     power-menu debsway-menu console-tmux needrestart sysctl-hardening module-blacklist boot-hardening grub-colors
-    network-manager random-mac usb)
+    network-manager secure-dns random-mac usb)

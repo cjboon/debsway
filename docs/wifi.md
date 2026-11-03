@@ -37,7 +37,7 @@ added, or that isn't Debian's, stops the installation. `bash
 prep/fetch-offline-debs.sh --check` refreshes the lists and checks what you
 have saved; `bash test.sh` also checks it, without internet.
 
-While `extras/secure-dns.sh` is on, `wifi.sh` leaves `/etc/resolv.conf` alone
+While secure DNS (`parts/secure-dns.sh`) is switched on, `wifi.sh` leaves `/etc/resolv.conf` alone
 (it points at Unbound on this computer), and `wifi.sh --remove` doesn't put its
 old copy back over it.
 

@@ -30,8 +30,8 @@ it is where many browser attacks happen), sound (default yes), whether it is
 your default browser, so links from other programs open in it (default yes),
 and uBlock Origin's mode: medium (default: other sites' scripts blocked too;
 you allow sites with `ublock-allow`) or standard (ads, trackers and malware
-sites blocked, sites work), and, for when the secure DNS extra isn't
-installed, Firefox's own encrypted DNS to Quad9: strict (default: never plain
+sites blocked, sites work), and, for when secure DNS is switched
+off, Firefox's own encrypted DNS to Quad9: strict (default: never plain
 DNS) or with fallback to the network's; and whether its cookies, site data
 and cache are deleted when it closes (default delete), so websites and the
 ad and tracker companies behind them can't recognise you from one visit to
@@ -51,7 +51,7 @@ with `extras/firefox-profiles/new-profile.sh` each get a user like it.
 
 ## LIMITS
 
-- Without the secure DNS extra, and with strict DNS (the default), a Wi-Fi sign-in page (cafés, hotels) won't load in any of debsway's Firefoxes, and on a network that blocks encrypted DNS no site will: run this again and choose fallback, or install the secure DNS extra.
+- With secure DNS switched off, and with strict DNS (the default), a Wi-Fi sign-in page (cafés, hotels) won't load in any of debsway's Firefoxes, and on a network that blocks encrypted DNS no site will: run this again and choose fallback.
 - What lands in `~/Downloads` comes from the web: treat it as untrusted.
 - With cookies deleted on close (the default), every site logs you out when Firefox closes, and a few forget settings or ask about cookies again; allow the sites you want to stay logged in to under Manage Exceptions, or choose keep.
 - The clipboard is shared while its window has focus.

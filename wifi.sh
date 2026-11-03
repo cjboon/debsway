@@ -163,7 +163,7 @@ unblock_wifi() {
 
 set_dns() {
     [ $# -gt 0 ] || return 0
-    # extras/secure-dns.sh points it at Unbound, which asks over an encrypted
+    # parts/secure-dns.sh's switch points it at Unbound, which asks over an encrypted
     # connection; the network's DNS server would go around that (and be refused)
     secure_dns_on && return 0
     # A symlinked resolv.conf belongs to resolved or similar; leave it
@@ -213,8 +213,9 @@ case "$1" in
             ip route del default dev "$interface" 2>/dev/null
             ip route add default via "${router%% *}" dev "$interface"
         fi
-        # (not while extras/secure-dns.sh points it at Unbound)
-        if [ -n "$dns" ] && [ ! -L /etc/resolv.conf ] && [ ! -e /etc/unbound/unbound.conf.d/debsway-secure-dns.conf ]; then
+        # (not while secure DNS, parts/secure-dns.sh, points it at Unbound)
+        if [ -n "$dns" ] && [ ! -L /etc/resolv.conf ] &&
+            ! grep -qE '^# Written by debsway (parts|extras)/secure-dns\.sh' /etc/resolv.conf 2>/dev/null; then
             : >/etc/resolv.conf
             for d in $dns; do echo "nameserver $d" >>/etc/resolv.conf; done
         fi ;;

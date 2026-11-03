@@ -1,0 +1,151 @@
+#!/bin/bash
+# secure-dns-switch on|off|status: written by debsway parts/secure-dns.sh
+# Installed as /usr/local/libexec/debsway-secure-dns, run as root. Your user
+# may run "on" and "off" without a password (a rule in /etc/sudoers.d): the
+# debsway menu's Secure DNS line and the secure-dns command use it.
+#   on      every lookup goes to Unbound on this computer (encrypted, checked
+#           with DNSSEC), and a firewall rule lets only Unbound send DNS out.
+#           If names don't resolve that way (a Wi-Fi sign-in page, port 853
+#           blocked), it switches off again and says so.
+#   off     DNS goes to the network's own server again, unencrypted: for Wi-Fi
+#           with a sign-in page. Firefox then encrypts its own lookups (its
+#           policy, written by ublock-allow, follows at its next start).
+#   status  on or off
+set -euo pipefail
+umask 022
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+RESOLV=/etc/resolv.conf
+BACKUP=/etc/resolv.conf.debsway-secure-dns.bak
+CONF=/etc/unbound/unbound.conf.d/debsway-secure-dns.conf
+NM_CONF=/etc/NetworkManager/conf.d/90-debsway-secure-dns.conf
+DHCLIENT_HOOK=/etc/dhcp/dhclient-enter-hooks.d/debsway-secure-dns
+DHCPCD_CONF=/etc/dhcpcd.conf
+DHCPCD_BEGIN='# >>> debsway secure-dns >>>'
+DHCPCD_END='# <<< debsway secure-dns <<<'
+UNIT=debsway-secure-dns-firewall.service
+# What /etc/resolv.conf says while it is on (an older debsway wrote "extras/")
+MARK='^# Written by debsway (parts|extras)/secure-dns\.sh'
+
+say() { printf 'secure-dns: %s\n' "$*"; }
+die() { printf 'secure-dns: %s\n' "$*" >&2; exit 1; }
+
+is_on() { grep -qsE "$MARK" "$RESOLV" && [ ! -L "$RESOLV" ]; }
+
+reload_nm() {
+    if systemctl is-active --quiet NetworkManager; then nmcli general reload conf >/dev/null 2>&1 || true; fi
+}
+
+# The things that would rewrite /etc/resolv.conf with the network's DNS server
+keep_hands_off() {
+    printf '%s\n' '# Written by debsway parts/secure-dns.sh: NetworkManager leaves' \
+        '# /etc/resolv.conf alone; it points at Unbound on this computer.' \
+        '[main]' 'dns=none' 'rc-manager=unmanaged' |
+        install -D -m 0644 /dev/stdin "$NM_CONF"
+    # dhclient (ifupdown's wired connections) calls make_resolv_conf; an enter
+    # hook can replace it with nothing
+    printf '%s\n' '# Written by debsway parts/secure-dns.sh: leave /etc/resolv.conf alone;' \
+        '# it points at Unbound on this computer.' 'make_resolv_conf() { :; }' |
+        install -D -m 0644 /dev/stdin "$DHCLIENT_HOOK"
+    if [ -f "$DHCPCD_CONF" ] && ! grep -qxF "$DHCPCD_BEGIN" "$DHCPCD_CONF"; then
+        printf '%s\n' "$DHCPCD_BEGIN" 'nohook resolv.conf' "$DHCPCD_END" >>"$DHCPCD_CONF"
+    fi
+    reload_nm
+}
+
+hands_back() {
+    rm -f "$NM_CONF" "$DHCLIENT_HOOK"
+    if [ -f "$DHCPCD_CONF" ]; then
+        sed -i "\\|^$DHCPCD_BEGIN\$|,\\|^$DHCPCD_END\$|d" "$DHCPCD_CONF"
+    fi
+    reload_nm
+}
+
+# resolv.conf back as it was, or (no copy) NetworkManager writes it again
+resolv_back() {
+    if [ -e "$BACKUP" ]; then
+        mv "$BACKUP" "$RESOLV"
+    elif is_on; then
+        rm -f "$RESOLV"
+        if systemctl is-active --quiet NetworkManager; then
+            nmcli general reload dns-full >/dev/null 2>&1 || systemctl restart NetworkManager
+        else
+            say "There was no copy of the old $RESOLV: no DNS server until this computer reconnects."
+        fi
+    fi
+}
+
+firewall_on() { systemctl enable "$UNIT" >/dev/null 2>&1 && systemctl restart "$UNIT"; }
+firewall_off() {
+    systemctl disable --now "$UNIT" >/dev/null 2>&1 || true
+    nft delete table inet debsway_secure_dns 2>/dev/null || true
+}
+
+# resolves: names work now (a few tries: Unbound may still be connecting)
+resolves() {
+    local i
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+        getent hosts deb.debian.org >/dev/null 2>&1 && return 0
+        [ "$i" = 10 ] || sleep 2
+    done
+    return 1
+}
+
+# others_follow: debsway's Firefox uses the system's DNS while this is on and
+# encrypts its own while it is off (its policy; it follows at its next start)
+others_follow() {
+    if [ -x /usr/local/bin/ublock-allow ]; then
+        /usr/local/bin/ublock-allow --refresh >/dev/null 2>&1 ||
+            say "Couldn't write Firefox's DNS policy again: sudo ublock-allow --refresh"
+    fi
+}
+
+switch_off() {
+    firewall_off
+    hands_back
+    resolv_back
+}
+
+[ "$(id -u)" = 0 ] || die "this runs as root (the secure-dns command calls it through sudo)."
+[ $# = 1 ] || die "usage: secure-dns-switch on|off|status"
+
+case $1 in
+    status)
+        if is_on; then echo on; else echo off; fi ;;
+    off)
+        if ! is_on; then
+            say "already off."
+            exit 0
+        fi
+        switch_off
+        others_follow
+        say "off: DNS goes to the network's own server, unencrypted. Firefox encrypts its own (restart it)." ;;
+    on)
+        [ -f "$CONF" ] || die "Unbound isn't set up for it: bash ~/debsway/parts/secure-dns.sh"
+        [ ! -L "$RESOLV" ] || die "$RESOLV is a link ($(readlink "$RESOLV")): something else runs DNS here."
+        if is_on; then
+            say "already on."
+            exit 0
+        fi
+        systemctl is-active --quiet unbound || systemctl restart unbound ||
+            die "Unbound didn't start (journalctl -u unbound says why); DNS stays as it was."
+        # A copy of what is there now, to put back when it is switched off
+        if [ -e "$RESOLV" ]; then cp -a "$RESOLV" "$BACKUP"; fi
+        keep_hands_off
+        printf '%s\n' '# Written by debsway parts/secure-dns.sh. Every name goes to Unbound on this' \
+            '# computer, which asks your chosen resolver over an encrypted connection.' \
+            'nameserver 127.0.0.1' 'options edns0 trust-ad' >"$RESOLV.debsway-new"
+        chmod 0644 "$RESOLV.debsway-new"
+        mv "$RESOLV.debsway-new" "$RESOLV"
+        if ! resolves; then
+            switch_off
+            die "names don't resolve through the encrypted resolver (a Wi-Fi sign-in page, port 853 blocked, or the resolver is down), so it stays off. Try again once you are signed in."
+        fi
+        if ! firewall_on || ! resolves; then
+            firewall_off
+            say "the firewall rule that keeps DNS from going around Unbound didn't load; encrypted DNS is on without it (systemctl status $UNIT)."
+        fi
+        others_follow
+        say "on: every lookup goes to Unbound, encrypted and checked with DNSSEC. Restart Firefox to follow." ;;
+    *) die "usage: secure-dns-switch on|off|status" ;;
+esac

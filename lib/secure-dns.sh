@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# lib/secure-dns.sh: the DNS-over-TLS resolvers extras/secure-dns.sh offers,
+# lib/secure-dns.sh: the DNS-over-TLS resolvers parts/secure-dns.sh offers,
 # and the files it writes. Sourced after lib.sh (by the extra, status.sh and
 # the tests). The addresses are pinned in pins.sh (DOT_*). Where the files are
 # is in lib/net.sh (SECURE_DNS_CONF), since wifi.sh needs to know too.
@@ -38,7 +38,7 @@ dns_unbound_conf() {
     pin=$(dns_pin "$name") || return 1
     tls=${pin%% *}
     cat <<EOF
-# Written by debsway extras/secure-dns.sh. Run it again to change the resolver.
+# Written by debsway parts/secure-dns.sh. Run it again to change the resolver.
 # provider: $name
 # Unbound answers this computer only, checks every answer with DNSSEC, and asks
 # $tls, encrypted (DNS over TLS on port 853); its certificate has to be
@@ -74,8 +74,10 @@ dns_current() {
 dns_status() {
     local name tls
     if secure_dns_on && name=$(dns_current) && tls=$(dns_tls_name "$name"); then
-        echo "DNS: encrypted to $tls, checked with DNSSEC (extras/secure-dns.sh)"
+        echo "DNS: encrypted to $tls, checked with DNSSEC (secure DNS on; the debsway menu switches it)"
+    elif secure_dns_installed; then
+        echo "DNS: unencrypted for now, to the network's DNS server: secure DNS is switched off (secure-dns on)"
     else
-        echo "DNS: unencrypted, to the network's DNS server (extras/secure-dns.sh encrypts it)"
+        echo "DNS: unencrypted, to the network's DNS server (parts/secure-dns.sh encrypts it)"
     fi
 }

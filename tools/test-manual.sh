@@ -120,24 +120,6 @@ for script in "$HERE"/extras/*.sh; do
 done
 check "every extra has a page with MANUAL INSTALL${missing:+ (not: ${missing[*]})}" test ${#missing[@]} -eq 0
 
-# ---- secure-dns: the manual Unbound settings are the script's ----
-(
-    . "$HERE/lib.sh"
-    . "$HERE/lib/secure-dns.sh"
-    set +e
-    bash "$R/extras/secure-dns.sh" --manual >"$T/sd"
-    block=$(sed -n '/^{$/,/^} | sudo tee/p' "$T/sd" | sed '$s/.*/}/')
-    for name in "${DNS_PROVIDERS[@]}"; do
-        NAME=$name DOT=$(dns_pin "$name")
-        TLS=${DOT%% *} ADDRS=${DOT#* }
-        manual=$(eval "$block" | grep -v '^#' | grep .)
-        script=$(dns_unbound_conf "$name" | grep -v '^#' | grep .)
-        check "secure-dns: the manual steps write the script's Unbound settings ($name)" test "$manual" = "$script"
-        check "...and the provider line status.sh reads" test "$(eval "$block" | head -1)" = "# provider: $name"
-    done
-    exit "$fails"
-) || fails=$?
-
 # ---- remote-access: the manual sshd settings are the script's, line for line ----
 script=$(sed -n '/^sudo tee "\$SSHD_CONF" >\/dev\/null <<EOF$/,/^EOF$/p' "$HERE/extras/remote-access.sh" | sed '1d;$d' | grep -v '^#')
 manual=$(HOME=$T/home bash "$R/extras/remote-access.sh" --manual | sed -n '/^sudo tee \/etc\/ssh\/sshd_config.d\/00-debsway-remote-access.conf <<EOF$/,/^EOF$/p' | sed '1d;$d' | grep -v '^#')

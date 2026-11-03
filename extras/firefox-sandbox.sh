@@ -22,7 +22,7 @@
 #    links from other programs open in it (default yes), uBlock Origin's
 #    mode: medium (default: other sites' scripts blocked, ublock-allow lets a
 #    site through) or standard (ads, trackers and malware only), and, for
-#    when the secure DNS extra isn't installed, Firefox's own encrypted DNS
+#    when secure DNS is switched off, Firefox's own encrypted DNS
 #    to Quad9: strict (default) or with fallback to the network's; and
 #    whether cookies, site data and the cache are deleted when it closes
 #    (default delete; sites you allow under Manage Exceptions keep theirs). firefox-esr is the
@@ -146,14 +146,15 @@ note "  standard  blocks ads, trackers and known malware sites; the rest of a si
 note "            runs, so sites work as you expect. Easier for people who'd"
 note "            rather not allow sites."
 choose ublock "Which way should uBlock Origin work?" "$ublock" medium standard
-note "Without the secure DNS extra (which encrypts every program's lookups), Firefox"
+note "While secure DNS is on, Firefox uses it (every program's lookups, encrypted)."
+note "While it is switched off (the debsway menu, for a Wi-Fi sign-in page), Firefox"
 note "encrypts its own, to Quad9, so your network can't see which sites you look up:"
-note "  strict    always; on Wi-Fi with a sign-in page (cafés, hotels) that page"
-note "            won't load in Firefox, and on a network that blocks encrypted DNS"
-note "            nothing does. debsway's default."
-note "  fallback  if encrypted DNS fails, the network's own, unencrypted: sign-in"
-note "            pages work, but such a network can see those lookups."
-note "With the secure DNS extra installed, Firefox uses the system's (encrypted) DNS."
+note "  strict    always; a Wi-Fi sign-in page (cafés, hotels) then won't load in"
+note "            Firefox even with secure DNS off, and on a network that blocks"
+note "            encrypted DNS nothing does. debsway's default."
+note "  fallback  if encrypted DNS fails, the network's own, unencrypted: with secure"
+note "            DNS switched off, sign-in pages work, but such a network can see"
+note "            those lookups."
 choose dns "Firefox's own encrypted DNS?" "$dns" strict fallback
 note "Websites keep cookies and other data in Firefox, which lets them, and the ad"
 note "and tracker companies behind them, recognise you from one visit to the next."

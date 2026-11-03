@@ -133,12 +133,15 @@ With the extras:
 - **Losing everything to a dead or stolen disk**: encrypted backups
   (`extras/backup.sh`).
 - **Hidden data in files you share**: Metadata Cleaner and mat2 (`extras/metadata-cleaner.sh`).
-- **Your network reading or forging the names you look up**: with
-  `extras/secure-dns.sh`, Unbound checks every answer with DNSSEC and asks
+- **Your network reading or forging the names you look up**: with secure
+  DNS on (`parts/secure-dns.sh`, in the base, with a switch), Unbound checks every answer with DNSSEC and asks
   one resolver you pick over DNS over TLS; a firewall rule lets only Unbound
   send DNS out, so nothing goes around it unencrypted (DNS over HTTPS can't
   be stopped that way). If the resolver can't be reached, names stop
   resolving instead of falling back, and Wi-Fi sign-in pages don't work.
+  Switched off (for such a page, in the debsway menu), other programs use
+  the network's DNS unencrypted; Firefox encrypts its own. Your user may
+  switch it without a password, so a program running as you could too.
 
 ## What it doesn't protect against
 
@@ -208,12 +211,12 @@ With the extras:
   and apt's signatures catch a false answer for the browser and for
   packages (a certificate or a signature that doesn't match is refused);
   other programs may not check. debsway's Firefox never sends your lookups
-  to a provider it picked: with the secure DNS extra its own DNS-over-HTTPS
-  is off and it uses the system's (encrypted); without it, it encrypts its
+  to a provider it picked: with secure DNS on its own DNS-over-HTTPS
+  is off and it uses the system's (encrypted); with it off, it encrypts its
   own lookups to Quad9, strictly (never plain DNS) unless "fallback" was
   chosen at its install, and only Firefox's lookups are protected then. Tor Browser, Whonix and apt over Tor
   look names up through Tor, and a connected VPN through its tunnel.
-  `extras/secure-dns.sh` encrypts the rest (see above); the resolver you
+  Secure DNS encrypts the rest while it is on (see above); the resolver you
   pick still sees every name, and the name of each site also travels
   unencrypted at the start of most HTTPS connections, so it hides where
   you go from your network less than a VPN or Tor does.

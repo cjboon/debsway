@@ -16,8 +16,8 @@
 #   ublock-allow --remove example.com
 #   ublock-allow --list               the mode, and the sites allowed
 #   ublock-allow --mode standard|medium
-#   ublock-allow --refresh            write it again (the secure DNS extra does,
-#                                     when it is installed or removed)
+#   ublock-allow --refresh            write it again (secure DNS's switch does,
+#                                     when it is switched on or off)
 # Restart Firefox afterwards.
 set -euo pipefail
 
@@ -25,10 +25,10 @@ ETC=${DEBSWAY_FIREFOX_ETC:-/etc/firefox-esr}
 LIST="$ETC/debsway-ublock-allow"
 # standard or medium; no file: medium, as debsway was before the choice
 MODE_FILE="$ETC/debsway-ublock-mode"
-# Firefox's own DNS (DNSOverHTTPS below) depends on the secure DNS extra, whose
-# settings file says it is installed, and on the choice made at the sandboxed
-# Firefox's install (dns=strict or fallback)
-SECURE_DNS=${DEBSWAY_SECURE_DNS_CONF:-/etc/unbound/unbound.conf.d/debsway-secure-dns.conf}
+# Firefox's own DNS (DNSOverHTTPS below) depends on secure DNS's switch
+# (parts/secure-dns.sh: while on, /etc/resolv.conf says so in its first line),
+# and on the choice made at the sandboxed Firefox's install (dns=strict or fallback)
+RESOLV=${DEBSWAY_RESOLV_CONF:-/etc/resolv.conf}
 CHOICES=${DEBSWAY_FIREFOX_CHOICES:-/etc/debsway/firefox.conf}
 QUAD9_DOH=https://dns.quad9.net/dns-query
 # Debian's Firefox only finds policies.json in its install folder (it looks
@@ -55,13 +55,13 @@ site_of() {
 
 sites() { [ -f "$LIST" ] && grep -v '^#' "$LIST" | grep . || true; }
 mode() { if [ "$(head -c 16 "$MODE_FILE" 2>/dev/null)" = standard ]; then echo standard; else echo medium; fi; }
-# doh: the DNSOverHTTPS policy. With the secure DNS extra the system's DNS is
-# already encrypted (and the one way out): Firefox's own is off. Without it,
+# doh: the DNSOverHTTPS policy. With secure DNS on, the system's DNS is
+# already encrypted (and the one way out): Firefox's own is off. Off,
 # Firefox encrypts its own lookups, to Quad9; strict (never plain DNS, so
 # Wi-Fi sign-in pages don't load in Firefox) unless fallback was chosen.
 doh() {
     local fallback=false
-    if [ -f "$SECURE_DNS" ]; then
+    if [ ! -L "$RESOLV" ] && grep -qsE '^# Written by debsway (parts|extras)/secure-dns\.sh' "$RESOLV"; then
         echo '{ "Enabled": false, "Locked": true }'
         return
     fi
@@ -97,9 +97,9 @@ write_policy() {
     #                            for every add-on; incognito is private all the time).
     #   Override*Page          - no Mozilla first-run or what's-new tabs; Firefox
     #                            opens straight to the home page.
-    #   DNSOverHTTPS           - locked: off with the secure DNS extra (Firefox
+    #   DNSOverHTTPS           - locked: off while secure DNS is on (Firefox
     #                            looks names up the way the rest of the system
-    #                            does, encrypted); without it, on, to Quad9
+    #                            does, encrypted); while it is off, on, to Quad9
     #                            (doh above), never a provider of Firefox's
     #                            own choosing.
     printf '{\n  "policies": {\n    "SearchEngines": { "Default": "DuckDuckGo", "DefaultPrivate": "DuckDuckGo" },\n    "OverrideFirstRunPage": "",\n    "OverridePostUpdatePage": "",\n    "DNSOverHTTPS": %s,\n    "ExtensionSettings": {\n      "uBlock0@raymondhill.net": { "private_browsing": true }\n    },\n    "3rdparty": {\n      "Extensions": {\n        "uBlock0@raymondhill.net": {\n          "adminSettings": "%s"\n        }\n      }\n    }\n  }\n}\n' "$(doh)" "$inner" |

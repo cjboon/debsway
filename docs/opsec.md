@@ -238,13 +238,14 @@ even when the content is encrypted. Without extra steps they see:
   connection and doesn't send its name, so networks can't easily recognise it
   from place to place.
 - Wi-Fi sign-in pages are on the network itself; they don't work while
-  `extras/secure-dns.sh` is on.
+  secure DNS is on: switch it off in the debsway menu (Secure DNS), sign in,
+  and switch it on again.
 - A phone's hotspot or USB tethering is often safer than unknown Wi-Fi.
 
 ### DNS
 
 Every name you look up (example.org) is a small message, normally sent
-unencrypted to the network's own DNS server. `extras/secure-dns.sh` sends them
+unencrypted to the network's own DNS server. Secure DNS (in the base) sends them
 encrypted to a resolver you choose and checks the answers. The resolver you
 choose then sees them instead, so choose one you trust.
 

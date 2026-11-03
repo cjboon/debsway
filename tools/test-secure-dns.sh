@@ -1,9 +1,12 @@
 #!/bin/bash
-# Checks extras/secure-dns.sh's pieces: the resolvers pinned in pins.sh, the
+# Checks parts/secure-dns.sh's pieces: the resolvers pinned in pins.sh, the
 # Unbound settings made from them (lib/secure-dns.sh), the firewall rule that
-# keeps DNS from going around Unbound, and that wifi.sh and wifi.sh --remove
-# leave /etc/resolv.conf alone while it is on (on a pretend /etc). Nothing is
-# installed and nothing outside a temp folder is changed. Run by test.sh, or:
+# keeps DNS from going around Unbound, that wifi.sh and wifi.sh --remove
+# leave /etc/resolv.conf alone while it is on (on a pretend /etc), and the
+# switch (bin/secure-dns-switch, on a copy whose /etc is a temp folder, with
+# pretend systemctl, nmcli, nft and getent; and bin/secure-dns with a pretend
+# sudo). Nothing is installed and nothing outside a temp folder is changed.
+# Run by test.sh, or:
 #   bash tools/test-secure-dns.sh
 # shellcheck disable=SC2016  # the inner bash expands its own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
@@ -65,13 +68,18 @@ if secure_dns_on; then off=false; else off=true; fi
 check "with no settings it is off" $off
 check "status.sh says DNS is unencrypted" grep -q "DNS: unencrypted" <<<"$(dns_status)"
 dns_unbound_conf digiges >"$T/etc/unbound/unbound.conf.d/debsway-secure-dns.conf"
-check "with its settings it is on" secure_dns_on
+check "with its settings but switched off: still off (on means switched on)" bash -c '! secure_dns_on'
+check "...status.sh says it is switched off" grep -q "secure DNS is switched off" <<<"$(dns_status)"
+printf '%s\n' '# Written by debsway parts/secure-dns.sh. Every name goes to Unbound on this' 'nameserver 127.0.0.1' >"$T/etc/resolv.conf"
+check "switched on (resolv.conf says so in its first line): on" secure_dns_on
 check "the resolver in use is read back" test "$(dns_current)" = digiges
 check "status.sh names it" grep -q "DNS: encrypted to dns.digitale-gesellschaft.ch" <<<"$(dns_status)"
+printf '%s\n' '# Written by debsway extras/secure-dns.sh. Every name goes to Unbound on this' 'nameserver 127.0.0.1' >"$T/etc/resolv.conf"
+check "...an older debsway's mark (extras/) counts as on too" secure_dns_on
 
 # ---- wifi.sh leaves resolv.conf alone while it is on ----
 # set_dns from wifi.sh, writing into the pretend /etc; resolvconf only writes down that it ran
-echo "nameserver 127.0.0.1" >"$T/etc/resolv.conf"
+printf '%s\n' '# Written by debsway parts/secure-dns.sh. Every name goes to Unbound on this' 'nameserver 127.0.0.1' >"$T/etc/resolv.conf"
 # shellcheck disable=SC2016
 out=$(bash -c '
     . "$1/lib.sh"; set +e
@@ -82,13 +90,13 @@ out=$(bash -c '
 check "wifi.sh doesn't put the network's DNS server back" grep -qx "nameserver 127.0.0.1" "$T/etc/resolv.conf"
 check "nor hand it to resolvconf" test ! -e "$T/log"
 check "its busybox DHCP script leaves it alone too" \
-    grep -q 'resolv.conf \] && \[ ! -e /etc/unbound/unbound.conf.d/debsway-secure-dns.conf \]' "$HERE/wifi.sh"
+    grep -qF "! grep -qE '^# Written by debsway (parts|extras)/secure-dns\.sh' /etc/resolv.conf" "$HERE/wifi.sh"
 echo "nameserver 192.168.1.1" >"$T/etc/resolv.conf.debsway.bak"
 remove_wifi_config >/dev/null 2>&1
 check "wifi.sh --remove doesn't put its old copy back over it" grep -qx "nameserver 127.0.0.1" "$T/etc/resolv.conf"
-rm -f "$T/etc/unbound/unbound.conf.d/debsway-secure-dns.conf"
+echo "nameserver 10.0.0.1" >"$T/etc/resolv.conf"
 remove_wifi_config >/dev/null 2>&1
-check "...but does once secure DNS is off" grep -qx "nameserver 192.168.1.1" "$T/etc/resolv.conf"
+check "...but does once secure DNS is switched off" grep -qx "nameserver 192.168.1.1" "$T/etc/resolv.conf"
 : "$out"
 
 # ---- the firewall rule ----
@@ -111,5 +119,72 @@ if command -v nft >/dev/null && unshare -rn true 2>/dev/null; then
 else
     echo "  skip  nft isn't installed (or no user namespaces), so its syntax isn't checked"
 fi
+
+# ---- the switch: on, off, and on where names don't resolve ----
+W=$T/sw
+mkdir -p "$W/etc/unbound/unbound.conf.d" "$W/etc/NetworkManager/conf.d" "$W/bin" "$W/usr/local/bin"
+sed -e "s|/etc/|$W/etc/|g" -e "s|/usr/local/bin/ublock-allow|$W/usr/local/bin/ublock-allow|g" \
+    -e "s|^export PATH=.*|export PATH=$W/bin:\$PATH|" "$HERE/bin/secure-dns-switch" >"$W/switch"
+grep -q "$W/etc/resolv.conf" "$W/switch" || { echo "  FAIL  the switch's /etc paths weren't found"; exit 1; }
+# root, a running NetworkManager, systemctl/nmcli/nft writing down what they did,
+# names resolving unless $W/no-dns exists, no waiting
+printf '#!/bin/sh\n[ "$1" = -u ] && echo 0 || exec /usr/bin/id "$@"\n' >"$W/bin/id"
+printf '#!/bin/sh\necho "systemctl $*" >>"%s/calls"\n[ "$1" != is-active ] || [ "$3" = NetworkManager ] || [ "$3" = unbound ]\n' "$W" >"$W/bin/systemctl"
+printf '#!/bin/sh\necho "nmcli $*" >>"%s/calls"\n' "$W" >"$W/bin/nmcli"
+printf '#!/bin/sh\necho "nft $*" >>"%s/calls"\n' "$W" >"$W/bin/nft"
+printf '#!/bin/sh\n[ ! -e "%s/no-dns" ]\n' "$W" >"$W/bin/getent"
+printf '#!/bin/sh\n' >"$W/bin/sleep"
+printf '#!/bin/sh\necho "ublock-allow $*" >>"%s/calls"\n' "$W" >"$W/usr/local/bin/ublock-allow"
+chmod +x "$W/bin/"* "$W/usr/local/bin/ublock-allow"
+chmod +x "$W/switch"
+sw() { bash "$W/switch" "$@"; }
+export W
+export -f sw
+: >"$W/etc/unbound/unbound.conf.d/debsway-secure-dns.conf"
+echo "nameserver 192.168.1.1" >"$W/etc/resolv.conf"
+: >"$W/calls"
+
+check "switch: off to start with" test "$(sw status)" = off
+sw on >/dev/null 2>&1
+check "on: resolv.conf points at Unbound, and says so" bash -c '
+    head -1 "$1" | grep -q "^# Written by debsway parts/secure-dns.sh" && grep -qx "nameserver 127.0.0.1" "$1"' _ "$W/etc/resolv.conf"
+check "...the network's copy kept, to put back" grep -qx "nameserver 192.168.1.1" "$W/etc/resolv.conf.debsway-secure-dns.bak"
+check "...NetworkManager told to leave resolv.conf alone" grep -qx "dns=none" "$W/etc/NetworkManager/conf.d/90-debsway-secure-dns.conf"
+check "...its firewall rule enabled and loaded" bash -c '
+    grep -qx "systemctl enable debsway-secure-dns-firewall.service" "$1" && grep -qx "systemctl restart debsway-secure-dns-firewall.service" "$1"' _ "$W/calls"
+check "...Firefox's DNS policy written again" grep -qx "ublock-allow --refresh" "$W/calls"
+check "...status: on" test "$(sw status)" = on
+: >"$W/calls"
+sw off >/dev/null 2>&1
+check "off: the network's DNS server back" grep -qx "nameserver 192.168.1.1" "$W/etc/resolv.conf"
+check "...NetworkManager may write it again" test ! -e "$W/etc/NetworkManager/conf.d/90-debsway-secure-dns.conf"
+check "...the firewall rule off, also at boot" grep -qx "systemctl disable --now debsway-secure-dns-firewall.service" "$W/calls"
+check "...and Firefox's policy written again (it then encrypts its own)" grep -qx "ublock-allow --refresh" "$W/calls"
+: >"$W/no-dns" "$W/calls"
+check "on where names don't resolve (a sign-in page): it says so, and fails" bash -c '! sw on'
+check "...and stays off: the network's DNS server, no firewall rule" bash -c '
+    grep -qx "nameserver 192.168.1.1" "$1" && [ "$(sw status)" = off ] && ! grep -q "systemctl enable" "$2"' _ "$W/etc/resolv.conf" "$W/calls"
+rm -f "$W/no-dns"
+rm "$W/etc/unbound/unbound.conf.d/debsway-secure-dns.conf"
+check "on without Unbound's settings: refused" bash -c '! sw on'
+check "anything but on, off or status: refused" bash -c '! sw "on; id" && ! sw && ! sw on off'
+check "not as root: refused" bash -c '! bash "$1" status' _ "$HERE/bin/secure-dns-switch"
+
+# ---- the secure-dns command and the sudo rule ----
+mkdir -p "$W/fake"
+printf '#!/bin/sh\necho "sudo $*" >>"%s/calls"\n' "$W" >"$W/fake/sudo"
+chmod +x "$W/fake/sudo"
+sed "s|/usr/local/libexec/debsway-secure-dns|$W/switch|" "$HERE/bin/secure-dns" >"$W/secure-dns"
+sdc() { DEBSWAY_RESOLV_CONF=$W/etc/resolv.conf PATH="$W/fake:$PATH" bash "$W/secure-dns" "$@"; }
+export -f sdc
+: >"$W/calls"
+sdc toggle
+check "secure-dns toggle while off: the switch's on, through sudo without a password" grep -qx "sudo -n $W/switch on" "$W/calls"
+check "secure-dns status needs no sudo" bash -c '[ "$(sdc status)" = off ] && [ "$(grep -c . "$1")" = 1 ]' _ "$W/calls"
+check "the sudo rule allows exactly on and off" grep -qF 'NOPASSWD: %s on, %s off\n' "$HERE/parts/secure-dns.sh"
+check "...checked by visudo before it is installed" grep -q 'sudo visudo -cf "$rule"' "$HERE/parts/secure-dns.sh"
+check "secure DNS is part of the base, after NetworkManager" bash -c '
+    . "$1/packages.sh"; [[ " ${PARTS[*]} " == *" network-manager secure-dns "* ]]' _ "$HERE"
+check "a re-run keeps the switch where it was (on only at first, or if it was on)" grep -qF 'if $first || [ "$("$BIN/secure-dns" status)" = on ]; then' "$HERE/parts/secure-dns.sh"
 
 [ "$fails" -eq 0 ]

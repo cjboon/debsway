@@ -102,7 +102,7 @@ for f in lib/tails.sh bin/tails-usb; do
     [ -f "$f" ] || bad "extras/tails-usb.sh needs $f"
 done
 for f in lib/secure-dns.sh data/secure-dns-firewall.nft; do
-    [ -f "$f" ] || bad "extras/secure-dns.sh needs $f"
+    [ -f "$f" ] || bad "parts/secure-dns.sh needs $f"
 done
 for f in bin/incognito bin/incognito-session bin/wayland-restrict data/incognito-user.js data/incognito-firewall.nft; do
     [ -f "$f" ] || bad "parts/incognito.sh needs $f"
@@ -610,7 +610,7 @@ else
 fi
 
 # --------------------------------------------------------------------
-section "Encrypted DNS (extras/secure-dns.sh): resolvers, Unbound's settings, the firewall rule"
+section "Encrypted DNS (parts/secure-dns.sh): resolvers, Unbound's settings, the firewall rule, the switch"
 if out=$(bash tools/test-secure-dns.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") secure DNS checks"
 else
@@ -877,7 +877,7 @@ LIST
         bad "Tails: the release file at $TAILS_LATEST_URL isn't as tails-usb expects"
     fi
 
-    # The resolvers extras/secure-dns.sh offers: each IPv4 address answers on port
+    # The resolvers parts/secure-dns.sh offers: each IPv4 address answers on port
     # 853 with a certificate for its pinned name (IPv6 is often not reachable)
     . lib/secure-dns.sh
     if command -v openssl >/dev/null; then

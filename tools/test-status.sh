@@ -50,6 +50,7 @@ chmod +x "$G/bin/"* "$G/firefox"
 printf 'APT::Periodic::Unattended-Upgrade "1";\n' >"$G/etc/apt/apt.conf.d/20auto-upgrades"
 printf '[Default Applications]\nx-scheme-handler/https=debsway-firefox.desktop\n' >"$T/home/.config/mimeapps.list"
 : >"$G/etc/unbound/unbound.conf.d/debsway-secure-dns.conf"
+printf '%s\n' '# Written by debsway parts/secure-dns.sh. Every name goes to Unbound on this' 'nameserver 127.0.0.1' >"$G/etc/resolv.conf"
 glance() { HOME=$T/home DEBSWAY_ETC=$G/etc DEBSWAY_FX_CLIENT=$1 DEBSWAY_FIREFOX_DIST=$G/dist STATUS_TEST_PATH="$G/bin:$T/bin:$T/nolock" bash "$R/status.sh" 2>/dev/null | sed -n '/^Security at a glance:/,/^$/p'; }
 out=$(glance "$G/firefox")
 check "at a glance, all done: six [x] lines, first in the screen" bash -c '[ "$(grep -c "^  \[x\]" <<<"$1")" = 6 ] && [ "$(head -1 <<<"$1")" = "Security at a glance:" ]' _ "$out"
@@ -57,15 +58,19 @@ first=$(HOME=$T/home DEBSWAY_ETC=$G/etc DEBSWAY_FX_CLIENT=$G/firefox DEBSWAY_FIR
 check "...and it is the first thing Status shows" test "$first" = "Security at a glance:"
 # nothing done: a plain disk, no firewall, no automatic updates, no sandboxed Firefox, plain DNS
 : >"$G/plain"; : >"$G/fw-off"
-rm -f "$G/etc/apt/apt.conf.d/20auto-upgrades" "$G/etc/unbound/unbound.conf.d/debsway-secure-dns.conf" "$T/home/.config/sway/config.d/idle.conf"
+rm -f "$G/etc/apt/apt.conf.d/20auto-upgrades" "$G/etc/unbound/unbound.conf.d/debsway-secure-dns.conf" "$G/etc/resolv.conf" "$T/home/.config/sway/config.d/idle.conf"
 out=$(glance "$G/none")
 check "...none done: each says so, with what to run" bash -c '
     grep -q "\[ \] Disk NOT encrypted" <<<"$1" && grep -q "\[~\] Screen locks only when you lock it" <<<"$1" &&
     grep -q "\[ \] Firewall off: bash parts/ufw.sh" <<<"$1" && grep -q "\[ \] Security updates don.t install by themselves" <<<"$1" &&
     grep -q "\[ \] No sandboxed browser" <<<"$1" && grep -q "\[ \] DNS not encrypted" <<<"$1"' _ "$out"
-# the sandboxed Firefox with its own encrypted DNS, no secure DNS extra
+# the sandboxed Firefox with its own encrypted DNS, no secure DNS
 printf '{\n  "policies": {\n    "DNSOverHTTPS": { "Enabled": true, "ProviderURL": "https://dns.quad9.net/dns-query", "Fallback": false, "Locked": true },\n  }\n}\n' >"$G/dist/policies.json"
 out=$(glance "$G/firefox")
-check "...Firefox's own encrypted DNS without the secure DNS extra: partly ([~])" grep -q '\[~\] DNS encrypted for Firefox only' <<<"$out"
+check "...Firefox's own encrypted DNS without secure DNS: partly ([~])" grep -q '\[~\] DNS encrypted for Firefox only' <<<"$out"
+
+: >"$G/etc/unbound/unbound.conf.d/debsway-secure-dns.conf"
+out=$(glance "$G/firefox")
+check "...secure DNS set up but switched off: partly ([~]), and it says so" grep -q '\[~\] Secure DNS switched off' <<<"$out"
 
 [ "$fails" -eq 0 ]

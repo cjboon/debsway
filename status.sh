@@ -55,9 +55,13 @@ fi
 if secure_dns_on; then
     glance x "DNS encrypted, for every program"
 elif [ -x "$FX" ] && grep -qs '"DNSOverHTTPS": { "Enabled": true' "$FX_POLICY"; then
-    glance "~" "DNS encrypted for Firefox only: bash extras/secure-dns.sh, for every program"
+    if secure_dns_installed; then
+        glance "~" "Secure DNS switched off: Firefox encrypts its own, other programs don't (debsway menu: Secure DNS)"
+    else
+        glance "~" "DNS encrypted for Firefox only: bash parts/secure-dns.sh, for every program"
+    fi
 else
-    glance " " "DNS not encrypted: your network sees which sites you look up (bash extras/secure-dns.sh)"
+    glance " " "DNS not encrypted: your network sees which sites you look up (bash parts/secure-dns.sh)"
 fi
 echo
 

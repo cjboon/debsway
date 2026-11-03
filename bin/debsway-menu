@@ -239,7 +239,7 @@ text_editor() {
 }
 # app NAME...: the first of these commands that is installed, from APPS (where
 # debsway and Debian put them; DEBSWAY_MENU_APPS: a test's own list)
-APPS=${DEBSWAY_MENU_APPS-/usr/bin/thunar /usr/bin/keepassxc $HOME/.local/bin/tuta /usr/bin/signal-desktop $HOME/.local/bin/simplex $HOME/.local/bin/claude-vm $HOME/.local/bin/claude $HOME/.local/bin/claude-regular $HOME/.local/bin/opencode-vm $HOME/.local/bin/vault $HOME/.local/bin/backup}
+APPS=${DEBSWAY_MENU_APPS-/usr/bin/thunar /usr/bin/keepassxc $HOME/.local/bin/tuta /usr/bin/signal-desktop $HOME/.local/bin/simplex $HOME/.local/bin/claude-vm $HOME/.local/bin/claude $HOME/.local/bin/claude-regular $HOME/.local/bin/opencode-vm $HOME/.local/bin/vault $HOME/.local/bin/backup $HOME/.local/bin/theme $HOME/.local/bin/secure-dns}
 app() {
     local want c
     for want; do
@@ -298,6 +298,9 @@ if [ -n "$VAULT_CMD" ]; then ids+=(vault); items+=(""); fi
 # So is the theme (light or dark), inside sway: the console stays dark
 THEME_CMD=$(app theme)
 if [ -n "$THEME_CMD" ] && [ -n "${SWAYSOCK:-}${WAYLAND_DISPLAY:-}" ]; then ids+=(theme); items+=(""); fi
+# And secure DNS (parts/secure-dns.sh): off for a Wi-Fi sign-in page, then on again
+SECDNS_CMD=$(app secure-dns)
+if [ -n "$SECDNS_CMD" ]; then ids+=(securedns); items+=(""); fi
 n=${#ids[@]}
 
 # radio_label NAME: what the entry shows, e.g. "Wi-Fi: on"
@@ -307,6 +310,10 @@ radio_label() {
         state=$("$THEME_CMD" 2>/dev/null)
         state=${state#Theme: }
         printf 'Theme: %s' "${state^}"
+        return
+    fi
+    if [ "$1" = securedns ]; then
+        printf 'Secure DNS: %s' "$("$SECDNS_CMD" status 2>/dev/null || echo unknown)"
         return
     fi
     if [ "$1" = vault ]; then
@@ -360,6 +367,18 @@ run_choice() {
     case ${ids[sel]} in
         wifi | bluetooth | mic | camera)
             "$RADIOS" "${ids[sel]}" toggle >/dev/null 2>&1
+            refresh_items
+            return 0 ;;
+        securedns)
+            # Switching on checks that names resolve (up to 20 seconds), and
+            # either way it says what to do next: shown on this window's screen
+            screen_off
+            printf '\e[2J\e[1;1HSwitching secure DNS...\n\n'
+            "$SECDNS_CMD" toggle || true
+            printf '\nPress Enter to go back. '
+            IFS= read -r _ </dev/tty || true
+            screen_on
+            settle
             refresh_items
             return 0 ;;
         theme)
@@ -472,9 +491,9 @@ while :; do
     read_key
     case $KEY in
         enter) run_choice ;;
-        # Space flips a switch (Wi-Fi, Bluetooth, microphone, webcam, theme);
-        # on anything else it does nothing, so it never opens a program
-        space) case ${ids[sel]} in wifi | bluetooth | mic | camera | theme) run_choice ;; esac ;;
+        # Space flips a switch (Wi-Fi, Bluetooth, microphone, webcam, theme,
+        # secure DNS); on anything else it does nothing, so it never opens a program
+        space) case ${ids[sel]} in wifi | bluetooth | mic | camera | theme | securedns) run_choice ;; esac ;;
         down | j) sel=$(((sel + 1) % n)) ;;
         up | k) sel=$(((sel + n - 1) % n)) ;;
         wheeldown) sel=$(((sel + 1) % n)) ;;

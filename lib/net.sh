@@ -95,12 +95,17 @@ sshd_problems() {
         }'
 }
 
-# extras/secure-dns.sh's settings for Unbound. While they are there,
-# /etc/resolv.conf points at Unbound and nothing of debsway's may rewrite it
-# (wifi.sh would put the network's DNS server back, which the extra's firewall
-# rule then refuses). DEBSWAY_ETC is where /etc is, for tests.
+# parts/secure-dns.sh's settings for Unbound (secure DNS is set up), and its
+# switch: while it is on, /etc/resolv.conf points at Unbound (and says so in
+# its first line) and nothing of debsway's may rewrite it (wifi.sh would put
+# the network's DNS server back, which its firewall rule then refuses). An
+# older debsway wrote "extras/". DEBSWAY_ETC is where /etc is, for tests.
 SECURE_DNS_CONF=/etc/unbound/unbound.conf.d/debsway-secure-dns.conf
-secure_dns_on() { [ -e "${DEBSWAY_ETC:-/etc}${SECURE_DNS_CONF#/etc}" ]; }
+secure_dns_installed() { [ -e "${DEBSWAY_ETC:-/etc}${SECURE_DNS_CONF#/etc}" ]; }
+secure_dns_on() {
+    local r=${DEBSWAY_ETC:-/etc}/resolv.conf
+    [ ! -L "$r" ] && grep -qsE '^# Written by debsway (parts|extras)/secure-dns\.sh' "$r"
+}
 
 # remove_wifi_config: undoes what wifi.sh wrote for a Wi-Fi it set up by hand
 # (run as root): the wpa_supplicant files it marked as its own and their
@@ -132,7 +137,7 @@ remove_wifi_config() {
         note "Removed $f"
     done
     if $networkd; then systemctl restart systemd-networkd >/dev/null 2>&1 || true; fi
-    # (not while extras/secure-dns.sh points it at Unbound)
+    # (not while secure DNS points it at Unbound)
     if [ -e "$etc/resolv.conf.debsway.bak" ] && [ ! -L "$etc/resolv.conf" ] && ! secure_dns_on; then
         cp -a "$etc/resolv.conf.debsway.bak" "$etc/resolv.conf" && rm -f "$etc/resolv.conf.debsway.bak"
         note "Put back $etc/resolv.conf"
