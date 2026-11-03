@@ -58,9 +58,10 @@ sed "s|/usr/local/bin/incognito|$T/usr/incognito|" "$HERE/bin/wifi-signin" >"$T/
 mkdir -p "$T/fake"
 printf '#!/bin/sh\necho "notify $*" >>"%s/said"\n' "$T" >"$T/fake/notify-send"
 chmod +x "$T/fake/notify-send"
-ws() { : >"$T/said"; HOME=$T/home PATH=$T/fake:/usr/bin:/bin bash "$T/wifi-signin" 2>>"$T/said"; }
+ws() { : >"$T/said"; HOME=$T/home XDG_STATE_HOME=$T/xstate PATH=$T/fake:/usr/bin:/bin bash "$T/wifi-signin" 2>>"$T/said"; }
 echo on >"$T/state"; : >"$T/calls"
 ws
+check "...the mark for the next login is left while it is off" test -e "$T/xstate/debsway/secure-dns-left-off"
 check "secure DNS on: off while the sign-in window is open" grep -qx "incognito --no-audio --signin http://detectportal.firefox.com/canonical.html (secure DNS off)" "$T/calls"
 check "...on again when it closes" bash -c '[ "$(tail -1 "$1")" = "secure-dns on" ] && [ "$(cat "$2")" = on ]' _ "$T/calls" "$T/state"
 echo off >"$T/state"; : >"$T/calls"

@@ -147,6 +147,9 @@ one and anyone on the way can answer falsely. With it:
   its encrypted DNS meanwhile; only programs that look names up during that
   minute use the network's. uBlock's medium mode can block a sign-in page's
   scripts from other sites: allow them with uBlock's button in that window.
+  If you log out while it is open, secure DNS stays off; at your next login
+  (a notification in sway, a line in a text console's shell) you are told,
+  until it is on again. Switched off by you, it says nothing.
 - **DNS over HTTPS** looks like any web traffic, so no firewall can stop it.
   Firefox's own is off while this is on; Mullvad Browser keeps its own.
 

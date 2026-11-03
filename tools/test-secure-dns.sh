@@ -185,4 +185,24 @@ check "secure DNS is part of the base, after NetworkManager" bash -c '
     . "$1/packages.sh"; [[ " ${PARTS[*]} " == *" network-manager secure-dns "* ]]' _ "$HERE"
 check "a re-run keeps the switch where it was (on only at first, or if it was on)" grep -qF 'if $first || [ "$("$BIN/secure-dns" status)" = on ]; then' "$HERE/parts/secure-dns.sh"
 
+# ---- login-check: a word at login if the Wi-Fi sign-in window left it off
+mkdir -p "$W/state/debsway" "$W/nfake"
+printf '#!/bin/sh\necho "notify $*" >>"%s/notified"\n' "$W" >"$W/nfake/notify-send"
+chmod +x "$W/nfake/notify-send"
+lc() { XDG_STATE_HOME=$W/state DEBSWAY_RESOLV_CONF=$W/etc/resolv.conf PATH="$W/nfake:$PATH" bash "$HERE/bin/secure-dns" login-check 2>&1; }
+echo "nameserver 192.168.1.1" >"$W/etc/resolv.conf"
+rm -f "$W/notified"
+check "login-check: off, but not left off by the sign-in window: nothing said" bash -c '[ -z "$(WAYLAND_DISPLAY=wayland-1 lc)" ] && [ ! -e "$1" ]' _ "$W/notified"
+export -f lc; export HERE
+: >"$W/state/debsway/secure-dns-left-off"
+WAYLAND_DISPLAY=wayland-1 lc >/dev/null
+check "...left off by it, still off, in sway: a notification" grep -q "notify .*Secure DNS is off" "$W/notified"
+check "...on a text console: a line in the terminal" bash -c 'out=$(WAYLAND_DISPLAY= lc); [[ $out == *"secure-dns on"* ]]'
+printf '%s\n' '# Written by debsway parts/secure-dns.sh. Every name goes to Unbound on this' 'nameserver 127.0.0.1' >"$W/etc/resolv.conf"
+check "...on again by then: nothing said, and the mark goes" bash -c '[ -z "$(WAYLAND_DISPLAY= lc)" ] && [ ! -e "$1" ]' _ "$W/state/debsway/secure-dns-left-off"
+check "secure-dns on removes the mark once it worked" grep -qF 'if [ "$cmd" = on ] && [ "$rc" = 0 ]; then rm -f "$LEFT_OFF"; fi' "$HERE/bin/secure-dns"
+check "the part runs login-check at sway's start, and from ~/.bashrc outside sway" bash -c '
+    grep -qx "exec ~/.local/bin/secure-dns login-check" "$1" && grep -qF "[ -n \"\${WAYLAND_DISPLAY:-}\" ] || [ ! -x ~/.local/bin/secure-dns ] || ~/.local/bin/secure-dns login-check" "$1" &&
+    grep -q "remove_snippet secure-dns" "$1"' _ "$HERE/parts/secure-dns.sh"
+
 [ "$fails" -eq 0 ]

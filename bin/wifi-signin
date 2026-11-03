@@ -13,6 +13,9 @@ set -euo pipefail
 START=http://detectportal.firefox.com/canonical.html
 INCOGNITO=/usr/local/bin/incognito
 SECURE_DNS=$HOME/.local/bin/secure-dns
+# While this has secure DNS off: the next login says so if it is still off
+# (bin/secure-dns login-check); switching on removes it
+LEFT_OFF=${XDG_STATE_HOME:-$HOME/.local/state}/debsway/secure-dns-left-off
 
 # say: in the terminal, or as a notification when started from the menu
 say() {
@@ -25,6 +28,8 @@ say() {
 was_on=false
 if [ -x "$SECURE_DNS" ] && [ "$("$SECURE_DNS" status)" = on ]; then
     was_on=true
+    mkdir -p "${LEFT_OFF%/*}"
+    : >"$LEFT_OFF"
     "$SECURE_DNS" off >/dev/null || { say "couldn't switch secure DNS off for the sign-in."; exit 1; }
 fi
 # shellcheck disable=SC2317,SC2329  # runs from the EXIT trap

@@ -38,7 +38,14 @@ SUDOERS=/etc/sudoers.d/debsway-secure-dns
 FIREWALL=/etc/debsway/secure-dns.nft
 UNIT=/etc/systemd/system/debsway-secure-dns-firewall.service
 
+RC=$HOME/.bashrc
+RC_BEGIN='# >>> debsway secure-dns check >>>'
+RC_END='# <<< debsway secure-dns check <<<'
+rc_take_out() { [ -f "$RC" ] && sed -i "\\|^$RC_BEGIN\$|,\\|^$RC_END\$|d" "$RC"; return 0; }
+
 if [ "${1:-}" = --remove ]; then
+    remove_snippet secure-dns
+    rc_take_out
     # (the switch puts resolv.conf and the network's DNS back, and tells Firefox)
     if [ -x "$SWITCH" ]; then sudo "$SWITCH" off || true; fi
     sudo systemctl disable --now debsway-secure-dns-firewall.service >/dev/null 2>&1 || true
@@ -151,6 +158,15 @@ fi
 sudo install -o root -g root -m 0440 "$rule" "$SUDOERS"
 rm -f "$rule"
 install_bin secure-dns
+# At login: a word if the Wi-Fi sign-in window left secure DNS off (logged out
+# while it was open). In sway a notification; on a text console, the shell
+put_snippet secure-dns <<'EOF'
+# Says so at login if the Wi-Fi sign-in window left secure DNS off (debsway parts/secure-dns.sh)
+exec ~/.local/bin/secure-dns login-check
+EOF
+rc_take_out
+# shellcheck disable=SC2016  # written into ~/.bashrc as it is, expanded there
+printf '%s\n' "$RC_BEGIN" '[ -n "${WAYLAND_DISPLAY:-}" ] || [ ! -x ~/.local/bin/secure-dns ] || ~/.local/bin/secure-dns login-check' "$RC_END" >>"$RC"
 
 # On at the first install, and whenever it was on; a switch you turned off stays off
 if $first || [ "$("$BIN/secure-dns" status)" = on ]; then
