@@ -33,6 +33,11 @@ user_pref("dom.push.enabled", false);
 // can't work here anyway (no microphone or camera).
 user_pref("media.peerconnection.enabled", false);
 
+// Saved passwords are filled in when you click the login box, not as the page
+// loads: tracking scripts have added hidden login boxes to read what Firefox
+// filled in (your email address, a lasting ID)
+user_pref("signon.autofillForms", false);
+
 // No guessing ahead
 user_pref("network.dns.disablePrefetch", true);
 user_pref("network.prefetch-next", false);

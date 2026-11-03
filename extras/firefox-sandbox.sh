@@ -15,7 +15,7 @@
 #    computer's own services (data/firefox-firewall.nft); how to lift it for a
 #    while is in that file. DNS stays open.
 #  - Your user may run exactly one thing as firefox (a rule in /etc/sudoers.d).
-#  - It asks five things (remembered, in /etc/debsway/firefox.conf, which only
+#  - It asks six things (remembered, in /etc/debsway/firefox.conf, which only
 #    root can write; asked again when you run this again in a terminal):
 #    fast JavaScript (the JIT; default no: it is where many browser attacks
 #    happen), sound (default yes), whether it is your default browser, so
@@ -23,7 +23,9 @@
 #    mode: medium (default: other sites' scripts blocked, ublock-allow lets a
 #    site through) or standard (ads, trackers and malware only), and, for
 #    when the secure DNS extra isn't installed, Firefox's own encrypted DNS
-#    to Quad9: strict (default) or with fallback to the network's. firefox-esr is the
+#    to Quad9: strict (default) or with fallback to the network's; and
+#    whether cookies, site data and the cache are deleted when it closes
+#    (default delete; sites you allow under Manage Exceptions keep theirs). firefox-esr is the
 #    same Firefox run as you, with everything you can reach, and stays
 #    installed. No video calls: it has no microphone or camera, so WebRTC is off.
 #  - Firefox profiles made with firefox-profiles/new-profile.sh each get a user
@@ -122,10 +124,11 @@ say "Your choices (asked again whenever you run this in a terminal)"
 CHOICES=/etc/debsway/firefox.conf
 chosen() { sed -n "s/^$1=//p" "$CHOICES" 2>/dev/null | head -1; }
 # last time's answers are the defaults (with no terminal to ask on: kept)
-fast=n sound=y links=y ublock=medium dns=strict
+fast=n sound=y links=y ublock=medium dns=strict cookies=delete
 [ "$(chosen fast_js)" != yes ] || fast=y
 [ "$(chosen ublock)" != standard ] || ublock=standard
 [ "$(chosen dns)" != fallback ] || dns=fallback
+[ "$(chosen cookies)" != keep ] || cookies=keep
 [ "$(chosen sound)" != no ] || sound=n
 [ "$(chosen default_browser)" != no ] || links=n
 note "Fast JavaScript makes heavy sites quicker, but the part that does it (the JIT)"
@@ -152,11 +155,23 @@ note "  fallback  if encrypted DNS fails, the network's own, unencrypted: sign-i
 note "            pages work, but such a network can see those lookups."
 note "With the secure DNS extra installed, Firefox uses the system's (encrypted) DNS."
 choose dns "Firefox's own encrypted DNS?" "$dns" strict fallback
+note "Websites keep cookies and other data in Firefox, which lets them, and the ad"
+note "and tracker companies behind them, recognise you from one visit to the next."
+note "  delete  cookies, site data and the cache go when Firefox closes. You are"
+note "          logged out of every site then (saved passwords still fill in, on a"
+note "          click). To stay logged in to a few: Firefox's Settings > Privacy &"
+note "          Security > Cookies and Site Data > Manage Exceptions > Allow."
+note "          debsway's default."
+note "  keep    they stay, as in a normal Firefox: you stay logged in everywhere."
+note "History, bookmarks and saved passwords stay either way: they are yours, and no"
+note "website can read them."
+choose cookies "When Firefox closes, its cookies and site data:" "$cookies" delete keep
 sudo install -d -o root -g root -m 0755 "${CHOICES%/*}"
 printf '%s\n' '# Written by debsway extras/firefox-sandbox.sh: run it again to change these' \
-    "fast_js=$fast" "sound=$sound" "default_browser=$links" "ublock=$ublock" "dns=$dns" | sudo tee "$CHOICES" >/dev/null
+    "fast_js=$fast" "sound=$sound" "default_browser=$links" "ublock=$ublock" "dns=$dns" "cookies=$cookies" | sudo tee "$CHOICES" >/dev/null
 sudo chmod 0644 "$CHOICES"
-note "Fast JavaScript: $fast. Sound: $sound. Default browser: $links. uBlock: $ublock mode. DNS: $dns."
+note "Fast JavaScript: $fast. Sound: $sound. Default browser: $links. uBlock: $ublock mode."
+note "DNS: $dns. Cookies and site data when it closes: $cookies."
 # uBlock's mode and Firefox's DNS, for every Firefox profile (ublock-allow came
 # with the hardening above; it reads the DNS choice from $CHOICES)
 sudo /usr/local/bin/ublock-allow --mode "$ublock" >/dev/null || warn "Couldn't set uBlock's $ublock mode: ublock-allow --mode $ublock"

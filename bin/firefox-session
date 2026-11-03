@@ -193,6 +193,22 @@ jit_on() {
 if [ -z "$tag" ] && [ "$(sed -n 's/^fast_js=//p' /etc/debsway/firefox.conf 2>/dev/null | head -1)" = yes ]; then
     jit_on >>"$profile/user.js"
 fi
+# Cookies, site data and the cache deleted when it closes (the default; a
+# profile for one site keeps them: that is what it is for). Only those:
+# Firefox's own defaults would take history and downloads too.
+if [ -z "$tag" ] && [ "$(sed -n 's/^cookies=//p' /etc/debsway/firefox.conf 2>/dev/null | head -1)" != keep ]; then
+    {
+        echo 'user_pref("privacy.sanitize.sanitizeOnShutdown", true);'
+        echo 'user_pref("privacy.clearOnShutdown_v2.cookiesAndStorage", true);'
+        echo 'user_pref("privacy.clearOnShutdown_v2.cache", true);'
+        echo 'user_pref("privacy.clearOnShutdown_v2.historyFormDataAndDownloads", false);'
+        echo 'user_pref("privacy.clearOnShutdown_v2.browsingHistoryAndDownloads", false);'
+        echo 'user_pref("privacy.clearOnShutdown_v2.formdata", false);'
+        echo 'user_pref("privacy.clearOnShutdown_v2.siteSettings", false);'
+    } >>"$profile/user.js"
+elif [ -z "$tag" ]; then
+    echo 'user_pref("privacy.sanitize.sanitizeOnShutdown", false);' >>"$profile/user.js"
+fi
 # A profile with its own user: its address and its JavaScript choice are in a file
 # only root can write (/etc/debsway/firefox-profiles/NAME.conf)
 if [ -n "$tag" ]; then

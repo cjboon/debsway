@@ -165,10 +165,21 @@ check "fast JavaScript chosen: the main Firefox gets the JIT back" grep -qx 'use
 : >"$T/prof/user.js"
 printf 'fast_js=no\n' >"$T/fx.conf"
 ( profile=$T/prof tag=; eval "$(conf_lines "$HERE/bin/firefox-session" '^jit_on() {')" ) 2>/dev/null
-check "...not chosen: it stays off" test ! -s "$T/prof/user.js"
+check "...not chosen: it stays off" not grep -q 'javascript.options.ion' "$T/prof/user.js"
+check "cookies, site data and the cache are deleted when it closes (the default), history kept" bash -c '
+    grep -qx "user_pref(\"privacy.sanitize.sanitizeOnShutdown\", true);" "$1" &&
+    grep -qx "user_pref(\"privacy.clearOnShutdown_v2.cookiesAndStorage\", true);" "$1" &&
+    grep -qx "user_pref(\"privacy.clearOnShutdown_v2.cache\", true);" "$1" &&
+    grep -qx "user_pref(\"privacy.clearOnShutdown_v2.historyFormDataAndDownloads\", false);" "$1" &&
+    grep -qx "user_pref(\"privacy.clearOnShutdown_v2.browsingHistoryAndDownloads\", false);" "$1"' _ "$T/prof/user.js"
+: >"$T/prof/user.js"
+printf 'cookies=keep\n' >"$T/fx.conf"
+( profile=$T/prof tag=; eval "$(conf_lines "$HERE/bin/firefox-session" '^jit_on() {')" ) 2>/dev/null
+check "...keep chosen: they stay" grep -qx 'user_pref("privacy.sanitize.sanitizeOnShutdown", false);' "$T/prof/user.js"
+: >"$T/prof/user.js"
 printf 'fast_js=yes\n' >"$T/fx.conf"
 ( profile=$T/prof tag=-bank; eval "$(conf_lines "$HERE/bin/firefox-session" '^jit_on() {')" ) 2>/dev/null
-check "...and the main Firefox's choice isn't a profile's (it has its own)" test ! -s "$T/prof/user.js"
+check "...and the main Firefox's choices aren't a profile's (it keeps its cookies: that is what it is for)" test ! -s "$T/prof/user.js"
 # sound: the main Firefox's choice from its file, a profile's from its own
 sound_of() { # NAME (empty: the main Firefox): what the firefox command decides
     local name=$1 audio=true
@@ -185,6 +196,12 @@ printf 'sound=no\n' >"$T/prof-bank.conf"
 check "...a profile with sound off is silent, the main Firefox not" bash -c '[ "$1" = false ] && [ "$2" = true ]' _ "$(sound_of bank)" "$(sound_of '')"
 rm -f "$T/prof-bank.conf"
 check "...never asked (no file): with sound" test "$(sound_of bank)" = true
+check "the install asks about cookies (delete or keep, default delete), explained, history and passwords kept" python3 -I -c '
+import sys; s = open(sys.argv[1]).read()
+assert "choose cookies \"When Firefox closes, its cookies and site data:\" \"$cookies\" delete keep" in s and "cookies=delete" in s
+assert "Manage Exceptions" in s and "History, bookmarks and saved passwords stay either way" in s and "\"cookies=$cookies\"" in s
+' "$HERE/extras/firefox-sandbox.sh"
+check "saved passwords fill in on a click, not as the page loads" grep -qx 'user_pref("signon.autofillForms", false);' "$HERE/data/firefox-user.js"
 check "the install asks about fast JavaScript (default no), sound and links (default yes), last answers first" python3 -I -c '
 import sys; s = open(sys.argv[1]).read()
 assert "fast=n sound=y links=y" in s

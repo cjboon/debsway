@@ -343,6 +343,14 @@ about incognito; your profiles stay).
   still works, just slower; heavy web apps can feel sluggish. Turn it back
   on for one site by giving it its own profile with fast JavaScript
   (`extras/firefox-profiles/new-profile.sh`).
+- **Cookies and site data deleted when it closes** (the sandboxed
+  Firefox's default; its install asks): websites, and the trackers behind
+  them, can't recognise you from one visit to the next. Sites you allow
+  under Settings > Privacy & Security > Cookies and Site Data > Manage
+  Exceptions keep theirs, so you stay logged in to those. History,
+  bookmarks and saved passwords stay: no website can read them.
+- **Saved passwords fill in on a click**, not as the page loads: tracking
+  scripts have added hidden login boxes to read what Firefox filled in.
 - **HTTPS-Only Mode**: Firefox won't load an unencrypted page without
   asking first, so nobody on café or hotel Wi-Fi can tamper with it.
 - **Its DNS, encrypted either way** (a locked policy, never a provider
