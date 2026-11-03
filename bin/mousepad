@@ -1,5 +1,9 @@
 #!/bin/sh
 # mousepad: written by debsway extras/mousepad.sh
-# Mousepad with dark menus and toolbar, to go with its black page
-# (GTK's own Adwaita theme, dark variant; only for Mousepad).
+# Mousepad with menus and toolbar to go with its page: GTK's own Adwaita
+# theme, dark variant, or light in debsway's light theme (bin/theme); only
+# for Mousepad.
+variant=dark
+[ "$(head -c 16 "${XDG_CONFIG_HOME:-$HOME/.config}/debsway/theme" 2>/dev/null)" != light ] || variant=light
+if [ "$variant" = light ]; then exec env GTK_THEME=Adwaita /usr/bin/mousepad "$@"; fi
 exec env GTK_THEME=Adwaita:dark /usr/bin/mousepad "$@"

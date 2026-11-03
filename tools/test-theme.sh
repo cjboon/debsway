@@ -22,9 +22,18 @@ not() { ! "$@"; }
 unset SWAYSOCK WAYLAND_DISPLAY
 
 mkdir -p "$T/fake"
-for p in swaymsg makoctl notify-send wmenu gsettings; do
+for p in swaymsg makoctl notify-send wmenu; do
     printf '#!/bin/sh\necho "%s $*" >>"%s/calls"\n' "$p" "$T" >"$T/fake/$p"
 done
+# gsettings: logs; knows Mousepad's settings; its scheme is in $T/mousepad-scheme
+cat >"$T/fake/gsettings" <<EOF
+#!/bin/sh
+echo "gsettings \$*" >>"$T/calls"
+case "\$1" in
+    list-schemas) echo org.xfce.mousepad.preferences.view ;;
+    get) cat "$T/mousepad-scheme" 2>/dev/null ;;
+esac
+EOF
 # (mako "isn't running": the real one on this desktop is never reloaded)
 printf '#!/bin/sh\nexit 1\n' >"$T/fake/pgrep"
 chmod +x "$T/fake/"*
@@ -84,6 +93,13 @@ th light >/dev/null
 check "...GTK apps prefer light: settings.ini for GTK 3 and 4, and libadwaita's color-scheme" bash -c '
     grep -qx "gtk-application-prefer-dark-theme=false" "$1/gtk-3.0/settings.ini" && grep -qx "gtk-application-prefer-dark-theme=false" "$1/gtk-4.0/settings.ini" &&
     grep -qx "gsettings set org.gnome.desktop.interface color-scheme prefer-light" "$2"' _ "$H/.config" "$T/calls"
+echo "'debsway-dark'" >"$T/mousepad-scheme"
+th light >/dev/null
+check "...Mousepad's debsway scheme follows: debsway-light" grep -qx "gsettings set org.xfce.mousepad.preferences.view color-scheme debsway-light" "$T/calls"
+echo "'oblivion'" >"$T/mousepad-scheme"
+th light >/dev/null
+check "...a scheme you chose yourself stays" not grep -q "mousepad.preferences.view color-scheme debsway" "$T/calls"
+rm -f "$T/mousepad-scheme"
 printf '[Settings]\ngtk-font-name=Mine 11\n' >"$H/.config/gtk-3.0/settings.ini"
 th light
 check "...a settings.ini line of your own stays" bash -c 'grep -qx "gtk-font-name=Mine 11" "$1" && [ "$(grep -c prefer-dark "$1")" = 1 ]' _ "$H/.config/gtk-3.0/settings.ini"

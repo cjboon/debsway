@@ -98,6 +98,14 @@ gtk() {
     done
     if command -v gsettings >/dev/null; then
         gsettings set org.gnome.desktop.interface color-scheme "prefer-$1" 2>/dev/null || true
+        # Mousepad: debsway's scheme to match (extras/mousepad.sh), while it
+        # is one of debsway's two; one you chose yourself stays
+        if gsettings list-schemas 2>/dev/null | grep -qx org.xfce.mousepad.preferences.view; then
+            case $(gsettings get org.xfce.mousepad.preferences.view color-scheme 2>/dev/null) in
+                "'debsway-dark'" | "'debsway-light'")
+                    gsettings set org.xfce.mousepad.preferences.view color-scheme "debsway-$1" 2>/dev/null || true ;;
+            esac
+        fi
     fi
 }
 

@@ -13,8 +13,9 @@ mousepad [FILE]       open it (or Super+d); text files open in it too
 Mousepad is a simple graphical text editor from Xfce, from Debian, made the
 default for plain text, Markdown, logs and shell scripts. debsway sets its
 look: white text on black in the terminal's colors (the scheme
-`data/mousepad-dark.xml`), dark menus (the `mousepad` command, `bin/mousepad`,
-starts it with GTK's dark theme), DejaVu Sans Mono 14, line numbers, matching
+`data/mousepad-dark.xml`; in debsway's light theme dark text on warm light,
+`data/mousepad-light.xml`, switched by `theme`), dark menus, or light ones in the light
+theme (the `mousepad` command, `bin/mousepad`, starts it with GTK's matching theme), DejaVu Sans Mono 14, line numbers, matching
 braces highlighted, a line at column 80, and tabs of 4 spaces
 (`data/mousepad.settings`, set with gsettings). Run again, the script sets
 them only if debsway's settings changed since, so your own changes stay.
@@ -31,6 +32,8 @@ them only if debsway's settings changed since, so your own changes stay.
 sudo apt install --no-install-recommends mousepad libglib2.0-bin
 # The colour scheme, where Mousepad looks for schemes
 install -D -m 0644 @DEBSWAY_DIR@/data/mousepad-dark.xml ~/.local/share/gtksourceview-4/styles/debsway-dark.xml
+# its light twin, for debsway's light theme (theme light switches to it)
+install -D -m 0644 @DEBSWAY_DIR@/data/mousepad-light.xml ~/.local/share/gtksourceview-4/styles/debsway-light.xml
 # The mousepad command with dark menus
 install -D -m 0755 @DEBSWAY_DIR@/bin/mousepad ~/.local/bin/mousepad
 # The settings: one "gsettings set" per line of data/mousepad.settings
@@ -51,7 +54,7 @@ To undo:
 # Forget it as the default for text files
 sed -i '/=org\.xfce\.mousepad\.desktop$/d' ~/.config/mimeapps.list
 # The command and the colour scheme
-rm ~/.local/bin/mousepad ~/.local/share/gtksourceview-4/styles/debsway-dark.xml
+rm ~/.local/bin/mousepad ~/.local/share/gtksourceview-4/styles/debsway-dark.xml ~/.local/share/gtksourceview-4/styles/debsway-light.xml
 # Its settings back to Mousepad's own
 gsettings reset-recursively org.xfce.mousepad.preferences
 # Mousepad; gsettings (libglib2.0-bin) is marked "automatic" instead of purged,

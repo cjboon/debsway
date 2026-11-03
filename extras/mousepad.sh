@@ -18,6 +18,8 @@ need_user
 APP=org.xfce.mousepad.desktop
 SETTINGS="$DEBSWAY_DIR/data/mousepad.settings"
 SCHEME="$DEBSWAY_DIR/data/mousepad-dark.xml"
+# its light twin, for debsway's light theme (bin/theme switches between them)
+SCHEME_LIGHT="$DEBSWAY_DIR/data/mousepad-light.xml"
 STYLES="${XDG_DATA_HOME:-$HOME/.local/share}/gtksourceview-4/styles"
 APPLIED="${XDG_STATE_HOME:-$HOME/.local/state}/debsway/mousepad-settings"
 
@@ -25,7 +27,7 @@ if [ "${1:-}" = --remove ]; then
     apt_purge mousepad libglib2.0-bin
     unset_default_app "$APP"
     remove_bin mousepad
-    rm -f "$APPLIED" "$STYLES/debsway-dark.xml"
+    rm -f "$APPLIED" "$STYLES/debsway-dark.xml" "$STYLES/debsway-light.xml"
     note "Your Mousepad settings are left as they are (gsettings reset -r org.xfce.mousepad.preferences clears them)."
     exit
 fi
@@ -46,9 +48,10 @@ apt_install mousepad libglib2.0-bin
 set_default_app "$APP" text/plain text/markdown text/x-log application/x-shellscript
 install_bin mousepad
 install -D -m 0644 "$SCHEME" "$STYLES/debsway-dark.xml"
+install -D -m 0644 "$SCHEME_LIGHT" "$STYLES/debsway-light.xml"
 
 # Which settings were set, so a change to them (not a rerun) sets them again
-want=$(cat "$SETTINGS" "$SCHEME" | sha256sum | cut -d' ' -f1)
+want=$(cat "$SETTINGS" "$SCHEME" "$SCHEME_LIGHT" | sha256sum | cut -d' ' -f1)
 if [ "$(cat "$APPLIED" 2>/dev/null)" = "$want" ]; then
     note "Mousepad's settings were set up before; leaving them as they are."
 elif ! command -v gsettings >/dev/null || ! gsettings list-schemas | grep -qx org.xfce.mousepad.preferences.view; then
@@ -57,6 +60,10 @@ elif apply_settings "$SETTINGS"; then
     mkdir -p "${APPLIED%/*}"
     echo "$want" >"$APPLIED"
     note "Set Mousepad's look and editing settings (data/mousepad.settings). Close and reopen Mousepad to see them."
+    # in debsway's light theme, its light scheme (data/mousepad.settings says dark)
+    if [ "$(head -c 16 "${XDG_CONFIG_HOME:-$HOME/.config}/debsway/theme" 2>/dev/null || true)" = light ]; then
+        gsettings set org.xfce.mousepad.preferences.view color-scheme debsway-light || true
+    fi
 else
     warn "Some of Mousepad's settings couldn't be set; run this again to retry."
 fi

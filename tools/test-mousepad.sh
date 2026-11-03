@@ -39,6 +39,7 @@ fi
 R=/usr/share/gtksourceview-4/styles/styles.rng
 if command -v xmllint >/dev/null && [ -f "$R" ]; then
     check "the scheme is a valid GtkSourceView 4 scheme" xmllint --noout --relaxng "$R" "$HERE/data/mousepad-dark.xml"
+    check "...and its light twin" xmllint --noout --relaxng "$R" "$HERE/data/mousepad-light.xml"
 fi
 
 # ---- the extra, with pretend programs ----
@@ -70,7 +71,7 @@ grep -q MOUSEPAD_TEST_PATH "$W/lib.sh" || { echo "  FAIL  lib.sh's PATH line was
 cp "$HERE/pins.sh" "$HERE/packages.sh" "$W/"
 ln -s "$HERE/lib" "$W/lib"
 cp "$HERE/extras/mousepad.sh" "$W/extras/"
-cp "$HERE/data/mousepad.settings" "$HERE/data/mousepad-dark.xml" "$W/data/"
+cp "$HERE/data/mousepad.settings" "$HERE/data/mousepad-dark.xml" "$HERE/data/mousepad-light.xml" "$W/data/"
 cp "$HERE/bin/mousepad" "$W/bin/"
 export MOUSEPAD_TEST_PATH="$T/bin:$PATH"
 run() { : >"$T/set"; HOME=$T/home XDG_DATA_HOME='' XDG_STATE_HOME='' XDG_CONFIG_HOME='' bash "$W/extras/mousepad.sh" "$@" >"$T/out" 2>&1; }
@@ -80,7 +81,16 @@ run
 check "every setting is set" test "$(wc -l <"$T/set")" -eq "$(grep -v '^#' "$S" | grep -c .)"
 check "...as written" grep -qx "org.xfce.mousepad.preferences.view color-scheme 'debsway-dark'" "$T/set"
 check "the scheme is installed where Mousepad looks" cmp "$HERE/data/mousepad-dark.xml" "$T/home/.local/share/gtksourceview-4/styles/debsway-dark.xml"
+check "...its light twin too, for the light theme (the same styles, other colors)" bash -c '
+    cmp -s "$1" "$3/debsway-light.xml" && grep -q "<style-scheme id=\"debsway-light\"" "$1" &&
+    [ "$(grep -c "<style " "$1")" = "$(grep -c "<style " "$2")" ]' _ "$HERE/data/mousepad-light.xml" "$HERE/data/mousepad-dark.xml" "$T/home/.local/share/gtksourceview-4/styles"
 check "mousepad gets dark menus" grep -q 'GTK_THEME=Adwaita:dark /usr/bin/mousepad' "$T/home/.local/bin/mousepad"
+# the command, run with a stand-in for /usr/bin/mousepad that says its GTK theme
+mp() { sed 's|/usr/bin/mousepad|env|' "$HERE/bin/mousepad" | HOME=$T/home XDG_CONFIG_HOME='' sh -s | grep '^GTK_THEME='; }
+check "...in the dark theme: Adwaita's dark variant" test "$(mp)" = GTK_THEME=Adwaita:dark
+mkdir -p "$T/home/.config/debsway"; echo light >"$T/home/.config/debsway/theme"
+check "...in the light theme: light menus" test "$(mp)" = GTK_THEME=Adwaita
+rm -f "$T/home/.config/debsway/theme"
 check "...and is the default for text files" grep -q 'text/plain=org.xfce.mousepad.desktop' "$T/home/.config/mimeapps.list"
 run
 check "run again, your own changes are left alone" test ! -s "$T/set"
@@ -98,8 +108,22 @@ run
 check "without Mousepad's settings in gsettings it says so" grep -q "Couldn't find Mousepad's settings" "$T/out"
 check "...sets nothing" test ! -s "$T/set"
 check "...and tries again next time (no marker)" test ! -e "$T/home/.local/state/debsway/mousepad-settings"
+# debsway's light theme (bin/theme): Mousepad starts on the light scheme
+rm -f "$T/home/.local/state/debsway/mousepad-settings"
+mkdir -p "$T/home/.config/debsway"
+echo light >"$T/home/.config/debsway/theme"
+cat >"$T/bin/gsettings" <<EOF
+#!/bin/sh
+case "\$1" in
+    list-schemas) echo org.xfce.mousepad.preferences.view ;;
+    set) shift; echo "\$*" >>"$T/set" ;;
+esac
+EOF
+run
+check "in the light theme it starts on its light scheme" bash -c '[ "$(grep "color-scheme" "$1" | tail -1)" = "org.xfce.mousepad.preferences.view color-scheme debsway-light" ]' _ "$T/set"
+rm -f "$T/home/.config/debsway/theme"
 run --remove
-check "--remove takes out the scheme" test ! -e "$T/home/.local/share/gtksourceview-4/styles/debsway-dark.xml"
+check "--remove takes out the schemes" bash -c '[ ! -e "$1/debsway-dark.xml" ] && [ ! -e "$1/debsway-light.xml" ]' _ "$T/home/.local/share/gtksourceview-4/styles"
 check "...and the mousepad command" test ! -e "$T/home/.local/bin/mousepad"
 
 [ "$fails" -eq 0 ]
