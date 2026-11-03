@@ -88,7 +88,7 @@ main() {
                 note "(Its signature is not checked: no signing key is pinned in pins.sh yet, so this is as the server gives it.)"
             fi
             ask "Bring these in?" n || { note "Nothing changed."; return 0; }
-            g merge --ff-only --quiet '@{upstream}' ||
+            g merge --ff-only --quiet "$upstream" ||
                 die "Couldn't bring it in (your files in $WREN_DIR conflict with it?). Look at: git -C $WREN_DIR status"
         fi
     else
