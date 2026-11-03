@@ -1,7 +1,10 @@
 #!/bin/bash
 # incognito-session: written by debsway parts/incognito.sh
-# Runs as the user "incognito" (the incognito command starts it through
-# sudo; it is the only thing your user may run as incognito). Opens Firefox
+# Runs as the user "incognito", or "wifi-signin" for the Wi-Fi sign-in window
+# (the incognito command starts it through sudo; it is the only thing your
+# user may run as either). Each user runs only its own kind of window: the
+# sign-in one, whose firewall rule lets it reach the local network, never a
+# normal one. Opens Firefox
 # inside cage, a tiny Wayland compositor shown as one window in your sway.
 # Home folder, profile, cache and downloads all live in /dev/shm (memory)
 # and are deleted when Firefox closes.
@@ -17,7 +20,8 @@ die() { printf 'incognito: %s\n' "$*" >&2; exit 1; }
 noabs=/usr/local/libexec/debsway-no-abstract-sockets
 [ -x "$noabs" ] || die "$noabs is missing. Run: bash ~/debsway/parts/incognito.sh"
 
-[ "$(id -un)" = incognito ] || die "this runs as the user incognito; use the incognito command."
+me=$(id -un)
+[ "$me" = incognito ] || [ "$me" = wifi-signin ] || die "this runs as the user incognito or wifi-signin; use the incognito command."
 [ $# -ge 5 ] || die "usage: incognito-session RUNTIME_DIR WAYLAND_DISPLAY AUDIO THEME normal|signin [URL...]"
 host_rt=$1 host_wl=$2 audio=$3 theme=$4 kind=$5
 shift 5
@@ -29,6 +33,8 @@ shift 5
 [[ $audio == - || $audio == incognito-audio.fifo ]] || die "unexpected sound pipe name."
 [[ $theme == light || $theme == dark ]] || die "unexpected theme."
 [[ $kind == normal || $kind == signin ]] || die "unexpected window kind."
+{ [ "$me" = incognito ] && [ "$kind" = normal ]; } || { [ "$me" = wifi-signin ] && [ "$kind" = signin ]; } ||
+    die "the user $me doesn't run the $kind window."
 if [ "$audio" != - ]; then
     [ -p "$host_rt/$audio" ] || audio=-
     for c in pipewire wireplumber pipewire-pulse; do
@@ -41,9 +47,9 @@ done
 
 [ -d /dev/shm ] || die "/dev/shm (memory) isn't available."
 # Left behind by a crash or a power cut
-find /dev/shm -maxdepth 1 -name 'incognito.*' -user incognito -exec rm -rf {} + 2>/dev/null || true
+find /dev/shm -maxdepth 1 -name "$me.*" -user "$me" -exec rm -rf {} + 2>/dev/null || true
 
-base=$(mktemp -d /dev/shm/incognito.XXXXXXXX)
+base=$(mktemp -d "/dev/shm/$me.XXXXXXXX")
 mkdir "$base/home" "$base/run" "$base/profile" "$base/tmp"
 pid=
 

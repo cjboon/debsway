@@ -1,0 +1,33 @@
+# Keeps the wifi-signin user off this computer (debsway parts/incognito.sh).
+# Only that user's traffic is touched. It runs the Wi-Fi sign-in window
+# (bin/wifi-signin), a throwaway Firefox that lives only while you sign in.
+# Unlike incognito it may reach the local network: a café's or hotel's sign-in
+# page is often there (http://192.168.1.1/login, http://10.0.0.1/...). It may
+# not reach:
+#   - programs on this machine that listen on the network (a local server,
+#     the Tor Browser proxy, a printing service, ...); DNS is let through,
+#     as for incognito, since it is what the window is for
+#   - multicast and broadcast addresses (no sign-in page lives there)
+
+table inet debsway_wifi_signin
+delete table inet debsway_wifi_signin
+
+table inet debsway_wifi_signin {
+    chain output {
+        type filter hook output priority 0; policy accept;
+        meta skuid "wifi-signin" jump wifi_signin
+    }
+
+    chain wifi_signin {
+        # Answers to connections that others made to it (it can listen)
+        ct state established,related accept
+        # DNS, the network's own: the window is there to use it
+        udp dport 53 accept
+        tcp dport 53 accept
+        # Anything addressed to this computer itself goes out through "lo",
+        # whichever of its addresses is used, so this catches them all
+        oifname "lo" reject
+        ip daddr { 0.0.0.0/8, 127.0.0.0/8, 224.0.0.0/4, 255.255.255.255 } reject
+        ip6 daddr { ::1, ff00::/8 } reject
+    }
+}

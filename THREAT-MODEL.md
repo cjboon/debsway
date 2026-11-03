@@ -49,7 +49,10 @@ this page to decide what else you need.
   (`parts/incognito.sh`) opens Firefox as a separate user with no
   password and no files of yours, in its own window system so the
   clipboard isn't shared, with everything kept in memory and deleted when
-  you close it. Video and sound work; the sound leaves through a one-way
+  you close it. The Wi-Fi sign-in window is the same, as another such user,
+  `wifi-signin`, except that it may reach your local network (sign-in pages
+  are often there; this computer stays closed to it) and uses the network's
+  DNS: open it for sign-in pages only. Video and sound work; the sound leaves through a one-way
   pipe, so it can't hear your microphone or your other programs. A hacked
   browser there gets a user that owns nothing.
 - **A browser exploit reaching your files.** `firefox` (`extras/firefox-sandbox.sh`)

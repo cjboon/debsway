@@ -10,6 +10,7 @@ bash ~/debsway/extras/firefox-sandbox.sh --manual   print the manual steps below
 
 ublock-allow example.com      let a site that breaks run scripts and frames from other sites
 incognito [URL]               a throwaway Firefox that keeps nothing (incognito --no-audio: no sound)
+wifi-signin                   the Wi-Fi sign-in window: the same, for a café's or hotel's sign-in page
 ```
 
 The sandboxed Firefox sets up Firefox ESR the debsway way for every profile
@@ -28,12 +29,17 @@ user with no home, no files of yours, no shared clipboard and only a
 restricted Wayland socket; its profile lives in memory and is deleted when the
 window closes. Its sound goes through a pipe into a player of yours, so it
 can't hear your microphone, and a firewall rule on that user
-(`data/incognito-firewall.nft`) keeps it off your network.
+(`data/incognito-firewall.nft`) keeps it off your network. The Wi-Fi sign-in
+window (`wifi-signin`) is the same throwaway Firefox as a second such user,
+`wifi-signin`, with the network's own DNS and plain http allowed; its rule
+(`data/wifi-signin-firewall.nft`) lets it reach the local network, where sign-in
+pages often are, but not this computer. That user runs only that window.
 
 ## LIMITS
 
 - uBlock's medium mode, if chosen, breaks some sites until you allow them; the JIT being off makes heavy sites slower.
 - `incognito` is still your network and your address: use Tor Browser or a VPN for that.
+- The Wi-Fi sign-in window can reach your local network (router, printers, other computers) while it is open: use it for sign-in pages only.
 - `incognito` has no WebRTC: video calls and browser-to-browser file transfers don't work there.
 - Any window, `incognito` included, can be captured by screenshots.
 - Both share your kernel: a kernel bug could get out of them.
@@ -65,33 +71,44 @@ systemctl --user enable --now firefox-restart-check.timer
 # --- incognito ---
 # cage, acl, its own audio server and player, nftables, python3 for wayland-restrict
 sudo apt install --no-install-recommends cage acl firefox-esr libavcodec61 pipewire-bin pipewire-pulse wireplumber nftables python3
-# The incognito user: a system user with no home, no password and no login;
-# render lets cage open the graphics card's render node (not the screen)
+# The incognito user, and wifi-signin for the Wi-Fi sign-in window: system
+# users with no home, no password and no login; render lets cage open the
+# graphics card's render node (not the screen)
 sudo useradd --system --user-group --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin --comment "debsway incognito Firefox" incognito
-sudo usermod --lock --shell /usr/sbin/nologin incognito
-sudo usermod -aG render incognito
+sudo useradd --system --user-group --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin --comment "debsway Wi-Fi sign-in window" wifi-signin
+for u in incognito wifi-signin; do
+    sudo usermod --lock --shell /usr/sbin/nologin "$u"
+    sudo usermod -aG render "$u"
+done
 # The restricted Wayland socket, the no-abstract-sockets wrapper, the command,
 # its session script and its prefs
 install -D -m 0755 @DEBSWAY_DIR@/bin/wayland-restrict ~/.local/bin/wayland-restrict
 sudo install -d -o root -g root -m 0755 /usr/local/share/debsway /usr/local/libexec
 sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/no-abstract-sockets /usr/local/libexec/debsway-no-abstract-sockets
 sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/incognito /usr/local/bin/incognito
+sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/wifi-signin /usr/local/bin/wifi-signin
 sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/incognito-session /usr/local/libexec/incognito-session
 sudo install -o root -g root -m 0644 @DEBSWAY_DIR@/data/incognito-user.js /usr/local/share/debsway/incognito-user.js
-# Your user may run the session script, and nothing else, as incognito. visudo
-# checks the rule first: never put a rule in /etc/sudoers.d it hasn't passed.
-printf '%s ALL=(incognito) NOPASSWD: /usr/local/libexec/incognito-session\n' "$(id -un)" >/tmp/debsway-incognito
+# Your user may run the session script, and nothing else, as incognito or
+# wifi-signin. visudo checks the rule first: never put a rule in
+# /etc/sudoers.d it hasn't passed.
+printf '%s ALL=(incognito, wifi-signin) NOPASSWD: /usr/local/libexec/incognito-session\n' "$(id -un)" >/tmp/debsway-incognito
 sudo visudo -cf /tmp/debsway-incognito
 sudo install -o root -g root -m 0440 /tmp/debsway-incognito /etc/sudoers.d/debsway-incognito
 rm /tmp/debsway-incognito
 # A limit on its processes, and no core dumps
-printf '%s\n' 'incognito hard nproc 4096' 'incognito hard core 0' | sudo tee /etc/security/limits.d/50-debsway-incognito.conf
-# The firewall rule: the internet only, not this computer or your network
+printf '%s\n' 'incognito hard nproc 4096' 'incognito hard core 0' 'wifi-signin hard nproc 4096' 'wifi-signin hard core 0' |
+    sudo tee /etc/security/limits.d/50-debsway-incognito.conf
+# The firewall rules: incognito the internet only, not this computer or your
+# network; wifi-signin the internet and your network, not this computer
 sudo install -D -o root -g root -m 0644 @DEBSWAY_DIR@/data/incognito-firewall.nft /etc/debsway/incognito.nft
+sudo install -D -o root -g root -m 0644 @DEBSWAY_DIR@/data/wifi-signin-firewall.nft /etc/debsway/wifi-signin.nft
 printf '%s\n' '[Unit]' 'Description=Keep the incognito user off the local network' \
     'Before=network-pre.target' 'Wants=network-pre.target' '' '[Service]' \
     'Type=oneshot' 'RemainAfterExit=yes' 'ExecStart=/usr/sbin/nft -f /etc/debsway/incognito.nft' \
-    'ExecStop=/usr/sbin/nft delete table inet debsway_incognito' '' '[Install]' 'WantedBy=multi-user.target' |
+    'ExecStart=/usr/sbin/nft -f /etc/debsway/wifi-signin.nft' \
+    'ExecStop=/usr/sbin/nft delete table inet debsway_incognito' \
+    'ExecStop=-/usr/sbin/nft delete table inet debsway_wifi_signin' '' '[Install]' 'WantedBy=multi-user.target' |
     sudo tee /etc/systemd/system/debsway-incognito-firewall.service
 sudo systemctl daemon-reload
 sudo systemctl enable --now debsway-incognito-firewall.service
@@ -103,12 +120,11 @@ To undo:
 ```
 # --- incognito ---
 sudo systemctl disable --now debsway-incognito-firewall.service
-sudo rm /etc/systemd/system/debsway-incognito-firewall.service /etc/debsway/incognito.nft
+sudo rm /etc/systemd/system/debsway-incognito-firewall.service /etc/debsway/incognito.nft /etc/debsway/wifi-signin.nft
 sudo systemctl daemon-reload
 sudo rm /etc/sudoers.d/debsway-incognito /etc/security/limits.d/50-debsway-incognito.conf
-sudo rm /usr/local/bin/incognito /usr/local/libexec/incognito-session /usr/local/share/debsway/incognito-user.js
-sudo pkill -KILL -u incognito
-sudo userdel incognito
+sudo rm /usr/local/bin/incognito /usr/local/bin/wifi-signin /usr/local/libexec/incognito-session /usr/local/share/debsway/incognito-user.js
+for u in incognito wifi-signin; do sudo pkill -KILL -u "$u"; sudo userdel "$u"; done
 # (wayland-restrict only if the media extra and the PDF viewer don't use it;
 # no-abstract-sockets only if no other sandbox does)
 rm ~/.local/bin/wayland-restrict

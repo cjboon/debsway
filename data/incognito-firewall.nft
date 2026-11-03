@@ -4,8 +4,9 @@
 #   - programs on this machine that listen on the network (a local server,
 #     the Tor Browser proxy, a printing service, ...)
 #   - your router, printers, other computers, or your phone's hotspot
-# DNS stays open (your resolver is usually the router). Wi-Fi login pages
-# at cafes are on the local network too: sign in with your own Firefox.
+# DNS stays open (your resolver is usually the router). Wi-Fi sign-in pages are
+# often on the local network, so the Wi-Fi sign-in window runs as another user,
+# wifi-signin, with a rule of its own (wifi-signin-firewall.nft).
 
 table inet debsway_incognito
 delete table inet debsway_incognito

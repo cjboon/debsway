@@ -367,10 +367,13 @@ DNS off only while it is open. What `parts/incognito.sh` sets up:
   user (`data/incognito-firewall.nft`, loaded at every boot) turns away its
   connections to your router, printers, other computers on the local network
   and to programs listening on this machine (including Tor Browser's
-  proxy). DNS and the internet stay open. Cafe Wi-Fi login pages are on the
-  local network, so sign in with your own Firefox first.
-- **A narrow door**: your user may run one thing as `incognito`, the
-  wrapper `/usr/local/libexec/incognito-session`, through a rule in
+  proxy). DNS and the internet stay open. Wi-Fi sign-in pages are often on
+  the local network, so the Wi-Fi sign-in window runs as a second such user,
+  `wifi-signin`, whose own rule (`data/wifi-signin-firewall.nft`) lets it reach
+  the local network but not this computer. That user runs only the sign-in
+  window, and the two can be open at the same time.
+- **A narrow door**: your user may run one thing as `incognito` (and as
+  `wifi-signin`), the wrapper `/usr/local/libexec/incognito-session`, through a rule in
   `/etc/sudoers.d/debsway-incognito` that was checked with `visudo`. The
   `incognito` command gives that user a restricted Wayland socket only
   while the window is open, and takes it away afterwards. It is made with

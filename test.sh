@@ -104,7 +104,7 @@ done
 for f in lib/secure-dns.sh data/secure-dns-firewall.nft; do
     [ -f "$f" ] || bad "parts/secure-dns.sh needs $f"
 done
-for f in bin/incognito bin/incognito-session bin/wayland-restrict data/incognito-user.js data/incognito-firewall.nft; do
+for f in bin/incognito bin/incognito-session bin/wayland-restrict bin/wifi-signin data/incognito-user.js data/incognito-firewall.nft data/wifi-signin-firewall.nft; do
     [ -f "$f" ] || bad "parts/incognito.sh needs $f"
 done
 # The hardening parts read these

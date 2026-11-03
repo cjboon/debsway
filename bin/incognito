@@ -11,7 +11,10 @@
 # It never gets to your audio server, so it can't hear your microphone or
 # your other programs.
 # --signin: the Wi-Fi sign-in window (bin/wifi-signin): it uses the network's
-# own DNS, not Firefox's encrypted DNS, so a sign-in page can load.
+# own DNS, not Firefox's encrypted DNS, so a sign-in page can load. It runs as
+# another user, wifi-signin, whose firewall rule lets it reach the local
+# network, where sign-in pages often are; it has no sound, and it can be open
+# next to an incognito window.
 set -euo pipefail
 
 die() { printf 'incognito: %s\n' "$*" >&2; exit 1; }
@@ -19,6 +22,9 @@ die() { printf 'incognito: %s\n' "$*" >&2; exit 1; }
 audio=true kind=normal
 if [ "${1:-}" = --no-audio ]; then audio=false; shift; fi
 if [ "${1:-}" = --signin ]; then kind=signin; shift; fi
+# Who it runs as: each kind its own user, with its own firewall rule
+user=incognito
+if [ "$kind" = signin ]; then user=wifi-signin audio=false; fi
 
 [ "$(id -u)" -ne 0 ] || die "run it as your normal user, not root."
 [ -n "${WAYLAND_DISPLAY:-}" ] || die "it needs your sway session; start sway first."
@@ -28,16 +34,16 @@ case $WAYLAND_DISPLAY in
     */*) die "WAYLAND_DISPLAY should be a plain name like wayland-1." ;;
 esac
 [ -S "$rt/$WAYLAND_DISPLAY" ] || die "can't find your Wayland socket ($rt/$WAYLAND_DISPLAY)."
-sock=$rt/incognito-wayland
+sock=$rt/$user-wayland
 restrict=$(command -v wayland-restrict) || die "wayland-restrict is missing. Run: bash ~/debsway/parts/incognito.sh"
 command -v setfacl >/dev/null || die "setfacl is missing (package acl)."
 command -v flock >/dev/null || die "flock is missing (package util-linux)."
-# The one command your user may run as incognito (see /etc/sudoers.d)
-sudo -n -u incognito -l /usr/local/libexec/incognito-session >/dev/null 2>&1 ||
+# The one command your user may run as incognito or wifi-signin (see /etc/sudoers.d)
+sudo -n -u "$user" -l /usr/local/libexec/incognito-session >/dev/null 2>&1 ||
     die "your user isn't set up to start it. Run: bash ~/debsway/parts/incognito.sh"
 
-# One at a time: the second would take back the access the first one needs
-exec 9>"$rt/incognito.lock"
+# One of each kind at a time: the second would take back the access the first one needs
+exec 9>"$rt/$user.lock"
 flock -n 9 || die "it is already open."
 
 # The sound pipe: incognito writes, a player of yours reads and plays it.
@@ -58,18 +64,18 @@ cleanup() {
     if [ -n "$player" ]; then kill "$player" 2>/dev/null || true; fi
     if [ -n "${WL_PID:-}" ]; then kill "$WL_PID" 2>/dev/null || true; fi
     rm -f "$fifo" "$sock"
-    setfacl -x u:incognito "$rt" 2>/dev/null || true
+    setfacl -x "u:$user" "$rt" 2>/dev/null || true
 }
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM HUP
 # 9>&-: wayland-restrict must not inherit the lock. It ends when cleanup
 # kills it, or when this script dies (its standard input closes).
-coproc WL { "$restrict" "$sock" incognito 9>&-; }
+coproc WL { "$restrict" "$sock" "$user" 9>&-; }
 IFS= read -r -t 10 line <&"${WL[0]}" && [ "$line" = ready ] ||
     die "couldn't make a restricted Wayland socket (needs sway 1.9 or newer; see above)."
-setfacl -m u:incognito:--x "$rt"
-setfacl -m u:incognito:rw- "$sock"
+setfacl -m "u:$user:--x" "$rt"
+setfacl -m "u:$user:rw-" "$sock"
 
 if $audio; then
     rm -f "$fifo"
@@ -90,5 +96,5 @@ rc=0
 # the theme (bin/theme): just the word light or dark
 theme=$(head -c 16 "${XDG_CONFIG_HOME:-$HOME/.config}/debsway/theme" 2>/dev/null || true)
 case $theme in light | dark) ;; *) theme=dark ;; esac
-sudo -n -u incognito /usr/local/libexec/incognito-session "$rt" "${sock##*/}" "$audio_arg" "$theme" "$kind" "$@" || rc=$?
+sudo -n -u "$user" /usr/local/libexec/incognito-session "$rt" "${sock##*/}" "$audio_arg" "$theme" "$kind" "$@" || rc=$?
 exit "$rc"

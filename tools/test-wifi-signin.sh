@@ -77,4 +77,61 @@ check "parts/incognito.sh installs it, root-owned, next to incognito (and remove
     grep -q "install -o root -g root -m 0755 \"\$DEBSWAY_DIR/bin/wifi-signin\" /usr/local/bin/wifi-signin" "$1" &&
     grep -q "sudo rm -f .*/usr/local/bin/wifi-signin" "$1"' _ "$HERE/parts/incognito.sh"
 
+# ---- the sign-in window's own user: the local network, not this computer
+# The user bin/incognito picks for each kind of window (incognito when it
+# doesn't choose: that is who every window ran as before)
+user_for() { bash -c 'kind=$1 audio=true; eval "$(sed -n "/^user=incognito$/,/^if \[ \"\$kind\" = signin \]/p" "$2")"; echo "${user:-incognito}"' _ "$1" "$HERE/bin/incognito"; }
+check "a normal window runs as incognito" test "$(user_for normal)" = incognito
+check "the sign-in window runs as wifi-signin, without sound" bash -c '
+    [ "$1" = wifi-signin ] && grep -qx "if \[ \"\$kind\" = signin \]; then user=wifi-signin audio=false; fi" "$2"' _ "$(user_for signin)" "$HERE/bin/incognito"
+check "...each with its own lock, so the two can be open together" \
+    bash -c 'grep -qx "exec 9>\"\$rt/\$user.lock\"" "$1" && grep -qx "sock=\$rt/\$user-wayland" "$1" && ! grep -q "u:incognito:--x" "$1"' _ "$HERE/bin/incognito"
+# incognito-session: each user runs only its own kind
+line=$(sed -n '/^{ \[ "\$me" = incognito \]/,/die "the user/p' "$HERE/bin/incognito-session")
+runs() { bash -c 'die() { exit 1; }; me=$1 kind=$2; eval "$3"' _ "$1" "$2" "$line"; }
+check "incognito-session: incognito runs the normal window, wifi-signin the sign-in one" bash -c '[ -n "$1" ]' _ "$line"
+check "...incognito normal, wifi-signin signin: yes" bash -c "$(declare -f runs); line=\$1; runs incognito normal && runs wifi-signin signin" _ "$line"
+check "...incognito signin, wifi-signin normal: no" bash -c "$(declare -f runs); line=\$1; ! runs incognito signin && ! runs wifi-signin normal" _ "$line"
+check "...and any other user: no" grep -qx '\[ "\$me" = incognito \] || \[ "\$me" = wifi-signin \] || die .*' "$HERE/bin/incognito-session"
+P=$HERE/parts/incognito.sh
+check "parts/incognito.sh makes the wifi-signin user like incognito, and --remove deletes it" bash -c '
+    grep -qx "sandbox_user \"\$SIGNIN\" \"debsway Wi-Fi sign-in window\"" "$1" && grep -q "for u in \"\$NAME\" \"\$SIGNIN\"; do" "$1"' _ "$P"
+check "...your user may run the wrapper as either, and nothing else" grep -q 'ALL=(%s, %s) NOPASSWD: %s' "$P"
+check "...its firewall rule is loaded at boot with incognito's, and taken out by --remove" bash -c '
+    grep -q "\"ExecStart=/usr/sbin/nft -f \$SIGNIN_FIREWALL\"" "$1" && grep -q "nft delete table inet debsway_wifi_signin" "$1" &&
+    grep -q "\"\$DEBSWAY_DIR/data/wifi-signin-firewall.nft\" \"\$SIGNIN_FIREWALL\"" "$1"' _ "$P"
+
+# The rules themselves, in a network namespace of their own (nothing on this
+# computer is touched): a dummy network 192.168.5.0/24 and 10.9.0.0/16, with
+# this "computer" at 192.168.5.2. A counter on each reject says whether the
+# rule turned a connection away.
+fw_for() { grep -lF "meta skuid \"$1\" jump" "$HERE"/data/*-firewall.nft | head -1; }
+NS_PATH=/usr/sbin:/sbin:/usr/bin:/bin
+if PATH=$NS_PATH command -v nft >/dev/null && unshare -rn true 2>/dev/null; then
+    # reach RULE-FILE USER HOST PORT: refused (by the rule), or out
+    reach() {
+        [ -f "$1" ] || { echo "no rule for $2"; return; }
+        sed -e "s/meta skuid \"$2\"/meta skuid 0/" -e 's/ reject$/ counter reject/' "$1" >"$T/fw.nft"
+        PATH=$NS_PATH unshare -rn bash -c '
+            ip link set lo up && ip link add d0 type dummy && ip link set d0 up &&
+            ip addr add 192.168.5.2/24 dev d0 && ip route add 10.9.0.0/16 dev d0 || exit 9
+            nft -f "$1" || exit 8
+            timeout 0.2 bash -c "exec 3<>/dev/tcp/$2/$3" 2>/dev/null
+            if nft list ruleset | grep -qE "counter packets [1-9]"; then echo refused; else echo out; fi' _ "$T/fw.nft" "$3" "$4"
+    }
+    SIGNIN_USER=$(user_for signin)
+    SIGNIN_FW=$(fw_for "$SIGNIN_USER")
+    INCOG_FW=$(fw_for incognito)
+    check "nft accepts the sign-in window's rule" bash -c 'sed "s/skuid \"wifi-signin\"/skuid 0/" "$1" >"$2/c.nft" && PATH=$3 unshare -rn nft -c -f "$2/c.nft"' _ "$HERE/data/wifi-signin-firewall.nft" "$T" "$NS_PATH"
+    check "the sign-in window reaches a sign-in page on the local network (192.168.5.1)" test "$(reach "$SIGNIN_FW" "$SIGNIN_USER" 192.168.5.1 80)" = out
+    check "...and one at 10.9.0.1" test "$(reach "$SIGNIN_FW" "$SIGNIN_USER" 10.9.0.1 80)" = out
+    check "...and the network's DNS server" test "$(reach "$SIGNIN_FW" "$SIGNIN_USER" 192.168.5.1 53)" = out
+    check "...but not this computer (its own address)" test "$(reach "$SIGNIN_FW" "$SIGNIN_USER" 192.168.5.2 8080)" = refused
+    check "...nor 127.0.0.1" test "$(reach "$SIGNIN_FW" "$SIGNIN_USER" 127.0.0.1 8080)" = refused
+    check "incognito still doesn't reach the local network" test "$(reach "$INCOG_FW" incognito 192.168.5.1 80)" = refused
+    check "...nor this computer" test "$(reach "$INCOG_FW" incognito 192.168.5.2 8080)" = refused
+else
+    echo "  skip  the firewall rules in a network namespace (needs nft and unshare -rn)"
+fi
+
 [ "$fails" -eq 0 ]

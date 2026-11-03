@@ -31,6 +31,11 @@
 #  - Your user may run exactly one thing as incognito: the wrapper that
 #    starts this (a rule in /etc/sudoers.d). While it runs, incognito can
 #    reach your sway's socket and nothing else of yours.
+#  - The Wi-Fi sign-in window (wifi-signin, the debsway menu's "Wi-Fi
+#    sign-in") is the same throwaway Firefox, as a second user of the same
+#    kind, wifi-signin, with the network's own DNS. Its firewall rule lets it
+#    reach the local network, where cafés' and hotels' sign-in pages often
+#    are, but not this computer. That user runs only the sign-in window.
 # It is still your network and your IP address: use Tor Browser or a VPN
 # for that. See THREAT-MODEL.md.
 # Usage: bash incognito.sh [--remove]
@@ -40,6 +45,8 @@
 need_user
 
 NAME=incognito
+# the Wi-Fi sign-in window's user
+SIGNIN=wifi-signin
 CMD=/usr/local/bin/incognito
 SESSION=/usr/local/libexec/incognito-session
 SHARE=/usr/local/share/debsway
@@ -47,23 +54,27 @@ PREFS=$SHARE/incognito-user.js
 SUDOERS=/etc/sudoers.d/debsway-incognito
 LIMITS=/etc/security/limits.d/50-debsway-incognito.conf
 FIREWALL=/etc/debsway/incognito.nft
+SIGNIN_FIREWALL=/etc/debsway/wifi-signin.nft
 UNIT=/etc/systemd/system/debsway-incognito-firewall.service
 
 if [ "${1:-}" = --remove ]; then
     sudo systemctl disable --now debsway-incognito-firewall.service >/dev/null 2>&1 || true
     sudo nft delete table inet debsway_incognito 2>/dev/null || true
+    sudo nft delete table inet debsway_wifi_signin 2>/dev/null || true
     # the media sandbox needs it too
     [ -f "$BIN/media-sandbox" ] || remove_bin wayland-restrict
-    sudo rm -f "$SUDOERS" "$LIMITS" "$CMD" /usr/local/bin/wifi-signin "$SESSION" "$PREFS" "$FIREWALL" "$UNIT"
+    sudo rm -f "$SUDOERS" "$LIMITS" "$CMD" /usr/local/bin/wifi-signin "$SESSION" "$PREFS" "$FIREWALL" "$SIGNIN_FIREWALL" "$UNIT"
     remove_no_abstract
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
     sudo rmdir "$SHARE" /usr/local/libexec /etc/debsway 2>/dev/null || true
-    if id "$NAME" >/dev/null 2>&1; then
-        sudo pkill -KILL -u "$NAME" 2>/dev/null || true
-        sudo userdel "$NAME"
-        note "Removed the user $NAME."
-    fi
-    sudo rm -rf /dev/shm/incognito.*
+    for u in "$NAME" "$SIGNIN"; do
+        if id "$u" >/dev/null 2>&1; then
+            sudo pkill -KILL -u "$u" 2>/dev/null || true
+            sudo userdel "$u"
+            note "Removed the user $u."
+        fi
+    done
+    sudo rm -rf /dev/shm/incognito.* /dev/shm/wifi-signin.*
     # cage goes too, unless another script needs it
     apt_purge
     exit
@@ -77,22 +88,27 @@ say "Installing cage and acl"
 # nftables: the rule that keeps the user off your local network
 apt_install cage acl firefox-esr libavcodec61 pipewire-bin pipewire-pulse wireplumber nftables python3
 
-say "The $NAME user"
-if id "$NAME" >/dev/null 2>&1; then
-    [ "$(id -u "$NAME")" -lt 1000 ] ||
-        die "A regular user account called $NAME already exists; this needs a system user. Rename or remove it first."
-else
-    sudo useradd --system --user-group --no-create-home --home-dir /nonexistent \
-        --shell /usr/sbin/nologin --comment "debsway incognito Firefox" "$NAME"
-fi
-# No password to guess, and no shell to log in with
-sudo usermod --lock --shell /usr/sbin/nologin "$NAME"
-# cage's Wayland backend (wlroots 0.18) opens the GPU's render node even with the
-# software renderer, and fails to start without it. render, not video: no modesetting.
-if getent group render >/dev/null; then
-    sudo usermod -aG render "$NAME"
-fi
-note "$NAME: no password, no login, no home folder, no groups but its own and render (cage needs the GPU's render node)."
+# sandbox_user NAME COMMENT: a system user with no password, login or home
+sandbox_user() {
+    if id "$1" >/dev/null 2>&1; then
+        [ "$(id -u "$1")" -lt 1000 ] ||
+            die "A regular user account called $1 already exists; this needs a system user. Rename or remove it first."
+    else
+        sudo useradd --system --user-group --no-create-home --home-dir /nonexistent \
+            --shell /usr/sbin/nologin --comment "$2" "$1"
+    fi
+    # No password to guess, and no shell to log in with
+    sudo usermod --lock --shell /usr/sbin/nologin "$1"
+    # cage's Wayland backend (wlroots 0.18) opens the GPU's render node even with the
+    # software renderer, and fails to start without it. render, not video: no modesetting.
+    if getent group render >/dev/null; then
+        sudo usermod -aG render "$1"
+    fi
+    note "$1: no password, no login, no home folder, no groups but its own and render (cage needs the GPU's render node)."
+}
+say "The $NAME and $SIGNIN users"
+sandbox_user "$NAME" "debsway incognito Firefox"
+sandbox_user "$SIGNIN" "debsway Wi-Fi sign-in window"
 
 say "The incognito command"
 sudo install -d -o root -g root -m 0755 "$SHARE" /usr/local/libexec
@@ -104,10 +120,10 @@ sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/wifi-signin" /usr/local/b
 sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/incognito-session" "$SESSION"
 sudo install -o root -g root -m 0644 "$DEBSWAY_DIR/data/incognito-user.js" "$PREFS"
 
-say "What your user may run as $NAME"
+say "What your user may run as $NAME and $SIGNIN"
 rule=$(mktemp)
-printf '# Written by debsway parts/incognito.sh. %s may run the incognito wrapper,\n# and nothing else, as the user incognito.\n%s ALL=(%s) NOPASSWD: %s\n' \
-    "$(id -un)" "$(id -un)" "$NAME" "$SESSION" >"$rule"
+printf '# Written by debsway parts/incognito.sh. %s may run the incognito wrapper,\n# and nothing else, as the users incognito and wifi-signin.\n%s ALL=(%s, %s) NOPASSWD: %s\n' \
+    "$(id -un)" "$(id -un)" "$NAME" "$SIGNIN" "$SESSION" >"$rule"
 # A broken sudoers file locks you out of sudo, so it is checked first
 if ! sudo visudo -cf "$rule" >/dev/null; then
     rm -f "$rule"
@@ -117,19 +133,22 @@ sudo install -o root -g root -m 0440 "$rule" "$SUDOERS"
 rm -f "$rule"
 note "Wrote $SUDOERS"
 
-printf '# Written by debsway parts/incognito.sh\n%s hard nproc 4096\n%s hard core 0\n' "$NAME" "$NAME" |
+printf '# Written by debsway parts/incognito.sh\n%s hard nproc 4096\n%s hard core 0\n%s hard nproc 4096\n%s hard core 0\n' \
+    "$NAME" "$NAME" "$SIGNIN" "$SIGNIN" |
     sudo tee "$LIMITS" >/dev/null
 
-say "Keeping $NAME off your network"
+say "Keeping $NAME off your network, and $SIGNIN off this computer"
 sudo install -d -o root -g root -m 0755 "${FIREWALL%/*}"
 sudo install -o root -g root -m 0644 "$DEBSWAY_DIR/data/incognito-firewall.nft" "$FIREWALL"
+sudo install -o root -g root -m 0644 "$DEBSWAY_DIR/data/wifi-signin-firewall.nft" "$SIGNIN_FIREWALL"
 # Loaded before the network comes up, at every boot
 printf '%s\n' '# Written by debsway parts/incognito.sh' '[Unit]' \
     'Description=Keep the incognito user off the local network (debsway)' \
     'Before=network-pre.target' 'Wants=network-pre.target' '' '[Service]' \
     'Type=oneshot' 'RemainAfterExit=yes' \
-    "ExecStart=/usr/sbin/nft -f $FIREWALL" \
-    'ExecStop=/usr/sbin/nft delete table inet debsway_incognito' '' '[Install]' \
+    "ExecStart=/usr/sbin/nft -f $FIREWALL" "ExecStart=/usr/sbin/nft -f $SIGNIN_FIREWALL" \
+    'ExecStop=/usr/sbin/nft delete table inet debsway_incognito' \
+    'ExecStop=-/usr/sbin/nft delete table inet debsway_wifi_signin' '' '[Install]' \
     'WantedBy=multi-user.target' | sudo tee "$UNIT" >/dev/null
 sudo systemctl daemon-reload
 # Restart, not just enable --now: the unit stays "active" after it first ran,
@@ -138,7 +157,7 @@ sudo systemctl enable debsway-incognito-firewall.service >/dev/null &&
     sudo systemctl restart debsway-incognito-firewall.service ||
     warn "Couldn't load the firewall rule; check: systemctl status debsway-incognito-firewall"
 note "$NAME can reach the internet, not your router, printers or your own local services."
-note "(Wi-Fi login pages at cafes are on the local network: sign in with your own Firefox first.)"
+note "$SIGNIN (the Wi-Fi sign-in window: wifi-signin) can reach the local network too, not this computer."
 
 note "Run it with: incognito   (or Super+d); incognito https://example.org/ opens a page."
 note "Videos play with sound (software decoding); incognito --no-audio keeps it silent."

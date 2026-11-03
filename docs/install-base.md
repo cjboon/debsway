@@ -142,7 +142,9 @@ one and anyone on the way can answer falsely. With it:
 - **The Wi-Fi sign-in window** (the debsway menu's "Wi-Fi sign-in", or
   `wifi-signin`) is the easy way through a sign-in page: it switches secure
   DNS off, opens a throwaway incognito window (in memory, gone when it
-  closes) that alone uses the network's own DNS and allows plain http,
+  closes; as its own user, `wifi-signin`, which may reach the local network
+  where sign-in pages often are, but not this computer) that alone uses the
+  network's own DNS and allows plain http,
   opening Mozilla's test page so the network can show its sign-in page, and
   switches secure DNS on again when you close it. Every other Firefox keeps
   its encrypted DNS meanwhile; only programs that look names up during that
