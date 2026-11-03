@@ -1,5 +1,21 @@
 # From scripts to a distribution: the plan
 
+## In short
+
+1. Decide the name, and make an offline signing key.
+2. `debsway install NAME`, with Tab completion.
+3. A `.deb` that installs debsway root-owned in `/usr/share/debsway`.
+4. A signed apt repository. Signing happens on your own computer, so a
+   broken-into VPS can't forge updates.
+5. A static website on a hardened VPS, with an onion mirror.
+6. An installer ISO, built on Debian's own installer and signed shim.
+7. DistroWatch.
+
+About seven to nine working sessions in all. Start with step 2: it is useful
+at once, and everything later builds on it.
+
+---
+
 Where debsway is now, where it could go, and the order that gets there with
 the least rework, without loosening any security debsway already gives.
 
