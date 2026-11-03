@@ -59,7 +59,7 @@ mkdir -p "$DOC"
 {
     echo "Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/"
     echo "Upstream-Name: Wren Linux"
-    echo "Source: https://github.com/cjboon/debsway"
+    echo "Source: https://github.com/cjboon/wren-linux"
     echo
     echo "Files: *"
     echo "Copyright: the Wren Linux authors"
@@ -102,7 +102,7 @@ Depends: bash, sudo, git, gpg, wget, python3, acl, nftables
 Recommends: bash-completion
 Section: admin
 Priority: optional
-Homepage: https://github.com/cjboon/debsway
+Homepage: https://github.com/cjboon/wren-linux
 Description: small, privacy-minded sway desktop for Debian, as plain scripts
  Wren Linux turns a bare Debian 13 install into a small sway desktop with careful
  defaults: a firewall, kernel hardening, automatic security updates, encrypted

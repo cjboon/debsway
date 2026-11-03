@@ -212,8 +212,8 @@ cp -r /mnt/wren ~ && sudo umount /mnt
 #    Or, with no stick, if you're already online (a cable, USB tethering from
 #    a phone, or Wi-Fi you set up in the installer; wifi.sh is one of the
 #    scripts you're downloading, so it can't help yet):
-#    wget -qO- https://github.com/cjboon/debsway/archive/refs/heads/main.tar.gz | tar xz
-#    mv debsway-main wren
+#    wget -qO- https://github.com/cjboon/wren-linux/archive/refs/heads/main.tar.gz | tar xz
+#    mv wren-linux-main wren
 #    (git isn't part of "standard system utilities", wget is. Read the
 #    scripts before you run them: this comes over https from GitHub only.)
 cd ~/wren
@@ -242,7 +242,7 @@ online, this makes it a git checkout of GitHub's Wren Linux, without changing
 a file (`git status` then shows anything that differs from GitHub):
 
 ```bash
-cd ~/wren && git init -q -b main && git remote add origin https://github.com/cjboon/debsway.git && git fetch -q && git reset origin/main && git branch -u origin/main && git status
+cd ~/wren && git init -q -b main && git remote add origin https://github.com/cjboon/wren-linux.git && git fetch -q && git reset origin/main && git branch -u origin/main && git status
 ```
 
 After that, `claude-pull` shows what's new and asks before bringing it in;

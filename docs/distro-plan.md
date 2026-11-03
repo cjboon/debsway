@@ -69,7 +69,7 @@ if the next one waits.
    so the distribution's isn't); always say "Wren Linux", and give the key's
    fingerprint wherever people find the download, so a look-alike site can't
    pass. Still to do:
-   - Rename the GitHub repository (the README's addresses then follow).
+   - (Done: the GitHub repository is cjboon/wren-linux.)
    - Read Debian's trademark policy (debian.org/trademark). The word
      "Debian" is what it protects; "Wren Linux" doesn't use it.
    - Write "based on Debian, not affiliated with or endorsed by the Debian
