@@ -27,6 +27,7 @@
       "Read(~/.electrum/**)",
       "Read(~/.sparrow/**)",
       "Read(~/.config/tutanota-desktop/**)",
+      "Read(~/.config/wren/backup.conf)",
       "Read(~/**/*.kdbx)",
       "Edit(~/.profile)",
       "Edit(~/.bashrc)",

@@ -30,6 +30,13 @@ python3 -I "$M" add "$S" "$OURS" "$ST"
 check "settings: into an empty home, the sandbox is on" jq_has "$S" 'd["sandbox"]["enabled"] is True'
 check "...with the deny rules" jq_has "$S" '"Read(~/.ssh/**)" in d["permissions"]["deny"] and "Bash(sudo *)" in d["permissions"]["deny"]'
 check "...and only you may read the file" test "$(stat -c %a "$S")" = 600
+check "...every folder and file closed to its commands is closed to its file tools too" python3 -I -c '
+import json, sys
+d = json.load(open(sys.argv[1]))
+deny = d["permissions"]["deny"]
+for p in d["sandbox"]["filesystem"]["denyRead"]:
+    assert "Read(%s/**)" % p in deny or "Read(%s)" % p in deny, p
+' "$OURS"
 python3 -I "$M" remove "$S" "$OURS" "$ST"
 check "...and remove leaves an empty settings file" jq_has "$S" 'd == {}'
 printf '%s\n' '{"model": "opus", "sandbox": {"enabled": false}, "permissions": {"deny": ["Read(~/secret)", "Read(~/.ssh/**)"], "allow": ["Bash(make *)"]}}' >"$S"
