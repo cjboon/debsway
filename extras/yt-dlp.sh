@@ -21,7 +21,7 @@
 # summary: yt-dlp video downloader, as its own locked user
 # security: most
 # status: file:/usr/local/bin/yt-dlp
-# files: bin/yt-dlp bin/yt-dlp-session data/yt-dlp-firewall.nft
+# files: bin/yt-dlp bin/yt-dlp-session bin/no-abstract-sockets data/yt-dlp-firewall.nft
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$WREN_DIR/lib/appimage.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
@@ -54,6 +54,7 @@ if [ "${1:-}" = --remove ]; then
     if getent group "$NAME" >/dev/null; then sudo groupdel "$NAME" 2>/dev/null || true; fi
     # Only yt-dlp's cache is in its home
     sudo rm -rf "$HOME_DIR"
+    remove_no_abstract
     # what this script installed and nothing else needs (python3 was there before)
     apt_purge
     note "Your downloads in ~/Downloads are yours and stay."
@@ -118,6 +119,7 @@ say "The yt-dlp command"
 sudo install -d -o root -g root -m 0755 /usr/local/libexec
 sudo install -o root -g root -m 0755 "$WREN_DIR/bin/yt-dlp-session" "$SESSION"
 sudo install -o root -g root -m 0755 "$WREN_DIR/bin/yt-dlp" "$CMD"
+install_no_abstract
 
 say "What your user may run as $NAME"
 rule=$(mktemp)

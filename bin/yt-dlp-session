@@ -32,5 +32,8 @@ umask 0007
 # the folder's group, as ytdlp isn't in yours, sets the mode.)
 mkdir "$OUT/$id"
 cd "$OUT/$id"
+# It runs site JavaScript: without a way to reach XWayland's abstract socket
+noabs=/usr/local/libexec/wren-no-abstract-sockets
+[ -x "$noabs" ] || { echo "yt-dlp-session: $noabs is missing. Run: wrenctl install yt-dlp" >&2; exit 1; }
 # python3 -I: no Python settings from the environment, no packages of ytdlp's own
-exec python3 -I "$YTDLP" --ignore-config --no-update --js-runtimes quickjs "$@"
+exec "$noabs" python3 -I "$YTDLP" --ignore-config --no-update --js-runtimes quickjs "$@"

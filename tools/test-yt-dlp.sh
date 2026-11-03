@@ -86,8 +86,11 @@ S=$T/yt-dlp-session
 mkdir -p "$T/s/out" "$T/s/home" "$T/s/lib"
 # as extras/yt-dlp.sh makes it: setgid, so what is made in it gets its group
 chmod 2770 "$T/s/out"
+# (a pretend no-abstract-sockets wrapper, which writes down that it ran)
+printf '#!/bin/sh\necho wrapped >"%s/s/noabs.ran"\nexec "$@"\n' "$T" >"$T/s/noabs"
+chmod +x "$T/s/noabs"
 sed -e "s|^YTDLP=.*|YTDLP=$T/s/lib/yt-dlp|" -e "s|^OUT=.*|OUT=$T/s/out|" -e "s|^HOME_DIR=.*|HOME_DIR=$T/s/home|" \
-    "$HERE/bin/yt-dlp-session" >"$S"
+    -e "s|/usr/local/libexec/wren-no-abstract-sockets|$T/s/noabs|" "$HERE/bin/yt-dlp-session" >"$S"
 cat >"$T/s/lib/yt-dlp" <<'EOF'
 import os, sys
 print("argv", sys.argv[1:])
@@ -97,6 +100,9 @@ print("isolated", sys.flags.isolated)
 EOF
 id=0123456789abcdef01234567
 out=$(PYTHONPATH=/nonexistent bash "$S" "$id" --flag 'https://example.org/x' 2>&1)
+check "it can't reach X11's abstract socket: yt-dlp runs site JavaScript (the wrapper runs it)" test -e "$T/s/noabs.ran"
+sed "s|$T/s/noabs|$T/s/nothing|" "$S" >"$S.nowrap"
+check "...and without the wrapper it won't run" not bash "$S.nowrap" 1123456789abcdef01234567 URL
 check "the session runs yt-dlp with python3 -I (no Python settings from outside)" grep -qx 'isolated 1' <<<"$out"
 check "...with config files ignored, no self-update, QuickJS for the JavaScript, then your options" \
     grep -qxF "argv ['--ignore-config', '--no-update', '--js-runtimes', 'quickjs', '--flag', 'https://example.org/x']" <<<"$out"
@@ -116,6 +122,9 @@ done
 
 # ---- what the extra installs ----
 X=$HERE/extras/yt-dlp.sh
+check "the extra installs the wrapper, takes it out when nothing uses it, and update.sh knows" bash -c '
+    grep -qx "install_no_abstract" "$1" && grep -q "remove_no_abstract" "$1" && grep -q "^# files:.*bin/no-abstract-sockets" "$1"' _ "$X"
+check "...its manual steps too" grep -q 'wren-no-abstract-sockets' "$HERE/docs/extras/yt-dlp.md"
 order() { # TEXT-BEFORE TEXT-AFTER: in the extra, the first comes before the second
     python3 -I -c 'import sys; s = open(sys.argv[1]).read(); a, b = s.index(sys.argv[2]), s.index(sys.argv[3]); assert a < b' "$X" "$1" "$2"
 }
