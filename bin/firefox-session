@@ -156,6 +156,31 @@ else
         echo 'user_pref("browser.newtabpage.activity-stream.newtabWallpapers.wallpaper", "dark-fox-anniversary");'
     } >>"$profile/user.js"
 fi
+# Once the profile has run, Firefox shows the theme its add-on list
+# (extensions.json) says is active, whatever the setting above says: the theme
+# asked for is marked active there before it starts, the other themes not
+# (nothing else in the list changes; no list yet: the setting does it). Firefox
+# isn't running now (one at a time), so it doesn't write the list meanwhile.
+set_theme_addon() { # THEME-ID
+    local list=$profile/extensions.json
+    [ -f "$list" ] && [ ! -L "$list" ] || return 0
+    python3 -I - "$list" "$1" 2>/dev/null <<'EOF' || true
+import json, os, sys
+path, want = sys.argv[1], sys.argv[2]
+with open(path) as f:
+    d = json.load(f)
+themes = [a for a in d.get("addons", []) if a.get("type") == "theme"]
+if any(a.get("id") == want for a in themes) and any(
+        a.get("active") != (a.get("id") == want) for a in themes):
+    for a in themes:
+        a["active"] = a.get("id") == want
+        a["userDisabled"] = not a["active"]
+    with open(path + ".debsway", "w") as f:
+        json.dump(d, f)
+    os.replace(path + ".debsway", path)
+EOF
+}
+set_theme_addon "firefox-compact-$theme@mozilla.org"
 # Your picture behind the New Tab page, instead of the fox: checked again here
 # (a plain file, a real JPEG or PNG, at most 10 MB), and put in the stylesheet
 # itself, since Firefox won't load a file from outside into that page
@@ -193,10 +218,12 @@ jit_on() {
 if [ -z "$tag" ] && [ "$(sed -n 's/^fast_js=//p' /etc/debsway/firefox.conf 2>/dev/null | head -1)" = yes ]; then
     jit_on >>"$profile/user.js"
 fi
-# Cookies, site data and the cache deleted when it closes (the default; a
-# profile for one site keeps them: that is what it is for). Only those:
-# Firefox's own defaults would take history and downloads too.
-if [ -z "$tag" ] && [ "$(sed -n 's/^cookies=//p' /etc/debsway/firefox.conf 2>/dev/null | head -1)" != keep ]; then
+# Cookies, site data and the cache deleted when it closes, when that was
+# chosen at its install (the question's default; an install from before the
+# question keeps them until it is asked; a profile for one site keeps them:
+# that is what it is for). Only those: Firefox's own defaults would take
+# history and downloads too.
+if [ -z "$tag" ] && [ "$(sed -n 's/^cookies=//p' /etc/debsway/firefox.conf 2>/dev/null | head -1)" = delete ]; then
     {
         echo 'user_pref("privacy.sanitize.sanitizeOnShutdown", true);'
         echo 'user_pref("privacy.clearOnShutdown_v2.cookiesAndStorage", true);'

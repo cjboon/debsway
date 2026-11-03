@@ -157,16 +157,28 @@ assert "    firefox) tag= ;;" in s and "    fx-*)" in s and "this runs as the us
 conf_lines() { # FILE PATTERN: the lines of FILE from PATTERN up to the profiles' part, reading $T/fx.conf instead
     sed -n "/$2/,/^# A profile with its own user/p" "$1" | sed '$d' | sed "s|/etc/debsway/firefox.conf|$T/fx.conf|g"
 }
+# The theme follows on a profile that has run: Firefox's add-on list says
+# which theme is active, and the session marks the one asked for
+mkdir -p "$T/th"
+printf '%s' '{"schemaVersion":37,"addons":[{"id":"firefox-compact-light@mozilla.org","type":"theme","active":true,"userDisabled":false},{"id":"firefox-compact-dark@mozilla.org","type":"theme","active":false,"userDisabled":true},{"id":"uBlock0@raymondhill.net","type":"extension","active":true,"userDisabled":false}]}' >"$T/th/extensions.json"
+( profile=$T/th; eval "$(sed -n '/^set_theme_addon() {/,/^}$/p' "$HERE/bin/firefox-session")"; set_theme_addon firefox-compact-dark@mozilla.org ) 2>/dev/null
+check "a profile that ran light starts dark when dark is asked for (its add-on list says so)" python3 -I -c '
+import json, sys; a = {x["id"]: x for x in json.load(open(sys.argv[1]))["addons"]}
+assert a["firefox-compact-dark@mozilla.org"]["active"] and not a["firefox-compact-dark@mozilla.org"]["userDisabled"]
+assert not a["firefox-compact-light@mozilla.org"]["active"] and a["firefox-compact-light@mozilla.org"]["userDisabled"]
+assert a["uBlock0@raymondhill.net"]["active"] and json.load(open(sys.argv[1]))["schemaVersion"] == 37
+' "$T/th/extensions.json"
+check "...and the session does it at every start, for the theme it was given" grep -qx 'set_theme_addon "firefox-compact-$theme@mozilla.org"' "$HERE/bin/firefox-session"
 printf 'fast_js=yes\nsound=no\ndefault_browser=no\n' >"$T/fx.conf"
 mkdir -p "$T/prof"
 : >"$T/prof/user.js"
 ( profile=$T/prof tag=; eval "$(conf_lines "$HERE/bin/firefox-session" '^jit_on() {')" ) 2>/dev/null
 check "fast JavaScript chosen: the main Firefox gets the JIT back" grep -qx 'user_pref("javascript.options.ion", true);' "$T/prof/user.js"
 : >"$T/prof/user.js"
-printf 'fast_js=no\n' >"$T/fx.conf"
+printf 'fast_js=no\ncookies=delete\n' >"$T/fx.conf"
 ( profile=$T/prof tag=; eval "$(conf_lines "$HERE/bin/firefox-session" '^jit_on() {')" ) 2>/dev/null
 check "...not chosen: it stays off" not grep -q 'javascript.options.ion' "$T/prof/user.js"
-check "cookies, site data and the cache are deleted when it closes (the default), history kept" bash -c '
+check "cookies, site data and the cache are deleted when it closes (delete chosen), history kept" bash -c '
     grep -qx "user_pref(\"privacy.sanitize.sanitizeOnShutdown\", true);" "$1" &&
     grep -qx "user_pref(\"privacy.clearOnShutdown_v2.cookiesAndStorage\", true);" "$1" &&
     grep -qx "user_pref(\"privacy.clearOnShutdown_v2.cache\", true);" "$1" &&
@@ -176,6 +188,10 @@ check "cookies, site data and the cache are deleted when it closes (the default)
 printf 'cookies=keep\n' >"$T/fx.conf"
 ( profile=$T/prof tag=; eval "$(conf_lines "$HERE/bin/firefox-session" '^jit_on() {')" ) 2>/dev/null
 check "...keep chosen: they stay" grep -qx 'user_pref("privacy.sanitize.sanitizeOnShutdown", false);' "$T/prof/user.js"
+: >"$T/prof/user.js"
+printf 'fast_js=no\n' >"$T/fx.conf"
+( profile=$T/prof tag=; eval "$(conf_lines "$HERE/bin/firefox-session" '^jit_on() {')" ) 2>/dev/null
+check "...an install from before the question (no answer saved): they stay, nothing deleted unasked" grep -qx 'user_pref("privacy.sanitize.sanitizeOnShutdown", false);' "$T/prof/user.js"
 : >"$T/prof/user.js"
 printf 'fast_js=yes\n' >"$T/fx.conf"
 ( profile=$T/prof tag=-bank; eval "$(conf_lines "$HERE/bin/firefox-session" '^jit_on() {')" ) 2>/dev/null
