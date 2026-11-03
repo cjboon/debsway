@@ -15,7 +15,18 @@
 #    (data/claude-regular-settings.json); --remove takes out only what it added.
 # claude-regular runs it; so does claude, unless extras/claude-code.sh is set up
 # (then claude is the sandboxed one).
-# Usage: bash claude-regular.sh [--remove | --manual]
+# Another account (a second Claude login): --account NAME gives it its own
+# settings folder, ~/.claude-NAME (its login, memories and settings; Claude
+# Code's CLAUDE_CONFIG_DIR), with the same settings as above; claude-regular
+# --account NAME runs it. Its file tools and sandboxed commands are kept from
+# ~/.claude, and the first account's from ~/.claude-NAME. Those are Claude
+# Code's own rules, not a wall: both run as you, so either could still get at
+# the other's folder another way, and two extra accounts aren't kept from each
+# other. For accounts that really can't see each other, use the sandboxed
+# claude (extras/claude-code.sh --account) or claude-vm (--account).
+# --remove-account NAME takes debsway's settings out again (asks before
+# deleting its login and memories).
+# Usage: bash claude-regular.sh [--remove | --manual | --account NAME | --remove-account NAME]
 # summary: Claude Code as you, with its own sandbox on
 # security: least
 # status: bin:claude-regular
@@ -29,7 +40,73 @@ SETTINGS=$HOME/.claude/settings.json
 STATE=${XDG_STATE_HOME:-$HOME/.local/state}/debsway/claude-regular-settings.json
 merge() { python3 -I "$DEBSWAY_DIR/lib/claude-settings.py" "$1" "$SETTINGS" "$DEBSWAY_DIR/data/claude-regular-settings.json" "$STATE"; }
 
+# account NAME: its folder and the two state files (its own settings, and
+# what was added to the first account's to keep it out)
+account() {
+    [[ $1 =~ ^[a-z][a-z0-9]{0,14}$ ]] || die "An account name is small letters and digits, a letter first, at most 15 (e.g. work)."
+    ACCOUNT_DIR=$HOME/.claude-$1
+    ACCOUNT_STATE=${STATE%.json}-$1.json
+    MAIN_STATE=${STATE%.json}-$1-first.json
+}
+# keep_out DIR: Claude Code settings that keep file tools and sandboxed
+# commands from DIR
+keep_out() {
+    printf '{ "sandbox": { "filesystem": { "denyRead": ["%s"] } },\n  "permissions": { "deny": ["Read(%s/**)", "Edit(%s/**)"] } }\n' "$1" "$1" "$1"
+}
+remove_account() {
+    account "$1"
+    [ ! -f "$MAIN_STATE" ] || python3 -I "$DEBSWAY_DIR/lib/claude-settings.py" remove "$SETTINGS" /dev/null "$MAIN_STATE" || true
+    [ ! -f "$ACCOUNT_STATE" ] || python3 -I "$DEBSWAY_DIR/lib/claude-settings.py" remove "$ACCOUNT_DIR/settings.json" /dev/null "$ACCOUNT_STATE" || true
+    rm -f "$MAIN_STATE" "$ACCOUNT_STATE"
+    if [ -d "$ACCOUNT_DIR" ] && ask "Delete $ACCOUNT_DIR (that account's Claude login, memories and settings)?" n; then
+        rm -rf "${ACCOUNT_DIR:?}"
+        note "Deleted $ACCOUNT_DIR."
+    elif [ -d "$ACCOUNT_DIR" ]; then
+        note "Kept $ACCOUNT_DIR."
+    fi
+}
+
+if [ "${1:-}" = --account ] || [ "${1:-}" = --remove-account ]; then
+    [ -n "${2:-}" ] || die "Usage: bash claude-regular.sh $1 NAME"
+    account "$2"
+    if [ "$1" = --remove-account ]; then
+        remove_account "$2"
+        note "The account $2 is gone from debsway's settings."
+        exit
+    fi
+    [ -x "$BIN/claude-regular" ] || die "Set up claude-regular first: bash $DEBSWAY_DIR/extras/claude-regular.sh"
+    mkdir -p "$ACCOUNT_DIR"
+    chmod 700 "$ACCOUNT_DIR"
+    ours=$(mktemp)
+    # debsway's settings, and ~/.claude kept out
+    # shellcheck disable=SC2088  # a literal ~: Claude Code's settings expand it themselves
+    python3 -I -c 'import json, sys
+a = json.load(open(sys.argv[1])); b = json.loads(sys.argv[2])
+a["sandbox"]["filesystem"]["denyRead"] += b["sandbox"]["filesystem"]["denyRead"]
+a["permissions"]["deny"] += b["permissions"]["deny"]
+json.dump(a, open(sys.argv[3], "w"), indent=2)' "$DEBSWAY_DIR/data/claude-regular-settings.json" "$(keep_out "~/.claude")" "$ours" ||
+        { rm -f "$ours"; die "Couldn't make the account's settings."; }
+    python3 -I "$DEBSWAY_DIR/lib/claude-settings.py" add "$ACCOUNT_DIR/settings.json" "$ours" "$ACCOUNT_STATE" ||
+        { rm -f "$ours"; die "Couldn't write $ACCOUNT_DIR/settings.json."; }
+    # and the first account kept out of this one's folder
+    # shellcheck disable=SC2088  # a literal ~: Claude Code's settings expand it themselves
+    keep_out "~/.claude-$2" >"$ours"
+    python3 -I "$DEBSWAY_DIR/lib/claude-settings.py" add "$SETTINGS" "$ours" "$MAIN_STATE" ||
+        { rm -f "$ours"; die "Couldn't write $SETTINGS."; }
+    rm -f "$ours"
+    note "claude-regular --account $2: its own login and memories in ~/.claude-$2."
+    note "Both run as you: Claude Code's rules keep them out of each other's folder, not a wall."
+    note "The first time, it shows a login link: log in with the other account."
+    exit
+fi
+
 if [ "${1:-}" = --remove ]; then
+    # the other accounts first, each with its own question
+    for st in "${STATE%.json}"-*-first.json; do
+        [ -f "$st" ] || continue
+        n=${st##*/claude-regular-settings-}
+        remove_account "${n%-first.json}"
+    done
     remove_bin claude-regular
     if [ -f "$STATE" ]; then merge remove && note "Took debsway's settings out of $SETTINGS; yours stay."; fi
     # claude-code itself stays while the sandboxed claude needs it

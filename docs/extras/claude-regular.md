@@ -6,9 +6,12 @@
 bash ~/debsway/extras/claude-regular.sh            install it, with its sandbox on
 bash ~/debsway/extras/claude-regular.sh --remove   remove it (your Claude login and settings stay)
 bash ~/debsway/extras/claude-regular.sh --manual   print the manual steps below
+bash ~/debsway/extras/claude-regular.sh --account NAME          another account (its own login and memories)
+bash ~/debsway/extras/claude-regular.sh --remove-account NAME   take it out (asks before deleting its login)
 
 cd ~/code/project && claude-regular   Claude Code as you, in that folder
 claude                                the same, unless extras/claude-code.sh is set up (then claude is the sandboxed one)
+claude-regular --account NAME         that account, its settings in ~/.claude-NAME
 /sandbox                              inside Claude Code: see or change its sandbox
 ```
 
@@ -26,7 +29,10 @@ file tools are kept from the same files, and from changing what runs at login
 (`~/.profile`, sway's config, systemd units, `~/.local/bin`), and it may not
 run sudo. These settings go into your `~/.claude/settings.json` next to your
 own (`data/claude-regular-settings.json`, merged by `lib/claude-settings.py`),
-and `--remove` takes out only what it added.
+and `--remove` takes out only what it added. Another account gets its own
+settings folder, `~/.claude-NAME` (Claude Code's `CLAUDE_CONFIG_DIR`), with
+the same settings, and rules keeping its file tools and sandboxed commands
+out of `~/.claude`, and the first account's out of `~/.claude-NAME`.
 
 ## LIMITS
 
@@ -34,6 +40,7 @@ and `--remove` takes out only what it added.
 - Claude Code enforces these rules itself; you can turn them off in it (`/sandbox`, `/permissions`), and a bug in it could miss one.
 - A command it can't run in the sandbox may be retried outside it, after asking you: read what you approve.
 - Treat what it writes in your project as untrusted until you've read it.
+- Accounts aren't walled off: both run as you, Claude Code's own rules are all that keeps each out of the other's folder, and two extra accounts aren't kept from each other. For a wall, use the sandboxed `claude --account` or `claude-vm --account`.
 
 ## MANUAL INSTALL
 
@@ -64,6 +71,14 @@ python3 -I @DEBSWAY_DIR@/lib/claude-settings.py add ~/.claude/settings.json \
 cat ~/.claude/settings.json
 cd ~/code/project && claude-regular
 ```
+
+Another account, NAME: `mkdir -m 700 ~/.claude-NAME`, the same `add` into
+`~/.claude-NAME/settings.json` (with its own state file), then add
+`"Read(~/.claude/**)"`, `"Edit(~/.claude/**)"` to its `permissions.deny` and
+`"~/.claude"` to its `sandbox.filesystem.denyRead`, and the same three for
+`~/.claude-NAME` to `~/.claude/settings.json`. Run it with
+`CLAUDE_CONFIG_DIR=~/.claude-NAME claude` (what `claude-regular --account NAME`
+does). This also works for a Claude Code installed without debsway.
 
 To undo (your Claude login and settings stay in `~/.claude`):
 

@@ -1,6 +1,22 @@
-#!/bin/sh
-# claude-regular [ARGS...]: written by debsway extras/claude-regular.sh
+#!/bin/bash
+# claude-regular [--account NAME] [ARGS...]: written by debsway extras/claude-regular.sh
 # Claude Code as you, in the folder you start it from, with your files and the
 # deny rules debsway added to ~/.claude/settings.json. (claude, from
 # extras/claude-code.sh, runs it as its own user instead.)
+# --account NAME: another account, with its own login, memories and settings
+# in ~/.claude-NAME (set up with extras/claude-regular.sh --account NAME). It
+# still runs as you: not walled off from the first.
+set -euo pipefail
+die() { printf 'claude-regular: %s\n' "$*" >&2; exit 1; }
+account=
+case ${1:-} in
+    --account) [ $# -ge 2 ] || die "--account needs a name: claude-regular --account NAME"; account=$2; shift 2 ;;
+    --account=*) account=${1#--account=}; shift ;;
+esac
+if [ -n "$account" ]; then
+    [[ $account =~ ^[a-z][a-z0-9]{0,14}$ ]] || die "an account name is small letters and digits, a letter first."
+    [ -f "$HOME/.claude-$account/settings.json" ] ||
+        die "the account $account isn't set up. Run: bash ~/debsway/extras/claude-regular.sh --account $account"
+    export CLAUDE_CONFIG_DIR=$HOME/.claude-$account
+fi
 exec /usr/bin/claude "$@"

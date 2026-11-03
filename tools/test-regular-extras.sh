@@ -124,5 +124,40 @@ run claude-regular.sh --remove
 check "--remove: only debsway's settings go" jq_has "$H/.claude/settings.json" 'd == {"permissions": {"deny": ["Read(~/mine)"]}}'
 check "...the command goes, and the repository only if unused" bash -c '[ ! -e "$1/.local/bin/claude-regular" ] && grep -qx remove-repo-if-unused "$2"' _ "$H" "$T/calls"
 
+# ---- another account: ~/.claude-work, the same settings, each kept out of the other's folder
+runa() { # ANSWER-FILE-LINES... -- SCRIPT ARGS...
+    local answers=()
+    while [ "$1" != -- ]; do answers+=("$1"); shift; done
+    shift
+    : >"$T/calls"
+    printf '%s\n' "${answers[@]}" >"$T/answers"
+    local script=$1
+    shift
+    HOME=$T/home XDG_STATE_HOME='' DEBSWAY_TEST_ANSWERS=$T/answers bash "$R/extras/$script" "$@" >"$T/out" 2>&1
+}
+echo '{"permissions": {"deny": ["Read(~/mine)"]}}' >"$H/.claude/settings.json"
+runa -- claude-regular.sh --account work
+check "--account before claude-regular is set up: refused" bash -c '! [ -e "$1/.claude-work" ] && grep -q "Set up claude-regular first" "$2"' _ "$H" "$T/out"
+run claude-regular.sh ''
+before=$(cat "$H/.claude/settings.json")
+runa -- claude-regular.sh --account work
+check "--account work: its own settings folder, with debsway's settings" jq_has "$H/.claude-work/settings.json" 'd["sandbox"]["enabled"] is True and "Edit(~/.profile)" in d["permissions"]["deny"]'
+check "...kept out of the first account's folder (file tools and sandboxed commands)" jq_has "$H/.claude-work/settings.json" '"Read(~/.claude/**)" in d["permissions"]["deny"] and "~/.claude" in d["sandbox"]["filesystem"]["denyRead"]'
+check "...and the first account kept out of its folder" jq_has "$H/.claude/settings.json" '"Read(~/.claude-work/**)" in d["permissions"]["deny"] and "~/.claude-work" in d["sandbox"]["filesystem"]["denyRead"] and "Read(~/mine)" in d["permissions"]["deny"]'
+check "...it says this isn't a wall" grep -q "not a wall" "$T/out"
+check "...its folder is yours alone" test "$(stat -c %a "$H/.claude-work")" = 700
+sed 's|exec /usr/bin/claude|echo "CLAUDE_CONFIG_DIR=${CLAUDE_CONFIG_DIR:-}"; exit; exec /usr/bin/claude|' "$HERE/bin/claude-regular" >"$T/cr"
+check "claude-regular --account work: Claude Code with that folder" bash -c '[ "$(HOME=$1 bash "$2" --account work)" = "CLAUDE_CONFIG_DIR=$1/.claude-work" ]' _ "$H" "$T/cr"
+check "...without --account: its usual folder" bash -c '[ "$(HOME=$1 CLAUDE_CONFIG_DIR= bash "$2")" = "CLAUDE_CONFIG_DIR=" ]' _ "$H" "$T/cr"
+check "...an account that isn't set up, or a name that isn't one: refused" bash -c '
+    ! HOME=$1 bash "$2" --account home 2>/dev/null && ! HOME=$1 bash "$2" --account ../x 2>/dev/null' _ "$H" "$T/cr"
+runa y -- claude-regular.sh --remove-account work
+check "--remove-account (y): its folder goes, the first account's settings are as before" bash -c '
+    [ ! -e "$1/.claude-work" ] && [ "$(python3 -I -c "import json,sys; print(json.load(open(sys.argv[1])))" "$1/.claude/settings.json")" = "$(python3 -I -c "import json,sys; print(json.loads(sys.argv[1]))" "$2")" ]' _ "$H" "$before"
+runa -- claude-regular.sh --account work
+runa n -- claude-regular.sh --remove
+check "--remove takes the accounts' settings out too (n: their login stays)" bash -c '
+    [ -d "$1/.claude-work" ] && ! grep -q "claude-work" "$1/.claude/settings.json" && ! grep -q "claude/\*\*" "$1/.claude-work/settings.json" 2>/dev/null' _ "$H"
+
 
 [ "$fails" -eq 0 ]
