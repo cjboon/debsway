@@ -299,7 +299,12 @@ check "the release name is missing: nothing is bolted on (it would be broken)" t
 
 # ---- inside the installer: Wren Linux's package into the new system ----
 L=$T/late.sh
-sed -e "s|/cdrom|$T/cdrom|g" -e "s|/target|$T/target|g" "$HERE/data/install-iso-late.sh" >"$L"
+sed -e "s|/cdrom|$T/cdrom|g" -e "s|/target|$T/target|g" -e "s|^NET=/sys/class/net$|NET=$T/sys|" "$HERE/data/install-iso-late.sh" >"$L"
+grep -q "^NET=$T/sys$" "$L" || { echo "  FAIL  late.sh's NET line wasn't found"; exit 1; }
+# the installer's ports: a cable with a link, a wired port without one, a Wi-Fi card
+mkdir -p "$T/sys/enp0s2/device" "$T/sys/eth1/device" "$T/sys/wlan0/device" "$T/sys/wlan0/wireless" "$T/target/etc/network"
+echo 1 >"$T/sys/enp0s2/carrier"; echo 0 >"$T/sys/eth1/carrier"; echo 1 >"$T/sys/wlan0/carrier"
+printf '%s\n' 'source /etc/network/interfaces.d/*' '' 'auto lo' 'iface lo inet loopback' >"$T/target/etc/network/interfaces"
 mkdir -p "$T/cdrom/wren-install/scripts" "$T/cdrom/wren-install/offline/debs" "$T/target/home/me" "$T/target/tmp" "$T/fake"
 echo "the package" >"$T/cdrom/wren-install/wren-linux_1.0_all.deb"
 echo x >"$T/cdrom/wren-install/offline/debs/Packages"
@@ -315,6 +320,11 @@ check "the package goes into the new system (dpkg -i, inside it)" \
     bash -c 'grep -qx "in-target dpkg -i /tmp/wren-linux.deb" "$1" && cmp -s "$2/installed.deb" "$3"' _ "$T/intarget" "$T" "$T/cdrom/wren-install/wren-linux_1.0_all.deb"
 check "...and nothing of Wren Linux goes into the home folder" test ! -e "$T/target/home/me/wren"
 check "...no copy of the package is left behind" test ! -e "$T/target/tmp/wren-linux.deb"
+W=$T/target/etc/network/interfaces.d/wren-wired
+check "the wired port the install used comes up by itself in the new system (DHCP)" \
+    bash -c 'grep -qx "allow-hotplug enp0s2" "$1" && grep -qx "iface enp0s2 inet dhcp" "$1"' _ "$W"
+check "...not a port without a cable, nor the Wi-Fi card" bash -c '! grep -qE "eth1|wlan0" "$1"' _ "$W"
+check "...and /etc/network/interfaces still reads that folder, once" test "$(grep -c '^source /etc/network/interfaces.d' "$T/target/etc/network/interfaces")" = 1
 check "the saved downloads go to ~/.local/share/wren/offline, the user's" \
     bash -c '[ -f "$1/.local/share/wren/offline/debs/Packages" ] && grep -qx "in-target chown -R me:me /home/me/.local" "$2"' _ "$T/target/home/me" "$T/intarget"
 check "your own scripts go to ~/scripts" test -f "$T/target/home/me/scripts/mine.txt"
@@ -323,6 +333,23 @@ check "the new user's .profile gets the first-login question, after what it had"
     bash -c 'head -1 "$1" | grep -q "Debian" && grep -qx "# >>> Wren Linux first login >>>" "$1"' _ "$T/target/home/me/.profile"
 PATH="$T/fake:$PATH" sh "$L" me
 check "...once, even if the installer's step runs again" test "$(grep -c '^# >>> Wren Linux first login >>>$' "$T/target/home/me/.profile")" = 1
+check "...and the wired port's entry isn't doubled" test "$(grep -c '^iface enp0s2' "$W")" = 1
+
+# ---- after the install: wifi.sh with no Wi-Fi device keeps the cable for boot ----
+N=$T/netdir
+mkdir -p "$N" "$T/fake2"
+printf '%s\n' 'auto lo' 'iface lo inet loopback' >"$N/interfaces"
+printf '#!/bin/sh\nexit 0\n' >"$T/fake2/ifup"; cp "$T/fake2/ifup" "$T/fake2/dhcpcd"; chmod +x "$T/fake2/"*
+kw() { PATH="$T/fake2:$PATH" WREN_NETWORK_DIR=$N bash -c 'note() { :; }; eval "$(sed -n "/^keep_wired() {/,/^}/p" "$1")"; keep_wired "$2"' _ "$HERE/wifi.sh" "$1"; }
+kw enp0s2
+check "wifi.sh, no Wi-Fi device: the cable it went online with is kept for boot" \
+    bash -c 'grep -qx "allow-hotplug enp0s2" "$1/interfaces.d/wren-wired-enp0s2" && grep -qx "iface enp0s2 inet dhcp" "$1/interfaces.d/wren-wired-enp0s2" && grep -q "^source /etc/network/interfaces.d" "$1/interfaces"' _ "$N"
+printf '%s\n' 'allow-hotplug eno1' 'iface eno1 inet static' >"$N/interfaces.d/mine"
+kw eno1
+check "...but a port something else already sets up is left alone" test ! -e "$N/interfaces.d/wren-wired-eno1"
+check "...and wifi.sh tries the cable before saying there is no Wi-Fi device" bash -c '
+    c=$(grep -n "^if \[ -z \"\$(wifi_ifaces)\" \] && online_by_cable; then" "$1" | cut -d: -f1); f=$(grep -n "^find_iface$" "$1" | cut -d: -f1)
+    [ -n "$c" ] && [ "$c" -lt "$f" ]' _ "$HERE/wifi.sh"
 check "without --autologin, tty1 asks for the password as usual" test ! -e "$T/target/etc/systemd/system/getty@tty1.service.d"
 chmod -R u+w "$T/cdrom"
 echo '[Service]' >"$T/cdrom/wren-install/autologin.conf"

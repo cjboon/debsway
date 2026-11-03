@@ -544,7 +544,50 @@ EOF
     fi
 }
 
+# keep_wired IFACE: IFACE (a wired port) comes up by itself at boot too, with
+# DHCP through ifupdown, unless something already sets it up. (WREN_NETWORK_DIR
+# is where /etc/network is, for tests.)
+keep_wired() {
+    local ifc=$1 dir=${WREN_NETWORK_DIR:-/etc/network}
+    command -v ifup >/dev/null && { command -v dhcpcd || command -v dhclient; } >/dev/null || return 0
+    grep -Eqs "^[[:space:]]*(iface|allow-hotplug|auto)[[:space:]]+${ifc}([[:space:]]|$)" "$dir/interfaces" "$dir"/interfaces.d/* && return 0
+    grep -Eqs '^[[:space:]]*source(-directory)?[[:space:]]+/etc/network/interfaces\.d' "$dir/interfaces" ||
+        printf '\nsource /etc/network/interfaces.d/*\n' >>"$dir/interfaces"
+    mkdir -p "$dir/interfaces.d"
+    printf '%s\n' "# Written by Wren Linux wifi.sh: the cable on $ifc comes up by itself" \
+        "allow-hotplug $ifc" "iface $ifc inet dhcp" >"$dir/interfaces.d/wren-wired-$ifc"
+    note "Saved for boot in $dir/interfaces.d/wren-wired-$ifc"
+}
+
+# online_by_cable: with no Wi-Fi device at all, a wired port with a cable in
+# (or a phone tethering over USB) is the way online: use it, and keep it for
+# boot. Fails if there is no such port or it gets no address.
+online_by_cable() {
+    local n
+    for n in $(wired_ifaces); do ip link set "$n" up 2>/dev/null || true; done
+    sleep 3
+    for n in $(wired_ifaces); do
+        [ "$(cat "/sys/class/net/$n/carrier" 2>/dev/null)" = 1 ] || continue
+        if ! { has_ipv4 "$n" && have_internet; }; then
+            note "No Wi-Fi device, but a cable on $n: getting an address"
+            dhcp_now "$n" && have_internet || continue
+        fi
+        keep_wired "$n"
+        say "Online through the cable on $n."
+        return 0
+    done
+    return 1
+}
+
 # -------------------------------------------------------------------- main
+
+# No Wi-Fi device, but a cable: that is enough to go on. (A laptop whose Wi-Fi
+# needs firmware can set it up later: run this again with the cable out.)
+if [ -z "$(wifi_ifaces)" ] && online_by_cable; then
+    note "No Wi-Fi device was found here. If this computer has Wi-Fi (missing firmware is the"
+    note "usual cause), unplug the cable and run this again once you are set up."
+    exit 0
+fi
 
 find_iface
 unblock_wifi

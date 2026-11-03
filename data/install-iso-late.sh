@@ -37,6 +37,35 @@ if [ -d "$inst/offline" ]; then
     find "/target/home/$user/.local/share/wren/offline" -type f -exec chmod 644 {} \;
     in-target chown -R "$user:$user" "/home/$user/.local"
 fi
+# The wired port the install went online with comes up by itself after it too.
+# The installer configures the network for itself, but, installing from the
+# live image, it leaves the new system nothing for it: only lo in
+# /etc/network/interfaces, so a laptop on a cable boots offline. Each port with
+# a cable in now gets an entry (DHCP, through ifupdown and dhcpcd, which the
+# new system has); a laptop on Wi-Fi only gets none, and wifi.sh sets that up.
+NET=/sys/class/net
+wired=
+for d in "$NET"/*; do
+    [ -e "$d/device" ] || continue
+    n=${d##*/}
+    [ "$n" != lo ] || continue
+    if [ -e "$d/wireless" ] || [ -e "$d/phy80211" ]; then continue; fi
+    [ "$(cat "$d/carrier" 2>/dev/null)" = 1 ] || continue
+    case $n in *[!A-Za-z0-9_.-]*) continue ;; esac
+    grep -Eqs "^[[:space:]]*iface[[:space:]]+${n}[[:space:]]" /target/etc/network/interfaces /target/etc/network/interfaces.d/* && continue
+    wired="$wired $n"
+done
+if [ -n "$wired" ] && [ -d /target/etc/network ]; then
+    mkdir -p /target/etc/network/interfaces.d
+    grep -Eqs '^[[:space:]]*source(-directory)?[[:space:]]+/etc/network/interfaces\.d' /target/etc/network/interfaces ||
+        printf '\nsource /etc/network/interfaces.d/*\n' >>/target/etc/network/interfaces
+    {
+        echo "# Written by Wren Linux's install stick (late.sh): the wired port(s) the"
+        echo "# install used come up by themselves, with DHCP"
+        for n in $wired; do printf 'allow-hotplug %s\niface %s inet dhcp\n' "$n" "$n"; done
+    } >/target/etc/network/interfaces.d/wren-wired
+    chmod 644 /target/etc/network/interfaces.d/wren-wired
+fi
 # The first-login question (once, even if this runs again)
 profile=/target/home/$user/.profile
 if [ -f /cdrom/wren-install/first-login.sh ] && ! grep -q '^# >>> Wren Linux first login >>>$' "$profile" 2>/dev/null; then
