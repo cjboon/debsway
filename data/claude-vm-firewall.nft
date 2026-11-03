@@ -41,6 +41,9 @@ table inet wren_claude_vm {
         ip daddr { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8,
                    169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16,
                    224.0.0.0/4, 255.255.255.255 } reject
-        ip6 daddr { ::1, fc00::/7, fe80::/10, ff00::/8 } reject
+        # No IPv6 at all: on a network with global addresses, the router and other
+        # computers have addresses no fixed rule can tell from the internet's.
+        # Sites fall back to IPv4 at once (an IPv6-only network wouldn't work)
+        meta nfproto ipv6 reject
     }
 }

@@ -167,6 +167,10 @@ With the extras:
 
 ## What it doesn't protect against
 
+- **A local network with public addresses.** The firewall rules that keep sandbox
+  users off your network know IPv4's private ranges and give those users no IPv6.
+  On a network where computers have public IPv4 addresses (some universities and
+  offices), a sandbox user can still reach them: nothing marks them as local.
 - **Anything running as you.** If you run a malicious program, or an
   attack escapes the browser, it can read all your files, every Firefox
   profile's logins and your wallets. Wren Linux doesn't sandbox your own

@@ -278,6 +278,14 @@ check "...and the same private ranges as incognito's" test "$(grep -E '^[[:space
 check "DNS stays open" grep -q 'udp dport 53 accept' "$HERE/data/firefox-firewall.nft"
 check "it says how to allow the local network for a while" grep -q 'systemctl stop wren-firefox-firewall' "$HERE/data/firefox-firewall.nft"
 
+# IPv6: a LAN's global addresses can't be told from the internet's by a fixed rule,
+# so the sandbox users get no IPv6 at all (the sign-in window may reach the LAN anyway)
+for f in firefox incognito claude claude-vm opencode-vm yt-dlp onion-site; do
+    check "$f's firewall: no IPv6 (only DNS, and answers, before it)" bash -c '
+        grep -qx "        meta nfproto ipv6 reject" "$1" && ! grep -q "ip6 daddr" "$1" &&
+        [ "$(grep -n "dport 53 accept" "$1" | head -1 | cut -d: -f1)" -lt "$(grep -n "meta nfproto ipv6 reject" "$1" | cut -d: -f1)" ]' _ "$HERE/data/$f-firewall.nft"
+done
+
 # 6. the extra
 e=$HERE/extras/firefox-sandbox.sh
 s=$(sed -n 's/^# summary: //p' "$e")

@@ -114,7 +114,8 @@ if PATH=$NS_PATH command -v nft >/dev/null && unshare -rn true 2>/dev/null; then
         sed -e "s/meta skuid \"$2\"/meta skuid 0/" -e 's/ reject$/ counter reject/' "$1" >"$T/fw.nft"
         PATH=$NS_PATH unshare -rn bash -c '
             ip link set lo up && ip link add d0 type dummy && ip link set d0 up &&
-            ip addr add 192.168.5.2/24 dev d0 && ip route add 10.9.0.0/16 dev d0 || exit 9
+            ip addr add 192.168.5.2/24 dev d0 && ip route add 10.9.0.0/16 dev d0 &&
+            ip -6 addr add 2001:db8:5::2/64 dev d0 nodad || exit 9
             nft -f "$1" || exit 8
             timeout 0.2 bash -c "exec 3<>/dev/tcp/$2/$3" 2>/dev/null
             if nft list ruleset | grep -qE "counter packets [1-9]"; then echo refused; else echo out; fi' _ "$T/fw.nft" "$3" "$4"
@@ -130,6 +131,7 @@ if PATH=$NS_PATH command -v nft >/dev/null && unshare -rn true 2>/dev/null; then
     check "...nor 127.0.0.1" test "$(reach "$SIGNIN_FW" "$SIGNIN_USER" 127.0.0.1 8080)" = refused
     check "incognito still doesn't reach the local network" test "$(reach "$INCOG_FW" incognito 192.168.5.1 80)" = refused
     check "...nor this computer" test "$(reach "$INCOG_FW" incognito 192.168.5.2 8080)" = refused
+    check "...nor a computer on a network with global IPv6 addresses" test "$(reach "$INCOG_FW" incognito 2001:db8:5::1 80)" = refused
 else
     echo "  skip  the firewall rules in a network namespace (needs nft and unshare -rn)"
 fi

@@ -370,7 +370,9 @@ DNS off only while it is open. What `parts/incognito.sh` sets up:
   user (`data/incognito-firewall.nft`, loaded at every boot) turns away its
   connections to your router, printers, other computers on the local network
   and to programs listening on this machine (including Tor Browser's
-  proxy). DNS and the internet stay open. Wi-Fi sign-in pages are often on
+  proxy). DNS and the internet stay open, over IPv4 only: on a network with
+  global IPv6 addresses a fixed rule can't tell the router from the internet, so
+  the sandbox users get no IPv6 (on an IPv6-only network they get no internet). Wi-Fi sign-in pages are often on
   the local network, so the Wi-Fi sign-in window runs as a second such user,
   `wifi-signin`, whose own rule (`data/wifi-signin-firewall.nft`) lets it reach
   the local network but not this computer. That user runs only the sign-in
