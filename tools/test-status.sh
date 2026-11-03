@@ -48,6 +48,7 @@ printf '#!/bin/sh\necho "install ok installed"\n' >"$G/bin/dpkg-query"
 printf '#!/bin/sh\n' >"$G/firefox"
 chmod +x "$G/bin/"* "$G/firefox"
 printf 'APT::Periodic::Unattended-Upgrade "1";\n' >"$G/etc/apt/apt.conf.d/20auto-upgrades"
+mkdir -p "$G/etc/ufw"; echo ENABLED=yes >"$G/etc/ufw/ufw.conf"
 printf '[Default Applications]\nx-scheme-handler/https=wren-firefox.desktop\n' >"$T/home/.config/mimeapps.list"
 : >"$G/etc/unbound/unbound.conf.d/wren-secure-dns.conf"
 printf '%s\n' '# Written by Wren Linux parts/secure-dns.sh. Every name goes to Unbound on this' 'nameserver 127.0.0.1' >"$G/etc/resolv.conf"
@@ -56,6 +57,10 @@ out=$(glance "$G/firefox")
 check "at a glance, all done: six [x] lines, first in the screen" bash -c '[ "$(grep -c "^  \[x\]" <<<"$1")" = 6 ] && [ "$(head -1 <<<"$1")" = "Security at a glance:" ]' _ "$out"
 first=$(HOME=$T/home WREN_ETC=$G/etc WREN_FX_CLIENT=$G/firefox WREN_FIREFOX_DIST=$G/dist STATUS_TEST_PATH="$G/bin:$T/bin:$T/nolock" bash "$R/status.sh" 2>/dev/null | head -1)
 check "...and it is the first thing Status shows" test "$first" = "Security at a glance:"
+# ufw disable: its service stays "active" (a one-shot that remains), its setting doesn't
+echo ENABLED=no >"$G/etc/ufw/ufw.conf"
+check "...after ufw disable: the firewall is off, though its service still says active" grep -q '\[ \] Firewall off' <<<"$(glance "$G/firefox")"
+echo ENABLED=yes >"$G/etc/ufw/ufw.conf"
 # nothing done: a plain disk, no firewall, no automatic updates, no sandboxed Firefox, plain DNS
 : >"$G/plain"; : >"$G/fw-off"
 rm -f "$G/etc/apt/apt.conf.d/20auto-upgrades" "$G/etc/unbound/unbound.conf.d/wren-secure-dns.conf" "$G/etc/resolv.conf" "$T/home/.config/sway/config.d/idle.conf"

@@ -33,7 +33,8 @@ elif [ -f "$SWAY_SNIPPETS/idle.conf" ]; then
 else
     glance "~" "Screen locks only when you lock it (Super+Escape): bash parts/swayidle.sh locks it when idle"
 fi
-if systemctl is-active --quiet ufw 2>/dev/null; then
+# (ufw's service is a one-shot that stays "active" after ufw disable: its setting says)
+if systemctl is-active --quiet ufw 2>/dev/null && grep -qsx 'ENABLED=yes' "$ETC/ufw/ufw.conf"; then
     glance x "Firewall on: nothing from outside can connect in"
 else
     glance " " "Firewall off: bash parts/ufw.sh"
