@@ -143,6 +143,10 @@ WREN_SIGNING_FPR=
 # not set up yet, and the part changes nothing.
 WREN_REPO_URL=
 
+# Where Wren Linux is published (git-init.sh connects a copy from a stick to it).
+# checked: 2026-11-03  the repository was renamed from cjboon/debsway
+WREN_GIT_URL=https://github.com/cjboon/wren-linux.git
+
 # The Debian release everything was written and tested on.
 # checked: 2026-10-27
 DEBIAN_RELEASE=trixie

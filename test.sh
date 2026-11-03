@@ -565,6 +565,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "git-init.sh: a copy from a stick, connected to what was published"
+if out=$(bash tools/test-git-init.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") git-init checks"
+else
+    bad "git-init checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "update.sh: only what Wren Linux's own key signed, with throwaway keys"
 if out=$(bash tools/test-update-signed.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") signed update checks"

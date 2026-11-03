@@ -238,15 +238,23 @@ Click the time (or press Super+t) for timers and alarms, with this month's calen
 ### Getting updates from GitHub
 
 The copy from the stick has the files but no git history. Once you're
-online, this makes it a git checkout of GitHub's Wren Linux, without changing
-a file (`git status` then shows anything that differs from GitHub):
+online, this makes it a git checkout of the published Wren Linux
+(`WREN_GIT_URL` in `pins.sh`), without changing a file:
 
 ```bash
-cd ~/wren && git init -q -b main && git remote add origin https://github.com/cjboon/wren-linux.git && git fetch -q && git reset origin/main && git branch -u origin/main && git status
+bash ~/wren/git-init.sh
 ```
 
-After that, `claude-pull` shows what's new and asks before bringing it in;
-plain `git pull` works too. (`claude-pull` is installed by the Claude Code
+It finds the published commit whose files are exactly yours and sets your
+copy there, so `bash ~/wren/update.sh` then shows and brings in what came
+after. If your files match nothing that was published (you changed them, or
+someone changed them on the stick), it says so: look at `git -C ~/wren status`
+and `git -C ~/wren diff` before you run anything with sudo. Once `pins.sh`
+names Wren Linux's signing key, it also refuses a server whose newest commit
+that key didn't sign.
+
+After that, `update.sh` (or `claude-pull`) shows what's new and asks before
+bringing it in; plain `git pull` works too. (`claude-pull` is installed by the Claude Code
 sandboxes, `extras/claude-code.sh` and `extras/claude-vm.sh`.) If Claude Code
 pushes to the repository, add the ssh key its sandbox prints as a deploy key
 on GitHub (with write access), replacing the old install's.

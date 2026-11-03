@@ -50,7 +50,7 @@ main() {
 
     if ! g rev-parse --is-inside-work-tree >/dev/null 2>&1; then
         [ ! -w "$WREN_DIR" ] ||
-            die "$WREN_DIR isn't a git checkout, so there is nothing to update from. Get Wren Linux again with: git clone <its address>"
+            die "$WREN_DIR isn't a git checkout yet (a copy from a stick or a download). Connect it to the published Wren Linux first: bash $WREN_DIR/git-init.sh"
         # The Wren Linux package's copy: root's, no git. apt brings what is new;
         # this reruns what it changed
         [ -z "$since" ] || die "--since is for a git copy of Wren Linux; the package's has no commits."
