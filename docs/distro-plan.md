@@ -329,6 +329,47 @@ Wren Linux's base on an encrypted disk.
 
 *Cost:* two to three sessions, and the most testing of any phase.
 
+### 4b. An amnesic mode for the installed system (planned, after the installer)
+
+A second entry in the boot menu, "Wren Linux (forget this session)": the
+installed system starts with its disk read-only and every change in memory
+(an overlay, set up by a small initramfs hook), and all of it is gone at power
+off. For a risky session: opening an untrusted file, a site you don't trust,
+or a laptop carried through a checkpoint, when nothing new may be written to
+the disk. An extra, so it is chosen, like the rest.
+
+- It is the installed system, so it has its security updates: nothing goes
+  stale.
+- It hides nothing already on the disk, and the normal entry writes as usual:
+  the threat model must say both.
+- Swap stays off in that mode (or it would write memory to the disk).
+- Tested in a VM: a file written in the mode is gone after a reboot, and the
+  normal entry still works.
+
+*Cost:* one session.
+
+### 4c. A live Wren Linux (considered, not now)
+
+A "Wren Linux Live" boot entry on the stick, Tails' way: started from the
+stick, everything in memory, gone at power off, nothing installed. Not now,
+for three reasons:
+
+- **It goes stale.** A live system forgets its updates too: every boot runs
+  the packages of the day the stick was made, holes and all. Tails puts out a
+  new image about every month; that is a release cycle of its own, too much
+  for one maintainer now.
+- **It would be taken for Tails, and isn't.** Tails sends everything through
+  Tor and has years of audits; a Wren Live would forget, not hide your
+  network. For people who need both, `tails-usb` already makes the stronger
+  tool easy to get, and mixing the two up could hurt someone.
+- **It is a lot to build and keep working** (live-build, a root chroot, the
+  base set up inside the image, its own VM tests), for what Tails does better.
+
+Not "install it fresh at every boot" either: that downloads packages each
+time (slow, impossible offline, and visible to the network). Revisit if
+people who use Wren Linux ask for it and someone can rebuild the image
+often; the amnesic mode (4b) covers much of the same need meanwhile.
+
 ---
 
 ## Phase 5: DistroWatch
