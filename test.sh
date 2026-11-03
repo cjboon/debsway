@@ -388,6 +388,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "vim with colors (extras/vim.sh, data/vimrc), in a temp home"
+if out=$(bash tools/test-vim.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") vim checks"
+else
+    bad "vim checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "w3m keeps cookies only while it is open (bin/w3m), with a pretend w3m"
 if out=$(bash tools/test-w3m.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") w3m checks"

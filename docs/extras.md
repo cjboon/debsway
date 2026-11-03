@@ -25,6 +25,7 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `pdf-viewer.sh` | zathura PDF viewer, in a sandbox |
 | `archive-tools.sh` | unzip, zip, 7z, bzip2 and zstd for archives |
 | `w3m.sh` | w3m, a text-mode web browser for the terminal (no JavaScript) |
+| `vim.sh` | Debian's full vim, with colors for each programming language, and a `~/.vimrc` (light or dark with the theme, modelines off) |
 | `console-only.sh` | log in to tmux (the same bar and keys) instead of starting sway |
 | `keepassxc.sh` | KeePassXC password manager, the minimal build (`keepassxc-minimal`): no browser integration and no Firefox add-on, so no web page can talk to it; copy and paste a password, or use auto-type. On a computer with the full build and the add-on, running it again switches to the minimal one |
 | `git.sh` | git, and optionally GitHub's `gh`; sets your commit name and email |

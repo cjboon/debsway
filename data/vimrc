@@ -1,0 +1,28 @@
+" Written by debsway extras/vim.sh (data/vimrc). debsway rewrites this file
+" while this first line is here; change or delete the line and it is yours.
+
+" Colors for the language of each file (vim knows hundreds: shell, Python, C,
+" JavaScript, HTML, Markdown...), and indenting and settings by file type
+syntax on
+filetype plugin indent on
+
+" Light or dark, as debsway's theme is (theme light, theme dark), at start
+let s:theme = expand('~/.config/debsway/theme')
+if filereadable(s:theme) && get(readfile(s:theme, '', 1), 0, '') ==# 'light'
+  set background=light
+else
+  set background=dark
+endif
+
+" Settings hidden in a file you open (modelines) are ignored: crafted files
+" have used them to run commands
+set nomodeline
+" No .vimrc or .exrc from the folder you start vim in
+set noexrc secure
+
+" Search: highlighted as you type; all small letters match either case
+set hlsearch incsearch ignorecase smartcase
+" Where you are: line numbers, line and column, the command being typed
+set number ruler showcmd
+" Backspace deletes over line ends and indents, as elsewhere
+set backspace=indent,eol,start
