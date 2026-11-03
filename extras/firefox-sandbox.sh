@@ -15,13 +15,15 @@
 #    computer's own services (data/firefox-firewall.nft); how to lift it for a
 #    while is in that file. DNS stays open.
 #  - Your user may run exactly one thing as firefox (a rule in /etc/sudoers.d).
-#  - It asks four things (remembered, in /etc/debsway/firefox.conf, which only
+#  - It asks five things (remembered, in /etc/debsway/firefox.conf, which only
 #    root can write; asked again when you run this again in a terminal):
 #    fast JavaScript (the JIT; default no: it is where many browser attacks
 #    happen), sound (default yes), whether it is your default browser, so
-#    links from other programs open in it (default yes), and uBlock Origin's
+#    links from other programs open in it (default yes), uBlock Origin's
 #    mode: medium (default: other sites' scripts blocked, ublock-allow lets a
-#    site through) or standard (ads, trackers and malware only). firefox-esr is the
+#    site through) or standard (ads, trackers and malware only), and, for
+#    when the secure DNS extra isn't installed, Firefox's own encrypted DNS
+#    to Quad9: strict (default) or with fallback to the network's. firefox-esr is the
 #    same Firefox run as you, with everything you can reach, and stays
 #    installed. No video calls: it has no microphone or camera, so WebRTC is off.
 #  - Firefox profiles made with firefox-profiles/new-profile.sh each get a user
@@ -120,9 +122,10 @@ say "Your choices (asked again whenever you run this in a terminal)"
 CHOICES=/etc/debsway/firefox.conf
 chosen() { sed -n "s/^$1=//p" "$CHOICES" 2>/dev/null | head -1; }
 # last time's answers are the defaults (with no terminal to ask on: kept)
-fast=n sound=y links=y ublock=medium
+fast=n sound=y links=y ublock=medium dns=strict
 [ "$(chosen fast_js)" != yes ] || fast=y
 [ "$(chosen ublock)" != standard ] || ublock=standard
+[ "$(chosen dns)" != fallback ] || dns=fallback
 [ "$(chosen sound)" != no ] || sound=n
 [ "$(chosen default_browser)" != no ] || links=n
 note "Fast JavaScript makes heavy sites quicker, but the part that does it (the JIT)"
@@ -140,12 +143,22 @@ note "  standard  blocks ads, trackers and known malware sites; the rest of a si
 note "            runs, so sites work as you expect. Easier for people who'd"
 note "            rather not allow sites."
 choose ublock "Which way should uBlock Origin work?" "$ublock" medium standard
+note "Without the secure DNS extra (which encrypts every program's lookups), Firefox"
+note "encrypts its own, to Quad9, so your network can't see which sites you look up:"
+note "  strict    always; on Wi-Fi with a sign-in page (cafés, hotels) that page"
+note "            won't load in Firefox, and on a network that blocks encrypted DNS"
+note "            nothing does. debsway's default."
+note "  fallback  if encrypted DNS fails, the network's own, unencrypted: sign-in"
+note "            pages work, but such a network can see those lookups."
+note "With the secure DNS extra installed, Firefox uses the system's (encrypted) DNS."
+choose dns "Firefox's own encrypted DNS?" "$dns" strict fallback
 sudo install -d -o root -g root -m 0755 "${CHOICES%/*}"
 printf '%s\n' '# Written by debsway extras/firefox-sandbox.sh: run it again to change these' \
-    "fast_js=$fast" "sound=$sound" "default_browser=$links" "ublock=$ublock" | sudo tee "$CHOICES" >/dev/null
+    "fast_js=$fast" "sound=$sound" "default_browser=$links" "ublock=$ublock" "dns=$dns" | sudo tee "$CHOICES" >/dev/null
 sudo chmod 0644 "$CHOICES"
-note "Fast JavaScript: $fast. Sound: $sound. Default browser: $links. uBlock: $ublock mode."
-# uBlock's mode, for every Firefox profile (ublock-allow came with the hardening above)
+note "Fast JavaScript: $fast. Sound: $sound. Default browser: $links. uBlock: $ublock mode. DNS: $dns."
+# uBlock's mode and Firefox's DNS, for every Firefox profile (ublock-allow came
+# with the hardening above; it reads the DNS choice from $CHOICES)
 sudo /usr/local/bin/ublock-allow --mode "$ublock" >/dev/null || warn "Couldn't set uBlock's $ublock mode: ublock-allow --mode $ublock"
 
 say "The $NAME user"

@@ -23,14 +23,16 @@ Wayland socket. A firewall rule on its group, `debsway-fx`
 computer's own services; DNS stays open. Your user may run exactly one thing
 as it, the session script `bin/firefox-session`, through a rule in
 `/etc/sudoers.d`, and a limit on processes keeps a runaway page from filling
-the machine. Its install asks four things, remembered in
+the machine. Its install asks five things, remembered in
 `/etc/debsway/firefox.conf` (which only root can write) and asked again when
 you run it again in a terminal: fast JavaScript (the JIT; default no, since
 it is where many browser attacks happen), sound (default yes), whether it is
 your default browser, so links from other programs open in it (default yes),
 and uBlock Origin's mode: medium (default: other sites' scripts blocked too;
 you allow sites with `ublock-allow`) or standard (ads, trackers and malware
-sites blocked, sites work). It follows debsway's light or dark theme
+sites blocked, sites work), and, for when the secure DNS extra isn't
+installed, Firefox's own encrypted DNS to Quad9: strict (default: never plain
+DNS) or with fallback to the network's. It follows debsway's light or dark theme
 (`theme`), and a JPEG or PNG in `~/Pictures/debsway/firefox` replaces the fox
 behind its New Tab page: your `firefox` command hands it a checked copy, which
 only the `firefox` user can read, at each start, so it never sees your
@@ -40,6 +42,7 @@ with `extras/firefox-profiles/new-profile.sh` each get a user like it.
 
 ## LIMITS
 
+- Without the secure DNS extra, and with strict DNS (the default), a Wi-Fi sign-in page (cafés, hotels) won't load in any of debsway's Firefoxes, and on a network that blocks encrypted DNS no site will: run this again and choose fallback, or install the secure DNS extra.
 - What lands in `~/Downloads` comes from the web: treat it as untrusted.
 - The clipboard is shared while its window has focus.
 - No WebRTC and no microphone or camera, here and in the profiles: video calls
@@ -77,7 +80,7 @@ sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/firefox-session /usr/loca
 sudo install -o root -g root -m 0644 @DEBSWAY_DIR@/data/firefox-user.js /usr/local/share/debsway/firefox-user.js
 # Your choices: fast JavaScript (yes/no), sound, default browser; only root can change them
 sudo install -d -o root -g root -m 0755 /etc/debsway
-printf 'fast_js=no\nsound=yes\ndefault_browser=yes\nublock=medium\n' | sudo tee /etc/debsway/firefox.conf
+printf 'fast_js=no\nsound=yes\ndefault_browser=yes\nublock=medium\ndns=strict\n' | sudo tee /etc/debsway/firefox.conf
 sudo /usr/local/bin/ublock-allow --mode medium
 
 # Your user may run the session script, and nothing else, as firefox. visudo

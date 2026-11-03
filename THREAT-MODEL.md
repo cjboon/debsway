@@ -202,9 +202,11 @@ With the extras:
   each name, and anyone on the way can answer with a false address. HTTPS
   and apt's signatures catch a false answer for the browser and for
   packages (a certificate or a signature that doesn't match is refused);
-  other programs may not check. Firefox's own DNS-over-HTTPS is switched
-  off (`parts/firefox-hardening.sh`), so the browser doesn't send your
-  lookups to a provider it picked. Tor Browser, Whonix and apt over Tor
+  other programs may not check. debsway's Firefox never sends your lookups
+  to a provider it picked: with the secure DNS extra its own DNS-over-HTTPS
+  is off and it uses the system's (encrypted); without it, it encrypts its
+  own lookups to Quad9, strictly (never plain DNS) unless "fallback" was
+  chosen at its install, and only Firefox's lookups are protected then. Tor Browser, Whonix and apt over Tor
   look names up through Tor, and a connected VPN through its tunnel.
   `extras/secure-dns.sh` encrypts the rest (see above); the resolver you
   pick still sees every name, and the name of each site also travels

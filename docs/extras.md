@@ -345,10 +345,13 @@ about incognito; your profiles stay).
   (`extras/firefox-profiles/new-profile.sh`).
 - **HTTPS-Only Mode**: Firefox won't load an unencrypted page without
   asking first, so nobody on café or hotel Wi-Fi can tamper with it.
-- **No DNS of its own**: Firefox's DNS-over-HTTPS is off and locked (a
-  policy), so it looks names up the way the rest of the system does instead
-  of sending them to a provider it picked (it does that by default in some
-  countries). Every Firefox debsway runs gets this, `incognito` and the
+- **Its DNS, encrypted either way** (a locked policy, never a provider
+  Firefox picks itself): with the secure DNS extra, its own DNS-over-HTTPS is
+  off and it looks names up the way the rest of the system does, encrypted;
+  without it, Firefox encrypts its own lookups to Quad9 (DNS over HTTPS),
+  strict by default (never plain DNS, so a Wi-Fi sign-in page won't load in
+  Firefox) or with fallback to the network's, as chosen at the sandboxed
+  Firefox's install. Every Firefox debsway runs gets this, `incognito` and the
   sandboxed `firefox` included.
 - **A notice when Firefox needs a restart**: after an update, the running
   browser keeps the old, unfixed version until you restart it. A check

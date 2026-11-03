@@ -17,7 +17,8 @@ The sandboxed Firefox sets up Firefox ESR the debsway way for every profile
 at install: standard (ads, trackers and known malware sites blocked) or medium
 (scripts and frames from other sites blocked too, which is where most malicious
 ads come from); the JavaScript JIT off, which most serious Firefox exploits
-target; HTTPS-Only Mode; Firefox's own DNS over HTTPS off; a blank New Tab;
+target; HTTPS-Only Mode; Firefox's DNS encrypted (the system's with the secure DNS
+extra, else its own to Quad9, strict or with fallback); a blank New Tab;
 and a notice when Firefox was updated while running and needs a restart. The
 prefs are `data/firefox-hardening.js`, the policies come from
 `bin/ublock-allow`. It also sets up `incognito` (`parts/incognito.sh`): a
@@ -44,7 +45,7 @@ can't hear your microphone, and a firewall rule on that user
 sudo apt install --no-install-recommends firefox-esr webext-ublock-origin-firefox libnotify-bin
 # The default prefs for every profile (Firefox reads /etc/firefox-esr/*.js)
 sudo install -m 0644 @DEBSWAY_DIR@/data/firefox-hardening.js /etc/firefox-esr/debsway-hardening.js
-# uBlock Origin (medium mode, or standard), DNS over HTTPS off: ublock-allow
+# uBlock Origin (medium mode, or standard) and Firefox's DNS: ublock-allow
 # writes Firefox's policies.json, and adds sites you allow later
 sudo install -m 0755 @DEBSWAY_DIR@/bin/ublock-allow /usr/local/bin/ublock-allow
 sudo /usr/local/bin/ublock-allow --mode medium

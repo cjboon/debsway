@@ -30,7 +30,7 @@ the resolver you chose, and if they don't it puts everything back.
 
 - The resolver you choose sees every name you look up, from your address.
 - Wi-Fi with a sign-in page (cafés, hotels, trains) doesn't work while it's on: those pages need the network's own DNS. `--remove` puts that back.
-- DNS over HTTPS can't be stopped by a firewall: Firefox's is switched off (`parts/firefox-hardening.sh`), Mullvad Browser uses its own.
+- DNS over HTTPS can't be stopped by a firewall: debsway's Firefox switches its own off while this is installed (and encrypts its own to Quad9 without it); Mullvad Browser uses its own.
 - Mullvad VPN uses its own DNS inside its tunnel while connected.
 - The sites you then connect to are still seen by your network (by address, and usually by name in the TLS handshake).
 

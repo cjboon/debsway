@@ -98,6 +98,17 @@ resolves() {
     return 1
 }
 
+# firefox_dns: debsway's Firefox (extras/firefox-sandbox.sh) uses the system's
+# DNS while this is installed, and encrypts its own without it: its policy is
+# written again, and it follows at its next start
+firefox_dns() {
+    if [ -x /usr/local/bin/ublock-allow ]; then
+        sudo /usr/local/bin/ublock-allow --refresh >/dev/null ||
+            warn "Couldn't tell Firefox about the DNS change: sudo ublock-allow --refresh"
+        note "Firefox follows at its next start."
+    fi
+}
+
 if [ "${1:-}" = --remove ]; then
     firewall_off
     sudo rm -f "$FIREWALL" "$UNIT"
@@ -108,6 +119,7 @@ if [ "${1:-}" = --remove ]; then
     sudo rm -f "$CONF"
     apt_purge unbound dns-root-data
     note "DNS goes to the network's own DNS server again, unencrypted."
+    firefox_dns
     exit
 fi
 
@@ -223,6 +235,7 @@ if ! resolves; then
     die "With the firewall rule on, names stopped resolving, so the rule was taken off again. Encrypted DNS through Unbound stays on; please report this."
 fi
 
+firefox_dns
 note "Done. Every lookup goes, encrypted, to $tls and is checked with DNSSEC."
 note "Wi-Fi with a sign-in page won't work while this is on; --remove switches it off."
 note "Change the resolver: run this again.   Check it: bash status.sh (the Network part)"
