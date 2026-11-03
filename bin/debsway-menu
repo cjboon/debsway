@@ -94,11 +94,24 @@ on_idle() {
     [ -z "$REDRAW" ] || [ "$(stty size 2>/dev/null || echo "24 80")" = "$size" ] || "$REDRAW"
 }
 
+# waiting: the menu is about to wait for a key. Only when
+# tools/test-debsway-menu.sh asks (DEBSWAY_MENU_TEST_READY=1) it says so, with
+# a terminal code that terminals ignore: the test then knows each key has been
+# handled, instead of guessing how long that takes on a busy machine.
+waiting() { [ -z "${DEBSWAY_MENU_TEST_READY:-}" ] || printf '\e]9999;debsway-ready\a'; }
+
+# wait_enter: for "Press Enter to go back" and the like
+wait_enter() {
+    waiting
+    IFS= read -r _ </dev/tty || true
+}
+
 # read_key: waits for one key or mouse report and sets KEY to: up down pgup pgdn
 # home end esc enter space click wheelup wheeldown other, or the character typed.
 # A click also sets CX and CY (column and row, counted from 1).
 read_key() {
     local c rc k2 k3 k4 report btn
+    waiting
     while :; do
         IFS= read -rsn1 -t 0.1 c
         rc=$?
@@ -380,7 +393,7 @@ run_choice() {
             printf '\e[2J\e[1;1HSwitching secure DNS...\n\n'
             "$SECDNS_CMD" toggle || true
             printf '\nPress Enter to go back. '
-            IFS= read -r _ </dev/tty || true
+            wait_enter
             screen_on
             settle
             refresh_items
@@ -416,7 +429,7 @@ run_choice() {
                 printf '\e[2J\e[1;1HOpening the vault (for an hour; vault open --for 2h in a terminal for longer).\n\n'
                 "$VAULT_CMD" open || true
                 printf '\nPress Enter to go back. '
-                IFS= read -r _ </dev/tty || true
+                wait_enter
                 screen_on
                 settle
             fi
@@ -427,7 +440,7 @@ run_choice() {
             printf '\e[2J\e[1;1HBacking up your home folder.\n\n'
             "$BACKUP_CMD" || printf '\nThe backup stopped with an error (see above).\n'
             printf '\nPress Enter to go back. '
-            IFS= read -r _ </dev/tty || true
+            wait_enter
             screen_on
             settle ;;
         editor)
@@ -440,7 +453,7 @@ run_choice() {
             printf '\e[2J\e[1;1H'
             "$HOME/.local/bin/console-font"
             printf '\nPress Enter to go back. '
-            IFS= read -r _ </dev/tty || true
+            wait_enter
             screen_on
             settle ;;
         help)
@@ -481,7 +494,7 @@ run_choice() {
             if [ "$rc" -ne 0 ] && [ ! -e "$DEBSWAY_PAUSED_FILE" ]; then
                 printf '\nIt stopped with an error (status %s).%s\nPress Enter to close. ' \
                     "$rc" "${log:+ What it printed is in $log}" >&2
-                IFS= read -r _ </dev/tty || true
+                wait_enter
             fi
             rm -f "$DEBSWAY_PAUSED_FILE" "$busy"
             exit "$rc" ;;

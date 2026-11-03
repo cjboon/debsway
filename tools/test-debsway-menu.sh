@@ -75,37 +75,57 @@ def run(script, env, keys, rows=24, cols=80):
         fcntl.ioctl(0, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
         os.execvpe("/bin/bash", ["bash", script, "--tui"], env)
     drawn = b""
-    if keys and isinstance(keys[0], tuple) and keys[0][0] == "early":
-        # the window is stretched just after the menu starts, before it has drawn anything
-        time.sleep(0.08)
-        fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", keys[0][1], keys[0][2], 0, 0))
-        keys = keys[1:]
-    def pump(wait=0.4):
-        nonlocal drawn
-        end = time.time() + wait
-        while time.time() < end:
+    ended = False
+    READY = b"\x1b]9999;debsway-ready\x07"
+    def pump(until, limit=10):
+        """Read what the menu draws until until() is true, the menu has ended,
+        or limit seconds have passed (only a menu that hangs takes that long)."""
+        nonlocal drawn, ended
+        end = time.time() + limit
+        while not ended and not until() and time.time() < end:
             r, _, _ = select.select([fd], [], [], 0.05)
             if r:
                 try:
                     data = os.read(fd, 65536)
                 except OSError:
-                    return
+                    data = b""
                 if not data:
+                    ended = True
                     return
                 drawn += data
-    # wait until the menu has drawn (a fixed delay is too short on a busy machine)
-    deadline = time.time() + 6
-    while b"Esc closes" not in drawn and time.time() < deadline:
-        pump(0.1)
+    def quiet(wait):
+        """Read until nothing more has come for wait seconds."""
+        nonlocal drawn
+        while not ended:
+            before = len(drawn)
+            pump(lambda: False, wait)
+            if len(drawn) == before:
+                return
+    def ready_after(n):
+        return lambda: drawn.count(READY) > n
+    if keys and isinstance(keys[0], tuple) and keys[0][0] == "early":
+        # the window is stretched just after the menu starts, before it has drawn anything
+        time.sleep(0.08)
+        fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", keys[0][1], keys[0][2], 0, 0))
+        keys = keys[1:]
+    # the menu says each time it waits for a key (DEBSWAY_MENU_TEST_READY):
+    # every key is sent once the one before it has been handled
+    pump(ready_after(0))
     for k in keys:
+        n = drawn.count(READY)
         if isinstance(k, tuple):      # ("resize", rows, cols): the window is stretched
+            before = len(drawn)
             fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", k[1], k[2], 0, 0))
-            pump(1.0)
+            # it draws again while it waits for the same key: until that is done
+            pump(lambda: len(drawn) > before, 3)
+            quiet(0.3)
             continue
         os.write(fd, (k(drawn) if callable(k) else k).encode())
-        pump(0.5)
+        pump(ready_after(n))
     status = None
-    for _ in range(80):   # (up to 8 s: a busy machine can be slow to exit)
+    # Only a menu that has closed its screen is exiting; one that said it waits
+    # for a key stays open (status None), so there is nothing to wait for
+    for _ in range(80 if ended else 0):   # (up to 8 s: a busy machine can be slow to exit)
         done, st = os.waitpid(pid, os.WNOHANG)
         if done:
             status = os.waitstatus_to_exitcode(st)
@@ -129,7 +149,7 @@ def click_on(label):
 if __name__ == "__main__":
     script, home, path, folder, ranfile = sys.argv[1:6]
     scenario = sys.argv[6]
-    env = {"PATH": path, "HOME": home, "TERM": "xterm-256color", "DEBSWAY_DIR": folder, "LANG": "C.UTF-8", "DEBSWAY_ESC_WAIT": "1",
+    env = {"PATH": path, "HOME": home, "TERM": "xterm-256color", "DEBSWAY_DIR": folder, "LANG": "C.UTF-8", "DEBSWAY_ESC_WAIT": "0.3", "DEBSWAY_MENU_TEST_READY": "1",
            # no browser or editor unless a scenario's test names some
            "DEBSWAY_MENU_BROWSERS": os.environ.get("DEBSWAY_MENU_BROWSERS", "/nonexistent"),
            "DEBSWAY_MENU_EDITORS": os.environ.get("DEBSWAY_MENU_EDITORS", "/nonexistent"),
@@ -182,7 +202,7 @@ if __name__ == "__main__":
     }
     drawn, status = run(script, env, scenarios[scenario])
     if len(sys.argv) > 7:
-        open(sys.argv[7], "w").write(re.sub(r"\x1b\[[0-9;?<]*[A-Za-z]", "\n", drawn))
+        open(sys.argv[7], "w").write(re.sub(r"\x1b\[[0-9;?<]*[A-Za-z]|\x1b\][^\x07]*\x07", "\n", drawn))
     print("STATUS", status)
     print("DREW", "|".join(re.findall(r"(Help|Install apps|Update|Status)", drawn)[:4]))
     print("DREWALL", "|".join(re.findall(r"(Help|Terminal|Install apps|Update|Status)", drawn)[:5]))
@@ -195,6 +215,13 @@ menu() { # SCENARIO [FOLDER]: runs it, leaves the output in $out and what ran in
     : >"$T/ran"
     out=$(python3 -I "$T/drive.py" "$HERE/bin/debsway-menu" "$T/home" "$T/fake:/usr/bin:/bin" "${2-$T/debsway}" "$T/ran" "$1" "$T/screen" 2>&1)
 }
+
+# the mark the test waits for is printed only when a test asks for it
+w=$(sed -n '/^waiting() {/p' "$HERE/bin/debsway-menu")
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+check "the menu marks each wait for a key only for the test" bash -c '
+    [ -n "$1" ] && [ -z "$(env -u DEBSWAY_MENU_TEST_READY bash -c "$1; waiting")" ] &&
+    [ -n "$(DEBSWAY_MENU_TEST_READY=1 bash -c "$1; waiting")" ]' _ "$w"
 
 menu enter
 check "outside sway there is no Terminal entry (it would open in this terminal anyway)" not grep -q '^DREWALL.*Terminal' <<<"$out"
@@ -397,25 +424,27 @@ import os, pty, select, sys, time
 def run(keys, pause=True):
     pid, fd = pty.fork()
     if pid == 0:
-        env = dict(os.environ, TERM="xterm", DEBSWAY_ESC_WAIT="1")
+        env = dict(os.environ, TERM="xterm", DEBSWAY_ESC_WAIT="0.3")
         if pause: env["DEBSWAY_PAUSE"] = "1"
         else: env.pop("DEBSWAY_PAUSE", None)
         os.execvpe("/bin/bash", ["bash", "-c", ". " + sys.argv[1] + "; pause_if_asked; echo AFTER-IT"], env)
     out = b""
-    def pump(w):
+    def pump(w, stop=b"AFTER-IT"):
+        """Read for up to w seconds; done early once stop has been printed."""
         nonlocal out
         end = time.time() + w
-        while time.time() < end:
+        while time.time() < end and stop not in out:
             r, _, _ = select.select([fd], [], [], 0.05)
             if r:
                 try: d = os.read(fd, 4096)
                 except OSError: return
                 if not d: return
                 out += d
-    pump(0.5)
+    # until it asks (or, with nothing to wait for, has gone on)
+    pump(5, b"Press Esc to close" if pause else b"AFTER-IT")
     waiting = b"AFTER-IT" not in out
     for k in keys:
-        os.write(fd, k.encode()); pump(1.5)   # (a plain Esc is confirmed after DEBSWAY_ESC_WAIT)
+        os.write(fd, k.encode()); pump(1.5)   # (only a key that must not close it waits this long)
     os.kill(pid, 9); os.waitpid(pid, 0)
     return waiting, b"AFTER-IT" in out, b"Press Esc to close" in out
 for name, keys, pause in [("none", [], False), ("x-then-esc", ["x", "\x1b"], True), ("enter", ["\r"], True),
@@ -506,22 +535,30 @@ pid, fd = pty.fork()
 if pid == 0:
     os.execvpe("bash", ["bash", sys.argv[1]], dict(os.environ, TERM="xterm", DEBSWAY_ASSUME_YES="1"))
 fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 20, 80, 0, 0))
-def pump(w):
-    out = b""; end = time.time() + w
+out = b""
+def pump(want, w=10):
+    """Read until want has been drawn (True), or w seconds have passed (False)."""
+    global out
+    end = time.time() + w
     while time.time() < end:
+        if want in re.sub(rb"\x1b\[[0-9;?]*[A-Za-z]|\x1b[=>]|\r|\x07", b"", out).decode(errors="replace"):
+            return True
         r, _, _ = select.select([fd], [], [], 0.05)
         if r:
             try: d = os.read(fd, 65536)
             except OSError: break
             if not d: break
             out += d
-    return re.sub(rb"\x1b\[[0-9;?]*[A-Za-z]|\x1b[=>]|\r|\x07", b"", out).decode(errors="replace")
-print("first", "Space for more, b to go back, q to go on" in pump(1.0))
+    return False
+print("first", pump("Space for more, b to go back, q to go on"))
 for _ in range(12):
     os.write(fd, b" "); time.sleep(0.1)
-print("end", "The end. Press q to go on to the question" in pump(1.0))
-os.write(fd, b"q"); time.sleep(0.5)
-done, st = os.waitpid(pid, os.WNOHANG)
+print("end", pump("The end. Press q to go on to the question"))
+os.write(fd, b"q")
+for _ in range(50):
+    done, st = os.waitpid(pid, os.WNOHANG)
+    if done: break
+    time.sleep(0.1)
 if not done:
     os.kill(pid, 9); os.waitpid(pid, 0)
 print("q", bool(done) and os.waitstatus_to_exitcode(st) == 0)
