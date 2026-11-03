@@ -46,17 +46,17 @@
 # files: bin/no-abstract-sockets lib/claude-accounts.sh
 # status: bin:claude bin:claude-unsandboxed bin:git file:/usr/local/libexec/claude-session
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/lib/claude-repo.sh"
-. "$DEBSWAY_DIR/lib/claude-accounts.sh"
+. "$WREN_DIR/lib/claude-repo.sh"
+. "$WREN_DIR/lib/claude-accounts.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 AGENT=claude-agent
 AGENT_HOME=/home/$AGENT
 SESSION=/usr/local/libexec/claude-session
-SUDOERS=/etc/sudoers.d/debsway-claude
-FIREWALL=/etc/debsway/claude.nft
-UNIT=/etc/systemd/system/debsway-claude-firewall.service
+SUDOERS=/etc/sudoers.d/wren-claude
+FIREWALL=/etc/wren/claude.nft
+UNIT=/etc/systemd/system/wren-claude-firewall.service
 PROJECTS=$HOME/projects
 
 # write_firewall: the rule file, with a line for each account, checked by nft
@@ -64,7 +64,7 @@ PROJECTS=$HOME/projects
 write_firewall() {
     local rules
     rules=$(mktemp)
-    claude_firewall_text "$DEBSWAY_DIR/data/claude-firewall.nft" >"$rules"
+    claude_firewall_text "$WREN_DIR/data/claude-firewall.nft" >"$rules"
     if ! sudo nft -c -f "$rules" >/dev/null; then
         rm -f "$rules"
         die "nft didn't accept the new firewall rule, so the old one stays."
@@ -73,8 +73,8 @@ write_firewall() {
     sudo install -o root -g root -m 0644 "$rules" "$FIREWALL"
     rm -f "$rules"
     [ "${1:-}" = no ] && return 0
-    sudo systemctl restart debsway-claude-firewall.service ||
-        warn "Couldn't load the firewall rule; check: systemctl status debsway-claude-firewall"
+    sudo systemctl restart wren-claude-firewall.service ||
+        warn "Couldn't load the firewall rule; check: systemctl status wren-claude-firewall"
 }
 
 # setup_agent: the locked user $AGENT, its notes and git settings, its ssh
@@ -83,7 +83,7 @@ setup_agent() {
     say "The $AGENT user"
     if ! id "$AGENT" >/dev/null 2>&1; then
         sudo useradd --create-home --home-dir "$AGENT_HOME" --shell /bin/bash --user-group \
-            --comment "debsway Claude Code" "$AGENT"
+            --comment "Wren Linux Claude Code" "$AGENT"
     fi
     # No password, so nobody can log in as it; only the sudo rule starts anything
     sudo usermod --lock "$AGENT"
@@ -98,11 +98,11 @@ setup_agent() {
     local note_file gitconfig
     note_file=$(mktemp)
     # (an account's folder is ~/projects-NAME: its notes say so)
-    sed "s|~/projects|~/${PROJECTS##*/}|g" "$DEBSWAY_DIR/data/claude-agent-CLAUDE.md" >"$note_file"
+    sed "s|~/projects|~/${PROJECTS##*/}|g" "$WREN_DIR/data/claude-agent-CLAUDE.md" >"$note_file"
     agent_file "$note_file" "$AGENT_HOME/.claude/CLAUDE.md"
     rm -f "$note_file"
     gitconfig=$(mktemp)
-    printf '# Written by debsway extras/claude-code.sh\n[user]\n\tname = Claude\n\temail = noreply@anthropic.com\n[init]\n\tdefaultBranch = main\n[safe]\n\tdirectory = *\n' >"$gitconfig"
+    printf '# Written by Wren Linux extras/claude-code.sh\n[user]\n\tname = Claude\n\temail = noreply@anthropic.com\n[init]\n\tdefaultBranch = main\n[safe]\n\tdirectory = *\n' >"$gitconfig"
     agent_file "$gitconfig" "$AGENT_HOME/.gitconfig"
     rm -f "$gitconfig"
 
@@ -144,7 +144,7 @@ setup_agent() {
     note "$PROJECTS is shared with $AGENT."
 }
 agent_file() { # SOURCE DESTINATION [MODE]: as $AGENT, unless you changed it
-    if ! sudo test -e "$2" || sudo grep -qis 'written by debsway' "$2"; then
+    if ! sudo test -e "$2" || sudo grep -qis 'written by Wren Linux' "$2"; then
         sudo install -D -o "$AGENT" -g "$AGENT" -m "${3:-0644}" "$1" "$2"
     else
         note "Kept your $2"
@@ -156,7 +156,7 @@ agent_file() { # SOURCE DESTINATION [MODE]: as $AGENT, unless you changed it
 sudoers_rule() {
     local rule
     rule=$(mktemp)
-    printf '# Written by debsway extras/claude-code.sh. %s may run the claude-session script,\n# and nothing else, as the user %s.\n%s ALL=(%s) NOPASSWD: %s\n' \
+    printf '# Written by Wren Linux extras/claude-code.sh. %s may run the claude-session script,\n# and nothing else, as the user %s.\n%s ALL=(%s) NOPASSWD: %s\n' \
         "$(id -un)" "$AGENT" "$(id -un)" "$AGENT" "$SESSION" >"$rule"
     if ! sudo visudo -cf "$rule" >/dev/null; then
         rm -f "$rule"
@@ -173,7 +173,7 @@ account() {
     AGENT=$CLAUDE_ACCOUNT_PREFIX$1
     AGENT_HOME=/home/$AGENT
     PROJECTS=$HOME/projects-$1
-    ACCOUNT_SUDOERS=/etc/sudoers.d/debsway-claude-$1
+    ACCOUNT_SUDOERS=/etc/sudoers.d/wren-claude-$1
 }
 
 # remove_account NAME: its sudo rule, its access to your folders, and (if you
@@ -210,7 +210,7 @@ if [ "${1:-}" = --account ] || [ "${1:-}" = --remove-account ]; then
         exit
     fi
     { [ -x "$SESSION" ] && id claude-agent >/dev/null 2>&1; } ||
-        die "Set up the sandboxed Claude first: bash $DEBSWAY_DIR/extras/claude-code.sh"
+        die "Set up the sandboxed Claude first: bash $WREN_DIR/extras/claude-code.sh"
     setup_agent
     say "Keeping $AGENT off your network"
     write_firewall
@@ -244,12 +244,12 @@ if [ "${1:-}" = --remove ]; then
     # is still set up (its session wrapper is the tell)
     [ -e /usr/local/libexec/claude-vm-session ] || remove_bin claude-pull
     remove_bin git
-    sudo systemctl disable --now debsway-claude-firewall.service >/dev/null 2>&1 || true
-    sudo nft delete table inet debsway_claude 2>/dev/null || true
+    sudo systemctl disable --now wren-claude-firewall.service >/dev/null 2>&1 || true
+    sudo nft delete table inet wren_claude 2>/dev/null || true
     sudo rm -f "$SUDOERS" "$SESSION" "$FIREWALL" "$UNIT"
     remove_no_abstract
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
-    sudo rmdir /usr/local/libexec /etc/debsway 2>/dev/null || true
+    sudo rmdir /usr/local/libexec /etc/wren 2>/dev/null || true
     # take back what it was allowed to reach
     if command -v setfacl >/dev/null; then
         setfacl -x "u:$AGENT" "$HOME" 2>/dev/null || true
@@ -288,24 +288,24 @@ say "Keeping $AGENT off your network"
 # (with a line for each other account)
 write_firewall no
 # Loaded before the network comes up, at every boot
-printf '%s\n' '# Written by debsway extras/claude-code.sh' '[Unit]' \
-    'Description=Keep the claude-agent user off the local network (debsway)' \
+printf '%s\n' '# Written by Wren Linux extras/claude-code.sh' '[Unit]' \
+    'Description=Keep the claude-agent user off the local network (Wren Linux)' \
     'Before=network-pre.target' 'Wants=network-pre.target' '' '[Service]' \
     'Type=oneshot' 'RemainAfterExit=yes' \
     "ExecStart=/usr/sbin/nft -f $FIREWALL" \
-    'ExecStop=/usr/sbin/nft delete table inet debsway_claude' '' '[Install]' \
+    'ExecStop=/usr/sbin/nft delete table inet wren_claude' '' '[Install]' \
     'WantedBy=multi-user.target' | sudo tee "$UNIT" >/dev/null
 sudo systemctl daemon-reload
 # Restart, not just enable --now: the unit stays "active" after it first ran,
 # so a rule file changed by an update would otherwise not be loaded
-sudo systemctl enable debsway-claude-firewall.service >/dev/null &&
-    sudo systemctl restart debsway-claude-firewall.service ||
-    warn "Couldn't load the firewall rule; check: systemctl status debsway-claude-firewall"
+sudo systemctl enable wren-claude-firewall.service >/dev/null &&
+    sudo systemctl restart wren-claude-firewall.service ||
+    warn "Couldn't load the firewall rule; check: systemctl status wren-claude-firewall"
 note "$AGENT can reach the internet, not your router, printers or your own local services."
 
 say "The claude command"
 sudo install -d -o root -g root -m 0755 /usr/local/libexec
-sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/claude-session" "$SESSION"
+sudo install -o root -g root -m 0755 "$WREN_DIR/bin/claude-session" "$SESSION"
 install_no_abstract
 sudoers_rule "$SUDOERS"
 install_bin claude

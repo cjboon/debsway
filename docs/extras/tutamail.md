@@ -3,18 +3,18 @@
 ## SYNOPSIS
 
 ```
-debsway install tutamail                     install it, or update to the newest release
-debsway remove tutamail                      remove it (its data stays)
-debsway manual tutamail                      print the manual steps below
+wrenctl install tutamail                     install it, or update to the newest release
+wrenctl remove tutamail                      remove it (its data stays)
+wrenctl manual tutamail                      print the manual steps below
 
 tuta                                         start it (or Super+d, then tuta)
-bash ~/debsway/test.sh                       says when a newer release is out
+bash ~/wren/test.sh                       says when a newer release is out
 ```
 
 Tuta Mail (Tutanota until 2023) is the desktop app of Tuta, an end-to-end
 encrypted email service: your mailbox, contacts and calendar are stored
 encrypted on Tuta's servers, and mail between Tuta users is end-to-end
-encrypted. debsway installs the official AppImage from `app.tuta.com` only if
+encrypted. Wren Linux installs the official AppImage from `app.tuta.com` only if
 it is signed by Tuta's code-signing key, a copy of which is in
 `data/tuta-pub.pem` (its SHA-256 is pinned in `pins.sh` as `TUTA_KEY_SHA256`).
 Tuta signs with openssl rather than gpg. Its release file isn't signed, so the
@@ -48,10 +48,10 @@ wget @TUTA_DESKTOP_URL@/latest-linux.yml @TUTA_DESKTOP_URL@/linux-sig.bin @TUTA_
 grep '^version:' latest-linux.yml
 
 # Tuta's key is the pinned one: this must print @TUTA_KEY_SHA256@
-openssl pkey -pubin -in @DEBSWAY_DIR@/data/tuta-pub.pem -outform DER | sha256sum
+openssl pkey -pubin -in @WREN_DIR@/data/tuta-pub.pem -outform DER | sha256sum
 
 # Tuta signed the AppImage: this must print "Verified OK". Stop here if not.
-openssl dgst -sha512 -verify @DEBSWAY_DIR@/data/tuta-pub.pem -signature linux-sig.bin tutanota-desktop-linux.AppImage
+openssl dgst -sha512 -verify @WREN_DIR@/data/tuta-pub.pem -signature linux-sig.bin tutanota-desktop-linux.AppImage
 
 # Unpack it (no FUSE needed), and check the app inside is the version the
 # release file named (the release file itself isn't signed)

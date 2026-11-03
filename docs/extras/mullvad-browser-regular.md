@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-debsway install mullvad-browser-regular                     install it
-debsway remove mullvad-browser-regular                      remove it (and Mullvad's repository, if Mullvad VPN isn't installed)
-debsway manual mullvad-browser-regular                      print the manual steps below
+wrenctl install mullvad-browser-regular                     install it
+wrenctl remove mullvad-browser-regular                      remove it (and Mullvad's repository, if Mullvad VPN isn't installed)
+wrenctl manual mullvad-browser-regular                      print the manual steps below
 
 mullvad-browser                                     start it (or Super+d); connect a VPN first
 ```
@@ -21,7 +21,7 @@ updates. It runs on X11, so XWayland is installed.
 
 - It doesn't hide your address: without a VPN, sites see it and your network sees where you go.
 - It isn't Tor, and hiding your address doesn't hide who you are to a site you log in to.
-- It runs as you, with no sandbox from debsway (the sandboxed Firefox and `incognito` are that).
+- It runs as you, with no sandbox from Wren Linux (the sandboxed Firefox and `incognito` are that).
 - It keeps its own DNS over HTTPS, which secure DNS (`parts/secure-dns.sh`) can't stop.
 
 ## MANUAL INSTALL
@@ -40,7 +40,7 @@ echo "deb [signed-by=/usr/share/keyrings/mullvad-keyring.asc arch=$(dpkg --print
 
 # Let unattended-upgrades install its updates too (it takes only Debian's otherwise)
 echo 'Unattended-Upgrade::Origins-Pattern:: "site=repository.mullvad.net";' |
-    sudo tee /etc/apt/apt.conf.d/52debsway-mullvad
+    sudo tee /etc/apt/apt.conf.d/52wren-mullvad
 
 # XWayland (it runs on X11) and the browser
 sudo apt update
@@ -55,6 +55,6 @@ To undo:
 sudo apt purge mullvad-browser
 # Only if Mullvad VPN isn't installed either: the repository, its key and the update rule
 sudo rm /etc/apt/sources.list.d/mullvad.list /usr/share/keyrings/mullvad-keyring.asc
-sudo rm /etc/apt/apt.conf.d/52debsway-mullvad
+sudo rm /etc/apt/apt.conf.d/52wren-mullvad
 sudo apt update
 ```

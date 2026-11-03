@@ -25,7 +25,7 @@ run() {
     printf '%s\n' "$@" >"$T/answers"
     (
         # shellcheck disable=SC2030
-        export DEBSWAY_TEST_ANSWERS=$T/answers
+        export WREN_TEST_ANSWERS=$T/answers
         pick_bridges "$context"
         echo "RESULT $BRIDGE_TYPE ${#BRIDGES[@]} $BRIDGE_WANTED"
     ) 2>&1
@@ -84,7 +84,7 @@ check "a wrong choice asks again" test "$(result "$out")" = "RESULT snowflake 0 
 echo "torrc lines"
 conf=$(
     # shellcheck disable=SC2031
-    export DEBSWAY_TEST_ANSWERS=$T/a
+    export WREN_TEST_ANSWERS=$T/a
     printf '%s\n' y 1 "$OBFS4" "" >"$T/a"
     pick_bridges system-tor >/dev/null 2>&1
     tor_bridge_config
@@ -103,7 +103,7 @@ check "...which Debian's AppArmor profile for tor lets it run" \
 conf=$(BRIDGE_TYPE=snowflake tor_bridge_config)
 check "Snowflake: both bridges" test "$(grep -c '^Bridge snowflake ' <<<"$conf")" = 2
 check "Snowflake: the plugin line" has '^ClientTransportPlugin snowflake exec /usr/bin/snowflake-client' "$conf"
-check "Snowflake lines use front=, which Debian's client knows" lacks 'fronts=' "$(grep -v '^#' "$DEBSWAY_DIR/data/snowflake-bridges.txt")"
+check "Snowflake lines use front=, which Debian's client knows" lacks 'fronts=' "$(grep -v '^#' "$WREN_DIR/data/snowflake-bridges.txt")"
 check "built-in kinds write nothing to torrc" test -z "$(BRIDGE_TYPE=obfs4-builtin tor_bridge_config)"
 
 [ "$fails" -eq 0 ]

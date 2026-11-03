@@ -50,7 +50,7 @@ done
 # A first run has no settings file yet: asking which resolver is in use must
 # not end the script (it did, silently, right after "Which resolver")
 check "first run, no settings yet: dns_current gives nothing and the script goes on" \
-    env DEBSWAY_ETC="$T/no-etc" bash -c 'set -euo pipefail; . "$1/lib.sh"; . "$1/lib/secure-dns.sh"; c=$(dns_current); [ -z "$c" ] && echo on' _ "$HERE"
+    env WREN_ETC="$T/no-etc" bash -c 'set -euo pipefail; . "$1/lib.sh"; . "$1/lib/secure-dns.sh"; c=$(dns_current); [ -z "$c" ] && echo on' _ "$HERE"
 if dns_unbound_conf nobody >/dev/null 2>&1; then unknown=false; else unknown=true; fi
 check "an unknown resolver gives no settings" $unknown
 check "Mullvad's public DNS (gone 2026-11-02) isn't offered" bash -c '! grep -qi mullvad <<<"$1"' _ "$(for n in "${DNS_PROVIDERS[@]}"; do dns_pin "$n"; done)"
@@ -62,24 +62,24 @@ else
 fi
 
 # ---- which resolver is in use, and status.sh's line ----
-export DEBSWAY_ETC=$T/etc
+export WREN_ETC=$T/etc
 mkdir -p "$T/etc/unbound/unbound.conf.d"
 if secure_dns_on; then off=false; else off=true; fi
 check "with no settings it is off" $off
 check "status.sh says DNS is unencrypted" grep -q "DNS: unencrypted" <<<"$(dns_status)"
-dns_unbound_conf digiges >"$T/etc/unbound/unbound.conf.d/debsway-secure-dns.conf"
+dns_unbound_conf digiges >"$T/etc/unbound/unbound.conf.d/wren-secure-dns.conf"
 check "with its settings but switched off: still off (on means switched on)" bash -c '! secure_dns_on'
 check "...status.sh says it is switched off" grep -q "secure DNS is switched off" <<<"$(dns_status)"
-printf '%s\n' '# Written by debsway parts/secure-dns.sh. Every name goes to Unbound on this' 'nameserver 127.0.0.1' >"$T/etc/resolv.conf"
+printf '%s\n' '# Written by Wren Linux parts/secure-dns.sh. Every name goes to Unbound on this' 'nameserver 127.0.0.1' >"$T/etc/resolv.conf"
 check "switched on (resolv.conf says so in its first line): on" secure_dns_on
 check "the resolver in use is read back" test "$(dns_current)" = digiges
 check "status.sh names it" grep -q "DNS: encrypted to dns.digitale-gesellschaft.ch" <<<"$(dns_status)"
-printf '%s\n' '# Written by debsway extras/secure-dns.sh. Every name goes to Unbound on this' 'nameserver 127.0.0.1' >"$T/etc/resolv.conf"
-check "...an older debsway's mark (extras/) counts as on too" secure_dns_on
+printf '%s\n' '# Written by Wren Linux extras/secure-dns.sh. Every name goes to Unbound on this' 'nameserver 127.0.0.1' >"$T/etc/resolv.conf"
+check "...an older Wren Linux's mark (extras/) counts as on too" secure_dns_on
 
 # ---- wifi.sh leaves resolv.conf alone while it is on ----
 # set_dns from wifi.sh, writing into the pretend /etc; resolvconf only writes down that it ran
-printf '%s\n' '# Written by debsway parts/secure-dns.sh. Every name goes to Unbound on this' 'nameserver 127.0.0.1' >"$T/etc/resolv.conf"
+printf '%s\n' '# Written by Wren Linux parts/secure-dns.sh. Every name goes to Unbound on this' 'nameserver 127.0.0.1' >"$T/etc/resolv.conf"
 # shellcheck disable=SC2016
 out=$(bash -c '
     . "$1/lib.sh"; set +e
@@ -90,8 +90,8 @@ out=$(bash -c '
 check "wifi.sh doesn't put the network's DNS server back" grep -qx "nameserver 127.0.0.1" "$T/etc/resolv.conf"
 check "nor hand it to resolvconf" test ! -e "$T/log"
 check "its busybox DHCP script leaves it alone too" \
-    grep -qF "! grep -qE '^# Written by debsway (parts|extras)/secure-dns\.sh' /etc/resolv.conf" "$HERE/wifi.sh"
-echo "nameserver 192.168.1.1" >"$T/etc/resolv.conf.debsway.bak"
+    grep -qF "! grep -qE '^# Written by Wren Linux (parts|extras)/secure-dns\.sh' /etc/resolv.conf" "$HERE/wifi.sh"
+echo "nameserver 192.168.1.1" >"$T/etc/resolv.conf.wren.bak"
 remove_wifi_config >/dev/null 2>&1
 check "wifi.sh --remove doesn't put its old copy back over it" grep -qx "nameserver 127.0.0.1" "$T/etc/resolv.conf"
 echo "nameserver 10.0.0.1" >"$T/etc/resolv.conf"
@@ -111,7 +111,7 @@ check "a VPN tunnel's own DNS passes (Mullvad points resolv.conf into it)" \
     bash -c '[ "$1" -lt "$3" ] && [ "$2" -lt "$3" ]' _ "$(pos 'oifname "wg\*" accept')" "$(pos 'oifname "tun\*" accept')" "$(pos 'udp dport')"
 check "nobody else is let through" test "$(grep -c ' accept$' <<<"$rules")" -eq 4
 check "it replaces its own table when loaded again" \
-    bash -c 'grep -qx "delete table inet debsway_secure_dns" "$1" && grep -qx "table inet debsway_secure_dns {" "$1"' _ "$FW"
+    bash -c 'grep -qx "delete table inet wren_secure_dns" "$1" && grep -qx "table inet wren_secure_dns {" "$1"' _ "$FW"
 # nft reads user names as it loads, so "unbound" becomes root for the check here
 if command -v nft >/dev/null && unshare -rn true 2>/dev/null; then
     sed 's/skuid "unbound"/skuid "root"/' "$FW" >"$T/fw.nft"
@@ -140,30 +140,30 @@ chmod +x "$W/switch"
 sw() { bash "$W/switch" "$@"; }
 export W
 export -f sw
-: >"$W/etc/unbound/unbound.conf.d/debsway-secure-dns.conf"
+: >"$W/etc/unbound/unbound.conf.d/wren-secure-dns.conf"
 echo "nameserver 192.168.1.1" >"$W/etc/resolv.conf"
 : >"$W/calls"
 
 check "switch: off to start with" test "$(sw status)" = off
 sw on >/dev/null 2>&1
 check "on: resolv.conf points at Unbound, and says so" bash -c '
-    head -1 "$1" | grep -q "^# Written by debsway parts/secure-dns.sh" && grep -qx "nameserver 127.0.0.1" "$1"' _ "$W/etc/resolv.conf"
-check "...the network's copy kept, to put back" grep -qx "nameserver 192.168.1.1" "$W/etc/resolv.conf.debsway-secure-dns.bak"
-check "...NetworkManager told to leave resolv.conf alone" grep -qx "dns=none" "$W/etc/NetworkManager/conf.d/90-debsway-secure-dns.conf"
+    head -1 "$1" | grep -q "^# Written by Wren Linux parts/secure-dns.sh" && grep -qx "nameserver 127.0.0.1" "$1"' _ "$W/etc/resolv.conf"
+check "...the network's copy kept, to put back" grep -qx "nameserver 192.168.1.1" "$W/etc/resolv.conf.wren-secure-dns.bak"
+check "...NetworkManager told to leave resolv.conf alone" grep -qx "dns=none" "$W/etc/NetworkManager/conf.d/90-wren-secure-dns.conf"
 check "...its firewall rule enabled and loaded" bash -c '
-    grep -qx "systemctl enable debsway-secure-dns-firewall.service" "$1" && grep -qx "systemctl restart debsway-secure-dns-firewall.service" "$1"' _ "$W/calls"
+    grep -qx "systemctl enable wren-secure-dns-firewall.service" "$1" && grep -qx "systemctl restart wren-secure-dns-firewall.service" "$1"' _ "$W/calls"
 check "...status: on" test "$(sw status)" = on
 : >"$W/calls"
 sw off >/dev/null 2>&1
 check "off: the network's DNS server back" grep -qx "nameserver 192.168.1.1" "$W/etc/resolv.conf"
-check "...NetworkManager may write it again" test ! -e "$W/etc/NetworkManager/conf.d/90-debsway-secure-dns.conf"
-check "...the firewall rule off, also at boot" grep -qx "systemctl disable --now debsway-secure-dns-firewall.service" "$W/calls"
+check "...NetworkManager may write it again" test ! -e "$W/etc/NetworkManager/conf.d/90-wren-secure-dns.conf"
+check "...the firewall rule off, also at boot" grep -qx "systemctl disable --now wren-secure-dns-firewall.service" "$W/calls"
 : >"$W/no-dns"; : >"$W/calls"
 check "on where names don't resolve (a sign-in page): it says so, and fails" bash -c '! sw on'
 check "...and stays off: the network's DNS server, no firewall rule" bash -c '
     grep -qx "nameserver 192.168.1.1" "$1" && [ "$(sw status)" = off ] && ! grep -q "systemctl enable" "$2"' _ "$W/etc/resolv.conf" "$W/calls"
 rm -f "$W/no-dns"
-rm "$W/etc/unbound/unbound.conf.d/debsway-secure-dns.conf"
+rm "$W/etc/unbound/unbound.conf.d/wren-secure-dns.conf"
 check "on without Unbound's settings: refused" bash -c '! sw on'
 check "anything but on, off or status: refused" bash -c '! sw "on; id" && ! sw && ! sw on off'
 check "not as root: refused" bash -c '! bash "$1" status' _ "$HERE/bin/secure-dns-switch"
@@ -172,8 +172,8 @@ check "not as root: refused" bash -c '! bash "$1" status' _ "$HERE/bin/secure-dn
 mkdir -p "$W/fake"
 printf '#!/bin/sh\necho "sudo $*" >>"%s/calls"\n' "$W" >"$W/fake/sudo"
 chmod +x "$W/fake/sudo"
-sed "s|/usr/local/libexec/debsway-secure-dns|$W/switch|" "$HERE/bin/secure-dns" >"$W/secure-dns"
-sdc() { DEBSWAY_RESOLV_CONF=$W/etc/resolv.conf PATH="$W/fake:$PATH" bash "$W/secure-dns" "$@"; }
+sed "s|/usr/local/libexec/wren-secure-dns|$W/switch|" "$HERE/bin/secure-dns" >"$W/secure-dns"
+sdc() { WREN_RESOLV_CONF=$W/etc/resolv.conf PATH="$W/fake:$PATH" bash "$W/secure-dns" "$@"; }
 export -f sdc
 : >"$W/calls"
 sdc toggle
@@ -186,20 +186,20 @@ check "secure DNS is part of the base, after NetworkManager" bash -c '
 check "a re-run keeps the switch where it was (on only at first, or if it was on)" grep -qF 'if $first || [ "$("$BIN/secure-dns" status)" = on ]; then' "$HERE/parts/secure-dns.sh"
 
 # ---- login-check: a word at login if the Wi-Fi sign-in window left it off
-mkdir -p "$W/state/debsway" "$W/nfake"
+mkdir -p "$W/state/wren" "$W/nfake"
 printf '#!/bin/sh\necho "notify $*" >>"%s/notified"\n' "$W" >"$W/nfake/notify-send"
 chmod +x "$W/nfake/notify-send"
-lc() { XDG_STATE_HOME=$W/state DEBSWAY_RESOLV_CONF=$W/etc/resolv.conf PATH="$W/nfake:$PATH" bash "$HERE/bin/secure-dns" login-check 2>&1; }
+lc() { XDG_STATE_HOME=$W/state WREN_RESOLV_CONF=$W/etc/resolv.conf PATH="$W/nfake:$PATH" bash "$HERE/bin/secure-dns" login-check 2>&1; }
 echo "nameserver 192.168.1.1" >"$W/etc/resolv.conf"
 rm -f "$W/notified"
 check "login-check: off, but not left off by the sign-in window: nothing said" bash -c '[ -z "$(WAYLAND_DISPLAY=wayland-1 lc)" ] && [ ! -e "$1" ]' _ "$W/notified"
 export -f lc; export HERE
-: >"$W/state/debsway/secure-dns-left-off"
+: >"$W/state/wren/secure-dns-left-off"
 WAYLAND_DISPLAY=wayland-1 lc >/dev/null
 check "...left off by it, still off, in sway: a notification" grep -q "notify .*Secure DNS is off" "$W/notified"
 check "...on a text console: a line in the terminal" bash -c 'out=$(WAYLAND_DISPLAY= lc); [[ $out == *"secure-dns on"* ]]'
-printf '%s\n' '# Written by debsway parts/secure-dns.sh. Every name goes to Unbound on this' 'nameserver 127.0.0.1' >"$W/etc/resolv.conf"
-check "...on again by then: nothing said, and the mark goes" bash -c '[ -z "$(WAYLAND_DISPLAY= lc)" ] && [ ! -e "$1" ]' _ "$W/state/debsway/secure-dns-left-off"
+printf '%s\n' '# Written by Wren Linux parts/secure-dns.sh. Every name goes to Unbound on this' 'nameserver 127.0.0.1' >"$W/etc/resolv.conf"
+check "...on again by then: nothing said, and the mark goes" bash -c '[ -z "$(WAYLAND_DISPLAY= lc)" ] && [ ! -e "$1" ]' _ "$W/state/wren/secure-dns-left-off"
 check "secure-dns on removes the mark once it worked" grep -qF 'if [ "$cmd" = on ] && [ "$rc" = 0 ]; then rm -f "$LEFT_OFF"; fi' "$HERE/bin/secure-dns"
 check "the part runs login-check at sway's start, and from ~/.bashrc outside sway" bash -c '
     grep -qx "exec ~/.local/bin/secure-dns login-check" "$1" && grep -qF "[ -n \"\${WAYLAND_DISPLAY:-}\" ] || [ ! -x ~/.local/bin/secure-dns ] || ~/.local/bin/secure-dns login-check" "$1" &&

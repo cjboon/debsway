@@ -44,14 +44,14 @@ if [ ! -e "$SITE/static/index.html" ]; then
         >"$SITE/static/index.html"
     chown "$SITE_USER:$SITE_USER" "$SITE/static/index.html"
 fi
-install -d -m 0755 /usr/share/debsway-site
+install -d -m 0755 /usr/share/wren-site
 printf '%s\n' '<!doctype html><title>Not running</title>' \
     '<p>The site'"'"'s app isn'"'"'t answering yet (nothing on 127.0.0.1:8000 in the VM).</p>' \
-    >/usr/share/debsway-site/no-app.html
+    >/usr/share/wren-site/no-app.html
 
 log "nginx"
 cat >/etc/nginx/sites-available/onion-site <<'EOF'
-# Written by debsway extras/onion-site.sh. Every visitor comes through Tor, so
+# Written by Wren Linux extras/onion-site.sh. Every visitor comes through Tor, so
 # the logs would only hold times, and those are left out.
 server {
     listen 80 default_server;
@@ -79,7 +79,7 @@ server {
     error_page 502 503 504 /no-app.html;
     location = /no-app.html {
         internal;
-        root /usr/share/debsway-site;
+        root /usr/share/wren-site;
     }
 }
 EOF
@@ -93,7 +93,7 @@ if [ "$APP" = python ]; then
     log "The Python app: gunicorn, as $SITE_USER, locked down"
     if [ ! -e "$SITE/app/app.py" ]; then
         cat >"$SITE/app/app.py" <<'EOF'
-# A starting point (debsway extras/onion-site.sh). Replace it with your own
+# A starting point (Wren Linux extras/onion-site.sh). Replace it with your own
 # Flask app, keeping the name: the service runs app:app from this folder.
 # Write anything you keep to /srv/site/data; the rest is read-only to the app.
 from flask import Flask
@@ -108,7 +108,7 @@ EOF
         chown "$SITE_USER:$SITE_USER" "$SITE/app/app.py"
     fi
     cat >/etc/systemd/system/site-app.service <<EOF
-# Written by debsway extras/onion-site.sh
+# Written by Wren Linux extras/onion-site.sh
 [Unit]
 Description=The onion site's Python app (gunicorn)
 After=network.target
@@ -138,17 +138,17 @@ EOF
 fi
 
 log "$SITE_USER may restart the site's services without a password"
-printf '%s\n' "# Written by debsway extras/onion-site.sh" \
+printf '%s\n' "# Written by Wren Linux extras/onion-site.sh" \
     "$SITE_USER ALL=(root) NOPASSWD: /usr/bin/systemctl restart site-app.service, /usr/bin/systemctl reload nginx.service" \
     >/etc/sudoers.d/onion-site
 chmod 0440 /etc/sudoers.d/onion-site
 visudo -cf /etc/sudoers.d/onion-site >/dev/null || { rm -f /etc/sudoers.d/onion-site; die "the sudoers rule didn't pass visudo"; }
 
 log "From now on apt reaches Debian only through the host's Tor (during onion-site update)"
-printf '%s\n' '// Written by debsway extras/onion-site.sh: this VM has no network; during' \
+printf '%s\n' '// Written by Wren Linux extras/onion-site.sh: this VM has no network; during' \
     '// "onion-site update" 10.0.2.100:9050 leads to the host'"'"'s Tor.' \
     'Acquire::http::Proxy "socks5h://10.0.2.100:9050";' \
-    'Acquire::https::Proxy "socks5h://10.0.2.100:9050";' >/etc/apt/apt.conf.d/90debsway-tor
+    'Acquire::https::Proxy "socks5h://10.0.2.100:9050";' >/etc/apt/apt.conf.d/90wren-tor
 # The daily apt timers would only fail without a network
 systemctl disable --now apt-daily.timer apt-daily-upgrade.timer >/dev/null 2>&1 || true
 

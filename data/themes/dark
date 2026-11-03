@@ -1,4 +1,4 @@
-# debsway's dark theme (the default): read by bin/theme, which accepts only
+# Wren Linux's dark theme (the default): read by bin/theme, which accepts only
 # NAME=colour lines (rrggbb, or rrggbbaa where it says so), a list of them, or
 # a number for ALPHA. Light is data/themes/light, with the same names.
 # The plain background when no wallpaper is up
@@ -16,7 +16,7 @@ NOTIFY_BORDER=4c7899
 # Menus (wmenu: the launcher, power menu, wallpaper list): background, text
 WMENU_BG=000000
 WMENU_TEXT=ffffff
-# The debsway menu, the cheat sheet, the timer: all gray
+# The Wren menu, the cheat sheet, the timer: all gray
 MENU_FG=d0d0d0
 MENU_BG=000000
 MENU_REGULAR=000000 9a9a9a b8b8b8 c8c8c8 8a8a8a a8a8a8 bcbcbc d0d0d0

@@ -27,7 +27,7 @@ chmod +x "$T/bin/iw"
 
 fn=$(sed -n '/^SCAN_TIMEOUT=/p; /^scan_ssids() {/,/^}/p' "$HERE/wifi.sh")
 scan() { # MODE: scan_ssids with the wpa backend (iw)
-    TEST_IW=$1 PATH="$T/bin:$PATH" DEBSWAY_SCAN_TIMEOUT=1 bash -c "$fn"'
+    TEST_IW=$1 PATH="$T/bin:$PATH" WREN_SCAN_TIMEOUT=1 bash -c "$fn"'
         BACKEND=wpa IF=wlan0; scan_ssids'
 }
 

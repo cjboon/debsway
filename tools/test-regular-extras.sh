@@ -1,7 +1,7 @@
 #!/bin/bash
 # Checks extras/claude-regular.sh, and what keeps it from getting in the way
 # of the sandboxed Claude Code:
-#  - lib/claude-settings.py adds debsway's Claude Code settings next to yours
+#  - lib/claude-settings.py adds Wren Linux's Claude Code settings next to yours
 #    and takes out only what it added;
 #  - lib/claude-repo.sh keeps Anthropic's repository while either extra uses it.
 # The extras run with a pretend sudo (it only logs), a pretend dpkg-query (their
@@ -36,12 +36,12 @@ printf '%s\n' '{"model": "opus", "sandbox": {"enabled": false}, "permissions": {
 python3 -I "$M" add "$S" "$OURS" "$ST"
 python3 -I "$M" add "$S" "$OURS" "$ST"
 check "settings: your own values stay (your sandbox off stays off)" jq_has "$S" 'd["sandbox"]["enabled"] is False and d["model"] == "opus"'
-check "...your rules stay, and debsway's are added once, even run twice" \
+check "...your rules stay, and Wren Linux's are added once, even run twice" \
     jq_has "$S" 'd["permissions"]["deny"].count("Read(~/.gnupg/**)") == 1 and "Read(~/secret)" in d["permissions"]["deny"] and d["permissions"]["allow"] == ["Bash(make *)"]'
 python3 -I "$M" remove "$S" "$OURS" "$ST"
-check "...remove takes out only debsway's" \
+check "...remove takes out only Wren Linux's" \
     jq_has "$S" 'd == {"model": "opus", "sandbox": {"enabled": False}, "permissions": {"deny": ["Read(~/secret)", "Read(~/.ssh/**)"], "allow": ["Bash(make *)"]}}'
-check "...a rule you had before stays, though debsway has it too" jq_has "$S" '"Read(~/.ssh/**)" in d["permissions"]["deny"]'
+check "...a rule you had before stays, though Wren Linux has it too" jq_has "$S" '"Read(~/.ssh/**)" in d["permissions"]["deny"]'
 echo '[1, 2]' >"$S"
 check "settings that aren't a JSON object are left alone" not python3 -I "$M" add "$S" "$OURS" "$ST"
 check "...unchanged" test "$(cat "$S")" = '[1, 2]'
@@ -105,7 +105,7 @@ run() { # SCRIPT ARG ANSWER...: ARG is --remove or empty; one answer per questio
     shift 2
     : >"$T/calls"
     printf '%s\n' "$@" >"$T/answers"
-    HOME=$T/home XDG_STATE_HOME='' DEBSWAY_TEST_ANSWERS=$T/answers bash "$R/extras/$script" ${arg:+"$arg"} >"$T/out" 2>&1
+    HOME=$T/home XDG_STATE_HOME='' WREN_TEST_ANSWERS=$T/answers bash "$R/extras/$script" ${arg:+"$arg"} >"$T/out" 2>&1
 }
 H=$T/home
 
@@ -121,7 +121,7 @@ check "...says claude is it, without the sandboxed claude" grep -q 'Run it with:
 run claude-regular.sh ''
 check "...with the sandboxed claude, says claude-regular" grep -q 'claude is the sandboxed one' "$T/out"
 run claude-regular.sh --remove
-check "--remove: only debsway's settings go" jq_has "$H/.claude/settings.json" 'd == {"permissions": {"deny": ["Read(~/mine)"]}}'
+check "--remove: only Wren Linux's settings go" jq_has "$H/.claude/settings.json" 'd == {"permissions": {"deny": ["Read(~/mine)"]}}'
 check "...the command goes, and the repository only if unused" bash -c '[ ! -e "$1/.local/bin/claude-regular" ] && grep -qx remove-repo-if-unused "$2"' _ "$H" "$T/calls"
 
 # ---- another account: ~/.claude-work, the same settings, each kept out of the other's folder
@@ -133,7 +133,7 @@ runa() { # ANSWER-FILE-LINES... -- SCRIPT ARGS...
     printf '%s\n' "${answers[@]}" >"$T/answers"
     local script=$1
     shift
-    HOME=$T/home XDG_STATE_HOME='' DEBSWAY_TEST_ANSWERS=$T/answers bash "$R/extras/$script" "$@" >"$T/out" 2>&1
+    HOME=$T/home XDG_STATE_HOME='' WREN_TEST_ANSWERS=$T/answers bash "$R/extras/$script" "$@" >"$T/out" 2>&1
 }
 echo '{"permissions": {"deny": ["Read(~/mine)"]}}' >"$H/.claude/settings.json"
 runa -- claude-regular.sh --account work
@@ -141,7 +141,7 @@ check "--account before claude-regular is set up: refused" bash -c '! [ -e "$1/.
 run claude-regular.sh ''
 before=$(cat "$H/.claude/settings.json")
 runa -- claude-regular.sh --account work
-check "--account work: its own settings folder, with debsway's settings" jq_has "$H/.claude-work/settings.json" 'd["sandbox"]["enabled"] is True and "Edit(~/.profile)" in d["permissions"]["deny"]'
+check "--account work: its own settings folder, with Wren Linux's settings" jq_has "$H/.claude-work/settings.json" 'd["sandbox"]["enabled"] is True and "Edit(~/.profile)" in d["permissions"]["deny"]'
 check "...kept out of the first account's folder (file tools and sandboxed commands)" jq_has "$H/.claude-work/settings.json" '"Read(~/.claude/**)" in d["permissions"]["deny"] and "~/.claude" in d["sandbox"]["filesystem"]["denyRead"]'
 check "...and the first account kept out of its folder" jq_has "$H/.claude/settings.json" '"Read(~/.claude-work/**)" in d["permissions"]["deny"] and "~/.claude-work" in d["sandbox"]["filesystem"]["denyRead"] and "Read(~/mine)" in d["permissions"]["deny"]'
 check "...it says this isn't a wall" grep -q "not a wall" "$T/out"

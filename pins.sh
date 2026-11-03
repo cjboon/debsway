@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# pins.sh: every signing key debsway trusts, and the outside things its
+# pins.sh: every signing key Wren Linux trusts, and the outside things its
 # scripts were written against. Sourced by lib.sh, so every script and
 # test.sh use these.
 #
@@ -128,20 +128,20 @@ DOT_DIGIGES="dns.digitale-gesellschaft.ch 185.95.218.42 185.95.218.43 2a05:fc84:
 # checked: 2026-10-29  applied-privacy.net/services/dns; openssl
 DOT_APPLIEDPRIVACY="dot1.applied-privacy.net 146.255.56.98 2a02:1b8:10:234::2"
 
-# debsway's own key (update.sh): the OpenPGP key that signs debsway's commits.
-# Its public half is data/debsway-signing-key.asc. Once this is set, update.sh
+# Wren Linux's own key (update.sh): the OpenPGP key that signs Wren Linux's commits.
+# Its public half is data/wren-signing-key.asc. Once this is set, update.sh
 # brings in a change only when the newest commit carries a good signature from
 # exactly this key, checked with the key file and this line of the copy you
 # already have, never with what comes in. Empty: changes come in unchecked, as
 # GitHub serves them, and update.sh says so. docs/maintaining.md says how to
 # make the key and turn this on.
-DEBSWAY_SIGNING_FPR=
+WREN_SIGNING_FPR=
 
-# debsway's own apt repository (parts/debsway-repo.sh): where it is served
+# Wren Linux's own apt repository (parts/wren-repo.sh): where it is served
 # from, https:// or an .onion address. Its packages are signed with the key
 # above (tools/make-apt-repo.sh), so the server needn't be trusted. Empty:
 # not set up yet, and the part changes nothing.
-DEBSWAY_REPO_URL=
+WREN_REPO_URL=
 
 # The Debian release everything was written and tested on.
 # checked: 2026-10-27

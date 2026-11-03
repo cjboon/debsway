@@ -44,13 +44,13 @@ for p in systemd-run systemctl pkill notify-send; do
     printf '#!/bin/sh\necho "%s $*" >>"%s/calls"\n' "$p" "$T" >"$T/bin/$p"
 done
 chmod +x "$T/bin/"*
-export PATH="$T/bin:$PATH" HOME=$T/home XDG_STATE_HOME=$T/home/.local/state DEBSWAY_VAULT_POLL=0
+export PATH="$T/bin:$PATH" HOME=$T/home XDG_STATE_HOME=$T/home/.local/state WREN_VAULT_POLL=0
 V=$HERE/bin/vault
-C=$T/home/.local/share/debsway-vault
+C=$T/home/.local/share/wren-vault
 run() { : >"$T/calls"; bash "$V" "$@" >"$T/out" 2>&1; }
 
 run open
-check "no vault yet: open says how to make one" grep -q 'debsway install vault' "$T/out"
+check "no vault yet: open says how to make one" grep -q 'wrenctl install vault' "$T/out"
 mkdir -p "$C" && : >"$C/gocryptfs.conf"
 
 now=$(date +%s)
@@ -59,7 +59,7 @@ check "open: gocryptfs mounts it in ~/Vault (and asks for the password)" grep -q
 check "...~/Vault only yours" test "$(stat -c %a "$T/home/Vault")" = 700
 until=$(sed -n 's/.* watch //p' "$T/calls")
 check "...and starts the timer, as a user service, for an hour" bash -c '[ "$1" -ge $(($2 + 3590)) ] && [ "$1" -le $(($2 + 3610)) ]' _ "$until" "$now"
-check "...which outlives the terminal (systemd-run --user)" grep -q '^systemd-run --user .*--unit=debsway-vault-watch' "$T/calls"
+check "...which outlives the terminal (systemd-run --user)" grep -q '^systemd-run --user .*--unit=wren-vault-watch' "$T/calls"
 check "status: open, and how long for" grep -q 'closes in 60 minutes' <<<"$(bash "$V" status)"
 rm -f "$T/mounted"
 run open --for 2h
@@ -93,7 +93,7 @@ rm -f "$T/locked"
 : >"$T/mounted"
 run close
 check "close: unmounts it" bash -c '[ ! -e "$1/mounted" ] && grep -qx "vault: Closed." "$1/out"' _ "$T"
-check "...and stops the timer" grep -qx 'systemctl --user stop debsway-vault-watch.service' "$T/calls"
+check "...and stops the timer" grep -qx 'systemctl --user stop wren-vault-watch.service' "$T/calls"
 : >"$T/mounted"; : >"$T/busy"
 run close
 check "a file open in it: closed anyway (no new access)" grep -qx "fusermount3 -u -z $T/home/Vault" "$T/calls"

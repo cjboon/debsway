@@ -1,7 +1,7 @@
 #!/bin/sh
 # display-scale: text too small on a sharp screen? Sets the scale of each
 # screen and remembers it for that particular screen, on whichever port it
-# is plugged in. Written by debsway install-base.sh. Run it inside sway.
+# is plugged in. Written by Wren Linux install-base.sh. Run it inside sway.
 #
 #   display-scale                 asks which screen and which scale
 #   display-scale list            the screens, their sharpness and scale
@@ -17,9 +17,9 @@
 # virtual machine's screen (Virtual-1) has a size the VM made up, so it is
 # left unknown too: no "sharp screen" notice from a VM.
 
-DRM=${DEBSWAY_DRM_DIR:-/sys/class/drm}
+DRM=${WREN_DRM_DIR:-/sys/class/drm}
 CONF=$HOME/.config/sway/config.d/display.conf
-SEEN=${XDG_STATE_HOME:-$HOME/.local/state}/debsway/display-seen
+SEEN=${XDG_STATE_HOME:-$HOME/.local/state}/wren/display-seen
 SHARP=150   # pixels per inch from which text at scale 1 looks small
 
 die() { echo "display-scale: $*" >&2; exit 1; }
@@ -116,7 +116,7 @@ write_conf() {
     new=$(mktemp)
     if [ -f "$CONF" ]; then cp "$CONF" "$old"; else : >"$old"; fi
     {
-        [ -s "$old" ] || echo "# Screen scales, written by debsway display-scale (display-scale list shows them)"
+        [ -s "$old" ] || echo "# Screen scales, written by Wren Linux display-scale (display-scale list shows them)"
         awk -v k="output \"$1\" scale " 'index($0, k) != 1' "$old"
         echo "output \"$1\" scale $2"
     } >"$new"
@@ -198,7 +198,7 @@ check() {
         k=$(key "$name" "$id")
         grep -qxF "$k" "$SEEN" && continue
         echo "$k" >>"$SEEN"
-        notify-send -a debsway -t 20000 "Sharp screen: $name" \
+        notify-send -a wren -t 20000 "Sharp screen: $name" \
             "$ppi pixels per inch: text may look small. Type display-scale to make it bigger (suggested $sug)."
     done
 }

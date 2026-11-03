@@ -3,16 +3,16 @@
 ## SYNOPSIS
 
 ```
-debsway install simplex-chat                     install it, or update to the newest release
-debsway remove simplex-chat                      remove it (your chats stay)
-debsway manual simplex-chat                      print the manual steps below
+wrenctl install simplex-chat                     install it, or update to the newest release
+wrenctl remove simplex-chat                      remove it (your chats stay)
+wrenctl manual simplex-chat                      print the manual steps below
 
 simplex                                          start it (or Super+d, then simplex)
-bash ~/debsway/test.sh                           says when a newer release is out
+bash ~/wren/test.sh                           says when a newer release is out
 ```
 
 SimpleX Chat is an end-to-end encrypted messenger without user accounts or
-phone numbers. debsway installs the official desktop AppImage from GitHub
+phone numbers. Wren Linux installs the official desktop AppImage from GitHub
 (about 350 MB) only if it matches the list of SHA-256 checksums signed by
 SimpleX's release key (`build@simplex.chat`, pinned in `pins.sh` as
 `SIMPLEX_FPR`). It is unpacked into `~/.local/opt/simplex` (no FUSE needed),

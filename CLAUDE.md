@@ -1,11 +1,11 @@
-# Working on debsway (notes for Claude)
+# Working on Wren Linux (notes for Claude)
 
-debsway is shell scripts that turn a bare Debian 13 install into a small sway
+Wren Linux is shell scripts that turn a bare Debian 13 install into a small sway
 desktop. Be plain about what was tested and what wasn't, and say which user runs which
 command.
 
 **For now Claude runs on the owner's own PC, not in a VM.** This is the installed
-debsway desktop: sway is running, there is a real GPU and `/dev/kvm`, the extras are
+Wren Linux desktop: sway is running, there is a real GPU and `/dev/kvm`, the extras are
 installed (`~/.local/bin`), and other users exist (e.g. `onion-site`). So:
 
 - Anything you run acts on the owner's real system and session. Don't run install,
@@ -13,9 +13,9 @@ installed (`~/.local/bin`), and other users exist (e.g. `onion-site`). So:
   services and VMs unless the owner asks; say the command and let them run it.
 - sudo asks for a password, so it can't run unattended. Never try to get around that.
 - The home folder holds private files (password database, keys, `~/.gnupg`, notes,
-  logs). Read nothing outside `~/debsway` and the scratchpad unless the owner points you
+  logs). Read nothing outside `~/wren` and the scratchpad unless the owner points you
   to a specific file.
-- `~/debsway` is a git repo tracking `origin/main` (https://github.com/cjboon/debsway.git).
+- `~/wren` is a git repo tracking `origin/main` (https://github.com/cjboon/debsway.git).
   There is no `~/.ssh` here; pushing uses the owner's own credential, so the owner pushes.
   Commit each finished item of work as soon as its tests pass (one commit per item);
   push only when the owner asks.
@@ -58,8 +58,8 @@ installed (`~/.local/bin`), and other users exist (e.g. `onion-site`). So:
   never typed in. Undo steps purge only the extra's own packages: shared ones are
   marked `apt-mark auto` (a purge also removes whatever depends on them).
 - Keep docs in step with behaviour: `README.md`, `docs/`, `THREAT-MODEL.md` (do not claim
-  protection a script doesn't give), and the man page `data/debsway.1` (a test checks that
-  it matches `debsway --help`).
+  protection a script doesn't give), and the man page `data/wrenctl.1` (a test checks that
+  it matches `wrenctl --help`).
 - Commits: one topic each, message ends with the `Co-Authored-By:` line from the session
   reminder, tests passing first. When splitting a change into commits, stage the files by
   name (a `git mv` is already staged and rides along with the next commit).

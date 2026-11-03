@@ -12,7 +12,7 @@
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
-RULE=/etc/udev/rules.d/90-debsway-backlight.rules
+RULE=/etc/udev/rules.d/90-wren-backlight.rules
 
 if [ "${1:-}" = --remove ]; then
     remove_snippet brightness
@@ -45,7 +45,7 @@ say "Letting the backlight group change the backlight"
 # backlight's brightness file to the backlight group, group-writable, whenever
 # it appears at boot.
 printf '%s\n' \
-    '# Written by debsway parts/brightnessctl.sh. Let the backlight group change' \
+    '# Written by Wren Linux parts/brightnessctl.sh. Let the backlight group change' \
     '# screen brightness (the sysfs file is owned by root, read-only, otherwise).' \
     'ACTION=="add", SUBSYSTEM=="backlight", RUN+="/bin/chgrp backlight /sys/class/backlight/%k/brightness", RUN+="/bin/chmod g+w /sys/class/backlight/%k/brightness"' |
     sudo tee "$RULE" >/dev/null
@@ -62,7 +62,7 @@ install_bin brightness
 
 # Super+F1/F2 for keyboards without brightness keys (Apple F1/F2 send them)
 put_snippet brightness <<'EOF'
-# Brightness (debsway parts/brightnessctl.sh)
+# Brightness (Wren Linux parts/brightnessctl.sh)
 bindsym --locked XF86MonBrightnessDown exec ~/.local/bin/brightness down
 bindsym --locked XF86MonBrightnessUp exec ~/.local/bin/brightness up
 bindsym $mod+F1 exec ~/.local/bin/brightness down

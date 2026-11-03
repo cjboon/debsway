@@ -1,9 +1,9 @@
 #!/bin/bash
-# Checks bin/debsway-menu (the menu behind "debsway" in the bar): the window
+# Checks bin/wren-menu (the menu behind "wren" in the bar): the window
 # it opens, and the menu itself, driven through a real pseudo-terminal with
 # arrow keys, Enter, Esc and mouse clicks. The programs it would run are
 # pretend ones that only write down how they were called. Changes nothing.
-# Run by test.sh, or:  bash tools/test-debsway-menu.sh
+# Run by test.sh, or:  bash tools/test-wren-menu.sh
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 
 T=$(mktemp -d)
@@ -17,17 +17,17 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 not() { ! "$@"; }
 command -v python3 >/dev/null || { echo "  ok    skipped: python3 isn't installed"; exit 0; }
 
-mkdir -p "$T/fake" "$T/home/.local/bin" "$T/debsway"
+mkdir -p "$T/fake" "$T/home/.local/bin" "$T/wren"
 # shellcheck disable=SC2016  # written into the pretend programs, expanded when they run
 {
     # foot: write down its arguments, one per line
     printf '#!/bin/sh\nprintf "%%s\\n" "$@" >"%s/foot"\n' "$T" >"$T/fake/foot"
-    # bash (what the menu runs the debsway scripts with): write down the folder, the
+    # bash (what the menu runs the Wren Linux scripts with): write down the folder, the
     # arguments and whether it was asked to wait at the end
-    printf '#!/bin/sh\necho "$PWD|$*|pause=$DEBSWAY_PAUSE" >>"%s/ran"\necho "printed by $*"\n' "$T" >"$T/fake/bash"
+    printf '#!/bin/sh\necho "$PWD|$*|pause=$WREN_PAUSE" >>"%s/ran"\necho "printed by $*"\n' "$T" >"$T/fake/bash"
     printf '#!/bin/sh\ncat >/dev/null\n' >"$T/fake/less"
     # (keys --text prints the cheat sheet, as the real one does after filtering it)
-    printf '#!/bin/sh\n[ "$1" = --text ] && exec cat "%s/home/.local/share/debsway/keys.txt"\necho "keys" >>"%s/ran"\n' "$T" "$T" >"$T/home/.local/bin/keys"
+    printf '#!/bin/sh\n[ "$1" = --text ] && exec cat "%s/home/.local/share/wren/keys.txt"\necho "keys" >>"%s/ran"\n' "$T" "$T" >"$T/home/.local/bin/keys"
 }
 chmod +x "$T/fake/"* "$T/home/.local/bin/keys"
 # radios: what it lists comes from $T/radios-list; state per name in $T/radio-NAME
@@ -42,13 +42,13 @@ case \$1 in
        esac ;;
 esac
 FAKE
-: >"$T/debsway/update.sh"
-mkdir -p "$T/home/.local/share/debsway"
-for i in $(seq 100); do echo "line $i"; done >"$T/home/.local/share/debsway/keys.txt"
+: >"$T/wren/update.sh"
+mkdir -p "$T/home/.local/share/wren"
+for i in $(seq 100); do echo "line $i"; done >"$T/home/.local/share/wren/keys.txt"
 
 # 1. The window: in grays, running the menu, and not fullscreen (the bar stays visible)
-PATH="$T/fake:$PATH" HOME="$T/home" /bin/bash "$HERE/bin/debsway-menu"
-check "a click opens a window named debsway-run" grep -qx -e --app-id=debsway-run "$T/foot"
+PATH="$T/fake:$PATH" HOME="$T/home" /bin/bash "$HERE/bin/wren-menu"
+check "a click opens a window named wren-run" grep -qx -e --app-id=wren-run "$T/foot"
 check "...quietly: only errors are logged (no warning about the missing icon protocol)" grep -qx -e --log-level=error "$T/foot"
 check "...not fullscreen, so the bar stays visible" not grep -qx -e --fullscreen "$T/foot"
 check "...with a black background" grep -qx 'colors.background=000000' "$T/foot"
@@ -76,7 +76,7 @@ def run(script, env, keys, rows=24, cols=80):
         os.execvpe("/bin/bash", ["bash", script, "--tui"], env)
     drawn = b""
     ended = False
-    READY = b"\x1b]9999;debsway-ready\x07"
+    READY = b"\x1b]9999;wren-ready\x07"
     def pump(until, limit=10):
         """Read what the menu draws until until() is true, the menu has ended,
         or limit seconds have passed (only a menu that hangs takes that long)."""
@@ -108,7 +108,7 @@ def run(script, env, keys, rows=24, cols=80):
         time.sleep(0.08)
         fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", keys[0][1], keys[0][2], 0, 0))
         keys = keys[1:]
-    # the menu says each time it waits for a key (DEBSWAY_MENU_TEST_READY):
+    # the menu says each time it waits for a key (WREN_MENU_TEST_READY):
     # every key is sent once the one before it has been handled
     pump(ready_after(0))
     for k in keys:
@@ -149,11 +149,11 @@ def click_on(label):
 if __name__ == "__main__":
     script, home, path, folder, ranfile = sys.argv[1:6]
     scenario = sys.argv[6]
-    env = {"PATH": path, "HOME": home, "TERM": "xterm-256color", "DEBSWAY_DIR": folder, "LANG": "C.UTF-8", "DEBSWAY_ESC_WAIT": "0.3", "DEBSWAY_MENU_TEST_READY": "1",
+    env = {"PATH": path, "HOME": home, "TERM": "xterm-256color", "WREN_DIR": folder, "LANG": "C.UTF-8", "WREN_ESC_WAIT": "0.3", "WREN_MENU_TEST_READY": "1",
            # no browser or editor unless a scenario's test names some
-           "DEBSWAY_MENU_BROWSERS": os.environ.get("DEBSWAY_MENU_BROWSERS", "/nonexistent"),
-           "DEBSWAY_MENU_EDITORS": os.environ.get("DEBSWAY_MENU_EDITORS", "/nonexistent"),
-           "DEBSWAY_MENU_APPS": os.environ.get("DEBSWAY_MENU_APPS", "/nonexistent")}
+           "WREN_MENU_BROWSERS": os.environ.get("WREN_MENU_BROWSERS", "/nonexistent"),
+           "WREN_MENU_EDITORS": os.environ.get("WREN_MENU_EDITORS", "/nonexistent"),
+           "WREN_MENU_APPS": os.environ.get("WREN_MENU_APPS", "/nonexistent")}
     if scenario.startswith("sway-"):
         env["SWAYSOCK"] = "/nonexistent/sway.sock"
     scenarios = {
@@ -208,20 +208,20 @@ if __name__ == "__main__":
     print("DREWALL", "|".join(re.findall(r"(Help|Terminal|Install apps|Update|Status)", drawn)[:5]))
     print("DREWAPPS", "|".join(re.findall(r"(Help|Terminal|Web browser|Text editor|Install apps)", drawn)[:5]))
     print("DREWMORE", "|".join(dict.fromkeys(re.findall(r"(File manager|Password manager|Mail|Signal|SimpleX|Claude|opencode|Back up now|Install apps|Vault: \w+)", drawn))))
-    # where the title "debsway" was drawn each time: row;column
-    print("TITLES", " ".join("%s;%s" % m for m in re.findall(r"\x1b\[(\d+);(\d+)H\x1b\[1mdebsway", drawn)))
+    # where the title "wren" was drawn each time: row;column
+    print("TITLES", " ".join("%s;%s" % m for m in re.findall(r"\x1b\[(\d+);(\d+)H\x1b\[1mWren Linux", drawn)))
 PY
 menu() { # SCENARIO [FOLDER]: runs it, leaves the output in $out and what ran in $T/ran
     : >"$T/ran"
-    out=$(python3 -I "$T/drive.py" "$HERE/bin/debsway-menu" "$T/home" "$T/fake:/usr/bin:/bin" "${2-$T/debsway}" "$T/ran" "$1" "$T/screen" 2>&1)
+    out=$(python3 -I "$T/drive.py" "$HERE/bin/wren-menu" "$T/home" "$T/fake:/usr/bin:/bin" "${2-$T/wren}" "$T/ran" "$1" "$T/screen" 2>&1)
 }
 
 # the mark the test waits for is printed only when a test asks for it
-w=$(sed -n '/^waiting() {/p' "$HERE/bin/debsway-menu")
+w=$(sed -n '/^waiting() {/p' "$HERE/bin/wren-menu")
 # shellcheck disable=SC2016  # the inner shell expands its own variables
 check "the menu marks each wait for a key only for the test" bash -c '
-    [ -n "$1" ] && [ -z "$(env -u DEBSWAY_MENU_TEST_READY bash -c "$1; waiting")" ] &&
-    [ -n "$(DEBSWAY_MENU_TEST_READY=1 bash -c "$1; waiting")" ]' _ "$w"
+    [ -n "$1" ] && [ -z "$(env -u WREN_MENU_TEST_READY bash -c "$1; waiting")" ] &&
+    [ -n "$(WREN_MENU_TEST_READY=1 bash -c "$1; waiting")" ]' _ "$w"
 
 menu enter
 check "outside sway there is no Terminal entry (it would open in this terminal anyway)" not grep -q '^DREWALL.*Terminal' <<<"$out"
@@ -243,8 +243,8 @@ check "no browser or editor installed: no lines for them" not grep -qE '^DREWAPP
 # A web browser and a text editor: the default browser (mimeapps.list) is the one opened
 mkdir -p "$T/apps" "$T/home/.config"
 for a in firefox firefox-esr mousepad; do printf '#!/bin/sh\n' >"$T/apps/$a"; chmod +x "$T/apps/$a"; done
-export DEBSWAY_MENU_BROWSERS="$T/apps/firefox-esr $T/apps/firefox" DEBSWAY_MENU_EDITORS="$T/apps/mousepad"
-printf '[Default Applications]\nx-scheme-handler/https=debsway-firefox.desktop\n' >"$T/home/.config/mimeapps.list"
+export WREN_MENU_BROWSERS="$T/apps/firefox-esr $T/apps/firefox" WREN_MENU_EDITORS="$T/apps/mousepad"
+printf '[Default Applications]\nx-scheme-handler/https=wren-firefox.desktop\n' >"$T/home/.config/mimeapps.list"
 menu sway-browser
 check "inside sway: Web browser and Text editor, after Terminal" grep -q 'DREWAPPS Help|Terminal|Web browser|Text editor|Install apps' <<<"$out"
 check "...Web browser opens the default browser (the sandboxed firefox, though listed second), through sway" grep -qx "swaymsg exec $T/apps/firefox" "$T/ran"
@@ -253,11 +253,11 @@ menu sway-browser
 check "...with no default set, the first one installed" grep -qx "swaymsg exec $T/apps/firefox-esr" "$T/ran"
 menu sway-editor
 check "...Text editor opens Mousepad" grep -qx "swaymsg exec $T/apps/mousepad" "$T/ran"
-export DEBSWAY_MENU_EDITORS=/nonexistent
+export WREN_MENU_EDITORS=/nonexistent
 menu sway-browser
 # shellcheck disable=SC2016  # the inner shell expands its own variables
 check "...no editor installed: only Web browser" bash -c 'grep -q "Web browser" <<<"$1" && ! grep -q "Text editor" <<<"$1"' _ "$(grep ^DREWAPPS <<<"$out")"
-unset DEBSWAY_MENU_BROWSERS DEBSWAY_MENU_EDITORS
+unset WREN_MENU_BROWSERS WREN_MENU_EDITORS
 # File manager, Password manager, Mail, Claude, Back up now and the Vault switch,
 # each only when installed
 check "nothing else installed: none of them" not grep -qE '^DREWMORE.*(File manager|Password manager|Mail|Claude|Back up|Vault)' <<<"$out"
@@ -267,7 +267,7 @@ printf '#!/bin/sh\necho "backup $*" >>"%s/ran"\n' "$T" >"$T/apps/backup"
 # shellcheck disable=SC2016  # the inner shell expands its own variables
 printf '#!/bin/sh\necho "vault $*" >>"%s/ran"\ncase "$1" in status) [ -e "%s/vault-open" ] && echo "open in x" || echo closed ;; open) : >"%s/vault-open" ;; close) rm -f "%s/vault-open" ;; esac\n' "$T" "$T" "$T" "$T" >"$T/apps/vault"
 chmod +x "$T/apps/backup" "$T/apps/vault"
-export DEBSWAY_MENU_APPS="$T/apps/thunar $T/apps/keepassxc $T/apps/tuta $T/apps/signal-desktop $T/apps/simplex $T/apps/claude-vm $T/apps/claude $T/apps/claude-regular $T/apps/opencode-vm $T/apps/vault $T/apps/backup"
+export WREN_MENU_APPS="$T/apps/thunar $T/apps/keepassxc $T/apps/tuta $T/apps/signal-desktop $T/apps/simplex $T/apps/claude-vm $T/apps/claude $T/apps/claude-regular $T/apps/opencode-vm $T/apps/vault $T/apps/backup"
 menu sway-files
 check "all installed: File manager, Password manager, Mail, Signal, SimpleX, Claude, Back up now, in that order" \
     grep -q '^DREWMORE File manager|Password manager|Mail|Signal|SimpleX|Claude|opencode|Back up now|Install apps|Vault: closed' <<<"$out"
@@ -306,7 +306,7 @@ printf '#!/bin/sh\necho "theme $*" >>"%s/ran"\n[ -n "$1" ] || echo "Theme: light
 # shellcheck disable=SC2016  # the inner shell expands its own variables
 printf '#!/bin/sh\necho "secure-dns $*" >>"%s/ran"\n[ "$1" != status ] || echo off\n' "$T" >"$T/apps/secure-dns"
 chmod +x "$T/apps/theme" "$T/apps/secure-dns"
-DEBSWAY_MENU_APPS="$DEBSWAY_MENU_APPS $T/apps/theme $T/apps/secure-dns"
+WREN_MENU_APPS="$WREN_MENU_APPS $T/apps/theme $T/apps/secure-dns"
 : >"$T/ran"
 menu sway-switches-space
 # shellcheck disable=SC2016  # the inner shell expands its own variables
@@ -320,7 +320,7 @@ menu sway-theme-click
 check "a click on Theme switches the theme" grep -qx "theme toggle" "$T/ran"
 printf '#!/bin/sh\n' >"$T/apps/wifi-signin"
 chmod +x "$T/apps/wifi-signin"
-DEBSWAY_MENU_APPS="$DEBSWAY_MENU_APPS $T/apps/wifi-signin"
+WREN_MENU_APPS="$WREN_MENU_APPS $T/apps/wifi-signin"
 : >"$T/ran"
 menu sway-signin
 # shellcheck disable=SC2016  # the inner shell expands its own variables
@@ -328,8 +328,8 @@ check "Wi-Fi sign-in opens the sign-in window through sway, and the menu closes"
     grep -qx "swaymsg exec $1" "$2" && grep -q "STATUS 0" <<<"$3"' _ "$T/apps/wifi-signin" "$T/ran" "$out"
 # shellcheck disable=SC2016  # the inner shell expands its own variables
 check "the menu looks for theme and secure-dns where they are installed" bash -c '
-    grep "^APPS=" "$1" | grep -q "\$HOME/.local/bin/theme \$HOME/.local/bin/secure-dns /usr/local/bin/wifi-signin}"' _ "$HERE/bin/debsway-menu"
-unset DEBSWAY_MENU_APPS
+    grep "^APPS=" "$1" | grep -q "\$HOME/.local/bin/theme \$HOME/.local/bin/secure-dns /usr/local/bin/wifi-signin}"' _ "$HERE/bin/wren-menu"
+unset WREN_MENU_APPS
 rm -f "$T/fake/swaymsg"
 menu enter
 check "the four entries are drawn" grep -q 'DREW Help|Install apps|Update|Status' <<<"$out"
@@ -350,23 +350,23 @@ check "End shows the last page" grep -qx 'line 100' "$T/screen"
 menu help-wheel
 check "the mouse wheel scrolls" grep -qx 'line 26' "$T/screen"
 menu status-esc
-check "Status is shown in the pager too" grep -qxF "$T/debsway|status.sh|pause=" "$T/ran"
+check "Status is shown in the pager too" grep -qxF "$T/wren|status.sh|pause=" "$T/ran"
 check "...and Esc closes it" grep -q 'STATUS 0' <<<"$out"
 
 menu down-enter
-check "Down then Enter runs install-extras.sh in the debsway folder" grep -qxF "$T/debsway|install-extras.sh|pause=1" "$T/ran"
+check "Down then Enter runs install-extras.sh in the Wren Linux folder" grep -qxF "$T/wren|install-extras.sh|pause=1" "$T/ran"
 
 menu j-remove
-check "Remove apps, after Install apps, runs install-extras.sh --remove in the debsway folder" grep -qxF "$T/debsway|install-extras.sh --remove|pause=1" "$T/ran"
+check "Remove apps, after Install apps, runs install-extras.sh --remove in the Wren Linux folder" grep -qxF "$T/wren|install-extras.sh --remove|pause=1" "$T/ran"
 menu j-enter
-check "j moves down too (Update)" grep -qxF "$T/debsway|update.sh|pause=1" "$T/ran"
-check "what Update prints is also kept in a log" grep -qx 'printed by update.sh' "$T/home/.local/state/debsway/menu-update.log"
+check "j moves down too (Update)" grep -qxF "$T/wren|update.sh|pause=1" "$T/ran"
+check "what Update prints is also kept in a log" grep -qx 'printed by update.sh' "$T/home/.local/state/wren/menu-update.log"
 
 menu up-wraps
-check "Up from the first entry goes to the last (Status)" grep -qxF "$T/debsway|status.sh|pause=" "$T/ran"
+check "Up from the first entry goes to the last (Status)" grep -qxF "$T/wren|status.sh|pause=" "$T/ran"
 
 menu click-update
-check "a click on Update runs update.sh" grep -qxF "$T/debsway|update.sh|pause=1" "$T/ran"
+check "a click on Update runs update.sh" grep -qxF "$T/wren|update.sh|pause=1" "$T/ran"
 
 menu click-outside
 check "a click outside the entries runs nothing" test ! -s "$T/ran"
@@ -416,7 +416,7 @@ check "with nothing to switch only the usual entries show" test "$(grep -c -E 'W
 rm -f "$T/home/.local/bin/radios"
 
 menu enter "$T/nowhere"
-check "without the debsway folder only Help is drawn" grep -q 'DREW Help$' <<<"$out"
+check "without the Wren Linux folder only Help is drawn" grep -q 'DREW Help$' <<<"$out"
 
 # 3. The prompt at the end of the install and update screens: Esc, Enter or q
 cat >"$T/pause.py" <<'PY'
@@ -424,9 +424,9 @@ import os, pty, select, sys, time
 def run(keys, pause=True):
     pid, fd = pty.fork()
     if pid == 0:
-        env = dict(os.environ, TERM="xterm", DEBSWAY_ESC_WAIT="0.3")
-        if pause: env["DEBSWAY_PAUSE"] = "1"
-        else: env.pop("DEBSWAY_PAUSE", None)
+        env = dict(os.environ, TERM="xterm", WREN_ESC_WAIT="0.3")
+        if pause: env["WREN_PAUSE"] = "1"
+        else: env.pop("WREN_PAUSE", None)
         os.execvpe("/bin/bash", ["bash", "-c", ". " + sys.argv[1] + "; pause_if_asked; echo AFTER-IT"], env)
     out = b""
     def pump(w, stop=b"AFTER-IT"):
@@ -474,15 +474,15 @@ assert none < wait and "exit 0" in s[none:wait], "the no-choice exit must come f
 check "nmtui has its color block (the install list draws itself now, lib/checklist.sh)" \
     bash -c '[ -n "$(sed -n "/^# newt (whiptail/,/^export NEWT_COLORS$/p" "$1")" ]' _ "$HERE/bin/nmtui"
 
-# the nmtui wrapper: runs the real program with debsway's colors, unless you set your own
+# the nmtui wrapper: runs the real program with Wren Linux's colors, unless you set your own
 # shellcheck disable=SC2016  # written into the pretend program, expanded when it runs
 printf '#!/bin/sh\necho "colors=$NEWT_COLORS"\necho "colorterm=${COLORTERM:-}"\necho "args=$*"\n' >"$T/fake/nmtui"
 chmod +x "$T/fake/nmtui"
-nm=$(env -u NEWT_COLORS -u COLORTERM TERM=foot DEBSWAY_NMTUI="$T/fake/nmtui" bash "$HERE/bin/nmtui" connect X)
-check "the nmtui wrapper sets debsway's colors: in foot, exact white on foot's own (see-through) black" grep -q 'colors=root=#ffffff,default ' <<<"$nm"
+nm=$(env -u NEWT_COLORS -u COLORTERM TERM=foot WREN_NMTUI="$T/fake/nmtui" bash "$HERE/bin/nmtui" connect X)
+check "the nmtui wrapper sets Wren Linux's colors: in foot, exact white on foot's own (see-through) black" grep -q 'colors=root=#ffffff,default ' <<<"$nm"
 check "...telling newt the terminal has 24-bit color, or it ignores them (and draws blue and red)" grep -qx 'colorterm=truecolor' <<<"$nm"
 check "...and passes its arguments on" grep -qx 'args=connect X' <<<"$nm"
-nm=$(env -u NEWT_COLORS -u COLORTERM TERM=linux DEBSWAY_NMTUI="$T/fake/nmtui" bash "$HERE/bin/nmtui")
+nm=$(env -u NEWT_COLORS -u COLORTERM TERM=linux WREN_NMTUI="$T/fake/nmtui" bash "$HERE/bin/nmtui")
 # shellcheck disable=SC2016
 check "at the console (no 24-bit color): color names" bash -c 'grep -q "colors=root=white,black" <<<"$1" && grep -qx "colorterm=" <<<"$1"' _ "$nm"
 # shellcheck disable=SC2016
@@ -533,7 +533,7 @@ if command -v less >/dev/null; then
 import os, pty, select, sys, time, fcntl, termios, struct, re
 pid, fd = pty.fork()
 if pid == 0:
-    os.execvpe("bash", ["bash", sys.argv[1]], dict(os.environ, TERM="xterm", DEBSWAY_ASSUME_YES="1"))
+    os.execvpe("bash", ["bash", sys.argv[1]], dict(os.environ, TERM="xterm", WREN_ASSUME_YES="1"))
 fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 20, 80, 0, 0))
 out = b""
 def pump(want, w=10):
@@ -568,7 +568,7 @@ PY
     check "...and on its last page that q goes on" grep -qx 'end True' <<<"$intro"
     check "...and q does go on" grep -qx 'q True' <<<"$intro"
 fi
-nm=$(NEWT_COLORS='root=red,blue' DEBSWAY_NMTUI="$T/fake/nmtui" bash "$HERE/bin/nmtui")
+nm=$(NEWT_COLORS='root=red,blue' WREN_NMTUI="$T/fake/nmtui" bash "$HERE/bin/nmtui")
 check "colors you set yourself win" grep -qx 'colors=root=red,blue' <<<"$nm"
 # shellcheck disable=SC2016  # a literal $HOME in the bar's script
 check "the Wi-Fi name in the bar opens the wrapper" grep -q 'exec "\$HOME/.local/bin/nmtui"' "$HERE/bin/sway-status"
@@ -585,79 +585,79 @@ oc() { # APP-ID: runs open_or_close as the bar would; what happened is in $T/oc/
     # (the window is started on its own, so give it a moment)
     for _ in 1 2 3 4 5 6 7 8 9 10; do [ ! -e "$T/oc/ran" ] || break; /bin/sleep 0.1; done
 }
-rm -f "$T/oc/open"; oc debsway-timer
+rm -f "$T/oc/open"; oc wren-timer
 check "bar: a click with nothing open opens the window" test -e "$T/oc/ran"
-touch "$T/oc/open"; oc debsway-timer
+touch "$T/oc/open"; oc wren-timer
 # shellcheck disable=SC2016  # expanded by the inner shell or Python, on purpose
 check "...a click while it is open closes it, and opens nothing" \
-    bash -c 'grep -qx -- "-q \[app_id=\"debsway-timer\"\] kill" "$1/sway" && [ ! -e "$1/ran" ]' _ "$T/oc"
-echo $$ >"$T/oc/xdg/debsway-menu-busy"; oc debsway-run
+    bash -c 'grep -qx -- "-q \[app_id=\"wren-timer\"\] kill" "$1/sway" && [ ! -e "$1/ran" ]' _ "$T/oc"
+echo $$ >"$T/oc/xdg/wren-menu-busy"; oc wren-run
 # shellcheck disable=SC2016  # expanded by the inner shell or Python, on purpose
-check "...but the debsway menu running Update (busy) is only brought to the front, never closed" \
-    bash -c 'grep -qx -- "-q \[app_id=\"debsway-run\"\] focus" "$1/sway" && ! grep -q kill "$1/sway" && [ ! -e "$1/ran" ]' _ "$T/oc"
-echo 999999999 >"$T/oc/xdg/debsway-menu-busy"; oc debsway-run
+check "...but the Wren menu running Update (busy) is only brought to the front, never closed" \
+    bash -c 'grep -qx -- "-q \[app_id=\"wren-run\"\] focus" "$1/sway" && ! grep -q kill "$1/sway" && [ ! -e "$1/ran" ]' _ "$T/oc"
+echo 999999999 >"$T/oc/xdg/wren-menu-busy"; oc wren-run
 check "...a busy mark left by a menu that is gone doesn't stop the closing" grep -q kill "$T/oc/sway"
-echo 'x; reboot' >"$T/oc/xdg/debsway-menu-busy"; oc debsway-run
+echo 'x; reboot' >"$T/oc/xdg/wren-menu-busy"; oc wren-run
 check "...nor does a mark that isn't a number" grep -q kill "$T/oc/sway"
-rm -f "$T/oc/xdg/debsway-menu-busy" "$T/oc/open"
-oc debsway-timer
+rm -f "$T/oc/xdg/wren-menu-busy" "$T/oc/open"
+oc wren-timer
 # shellcheck disable=SC2016  # expanded by the inner shell, on purpose
 check "one bar window at a time: opening the timer closes the menu, the Wi-Fi screen and the cheat sheet" \
-    bash -c 'for w in debsway-run debsway-nmtui debsway-keys; do grep -qx -- "-q \[app_id=\"$w\"\] kill" "$1/sway" || exit 1; done; [ -e "$1/ran" ]' _ "$T/oc"
-echo $$ >"$T/oc/xdg/debsway-menu-busy"; oc debsway-timer
+    bash -c 'for w in wren-run wren-nmtui wren-keys; do grep -qx -- "-q \[app_id=\"$w\"\] kill" "$1/sway" || exit 1; done; [ -e "$1/ran" ]' _ "$T/oc"
+echo $$ >"$T/oc/xdg/wren-menu-busy"; oc wren-timer
 # shellcheck disable=SC2016  # expanded by the inner shell, on purpose
-check "...but not a debsway menu that is running Update" bash -c '! grep -q "debsway-run" "$1/sway" && [ -e "$1/ran" ]' _ "$T/oc"
-rm -f "$T/oc/xdg/debsway-menu-busy"
-# Super+m: sway-status --menu, as a click on "debsway" in the bar
+check "...but not a Wren menu that is running Update" bash -c '! grep -q "wren-run" "$1/sway" && [ -e "$1/ran" ]' _ "$T/oc"
+rm -f "$T/oc/xdg/wren-menu-busy"
+# Super+m: sway-status --menu, as a click on "wren" in the bar
 mkdir -p "$T/oc/home/.local/bin"
-printf '#!/bin/sh\ntouch "%s/oc/menu-ran"\n' "$T" >"$T/oc/home/.local/bin/debsway-menu"
-chmod +x "$T/oc/home/.local/bin/debsway-menu"
+printf '#!/bin/sh\ntouch "%s/oc/menu-ran"\n' "$T" >"$T/oc/home/.local/bin/wren-menu"
+chmod +x "$T/oc/home/.local/bin/wren-menu"
 echo 4242 >"$T/oc/xdg/sway-status.pid"
 rm -f "$T/oc/open" "$T/oc/menu-ran"; : >"$T/oc/sway"
 timeout 5 env PATH="$T/oc/bin:$PATH" HOME="$T/oc/home" XDG_RUNTIME_DIR="$T/oc/xdg" sh "$HERE/bin/sway-status" --menu </dev/null >/dev/null 2>&1
 for _ in 1 2 3 4 5 6 7 8 9 10; do [ ! -e "$T/oc/menu-ran" ] || break; /bin/sleep 0.1; done
-check "Super+m (sway-status --menu) opens the debsway menu" test -e "$T/oc/menu-ran"
+check "Super+m (sway-status --menu) opens the Wren menu" test -e "$T/oc/menu-ran"
 check "...and leaves the running bar's PID file alone" test "$(cat "$T/oc/xdg/sway-status.pid")" = 4242
 touch "$T/oc/open"; rm -f "$T/oc/menu-ran"; : >"$T/oc/sway"
 timeout 5 env PATH="$T/oc/bin:$PATH" HOME="$T/oc/home" XDG_RUNTIME_DIR="$T/oc/xdg" sh "$HERE/bin/sway-status" --menu </dev/null >/dev/null 2>&1
 /bin/sleep 0.3
 # shellcheck disable=SC2016  # expanded by the inner shell, on purpose
 check "...pressed again while it's open: closes it, opens nothing" \
-    bash -c 'grep -qx -- "-q \[app_id=\"debsway-run\"\] kill" "$1/sway" && [ ! -e "$1/menu-ran" ]' _ "$T/oc"
+    bash -c 'grep -qx -- "-q \[app_id=\"wren-run\"\] kill" "$1/sway" && [ ! -e "$1/menu-ran" ]' _ "$T/oc"
 rm -f "$T/oc/open" "$T/oc/xdg/sway-status.pid"
 # shellcheck disable=SC2016  # $mod is sway's, not the shell's
 check "sway binds Super+m to it, in the part's snippet (update.sh re-runs a part, never install-base.sh)" bash -c '
-    grep -qx "bindsym \$mod+m exec ~/.local/bin/sway-status --menu" "$1/parts/debsway-menu.sh" && grep -qx "put_snippet debsway-menu <<.EOF." "$1/parts/debsway-menu.sh" &&
+    grep -qx "bindsym \$mod+m exec ~/.local/bin/sway-status --menu" "$1/parts/wren-menu.sh" && grep -qx "put_snippet wren-menu <<.EOF." "$1/parts/wren-menu.sh" &&
     ! grep -q "sway-status --menu" "$1/install-base.sh"' _ "$HERE"
-check "the cheat sheet lists Super+m" grep -q 'Super+m .*debsway menu' "$HERE/data/keys.txt"
+check "the cheat sheet lists Super+m" grep -q 'Super+m .*Wren menu' "$HERE/data/keys.txt"
 # sway restarts swaybar on every reload, and swaybar stops the status script's
 # whole process group: a window started in it would be killed mid-way
 rm -f "$T/oc/open" "$T/oc/sid"
-PATH="$T/oc/bin:$PATH" XDG_RUNTIME_DIR="$T/oc/xdg" sh -c 'eval "$(sed -n "/^menu_busy() {/,/^}/p; /^open_or_close() {/,/^}/p" "$1")"; open_or_close debsway-timer sh -c "echo \$\$ \$(ps -o sid= -p \$\$) >\"\$1\"" _ "$2"; wait' \
+PATH="$T/oc/bin:$PATH" XDG_RUNTIME_DIR="$T/oc/xdg" sh -c 'eval "$(sed -n "/^menu_busy() {/,/^}/p; /^open_or_close() {/,/^}/p" "$1")"; open_or_close wren-timer sh -c "echo \$\$ \$(ps -o sid= -p \$\$) >\"\$1\"" _ "$2"; wait' \
     _ "$HERE/bin/sway-status" "$T/oc/sid"
 for _ in 1 2 3 4 5 6 7 8 9 10; do [ ! -s "$T/oc/sid" ] || break; /bin/sleep 0.1; done
 # shellcheck disable=SC2016  # expanded by the inner shell, on purpose
 check "a window from the bar has a session of its own (a sway reload, which restarts the bar, doesn't close it)" \
     bash -c 'read -r pid sid <"$1" && [ "$pid" = "$sid" ]' _ "$T/oc/sid"
 # shellcheck disable=SC2016  # expanded by the inner shell or Python, on purpose
-check "the time, the Wi-Fi name and debsway in the bar each open or close their window" bash -c '
-    grep -qF "open_or_close debsway-timer foot -o colors.alpha=0.85 --app-id=debsway-timer" "$1" &&
-    grep -qF "open_or_close debsway-nmtui foot -o colors.alpha=0.85 --app-id=debsway-nmtui" "$1" &&
-    grep -qF "open_or_close debsway-run \"\$HOME/.local/bin/debsway-menu\"" "$1"' _ "$HERE/bin/sway-status"
+check "the time, the Wi-Fi name and Wren Linux in the bar each open or close their window" bash -c '
+    grep -qF "open_or_close wren-timer foot -o colors.alpha=0.85 --app-id=wren-timer" "$1" &&
+    grep -qF "open_or_close wren-nmtui foot -o colors.alpha=0.85 --app-id=wren-nmtui" "$1" &&
+    grep -qF "open_or_close wren-run \"\$HOME/.local/bin/wren-menu\"" "$1"' _ "$HERE/bin/sway-status"
 # shellcheck disable=SC2016  # expanded by the inner shell or Python, on purpose
 check "the menu marks itself busy before Update or Install apps, and unmarks after" \
-    python3 -I -c 'import sys; s = open(sys.argv[1]).read(); a = s.index("echo $$ >\"$busy\""); assert a < s.index("bash update.sh") and a < s.index("bash install-extras.sh") < s.index("rm -f \"$DEBSWAY_PAUSED_FILE\" \"$busy\"")' "$HERE/bin/debsway-menu"
+    python3 -I -c 'import sys; s = open(sys.argv[1]).read(); a = s.index("echo $$ >\"$busy\""); assert a < s.index("bash update.sh") and a < s.index("bash install-extras.sh") < s.index("rm -f \"$WREN_PAUSED_FILE\" \"$busy\"")' "$HERE/bin/wren-menu"
 
 # the bar
-check "the bar shows debsway" grep -q '"full_text":"debsway"' "$HERE/bin/sway-status"
+check "the bar shows Wren Linux" grep -q '"full_text":"wren"' "$HERE/bin/sway-status"
 check "the bar has no separate Help any more" not grep -q '"name":"help"' "$HERE/bin/sway-status"
-check "a click on debsway starts the menu" grep -q 'debsway-menu' "$HERE/bin/sway-status"
+check "a click on Wren Linux starts the menu" grep -q 'wren-menu' "$HERE/bin/sway-status"
 
 # shellcheck disable=SC2016  # the inner bash, and the menu's own text
 # A script that waits at its end marks it, so the menu doesn't ask a second time;
 # one that stops on an error before that leaves no mark, and the menu waits
-check "pause_if_asked marks that the window waited" bash -c '. "$1/lib.sh"; DEBSWAY_PAUSE=1 DEBSWAY_PAUSED_FILE="$2/paused" pause_if_asked </dev/null >/dev/null 2>&1; [ -e "$2/paused" ]' _ "$HERE" "$T"
+check "pause_if_asked marks that the window waited" bash -c '. "$1/lib.sh"; WREN_PAUSE=1 WREN_PAUSED_FILE="$2/paused" pause_if_asked </dev/null >/dev/null 2>&1; [ -e "$2/paused" ]' _ "$HERE" "$T"
 # shellcheck disable=SC2016  # the menu's own text, $ included
-check "the menu waits after an error only without that mark" grep -q '"$rc" -ne 0 \] && \[ ! -e "$DEBSWAY_PAUSED_FILE" \]' "$HERE/bin/debsway-menu"
+check "the menu waits after an error only without that mark" grep -q '"$rc" -ne 0 \] && \[ ! -e "$WREN_PAUSED_FILE" \]' "$HERE/bin/wren-menu"
 
 [ "$fails" -eq 0 ]

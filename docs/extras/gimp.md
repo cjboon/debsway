@@ -3,18 +3,18 @@
 ## SYNOPSIS
 
 ```
-debsway install gimp                     install it
-debsway remove gimp                      remove it (~/.config/GIMP and ~/Pictures stay)
-debsway manual gimp                      print the manual steps below
+wrenctl install gimp                     install it
+wrenctl remove gimp                      remove it (~/.config/GIMP and ~/Pictures stay)
+wrenctl manual gimp                      print the manual steps below
 
 gimp                           start GIMP, in its sandbox (Super+d too)
 gimp ~/Pictures/photo.jpg      open a picture
-DEBSWAY_NO_SANDBOX=1 gimp      without the sandbox
+WREN_NO_SANDBOX=1 gimp      without the sandbox
 ```
 
 GIMP, the image editor, from Debian. It reads dozens of picture formats, and
 a crafted picture from the web is a common way in, so the `gimp` command
-debsway installs (`bin/gimp`) starts it inside bubblewrap (`bin/media-sandbox`,
+Wren Linux installs (`bin/gimp`) starts it inside bubblewrap (`bin/media-sandbox`,
 the same sandbox as imv, mpv and zathura): it sees `~/Pictures` to open and
 save in, `~/Downloads` to open from (read-only), its own settings
 (`~/.config/GIMP`) and the files you name, read-only; not the rest of your
@@ -26,7 +26,7 @@ sandboxed one too.
 ## LIMITS
 
 - Save into `~/Pictures`: it can't write anywhere else, and a picture opened from elsewhere is read-only.
-- `/usr/bin/gimp-3.0`, or a launcher that uses that path, skips the sandbox; so does `DEBSWAY_NO_SANDBOX=1`.
+- `/usr/bin/gimp-3.0`, or a launcher that uses that path, skips the sandbox; so does `WREN_NO_SANDBOX=1`.
 - Plug-ins and scripts you add run inside the same sandbox, but can read and change everything in `~/Pictures`.
 - The sandbox shares your kernel: a kernel bug could still get out.
 
@@ -36,9 +36,9 @@ sandboxed one too.
 # GIMP, bubblewrap for the sandbox, python3 for wayland-restrict
 sudo apt install --no-install-recommends gimp bubblewrap python3
 # The restricted Wayland socket, the sandbox, and the gimp command that uses it
-install -D -m 0755 @DEBSWAY_DIR@/bin/wayland-restrict ~/.local/bin/wayland-restrict
-install -D -m 0755 @DEBSWAY_DIR@/bin/media-sandbox ~/.local/bin/media-sandbox
-install -D -m 0755 @DEBSWAY_DIR@/bin/gimp ~/.local/bin/gimp
+install -D -m 0755 @WREN_DIR@/bin/wayland-restrict ~/.local/bin/wayland-restrict
+install -D -m 0755 @WREN_DIR@/bin/media-sandbox ~/.local/bin/media-sandbox
+install -D -m 0755 @WREN_DIR@/bin/gimp ~/.local/bin/gimp
 mkdir -p ~/Pictures ~/.config/GIMP
 # Its menu entry, starting the sandboxed gimp
 mkdir -p ~/.local/share/applications

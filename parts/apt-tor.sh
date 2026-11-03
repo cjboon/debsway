@@ -14,15 +14,15 @@
 # (Mullvad, Claude Code) are still fetched directly.
 # install-base.sh offers it first, answering no by default.
 # Usage: bash apt-tor.sh [--remove]
-# status: file:/etc/tor/.debsway-apt-tor
+# status: file:/etc/tor/.wren-apt-tor
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
-MARK=/etc/tor/.debsway-apt-tor
+MARK=/etc/tor/.wren-apt-tor
 TORRC=/etc/tor/torrc
-BEGIN='# >>> debsway apt-tor >>>'
-END='# <<< debsway apt-tor <<<'
-BAK_SUFFIX=.debsway-tor.bak
+BEGIN='# >>> Wren Linux apt-tor >>>'
+END='# <<< Wren Linux apt-tor <<<'
+BAK_SUFFIX=.wren-tor.bak
 
 # The files that name Debian's mirrors (classic lines and deb822 stanzas),
 # and the Tor Project's (lyrebird, for webtunnel)
@@ -56,7 +56,7 @@ if [ "${1:-}" = --remove ]; then
     sudo apt-get update || warn "apt couldn't update with the restored sources; check /etc/apt/sources.list*"
     sudo sed -i "\\|^$BEGIN\$|,\\|^$END\$|d" "$TORRC" 2>/dev/null || true
     # another script (remote access) may still use the same tor service
-    if system_tor_wanted .debsway-apt-tor; then
+    if system_tor_wanted .wren-apt-tor; then
         sudo systemctl restart tor@default.service >/dev/null 2>&1 || true
     else
         tor_service_off
@@ -65,7 +65,7 @@ if [ "${1:-}" = --remove ]; then
     apt_purge tor obfs4proxy lyrebird snowflake-client apt-transport-tor
     remove_torproject_repo_if_unused
     # OnionShare keeps the system tor service off, unless something still needs it
-    if is_installed onionshare-cli && ! system_tor_wanted .debsway-apt-tor; then
+    if is_installed onionshare-cli && ! system_tor_wanted .wren-apt-tor; then
         sudo systemctl mask tor.service tor@default.service >/dev/null
     fi
     note "apt downloads directly again."
@@ -100,7 +100,7 @@ sudo sed -i "\\|^$BEGIN\$|,\\|^$END\$|d" "$TORRC"
 if [ "$BRIDGE_TYPE" != none ]; then
     { echo "$BEGIN"; tor_bridge_config; echo "$END"; } | sudo tee -a "$TORRC" >/dev/null
 fi
-printf '%s\n' 'Written by debsway parts/apt-tor.sh: the system tor service is used for apt.' | sudo tee "$MARK" >/dev/null
+printf '%s\n' 'Written by Wren Linux parts/apt-tor.sh: the system tor service is used for apt.' | sudo tee "$MARK" >/dev/null
 
 say "Starting Tor"
 tor_service_on
@@ -125,6 +125,6 @@ if ! sudo apt-get update; then
     sudo apt-get update >/dev/null || true
     die "apt couldn't update through Tor, so its sources were put back. (Some exit nodes are blocked by mirrors; try again.)"
 fi
-unset DEBSWAY_APT_UPDATED
+unset WREN_APT_UPDATED
 note "apt now downloads Debian's packages through Tor over https. It is slower."
 note "Undo: bash parts/apt-tor.sh --remove"

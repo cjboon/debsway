@@ -7,7 +7,7 @@ drop_ifupdown_iface() {
     [ -f "$file" ] || return 0
     $SUDO grep -Eq "^[[:space:]]*(auto|allow-hotplug|iface)[[:space:]]+$ifc([[:space:]]|$)" "$file" ||
         return 0
-    [ -e "$file.debsway.bak" ] || $SUDO cp -a "$file" "$file.debsway.bak"
+    [ -e "$file.wren.bak" ] || $SUDO cp -a "$file" "$file.wren.bak"
     tmp=$(mktemp)
     $SUDO cat "$file" | awk -v i="$ifc" '
         /^[^[:space:]#]/ { inside = 0 }
@@ -17,7 +17,7 @@ drop_ifupdown_iface() {
         { print }' >"$tmp"
     $SUDO tee "$file" <"$tmp" >/dev/null
     rm -f "$tmp"
-    note "Commented out $ifc in $file (backup: $file.debsway.bak)"
+    note "Commented out $ifc in $file (backup: $file.wren.bak)"
 }
 
 wifi_ifaces() {
@@ -52,7 +52,7 @@ nm_write_wifi() {
         printf '\n'
         if [ -n "$psk" ]; then printf '[wifi-security]\nkey-mgmt=wpa-psk\npsk=%s\n\n' "$key"; fi
         printf '[ipv4]\nmethod=auto\n\n[ipv6]\naddr-gen-mode=default\nmethod=auto\n'
-    } | $SUDO install -D -m 0600 /dev/stdin "/etc/NetworkManager/system-connections/debsway-$hex.nmconnection"
+    } | $SUDO install -D -m 0600 /dev/stdin "/etc/NetworkManager/system-connections/wren-$hex.nmconnection"
 }
 
 # ssh_pubkey_ok LINE: one ssh public key, as the .pub file holds it: a key type,
@@ -73,7 +73,7 @@ ssh_pubkey_ok() {
 # prints one line for each setting that is not what extras/remote-access.sh
 # wants: key login only, no root, USER only, and listening on 127.0.0.1 only.
 # sshd takes the first value it finds for a setting, so a file read earlier
-# can beat debsway's drop-in; this catches that.
+# can beat Wren Linux's drop-in; this catches that.
 sshd_problems() {
     awk -v user="$1" '
         BEGIN {
@@ -97,14 +97,14 @@ sshd_problems() {
 
 # parts/secure-dns.sh's settings for Unbound (secure DNS is set up), and its
 # switch: while it is on, /etc/resolv.conf points at Unbound (and says so in
-# its first line) and nothing of debsway's may rewrite it (wifi.sh would put
+# its first line) and nothing of Wren Linux's may rewrite it (wifi.sh would put
 # the network's DNS server back, which its firewall rule then refuses). An
-# older debsway wrote "extras/". DEBSWAY_ETC is where /etc is, for tests.
-SECURE_DNS_CONF=/etc/unbound/unbound.conf.d/debsway-secure-dns.conf
-secure_dns_installed() { [ -e "${DEBSWAY_ETC:-/etc}${SECURE_DNS_CONF#/etc}" ]; }
+# older Wren Linux wrote "extras/". WREN_ETC is where /etc is, for tests.
+SECURE_DNS_CONF=/etc/unbound/unbound.conf.d/wren-secure-dns.conf
+secure_dns_installed() { [ -e "${WREN_ETC:-/etc}${SECURE_DNS_CONF#/etc}" ]; }
 secure_dns_on() {
-    local r=${DEBSWAY_ETC:-/etc}/resolv.conf
-    [ ! -L "$r" ] && grep -qsE '^# Written by debsway (parts|extras)/secure-dns\.sh' "$r"
+    local r=${WREN_ETC:-/etc}/resolv.conf
+    [ ! -L "$r" ] && grep -qsE '^# Written by Wren Linux (parts|extras)/secure-dns\.sh' "$r"
 }
 
 # remove_wifi_config: undoes what wifi.sh wrote for a Wi-Fi it set up by hand
@@ -112,25 +112,25 @@ secure_dns_on() {
 # per-interface services, its ifupdown stanzas, its systemd-networkd files, and
 # the DNS file it saved. It leaves alone what NetworkManager has (that is
 # parts/network-manager.sh) and every package. Prints what it removed.
-# DEBSWAY_ETC is where /etc is, for tests.
+# WREN_ETC is where /etc is, for tests.
 remove_wifi_config() {
-    local etc=${DEBSWAY_ETC:-/etc} f ifc networkd=false
+    local etc=${WREN_ETC:-/etc} f ifc networkd=false
     for f in "$etc"/wpa_supplicant/wpa_supplicant-*.conf; do
-        [ -f "$f" ] && [ "$(head -1 "$f")" = "# Written by debsway wifi.sh" ] || continue
+        [ -f "$f" ] && [ "$(head -1 "$f")" = "# Written by Wren Linux wifi.sh" ] || continue
         ifc=${f##*/wpa_supplicant-}
         ifc=${ifc%.conf}
         systemctl disable --now "wpa_supplicant@$ifc.service" >/dev/null 2>&1 || true
         rm -f "$f"
         note "Removed $f"
     done
-    for f in "$etc"/network/interfaces.d/debsway-wifi-*; do
+    for f in "$etc"/network/interfaces.d/wren-wifi-*; do
         [ -f "$f" ] || continue
-        ifc=${f##*/debsway-wifi-}
+        ifc=${f##*/wren-wifi-}
         ifdown "$ifc" >/dev/null 2>&1 || true
         rm -f "$f"
         note "Removed $f"
     done
-    for f in "$etc"/systemd/network/50-debsway-*.network; do
+    for f in "$etc"/systemd/network/50-wren-*.network; do
         [ -f "$f" ] || continue
         rm -f "$f"
         networkd=true
@@ -138,30 +138,30 @@ remove_wifi_config() {
     done
     if $networkd; then systemctl restart systemd-networkd >/dev/null 2>&1 || true; fi
     # (not while secure DNS points it at Unbound)
-    if [ -e "$etc/resolv.conf.debsway.bak" ] && [ ! -L "$etc/resolv.conf" ] && ! secure_dns_on; then
-        cp -a "$etc/resolv.conf.debsway.bak" "$etc/resolv.conf" && rm -f "$etc/resolv.conf.debsway.bak"
+    if [ -e "$etc/resolv.conf.wren.bak" ] && [ ! -L "$etc/resolv.conf" ] && ! secure_dns_on; then
+        cp -a "$etc/resolv.conf.wren.bak" "$etc/resolv.conf" && rm -f "$etc/resolv.conf.wren.bak"
         note "Put back $etc/resolv.conf"
     fi
 }
 
 # set_bluetooth_autoenable FILE false|true: bluez's main.conf decides whether
 # the adapter powers up by itself at start. "false" keeps it off until you
-# switch it on (the debsway menu or debsway --bluetooth on); "true" puts bluez's
-# own default back. Lines this wrote end in "# debsway" so they can be undone.
+# switch it on (the Wren menu or wrenctl --bluetooth on); "true" puts bluez's
+# own default back. Lines this wrote end in "# Wren Linux" so they can be undone.
 set_bluetooth_autoenable() {
     local f=$1 want=$2 tmp
     if [ "$want" = false ]; then
         if grep -qE '^[#[:space:]]*AutoEnable=' "$f" 2>/dev/null; then
             tmp=$(mktemp)
-            sed -E 's/^[#[:space:]]*AutoEnable=.*/AutoEnable=false # debsway/' "$f" >"$tmp"
+            sed -E 's/^[#[:space:]]*AutoEnable=.*/AutoEnable=false # Wren Linux/' "$f" >"$tmp"
             cat "$tmp" >"$f"
             rm -f "$tmp"
         else
-            printf '\n[Policy]\nAutoEnable=false # debsway\n' >>"$f"
+            printf '\n[Policy]\nAutoEnable=false # Wren Linux\n' >>"$f"
         fi
     else
         tmp=$(mktemp)
-        sed -E 's/^AutoEnable=false # debsway$/#AutoEnable=true/' "$f" >"$tmp"
+        sed -E 's/^AutoEnable=false # Wren Linux$/#AutoEnable=true/' "$f" >"$tmp"
         cat "$tmp" >"$f"
         rm -f "$tmp"
     fi

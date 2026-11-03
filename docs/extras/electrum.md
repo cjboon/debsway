@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-debsway install electrum                     install it
-debsway remove electrum                      remove it (wallets in ~/.electrum stay)
-debsway manual electrum                      print the manual steps below
+wrenctl install electrum                     install it
+wrenctl remove electrum                      remove it (wallets in ~/.electrum stay)
+wrenctl manual electrum                      print the manual steps below
 
 electrum                                     start it (or Super+d, then electrum)
 ```
@@ -19,7 +19,7 @@ shows when you make one, because nothing else can bring a lost wallet back.
 
 - It runs as you: anything that can read your files can read `~/.electrum`.
 - It asks a server about your addresses to learn your balance; nothing here sets up Tor or your own server for it.
-- debsway doesn't back up your seed, and can't.
+- Wren Linux doesn't back up your seed, and can't.
 - Debian's version can be a little behind the newest release.
 
 ## MANUAL INSTALL

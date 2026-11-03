@@ -1,5 +1,5 @@
 #!/bin/bash
-# opencode-vm [connect|shell|status|stop|pubkey|rebuild]: written by debsway
+# opencode-vm [connect|shell|status|stop|pubkey|rebuild]: written by Wren Linux
 # extras/opencode-vm.sh
 # opencode inside a disposable virtual machine, not on your computer. The
 # VM has its own disk and no shared folder with you: the agent's only way to
@@ -47,7 +47,7 @@ if [ "$cmd" = connect ] || [ "$cmd" = shell ]; then
 fi
 
 sudo -n -u "$AGENT" -l "$SESSION" >/dev/null 2>&1 ||
-    die "the VM sandbox isn't set up. Run: debsway install opencode-vm"
+    die "the VM sandbox isn't set up. Run: wrenctl install opencode-vm"
 
 if [ -n "${OPENCODE_VM_HOLD:-}" ]; then
     rc=0

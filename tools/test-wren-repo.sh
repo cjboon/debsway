@@ -1,11 +1,11 @@
 #!/bin/bash
-# Checks parts/debsway-repo.sh (debsway's own apt repository) with a pretend
+# Checks parts/wren-repo.sh (Wren Linux's own apt repository) with a pretend
 # sudo (install and tee go into a temp folder, the rest is logged) and
-# throwaway keys, in a copy of debsway whose pins.sh the test fills in: nothing
+# throwaway keys, in a copy of Wren Linux whose pins.sh the test fills in: nothing
 # until the key and the address are pinned; then the pinned key only, trusted
-# for that repository only, and an apt pin that lets nothing but debsway come
+# for that repository only, and an apt pin that lets nothing but Wren Linux come
 # from it. Nothing on this computer changes. Run by test.sh, or:
-#   bash tools/test-debsway-repo.sh
+#   bash tools/test-wren-repo.sh
 # shellcheck disable=SC2016  # the pretend programs expand their own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 command -v gpg >/dev/null || { echo "  ok    skipped: gpg isn't installed"; exit 0; }
@@ -26,7 +26,7 @@ done
 GOOD=$(gpg --show-keys --with-colons "$T/good.asc" | awk -F: '/^fpr/ { print $10; exit }')
 [ -n "$GOOD" ] || { echo "  ok    skipped: gpg couldn't make test keys here"; exit 0; }
 
-# A copy of debsway to change pins.sh and the key file in
+# A copy of Wren Linux to change pins.sh and the key file in
 mkdir "$T/d"
 (cd "$HERE" && git ls-files -co --exclude-standard | tar -cf - -T -) | tar -C "$T/d" -xf -
 mkdir -p "$T/bin" "$T/root" "$T/home"
@@ -41,48 +41,48 @@ case "\$1" in
 esac
 EOF
 chmod +x "$T/bin/sudo"
-P=$T/d/parts/debsway-repo.sh
-run() { : >"$T/calls"; HOME="$T/home" DEBSWAY_SUDO="$T/bin/sudo" bash "$P" "$@" >"$T/out" 2>&1; }
-pin() { sed -i "s|^DEBSWAY_SIGNING_FPR=.*|DEBSWAY_SIGNING_FPR=$1|; s|^DEBSWAY_REPO_URL=.*|DEBSWAY_REPO_URL=$2|" "$T/d/pins.sh"; }
+P=$T/d/parts/wren-repo.sh
+run() { : >"$T/calls"; HOME="$T/home" WREN_SUDO="$T/bin/sudo" bash "$P" "$@" >"$T/out" 2>&1; }
+pin() { sed -i "s|^WREN_SIGNING_FPR=.*|WREN_SIGNING_FPR=$1|; s|^WREN_REPO_URL=.*|WREN_REPO_URL=$2|" "$T/d/pins.sh"; }
 R=$T/root
-KEY=$R/usr/share/keyrings/debsway-archive-keyring.asc
-LIST=$R/etc/apt/sources.list.d/debsway.sources
-PREF=$R/etc/apt/preferences.d/debsway.pref
+KEY=$R/usr/share/keyrings/wren-archive-keyring.asc
+LIST=$R/etc/apt/sources.list.d/wren.sources
+PREF=$R/etc/apt/preferences.d/wren.pref
 
-check "pins.sh has the two lines, empty for now" bash -c 'grep -qx "DEBSWAY_SIGNING_FPR=" "$1" && grep -qx "DEBSWAY_REPO_URL=" "$1"' _ "$HERE/pins.sh"
+check "pins.sh has the two lines, empty for now" bash -c 'grep -qx "WREN_SIGNING_FPR=" "$1" && grep -qx "WREN_REPO_URL=" "$1"' _ "$HERE/pins.sh"
 run
 check "nothing pinned: it changes nothing, and says why" bash -c '[ -z "$(ls -A "$1")" ] && grep -q "isn.t set up yet" "$2"' _ "$R" "$T/out"
 
-cp "$T/good.asc" "$T/d/data/debsway-signing-key.asc"
+cp "$T/good.asc" "$T/d/data/wren-signing-key.asc"
 pin "$GOOD" "http://example.org/debian"
 run
 check "an address that is neither https nor .onion is refused" bash -c '[ -z "$(ls -A "$1")" ]' _ "$R"
 
-cp "$T/other.asc" "$T/d/data/debsway-signing-key.asc"
+cp "$T/other.asc" "$T/d/data/wren-signing-key.asc"
 pin "$GOOD" "https://example.org/debian"
 run
 check "a key file that isn't the pinned key: nothing goes in" bash -c '[ -z "$(ls -A "$1")" ] && grep -q "isn.t exactly the pinned key" "$2"' _ "$R" "$T/out"
 
-cp "$T/good.asc" "$T/d/data/debsway-signing-key.asc"
+cp "$T/good.asc" "$T/d/data/wren-signing-key.asc"
 run
 check "the pinned key goes in, as the repository's only key" cmp "$T/good.asc" "$KEY"
 check "...the repository, trusted with that key alone" bash -c '
-    grep -qx "URIs: https://example.org/debian" "$1" && grep -qx "Signed-By: /usr/share/keyrings/debsway-archive-keyring.asc" "$1" && grep -qx "Suites: trixie" "$1"' _ "$LIST"
-check "...an apt pin: only debsway from it, everything else there never" bash -c '
-    [ "$(grep -v "^#" "$1" | paste -sd"|")" = "Package: debsway|Pin: origin example.org|Pin-Priority: 500||Package: *|Pin: origin example.org|Pin-Priority: -1" ]' _ "$PREF"
-check "...and unattended-upgrades takes its updates" grep -q 'site=example.org' "$R/etc/apt/apt.conf.d/52debsway-debsway"
+    grep -qx "URIs: https://example.org/debian" "$1" && grep -qx "Signed-By: /usr/share/keyrings/wren-archive-keyring.asc" "$1" && grep -qx "Suites: trixie" "$1"' _ "$LIST"
+check "...an apt pin: only Wren Linux from it, everything else there never" bash -c '
+    [ "$(grep -v "^#" "$1" | paste -sd"|")" = "Package: wren-linux|Pin: origin example.org|Pin-Priority: 500||Package: *|Pin: origin example.org|Pin-Priority: -1" ]' _ "$PREF"
+check "...and unattended-upgrades takes its updates" grep -q 'site=example.org' "$R/etc/apt/apt.conf.d/52wren-wren-linux"
 pin "$GOOD" "http://abcdefghijklmnopqrstuvwxyz234567abcdefghijklmnopqrstuvwx.onion/debian"
 run
 check "an onion address is taken too" grep -qx "URIs: http://abcdefghijklmnopqrstuvwxyz234567abcdefghijklmnopqrstuvwx.onion/debian" "$LIST"
 # The pin as written, with Debian's own apt (as you, every apt folder in $T):
-# a repository at 127.0.0.1 that offers debsway and an "openssl", served by a
+# a repository at 127.0.0.1 that offers Wren Linux and an "openssl", served by a
 # web server on this computer's loopback only
 if command -v apt-ftparchive >/dev/null && command -v python3 >/dev/null; then
     pin "$GOOD" "https://127.0.0.1/debian"
     run
     E=$T/pinrepo
     mkdir -p "$E/repo/pool" "$E/repo/dists/trixie/main/binary-amd64"
-    for pv in debsway:1.0 openssl:99; do
+    for pv in wren-linux:1.0 openssl:99; do
         mkdir -p "$E/${pv%%:*}/DEBIAN"
         chmod 0755 "$E/${pv%%:*}" "$E/${pv%%:*}/DEBIAN"
         printf 'Package: %s\nVersion: %s\nArchitecture: all\nMaintainer: t <t@t>\nDescription: t\n' "${pv%%:*}" "${pv#*:}" >"$E/${pv%%:*}/DEBIAN/control"
@@ -98,7 +98,7 @@ if command -v apt-ftparchive >/dev/null && command -v python3 >/dev/null; then
     A=$E/apt
     mkdir -p "$A/etc/sources.list.d" "$A/etc/preferences.d" "$A/etc/apt.conf.d" "$A/state/lists/partial" "$A/cache/archives/partial"
     # (trusted=yes: the signature is tools/test-apt-repo.sh's to check; this is the pin)
-    echo "deb [trusted=yes] http://127.0.0.1:$port trixie main" >"$A/etc/sources.list.d/debsway.list"
+    echo "deb [trusted=yes] http://127.0.0.1:$port trixie main" >"$A/etc/sources.list.d/wren.list"
     APT=(-o Dir::Etc="$A/etc" -o Dir::Etc::sourcelist=/dev/null -o Dir::Etc::sourceparts="$A/etc/sources.list.d"
         -o Dir::Etc::preferencesparts="$A/etc/preferences.d" -o Dir::Etc::parts="$A/etc/apt.conf.d"
         -o Dir::State="$A/state" -o Dir::Cache="$A/cache" -o Dir::State::status=/dev/null
@@ -108,9 +108,9 @@ if command -v apt-ftparchive >/dev/null && command -v python3 >/dev/null; then
     apt-get "${APT[@]}" update >/dev/null 2>&1
     cand() { apt-cache "${APT[@]}" policy "$1" 2>/dev/null | sed -n 's/^  Candidate: //p'; }
     check "real apt, without the pin: the repository could bring openssl (so the next check means something)" test "$(cand openssl)" = 99
-    cp "$PREF" "$A/etc/preferences.d/debsway.pref"
+    cp "$PREF" "$A/etc/preferences.d/wren.pref"
     check "real apt, with the part's pin: openssl can't come from it" test "$(cand openssl)" = "(none)"
-    check "...and debsway still can" test "$(cand debsway)" = 1.0
+    check "...and Wren Linux still can" test "$(cand wren-linux)" = 1.0
     kill "$server" 2>/dev/null
 fi
 

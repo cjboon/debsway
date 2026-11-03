@@ -1,7 +1,7 @@
 #!/bin/bash
-# vault: written by debsway extras/vault.sh
+# vault: written by Wren Linux extras/vault.sh
 # An encrypted folder: ~/Vault, whose files are kept encrypted (gocryptfs) in
-# ~/.local/share/debsway-vault and appear in ~/Vault only while it is open. It
+# ~/.local/share/wren-vault and appear in ~/Vault only while it is open. It
 # has its own password, not your login's. Closed, its key isn't in memory, so
 # a laptop taken while it is on and locked doesn't give the files away.
 #   vault open [--for TIME | --no-timeout]   open it; it closes itself after an
@@ -9,7 +9,7 @@
 #   vault close                              close it now
 #   vault status                             open or closed, and for how long
 # It also closes whenever the screen locks: when you're idle and before the
-# laptop sleeps (debsway's idle lock runs ~/.config/debsway/on-lock.d/vault),
+# laptop sleeps (Wren Linux's idle lock runs ~/.config/wren/on-lock.d/vault),
 # and within seconds of Super+Escape, the lid or the power menu locking it.
 # A program with a file open in it when it closes loses access to that file:
 # save your work first.
@@ -17,18 +17,18 @@
 #                          0 for never, or as soon as the screen locks)
 set -euo pipefail
 
-CIPHER=${DEBSWAY_VAULT_CIPHER:-$HOME/.local/share/debsway-vault}
-MNT=${DEBSWAY_VAULT_DIR:-$HOME/Vault}
-STATE=${XDG_STATE_HOME:-$HOME/.local/state}/debsway/vault-until
-UNIT=debsway-vault-watch
-POLL=${DEBSWAY_VAULT_POLL:-5}
+CIPHER=${WREN_VAULT_CIPHER:-$HOME/.local/share/wren-vault}
+MNT=${WREN_VAULT_DIR:-$HOME/Vault}
+STATE=${XDG_STATE_HOME:-$HOME/.local/state}/wren/vault-until
+UNIT=wren-vault-watch
+POLL=${WREN_VAULT_POLL:-5}
 
 say() { printf 'vault: %s\n' "$*" >&2; }
 die() { say "$*"; exit 1; }
 # (from the idle lock there is no terminal: a notification says it too)
 tell() {
     say "$*"
-    [ -t 2 ] || notify-send -a debsway Vault "$*" 2>/dev/null || true
+    [ -t 2 ] || notify-send -a wren Vault "$*" 2>/dev/null || true
 }
 is_open() { mountpoint -q "$MNT" 2>/dev/null; }
 screen_locked() { pgrep -x -u "$(id -u)" swaylock >/dev/null 2>&1; }
@@ -79,7 +79,7 @@ case ${1:-status} in
             '') ;;
             *) die "usage: vault open [--for TIME | --no-timeout]" ;;
         esac
-        [ -f "$CIPHER/gocryptfs.conf" ] || die "There is no vault yet. Make one with: debsway install vault"
+        [ -f "$CIPHER/gocryptfs.conf" ] || die "There is no vault yet. Make one with: wrenctl install vault"
         if is_open; then
             say "It is open already ($MNT)."
         else

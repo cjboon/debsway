@@ -1,16 +1,16 @@
 #!/bin/bash
-# Copies debsway onto a USB stick (or any folder): the committed files, plus
+# Copies Wren Linux onto a USB stick (or any folder): the committed files, plus
 # the saved downloads in offline/. Nothing from ignore/ (personal files) or
-# untracked files goes along, and a stick that already has a debsway folder
+# untracked files goes along, and a stick that already has a Wren Linux folder
 # gets only the downloads that changed.
 #
 #   bash tools/pack-usb.sh /media/you/STICK
 #
 # It copies the last commit, so commit what you want on the stick first.
 #
-# The stick is also labelled DEBSWAY (it asks first), so that on a fresh
+# The stick is also labelled WREN (it asks first), so that on a fresh
 # install one line finds it, whatever the device is called:
-#   sudo mount -L DEBSWAY /mnt && bash /mnt/debsway/start.sh
+#   sudo mount -L WREN /mnt && bash /mnt/wren/start.sh
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 not_root
 
@@ -32,15 +32,15 @@ if [[ $dest == /dev/* ]]; then
 fi
 [ -n "$dest" ] && [ -d "$dest" ] || die "Usage: bash tools/pack-usb.sh /path/to/the/stick"
 command -v git >/dev/null || die "git is missing."
-git -C "$DEBSWAY_DIR" rev-parse --git-dir >/dev/null 2>&1 || die "$DEBSWAY_DIR isn't a git checkout."
-if [ -n "$(git -C "$DEBSWAY_DIR" status --porcelain --untracked-files=no)" ]; then
+git -C "$WREN_DIR" rev-parse --git-dir >/dev/null 2>&1 || die "$WREN_DIR isn't a git checkout."
+if [ -n "$(git -C "$WREN_DIR" status --porcelain --untracked-files=no)" ]; then
     warn "You have changes that aren't committed; the stick gets the last commit without them."
 fi
 
-target="$dest/debsway"
-LABEL=DEBSWAY
+target="$dest/wren"
+LABEL=WREN
 
-# label_stick: puts the label DEBSWAY on the stick, if it has another one.
+# label_stick: puts the label WREN on the stick, if it has another one.
 # Only a removable (USB) drive is ever relabelled, never a disk of this computer.
 label_stick() {
     local src fstype disk label tool need pkg mnt unmounted
@@ -61,7 +61,7 @@ label_stick() {
     fi
     say "Labelling the stick $LABEL"
     note "It is labelled '${label:-none}' now. On the new system one line finds it by the"
-    note "label: sudo mount -L $LABEL /mnt && bash /mnt/debsway/start.sh"
+    note "label: sudo mount -L $LABEL /mnt && bash /mnt/wren/start.sh"
     ask "Label $src ($fstype) $LABEL?" y || { warn "Not labelled: that line won't find it until you do."; return 0; }
     case $fstype in
         vfat) tool=(fatlabel "$src" "$LABEL"); need=fatlabel; pkg=dosfstools ;;
@@ -101,7 +101,7 @@ say "Copying the committed files to $target"
 mkdir -p "$target"
 # The old copy goes, except the big downloads
 find "$target" -mindepth 1 -maxdepth 1 ! -name offline -exec rm -rf {} +
-git -C "$DEBSWAY_DIR" archive --format=tar HEAD | tar -x --no-same-permissions -C "$target"
+git -C "$WREN_DIR" archive --format=tar HEAD | tar -x --no-same-permissions -C "$target"
 # A stick's filesystem may not keep permissions, which is why the README
 # says to run scripts with bash.
 
@@ -119,20 +119,20 @@ sync
 # A page to read on another computer (or print): the stick can't show it on
 # the new machine until it is mounted
 cat >"$dest/START-HERE.txt" <<EOF
-debsway: how to start on a fresh Debian install
+Wren Linux: how to start on a fresh Debian install
 
 1. Plug in this stick. At the text console, log in and type:
 
-     sudo mount -L $LABEL /mnt && bash /mnt/debsway/start.sh
+     sudo mount -L $LABEL /mnt && bash /mnt/wren/start.sh
 
-   It copies debsway to your home folder, unmounts the stick, gets you
+   It copies Wren Linux to your home folder, unmounts the stick, gets you
    online with wifi.sh if you aren't, and starts install-base.sh, which
    explains what it will do and asks before it changes anything.
 
 2. If you set a root password in the installer, sudo isn't installed. Use:
 
      su -c "mount -L $LABEL /mnt"
-     bash /mnt/debsway/start.sh
+     bash /mnt/wren/start.sh
 
    and follow what it says (it uses prep/setup-sudo.sh).
 
@@ -144,4 +144,4 @@ Read the scripts before you run them: they change system files.
 EOF
 label_stick
 note "Done: $target"
-note "On the new system: sudo mount -L $LABEL /mnt && bash /mnt/debsway/start.sh"
+note "On the new system: sudo mount -L $LABEL /mnt && bash /mnt/wren/start.sh"

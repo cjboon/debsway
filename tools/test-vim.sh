@@ -1,9 +1,9 @@
 #!/bin/bash
 # Checks extras/vim.sh and data/vimrc: Debian's full vim is installed; the
-# vimrc colors code by file type, turns modelines off, and follows debsway's
+# vimrc colors code by file type, turns modelines off, and follows Wren Linux's
 # light or dark theme; it is written only where you have no vimrc of your
-# own, rewritten while its first line is debsway's, and --remove takes out
-# only debsway's. Runs the extra with a pretend sudo (only logs) and
+# own, rewritten while its first line is Wren Linux's, and --remove takes out
+# only Wren Linux's. Runs the extra with a pretend sudo (only logs) and
 # dpkg-query (its packages "already installed"), in a temp home, so nothing on
 # this computer changes; vim itself only if the full vim is installed here.
 # Run by test.sh, or:  bash tools/test-vim.sh
@@ -27,10 +27,10 @@ check "...and reads no .vimrc or .exrc from the folder vim starts in" grep -qx '
 # vim itself, if the full vim is here: the vimrc loads cleanly, light or dark with the theme
 if command -v vim.basic >/dev/null; then
     bg() { HOME=$T/vh vim.basic -u "$V" -i NONE -N -es -c 'echo &background' -c 'qall!' </dev/null 2>&1 | tr -d '\r\n '; }
-    mkdir -p "$T/vh/.config/debsway"
+    mkdir -p "$T/vh/.config/wren"
     check "vim reads it without an error, dark without a theme" test "$(bg)" = dark
-    echo light >"$T/vh/.config/debsway/theme"
-    check "...light in debsway's light theme" test "$(bg)" = light
+    echo light >"$T/vh/.config/wren/theme"
+    check "...light in Wren Linux's light theme" test "$(bg)" = light
     check "...modelines off in vim itself" test "$(HOME=$T/vh vim.basic -u "$V" -i NONE -N -es -c 'echo &modeline' -c 'qall!' </dev/null 2>&1 | tr -d '\r\n ')" = 0
 else
     echo "  ok    skipped running vim: the full vim isn't installed here"
@@ -65,10 +65,10 @@ run() { : >"$T/root-calls"; HOME=$T/home bash "$W/extras/vim.sh" "$@" >"$T/out" 
 
 run
 check "it installs Debian's full vim" grep -qx 'apt_install vim' "$HERE/extras/vim.sh"
-check "...and writes debsway's vimrc where there was none" cmp "$V" "$T/home/.vimrc"
-echo '" old debsway lines' >>"$T/home/.vimrc"
+check "...and writes Wren Linux's vimrc where there was none" cmp "$V" "$T/home/.vimrc"
+echo '" old Wren Linux lines' >>"$T/home/.vimrc"
 run
-check "run again: debsway's vimrc is written again (its first line is debsway's)" cmp "$V" "$T/home/.vimrc"
+check "run again: Wren Linux's vimrc is written again (its first line is Wren Linux's)" cmp "$V" "$T/home/.vimrc"
 printf 'set number\n' >"$T/home/.vimrc"
 run
 check "a vimrc of your own is left alone" test "$(cat "$T/home/.vimrc")" = 'set number'
@@ -77,7 +77,7 @@ run --remove
 check "--remove leaves a vimrc of your own" test -f "$T/home/.vimrc"
 cp "$V" "$T/home/.vimrc"
 run --remove
-check "...and takes out debsway's" test ! -e "$T/home/.vimrc"
+check "...and takes out Wren Linux's" test ! -e "$T/home/.vimrc"
 check "...and vim (vim-tiny, Debian's own, stays)" grep -q 'vim-tiny' "$T/out"
 
 [ "$fails" -eq 0 ]

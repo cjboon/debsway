@@ -18,7 +18,7 @@ ran() { grep -qxF "$T/L/$1" "$T/ran"; }
 export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t
 export HOME="$T/home" XDG_STATE_HOME="$T/state"
 # no key files of this computer are looked at (lib/apt-keys.sh reads under this folder)
-export DEBSWAY_KEYS_ROOT="$T/no-keys"
+export WREN_KEYS_ROOT="$T/no-keys"
 mkdir -p "$HOME"
 
 # The server's working copy W (this checkout's files), the server O, your copy L
@@ -50,19 +50,19 @@ SECOND=$(git -C "$T/W" rev-parse HEAD)
 # shellcheck disable=SC2016  # written into the runner, expanded when it runs
 printf '#!/bin/bash\necho "$1" >>"%s/ran"\n[ "$1" != "$FAIL_ON" ]\n' "$T" >"$T/runner"
 chmod +x "$T/runner"
-export DEBSWAY_UPDATE_RUNNER="$T/runner"
+export WREN_UPDATE_RUNNER="$T/runner"
 # A pretend sudo: -v succeeds (or fails with FAKE_SUDO_RC); every call is written down
 # shellcheck disable=SC2016  # written into the pretend program, expanded when it runs
 printf '#!/bin/bash\necho "sudo $*" >>"%s/sudolog"\n[ "$1" = -v ] && exit "${FAKE_SUDO_RC:-0}"\nexit 0\n' "$T" >"$T/sudo"
 chmod +x "$T/sudo"
-export DEBSWAY_SUDO="$T/sudo"
+export WREN_SUDO="$T/sudo"
 # What is "set up here": incognito, claude-code (not claude-vm), media (not changed),
 # and two that use the changed library or pin
-export DEBSWAY_UPDATE_ASSUME_INSTALLED="parts/incognito.sh extras/claude-code.sh extras/media.sh extras/feather-wallet.sh extras/sparrow-wallet.sh"
+export WREN_UPDATE_ASSUME_INSTALLED="parts/incognito.sh extras/claude-code.sh extras/media.sh extras/feather-wallet.sh extras/sparrow-wallet.sh"
 upd() { # ANSWERS... then the arguments of update.sh in $ARGS
     printf '%s\n' "$@" >"$T/answers"
     # shellcheck disable=SC2086
-    DEBSWAY_TEST_ANSWERS="$T/answers" bash "$T/L/update.sh" $ARGS 2>&1
+    WREN_TEST_ANSWERS="$T/answers" bash "$T/L/update.sh" $ARGS 2>&1
 }
 
 # 1. saying no brings nothing in
@@ -83,7 +83,7 @@ check "a new part outside the base list is not" not ran parts/otherpart.sh
 check "an installed script whose files didn't change is left alone" not ran extras/media.sh
 check "a changed script that isn't set up here is left alone" not ran extras/claude-vm.sh
 check "a changed core library is reported, not counted against every script" grep -q 'lib/core.sh' <<<"$out"
-check "the commit it brought you to is remembered" test "$(cat "$T/state/debsway/updated-to")" = "$SECOND"
+check "the commit it brought you to is remembered" test "$(cat "$T/state/wren/updated-to")" = "$SECOND"
 
 # 2b. the sudo password is asked once, before the first script, not by each script
 check "sudo is asked for once, before any script runs" test "$(grep -c '^sudo -v' "$T/sudolog")" -eq 1
@@ -94,10 +94,10 @@ check "...and kept fresh in the background while they run" grep -q '^sudo -n tru
 ARGS='' out=$(upd)
 check "a second run finds nothing to do" test ! -s "$T/ran"
 
-# 3b. a command debsway installed that is older than this copy (pulled by hand
+# 3b. a command Wren Linux installed that is older than this copy (pulled by hand
 # before update.sh first ran): its script is offered, though nothing changed
 mkdir -p "$HOME/.local/bin"
-printf '#!/bin/sh\n# imv: written by debsway extras/media.sh (an older one)\n' >"$HOME/.local/bin/imv"
+printf '#!/bin/sh\n# imv: written by Wren Linux extras/media.sh (an older one)\n' >"$HOME/.local/bin/imv"
 ARGS='' out=$(upd y)
 check "an installed command older than this copy: its script is offered again" ran extras/media.sh
 cp "$T/L/bin/imv" "$HOME/.local/bin/imv"
@@ -118,26 +118,26 @@ check "--all runs everything that is set up" test "$(wc -l <"$T/ran")" -eq 5
 check "--all still leaves out what isn't set up" not ran extras/claude-vm.sh
 
 # 6. a script that fails: reported, and the commit is not remembered
-rm -f "$T/state/debsway/updated-to"
+rm -f "$T/state/wren/updated-to"
 : >"$T/ran"
 FAIL_ON="$T/L/parts/incognito.sh"
 export FAIL_ON
 ARGS="--since $FIRST" out=$(upd y)
 check "a failing script is reported" grep -q 'did not finish' <<<"$out"
 check "the other scripts still run" ran extras/claude-code.sh
-check "a failed run is not remembered as done" test ! -e "$T/state/debsway/updated-to"
+check "a failed run is not remembered as done" test ! -e "$T/state/wren/updated-to"
 unset FAIL_ON
 
 # 6b. a wrong sudo password stops everything: no script runs, the next one is not tried
-rm -f "$T/state/debsway/updated-to"
+rm -f "$T/state/wren/updated-to"
 : >"$T/ran"; : >"$T/sudolog"
 printf 'y\n' >"$T/answers"
-bad=$(FAKE_SUDO_RC=1 DEBSWAY_TEST_ANSWERS="$T/answers" bash "$T/L/update.sh" --since "$FIRST" 2>&1; echo "rc=$?")
+bad=$(FAKE_SUDO_RC=1 WREN_TEST_ANSWERS="$T/answers" bash "$T/L/update.sh" --since "$FIRST" 2>&1; echo "rc=$?")
 check "a refused sudo password runs no script at all" test ! -s "$T/ran"
 check "...says so, in plain words" grep -q "sudo didn't accept the password, so nothing was run" <<<"$bad"
 check "...fails, so it is not mistaken for success" not grep -qx 'rc=0' <<<"$bad"
 check "...asks only once (it does not go on to the next script and ask again)" test "$(grep -c '^sudo -v' "$T/sudolog")" -eq 1
-check "...and does not record the update as done" test ! -e "$T/state/debsway/updated-to"
+check "...and does not record the update as done" test ! -e "$T/state/wren/updated-to"
 
 # 7. a plain-git problem: your own commit on top
 echo mine >"$T/L/mine.txt"

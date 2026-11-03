@@ -1,5 +1,5 @@
 #!/bin/bash
-# firefox-session: written by debsway extras/firefox-sandbox.sh
+# firefox-session: written by Wren Linux extras/firefox-sandbox.sh
 # Runs as the user "firefox", or as "fx-NAME" for a Firefox profile with its own
 # user (the firefox command starts it through sudo; it is the only thing your
 # user may run as those users). Opens Firefox as a normal
@@ -18,8 +18,8 @@ export PATH=/usr/local/bin:/usr/bin:/bin
 die() { printf 'firefox: %s\n' "$*" >&2; exit 1; }
 
 # Keeps it off XWayland's abstract socket, which any user can connect to
-noabs=/usr/local/libexec/debsway-no-abstract-sockets
-need_noabs() { [ -x "$noabs" ] || die "$noabs is missing. Run: debsway install firefox-sandbox"; }
+noabs=/usr/local/libexec/wren-no-abstract-sockets
+need_noabs() { [ -x "$noabs" ] || die "$noabs is missing. Run: wrenctl install firefox-sandbox"; }
 
 # Who this is: "firefox" (tag empty), or "fx-NAME" for the profile NAME
 user=$(id -un)
@@ -135,7 +135,7 @@ trap 'exit 130' INT
 trap 'exit 143' TERM HUP
 
 # The profile is kept; its settings are put in again at every start
-cp /usr/local/share/debsway/firefox-user.js "$profile/user.js"
+cp /usr/local/share/wren/firefox-user.js "$profile/user.js"
 {
     echo 'user_pref("browser.download.folderList", 2);'
     echo "user_pref(\"browser.download.dir\", \"$downloads\");"
@@ -152,9 +152,9 @@ cp /usr/local/share/debsway/firefox-user.js "$profile/user.js"
 doh_prefs() {
     local mode=3
     if [ "$1" = signin ] ||
-        { [ ! -L /etc/resolv.conf ] && grep -qsE '^# Written by debsway (parts|extras)/secure-dns\.sh' /etc/resolv.conf; }; then
+        { [ ! -L /etc/resolv.conf ] && grep -qsE '^# Written by Wren Linux (parts|extras)/secure-dns\.sh' /etc/resolv.conf; }; then
         mode=5
-    elif [ "$(sed -n 's/^dns=//p' /etc/debsway/firefox.conf 2>/dev/null | head -1)" = fallback ]; then
+    elif [ "$(sed -n 's/^dns=//p' /etc/wren/firefox.conf 2>/dev/null | head -1)" = fallback ]; then
         mode=2
     fi
     echo "user_pref(\"network.trr.mode\", $mode);"
@@ -196,9 +196,9 @@ if any(a.get("id") == want for a in themes) and any(
     for a in themes:
         a["active"] = a.get("id") == want
         a["userDisabled"] = not a["active"]
-    with open(path + ".debsway", "w") as f:
+    with open(path + ".wren", "w") as f:
         json.dump(d, f)
-    os.replace(path + ".debsway", path)
+    os.replace(path + ".wren", path)
 EOF
 }
 set_theme_addon "firefox-compact-$theme@mozilla.org"
@@ -206,7 +206,7 @@ set_theme_addon "firefox-compact-$theme@mozilla.org"
 # (a plain file, a real JPEG or PNG, at most 10 MB), and put in the stylesheet
 # itself, since Firefox won't load a file from outside into that page
 newtab_css=$profile/chrome/userContent.css
-mark='/* Written by debsway (firefox-session): your New Tab picture. */'
+mark='/* Written by Wren Linux (firefox-session): your New Tab picture. */'
 pic=$host_rt/$picture
 kind=
 if [ "$picture" != - ] && [ -f "$pic" ] && [ ! -L "$pic" ] && [ "$(stat -c %s -- "$pic")" -le $((10 * 1024 * 1024)) ]; then
@@ -235,8 +235,8 @@ jit_on() {
     echo 'user_pref("javascript.options.asmjs", true);'
 }
 # The main Firefox: the choices made at its install, in a file only root can
-# write (/etc/debsway/firefox.conf)
-if [ -z "$tag" ] && [ "$(sed -n 's/^fast_js=//p' /etc/debsway/firefox.conf 2>/dev/null | head -1)" = yes ]; then
+# write (/etc/wren/firefox.conf)
+if [ -z "$tag" ] && [ "$(sed -n 's/^fast_js=//p' /etc/wren/firefox.conf 2>/dev/null | head -1)" = yes ]; then
     jit_on >>"$profile/user.js"
 fi
 # Cookies, site data and the cache deleted when it closes, when that was
@@ -244,7 +244,7 @@ fi
 # question keeps them until it is asked; a profile for one site keeps them:
 # that is what it is for). Only those: Firefox's own defaults would take
 # history and downloads too.
-if [ -z "$tag" ] && [ "$(sed -n 's/^cookies=//p' /etc/debsway/firefox.conf 2>/dev/null | head -1)" = delete ]; then
+if [ -z "$tag" ] && [ "$(sed -n 's/^cookies=//p' /etc/wren/firefox.conf 2>/dev/null | head -1)" = delete ]; then
     {
         echo 'user_pref("privacy.sanitize.sanitizeOnShutdown", true);'
         echo 'user_pref("privacy.clearOnShutdown_v2.cookiesAndStorage", true);'
@@ -258,9 +258,9 @@ elif [ -z "$tag" ]; then
     echo 'user_pref("privacy.sanitize.sanitizeOnShutdown", false);' >>"$profile/user.js"
 fi
 # A profile with its own user: its address and its JavaScript choice are in a file
-# only root can write (/etc/debsway/firefox-profiles/NAME.conf)
+# only root can write (/etc/wren/firefox-profiles/NAME.conf)
 if [ -n "$tag" ]; then
-    conf=/etc/debsway/firefox-profiles/$tag.conf
+    conf=/etc/wren/firefox-profiles/$tag.conf
     [ -r "$conf" ] || die "no settings for the profile $tag ($conf)."
     url=$(sed -n 's/^url=//p' "$conf" | head -1)
     fast=$(sed -n 's/^fast_js=//p' "$conf" | head -1)
@@ -283,7 +283,7 @@ if [ -n "$tag" ]; then
     # toolbars=shown. Written at every start, so the setting is what counts.
     if [ "$toolbars" != shown ]; then
         mkdir -p "$profile/chrome"
-        printf '%s\n' '/* Written by debsway (firefox-session): this profile shows the page only. */' \
+        printf '%s\n' '/* Written by Wren Linux (firefox-session): this profile shows the page only. */' \
             '#navigator-toolbox { visibility: collapse !important; }' >"$profile/chrome/userChrome.css"
     else
         rm -f "$profile/chrome/userChrome.css"

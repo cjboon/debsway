@@ -15,7 +15,7 @@ live_name() {
 }
 
 # The kernel arguments that start the automatic install
-AUTO_ARGS="auto=true priority=critical preseed/file=/cdrom/debsway-install/preseed.cfg"
+AUTO_ARGS="auto=true priority=critical preseed/file=/cdrom/wren-install/preseed.cfg"
 
 # debian_cd_image_ok SHA512SUMS FILE NAME:
 # FILE's SHA-512 is the one the list gives for NAME.
@@ -38,16 +38,16 @@ fill_preseed() {
 
 # offline_debs_refresh: the Wi-Fi packages that go on the stick (offline/debs),
 # for a laptop with no network at first boot, brought up to date when wifi.sh
-# would refuse them within DEBSWAY_OFFLINE_MIN_DAYS days (5): their signed
+# would refuse them within WREN_OFFLINE_MIN_DAYS days (5): their signed
 # lists are fetched again and the saved packages checked against them (--check);
 # if one has changed, the same firmware is fetched again; with none saved,
 # every common Wi-Fi card's (the laptop it's for may not be this one). Says
 # until when they're good. Never stops the build: a stick still installs over
 # a cable or a phone.
 offline_debs_refresh() {
-    local debs=${OFFLINE_DIR:-$DEBSWAY_DIR/offline}/debs fetch=$DEBSWAY_DIR/prep/fetch-offline-debs.sh
-    local now until min=${DEBSWAY_OFFLINE_MIN_DAYS:-5} fw=() f
-    now=${DEBSWAY_NOW:-$(date +%s)}
+    local debs=${OFFLINE_DIR:-$WREN_DIR/offline}/debs fetch=$WREN_DIR/prep/fetch-offline-debs.sh
+    local now until min=${WREN_OFFLINE_MIN_DAYS:-5} fw=() f
+    now=${WREN_NOW:-$(date +%s)}
     until=$(offline_good_until "$debs/verify")
     if [ -z "$until" ] || [ "$until" -lt $((now + min * 86400)) ]; then
         if [ -f "$debs/Packages" ]; then
@@ -76,13 +76,13 @@ offline_debs_refresh() {
 # password (data/autologin-getty.conf), for extras/autologin.sh and the stick
 autologin_conf() {
     user_ok "$1" || return 1
-    sed "s|@USER@|$1|g" "$DEBSWAY_DIR/data/autologin-getty.conf"
+    sed "s|@USER@|$1|g" "$WREN_DIR/data/autologin-getty.conf"
 }
 
 # this_timezone: the time zone of the computer building the image (UTC if it
-# can't be told). DEBSWAY_ETC is where /etc is, for tests.
+# can't be told). WREN_ETC is where /etc is, for tests.
 this_timezone() {
-    local etc=${DEBSWAY_ETC:-/etc} tz=
+    local etc=${WREN_ETC:-/etc} tz=
     if [ -L "$etc/localtime" ]; then tz=$(readlink "$etc/localtime"); tz=${tz#*/zoneinfo/}; fi
     [ -n "$tz" ] || tz=$(cat "$etc/timezone" 2>/dev/null) || true
     case $tz in Etc/UTC | Etc/UCT | UCT | Zulu | Etc/Zulu | Universal | Etc/Universal | '') tz=UTC ;; esac
@@ -106,7 +106,7 @@ grub_add_entry() {
     tmp=$(mktemp)
     awk -v args="$AUTO_ARGS" '
         !done && /^menuentry / {
-            print "menuentry --hotkey=d '"'"'Automatic install with debsway (asks for your passphrase and password)'"'"' {"
+            print "menuentry --hotkey=d '"'"'Automatic install with Wren Linux (asks for your passphrase and password)'"'"' {"
             print "    set background_color=black"
             print "    linux    /install/gtk/vmlinuz vga=788 " args " --- quiet"
             print "    initrd   /install/gtk/initrd.gz"
@@ -117,22 +117,22 @@ grub_add_entry() {
     rm -f "$tmp"
 }
 
-# isolinux_entry: the BIOS menu's entry for it (isolinux/debsway.cfg), the default
+# isolinux_entry: the BIOS menu's entry for it (isolinux/wren.cfg), the default
 isolinux_entry() {
-    printf '%s\n' 'label debsway' \
-        '	menu label Automatic install with ^debsway (asks for your passphrase and password)' \
+    printf '%s\n' 'label Wren Linux' \
+        '	menu label Automatic install with ^Wren Linux (asks for your passphrase and password)' \
         '	menu default' '	kernel /install/gtk/vmlinuz' \
         "	append vga=788 initrd=/install/gtk/initrd.gz $AUTO_ARGS --- quiet"
 }
 
-# isolinux_edit MENU.CFG LIVE.CFG: the BIOS menu includes debsway.cfg
+# isolinux_edit MENU.CFG LIVE.CFG: the BIOS menu includes wren.cfg
 # before the live entries, and the live system is no longer the default (its
 # entries stay)
 isolinux_edit() {
     local menu=$1 live=$2 tmp
     grep -qx 'include live.cfg' "$menu" && grep -qx '	menu default' "$live" || return 1
     tmp=$(mktemp)
-    awk '$0 == "include live.cfg" && !done { print "include debsway.cfg"; done = 1 } { print }' "$menu" >"$tmp" && cat "$tmp" >"$menu"
+    awk '$0 == "include live.cfg" && !done { print "include wren.cfg"; done = 1 } { print }' "$menu" >"$tmp" && cat "$tmp" >"$menu"
     grep -vx -e '	menu default' "$live" >"$tmp" && cat "$tmp" >"$live"
     rm -f "$tmp"
 }

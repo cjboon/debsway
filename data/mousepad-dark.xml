@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  debsway's dark scheme for Mousepad (GtkSourceView 4): white text on black,
-  in the colors of debsway's terminal (data/foot.ini). extras/mousepad.sh
-  installs it as ~/.local/share/gtksourceview-4/styles/debsway-dark.xml.
+  Wren Linux's dark scheme for Mousepad (GtkSourceView 4): white text on black,
+  in the colors of Wren Linux's terminal (data/foot.ini). extras/mousepad.sh
+  installs it as ~/.local/share/gtksourceview-4/styles/wren-dark.xml.
 -->
-<style-scheme id="debsway-dark" name="debsway dark" version="1.0">
-  <author>debsway</author>
-  <description>White text on black, in the colors of debsway's terminal</description>
+<style-scheme id="wren-dark" name="Wren Linux dark" version="1.0">
+  <author>Wren Linux</author>
+  <description>White text on black, in the colors of Wren Linux's terminal</description>
 
   <color name="black"   value="#000000"/>
   <color name="text"    value="#dcdcdc"/>

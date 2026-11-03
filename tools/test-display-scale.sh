@@ -44,7 +44,7 @@ SH
 printf '#!/bin/sh\necho "$*" >>"%s/notified"\n' "$T" >"$T/fake/notify-send"
 printf '#!/bin/sh\nexit 0\n' >"$T/fake/sleep"
 chmod +x "$T/fake/"*
-run() { env PATH="$T/fake:$PATH" HOME="$T/home" XDG_STATE_HOME="$T/state" DEBSWAY_DRM_DIR="$T/drm" sh "$DS" "$@"; }
+run() { env PATH="$T/fake:$PATH" HOME="$T/home" XDG_STATE_HOME="$T/state" WREN_DRM_DIR="$T/drm" sh "$DS" "$@"; }
 screen() { printf "Output %s '%s'\n  Current mode: %s @ 60.000 Hz\n  Scale factor: 1.000000\n" "$@"; }
 
 screen eDP-1 'Some Panel 0x1234' 1920x1080 >"$T/outputs"

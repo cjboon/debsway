@@ -1,7 +1,7 @@
 #!/bin/bash
-# Checks that update.sh brings in only what debsway's own key signed, once
-# pins.sh names that key (DEBSWAY_SIGNING_FPR, the key in
-# data/debsway-signing-key.asc): a pretend server and "your copy", made here
+# Checks that update.sh brings in only what Wren Linux's own key signed, once
+# pins.sh names that key (WREN_SIGNING_FPR, the key in
+# data/wren-signing-key.asc): a pretend server and "your copy", made here
 # from the real files, with throwaway keys (good, another, expired, revoked).
 # Changes nothing outside a temp folder. Run by test.sh, or:
 #   bash tools/test-update-signed.sh
@@ -19,10 +19,10 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 }
 not() { ! "$@"; }
 export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t
-export HOME="$T/home" XDG_STATE_HOME="$T/state" DEBSWAY_KEYS_ROOT="$T/no-keys"
+export HOME="$T/home" XDG_STATE_HOME="$T/state" WREN_KEYS_ROOT="$T/no-keys"
 mkdir -p "$HOME"
 # nothing is run again (nothing is "set up" here), and no sudo is asked for
-export DEBSWAY_UPDATE_ASSUME_INSTALLED='' DEBSWAY_SUDO=true
+export WREN_UPDATE_ASSUME_INSTALLED='' WREN_SUDO=true
 
 # Throwaway keys: the pinned one, another, one that expired (made "in 2020",
 # for a day), and one revoked after use
@@ -53,9 +53,9 @@ chmod +x "$T/gpg-sign"
 # key and has its public half; a second key in that file must not count.
 mkdir "$T/W"
 (cd "$HERE" && git ls-files -co --exclude-standard | tar -cf - -T -) | tar -C "$T/W" -xf -
-{ "${G[@]}" --export --armor "$FPIN"; "${G[@]}" --export --armor "$FOTHER"; } >"$T/W/data/debsway-signing-key.asc"
-sed -i "s/^DEBSWAY_SIGNING_FPR=.*/DEBSWAY_SIGNING_FPR=$FPIN/" "$T/W/pins.sh"
-grep -qx "DEBSWAY_SIGNING_FPR=$FPIN" "$T/W/pins.sh" || { echo "  FAIL  pins.sh has no DEBSWAY_SIGNING_FPR line"; exit 1; }
+{ "${G[@]}" --export --armor "$FPIN"; "${G[@]}" --export --armor "$FOTHER"; } >"$T/W/data/wren-signing-key.asc"
+sed -i "s/^WREN_SIGNING_FPR=.*/WREN_SIGNING_FPR=$FPIN/" "$T/W/pins.sh"
+grep -qx "WREN_SIGNING_FPR=$FPIN" "$T/W/pins.sh" || { echo "  FAIL  pins.sh has no WREN_SIGNING_FPR line"; exit 1; }
 git -C "$T/W" init -q -b main && git -C "$T/W" add -A && git -C "$T/W" commit -q -m first
 git clone -q --bare "$T/W" "$T/O.git"
 git clone -q "$T/O.git" "$T/L"
@@ -76,41 +76,41 @@ push_commit() {
 }
 head_of() { git -C "$T/L" rev-parse HEAD; }
 server() { git -C "$T/O.git" rev-parse main; }
-upd() { printf 'y\ny\n' >"$T/answers"; DEBSWAY_TEST_ANSWERS="$T/answers" bash "$T/L/update.sh" 2>&1; }
+upd() { printf 'y\ny\n' >"$T/answers"; WREN_TEST_ANSWERS="$T/answers" bash "$T/L/update.sh" 2>&1; }
 
 push_commit "$FPIN"
 out=$(upd)
 check "signed by the pinned key's signing subkey: brought in" test "$(head_of)" = "$(server)"
-check "...and said" grep -q "is signed by debsway's key" <<<"$out"
+check "...and said" grep -q "is signed by Wren Linux's key" <<<"$out"
 
 push_commit none
 before=$(head_of)
 out=$(upd)
 check "not signed: nothing brought in" test "$(head_of)" = "$before"
-check "...and said why" grep -q "isn't signed by debsway's key" <<<"$out"
+check "...and said why" grep -q "isn't signed by Wren Linux's key" <<<"$out"
 
 push_commit "$FOTHER"
 out=$(upd)
 check "signed by another key, even one in the key file: nothing brought in" test "$(head_of)" = "$before"
-check "...because of the signature" grep -q "isn't signed by debsway's key" <<<"$out"
+check "...because of the signature" grep -q "isn't signed by Wren Linux's key" <<<"$out"
 
 # the old key's signature, made while it was valid ("2020"); it has expired since
 push_commit "$FOLD" 20200101T120000
 out=$(upd)
 check "signed by an expired key: nothing brought in" test "$(head_of)" = "$before"
-check "...because of the signature" grep -q "isn't signed by debsway's key" <<<"$out"
+check "...because of the signature" grep -q "isn't signed by Wren Linux's key" <<<"$out"
 
 push_commit "$FREV"
 printf 'y\n0\n\ny\n' | gpg --homedir "$T/gh" --quiet --no-tty --pinentry-mode loopback --passphrase '' \
     --command-fd 0 --output "$T/rev.cert" --gen-revoke "$FREV" 2>/dev/null
 "${G[@]}" --import "$T/rev.cert" 2>/dev/null
 # your copy's key file: the pinned key and the revoked one, revocation included
-{ "${G[@]}" --export --armor "$FPIN"; "${G[@]}" --export --armor "$FREV"; } >"$T/L/data/debsway-signing-key.asc"
-sed -i "s/^DEBSWAY_SIGNING_FPR=.*/DEBSWAY_SIGNING_FPR=$FREV/" "$T/L/pins.sh"
+{ "${G[@]}" --export --armor "$FPIN"; "${G[@]}" --export --armor "$FREV"; } >"$T/L/data/wren-signing-key.asc"
+sed -i "s/^WREN_SIGNING_FPR=.*/WREN_SIGNING_FPR=$FREV/" "$T/L/pins.sh"
 out=$(upd)
 check "signed by a revoked key (pinned): nothing brought in" test "$(head_of)" = "$before"
-check "...because of the signature" grep -q "isn't signed by debsway's key" <<<"$out"
-git -C "$T/L" checkout -q -- pins.sh data/debsway-signing-key.asc
+check "...because of the signature" grep -q "isn't signed by Wren Linux's key" <<<"$out"
+git -C "$T/L" checkout -q -- pins.sh data/wren-signing-key.asc
 
 # a signed commit on top of unsigned ones: the newest one vouches for them all
 push_commit none
@@ -121,15 +121,15 @@ check "unsigned commits under a signed one: brought in (the signature covers the
 # a key file that isn't the pinned key: nothing brought in
 push_commit "$FPIN"
 before=$(head_of)
-"${G[@]}" --export --armor "$FOTHER" >"$T/L/data/debsway-signing-key.asc"
+"${G[@]}" --export --armor "$FOTHER" >"$T/L/data/wren-signing-key.asc"
 out=$(upd)
 check "the key file without the pinned key: nothing brought in" test "$(head_of)" = "$before"
-check "...because of the signature" grep -q "isn't signed by debsway's key" <<<"$out"
-git -C "$T/L" checkout -q -- data/debsway-signing-key.asc
+check "...because of the signature" grep -q "isn't signed by Wren Linux's key" <<<"$out"
+git -C "$T/L" checkout -q -- data/wren-signing-key.asc
 
 # no key pinned yet (your copy's pins.sh, not committed): brought in as before,
 # saying it wasn't checked
-sed -i 's/^DEBSWAY_SIGNING_FPR=.*/DEBSWAY_SIGNING_FPR=/' "$T/L/pins.sh"
+sed -i 's/^WREN_SIGNING_FPR=.*/WREN_SIGNING_FPR=/' "$T/L/pins.sh"
 push_commit none
 out=$(upd)
 check "no key pinned: brought in" test "$(head_of)" = "$(server)"

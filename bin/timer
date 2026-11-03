@@ -1,6 +1,6 @@
 #!/bin/bash
 # timer: timers, alarms and the look of the clock in the bar.
-# Written by debsway install-base.sh. Needs systemd and date, and cal (ncal) for
+# Written by Wren Linux install-base.sh. Needs systemd and date, and cal (ncal) for
 # the month in its screen.
 #
 #   timer                       a small menu (also: click the time in the bar, or Super+t)
@@ -21,8 +21,8 @@
 
 set -u
 
-STATE=${XDG_RUNTIME_DIR:-/tmp}/debsway-timers   # lives as long as the timers do
-CONF=${XDG_CONFIG_HOME:-$HOME/.config}/debsway/clock
+STATE=${XDG_RUNTIME_DIR:-/tmp}/wren-timers   # lives as long as the timers do
+CONF=${XDG_CONFIG_HOME:-$HOME/.config}/wren/clock
 SELF=$(readlink -f -- "$0")
 MAX=604800                                      # longest timer: a week
 
@@ -102,7 +102,7 @@ load() {
         f=$STATE/$id
         # long gone (the system was off, say), or its systemd timer is not there any more
         if [ "$due" -lt $((now - 120)) ] ||
-            { [ "${1:-}" = check ] && ! systemctl --user is-active --quiet "debsway-timer-$id.timer"; }; then
+            { [ "${1:-}" = check ] && ! systemctl --user is-active --quiet "wren-timer-$id.timer"; }; then
             rm -f "$f"
             continue
         fi
@@ -143,9 +143,9 @@ add() {
     mkdir -p "$STATE"
     printf 'kind=%s\ndue=%s\nlabel=%s\n' "$kind" "$due" "$label" >"$STATE/$id"
     when=$(date -d "@$due" '+%Y-%m-%d %H:%M:%S')
-    if ! systemd-run --user --quiet --unit="debsway-timer-$id" --on-calendar="$when" \
+    if ! systemd-run --user --quiet --unit="wren-timer-$id" --on-calendar="$when" \
         --timer-property=AccuracySec=1s --timer-property=RemainAfterElapse=no \
-        --description="debsway $kind: $label" "$SELF" fire "$id" 2>/dev/null; then
+        --description="Wren Linux $kind: $label" "$SELF" fire "$id" 2>/dev/null; then
         rm -f "$STATE/$id"
         err "systemd could not start it (is this a normal login session?)"
         return 1
@@ -186,7 +186,7 @@ cancel_cmd() {
     [ ${#IDS[@]} -gt 0 ] || { echo "Nothing is running."; return 0; }
     for i in "${!IDS[@]}"; do
         if [ "$1" = all ] || [ "$1" = $((i + 1)) ]; then
-            systemctl --user stop "debsway-timer-${IDS[i]}.timer" 2>/dev/null
+            systemctl --user stop "wren-timer-${IDS[i]}.timer" 2>/dev/null
             rm -f "$STATE/${IDS[i]}"
             n=$((n + 1))
         fi
@@ -196,13 +196,13 @@ cancel_cmd() {
     echo "Cancelled $n."
 }
 
-# The alarm sound is debsway's own bell phrase (data/alarm.wav, 8 seconds), put
+# The alarm sound is Wren Linux's own bell phrase (data/alarm.wav, 8 seconds), put
 # here by parts/core-commands.sh; no sound theme package is needed. An alarm
 # plays it over and over for about RING_ALARM seconds, a timer for RING_TIMER.
-# (The DEBSWAY_ ones: a test points these at pretend values)
-SOUND_DIR=${DEBSWAY_SOUND_DIR:-$HOME/.local/share/debsway}
-RING_ALARM=${DEBSWAY_RING_ALARM:-300}
-RING_TIMER=${DEBSWAY_RING_TIMER:-20}
+# (The WREN_ ones: a test points these at pretend values)
+SOUND_DIR=${WREN_SOUND_DIR:-$HOME/.local/share/wren}
+RING_ALARM=${WREN_RING_ALARM:-300}
+RING_TIMER=${WREN_RING_TIMER:-20}
 
 # kill_ring PID: ends a ringing sound (the player first, then the loop around it)
 kill_ring() { pkill -P "$1" 2>/dev/null; kill "$1" 2>/dev/null; }
@@ -232,9 +232,9 @@ fire() {
     # Without that there is only the notification, so it says why instead of
     # leaving you wondering.
     if ! command -v pw-play >/dev/null; then
-        hint=" (no sound: debsway --apps, then check pipewire-audio)"
+        hint=" (no sound: wrenctl --apps, then check pipewire-audio)"
     elif [ ! -r "$SOUND_DIR/alarm.wav" ]; then
-        hint=" (no sound: the alarm sound is missing; run debsway --update)"
+        hint=" (no sound: the alarm sound is missing; run wrenctl --update)"
     else
         sound=$SOUND_DIR/alarm.wav
     fi
@@ -259,11 +259,11 @@ fire() {
         if [ -n "$ringpid" ] && notify-send --help 2>&1 | grep -q -e '--wait'; then
             # Clicking the notification or dismissing it ends the notify-send, and the sound with it
             (
-                notify-send --wait -A default=Stop -u critical -t 0 -a debsway "$title" "$body" >/dev/null 2>&1
+                notify-send --wait -A default=Stop -u critical -t 0 -a wren "$title" "$body" >/dev/null 2>&1
                 kill_ring "$ringpid"
             ) &
         else
-            notify-send -u critical -t 0 -a debsway "$title" "$body"
+            notify-send -u critical -t 0 -a wren "$title" "$body"
         fi
     fi
     if [ -n "$ringpid" ]; then
@@ -316,15 +316,15 @@ bar_format() {
 }
 
 # --- how long before the screen locks ---------------------------------------
-# bin/debsway-idle (parts/swayidle.sh) reads the minutes from this file
+# bin/wren-idle (parts/swayidle.sh) reads the minutes from this file
 
-LOCK_CONF=${XDG_CONFIG_HOME:-$HOME/.config}/debsway/lock
-IDLE=${DEBSWAY_IDLE:-$HOME/.local/bin/debsway-idle}   # (a test points this elsewhere)
+LOCK_CONF=${XDG_CONFIG_HOME:-$HOME/.config}/wren/lock
+IDLE=${WREN_IDLE:-$HOME/.local/bin/wren-idle}   # (a test points this elsewhere)
 
 lock_cmd() {
     local m
     if [ ! -x "$IDLE" ]; then
-        err "the screen doesn't lock by itself here (debsway part swayidle sets that up)"
+        err "the screen doesn't lock by itself here (wrenctl part swayidle sets that up)"
         return 1
     fi
     if [ -z "${1:-}" ]; then
@@ -338,7 +338,7 @@ lock_cmd() {
     fi
     m=$((10#$m))
     mkdir -p "${LOCK_CONF%/*}"
-    printf '# Written by debsway timer lock: minutes idle before the screen locks\nminutes=%s\n' "$m" >"$LOCK_CONF"
+    printf '# Written by Wren Linux timer lock: minutes idle before the screen locks\nminutes=%s\n' "$m" >"$LOCK_CONF"
     # swayidle keeps the timeouts it started with, so start it again
     if [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null; then
         pkill -x swayidle 2>/dev/null
@@ -397,7 +397,7 @@ calendar_lines() {
             i=$((i + 1))
         done < <(cal 2>/dev/null | sed -e 's/\x1b\[[0-9;]*m//g' -e 's/.\x08//g')
     else
-        CAL=("$(pad '' $CAL_W)" "$(pad '' $CAL_W)" "$(center 'No calendar yet:' $CAL_W)" "$(center 'debsway --update' $CAL_W)")
+        CAL=("$(pad '' $CAL_W)" "$(pad '' $CAL_W)" "$(center 'No calendar yet:' $CAL_W)" "$(center 'wrenctl --update' $CAL_W)")
     fi
     while [ ${#CAL[@]} -lt 8 ]; do CAL+=("$(pad '' $CAL_W)"); done
 }
@@ -428,7 +428,7 @@ running_lines() {
 
 # settle: a new window starts small and sway stretches it a moment later;
 # waits (up to 1.5 s) until its size stops changing, so the screen is drawn
-# for the size it ends up (as debsway-menu does). Before sway has given it a
+# for the size it ends up (as wren-menu does). Before sway has given it a
 # size at all a window reports 0x0, which never counts as settled: drawn for
 # that, the box sat at the left of the window.
 settle() {
@@ -528,7 +528,7 @@ draw_screen() {
 
 menu() {
     local input n inputrc
-    # Esc closes the menu, like every debsway screen. readline reads its keys from
+    # Esc closes the menu, like every Wren Linux screen. readline reads its keys from
     # this file: your usual ones, then a lone Esc (told apart from an arrow key
     # after a tenth of a second) types q and Enter.
     inputrc=$(mktemp)

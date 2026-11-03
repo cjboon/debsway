@@ -13,9 +13,9 @@ CLAUDE_ACCOUNT_PREFIX=claude-agent-
 claude_account_valid() { [[ $1 =~ ^[a-z][a-z0-9]{0,14}$ ]]; }
 
 # claude_account_users [PREFIX]: the account users on this computer, as
-# USER:UID, one per line (DEBSWAY_PASSWD: a passwd file to read instead, for tests)
+# USER:UID, one per line (WREN_PASSWD: a passwd file to read instead, for tests)
 claude_account_users() {
-    if [ -n "${DEBSWAY_PASSWD:-}" ]; then cat "$DEBSWAY_PASSWD"; else getent passwd; fi |
+    if [ -n "${WREN_PASSWD:-}" ]; then cat "$WREN_PASSWD"; else getent passwd; fi |
         awk -F: -v p="${1:-$CLAUDE_ACCOUNT_PREFIX}" 'index($1, p) == 1 && substr($1, length(p) + 1) ~ /^[a-z][a-z0-9]*$/ { print $1 ":" $3 }'
 }
 
@@ -42,10 +42,10 @@ claude_firewall_text() {
 # locked user, claude-vm-NAME, with its own VM (disk, keys, Claude login) in
 # its home, and its own SSH console port on 127.0.0.1, which only that user
 # may reach. The ports are kept where only root can write
-# (DEBSWAY_CLAUDE_VM_PORTS: another file, for tests): one "NAME PORT" a line.
+# (WREN_CLAUDE_VM_PORTS: another file, for tests): one "NAME PORT" a line.
 
 CLAUDE_VM_PREFIX=claude-vm-
-CLAUDE_VM_PORTS=${DEBSWAY_CLAUDE_VM_PORTS:-/etc/debsway/claude-vm-ports}
+CLAUDE_VM_PORTS=${WREN_CLAUDE_VM_PORTS:-/etc/wren/claude-vm-ports}
 
 # claude_vm_port NAME: its port, or nothing
 claude_vm_port() {

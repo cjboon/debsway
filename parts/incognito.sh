@@ -31,7 +31,7 @@
 #  - Your user may run exactly one thing as incognito: the wrapper that
 #    starts this (a rule in /etc/sudoers.d). While it runs, incognito can
 #    reach your sway's socket and nothing else of yours.
-#  - The Wi-Fi sign-in window (wifi-signin, the debsway menu's "Wi-Fi
+#  - The Wi-Fi sign-in window (wifi-signin, the Wren menu's "Wi-Fi
 #    sign-in") is the same throwaway Firefox, as a second user of the same
 #    kind, wifi-signin, with the network's own DNS. Its firewall rule lets it
 #    reach the local network, where cafés' and hotels' sign-in pages often
@@ -49,24 +49,24 @@ NAME=incognito
 SIGNIN=wifi-signin
 CMD=/usr/local/bin/incognito
 SESSION=/usr/local/libexec/incognito-session
-SHARE=/usr/local/share/debsway
+SHARE=/usr/local/share/wren
 PREFS=$SHARE/incognito-user.js
-SUDOERS=/etc/sudoers.d/debsway-incognito
-LIMITS=/etc/security/limits.d/50-debsway-incognito.conf
-FIREWALL=/etc/debsway/incognito.nft
-SIGNIN_FIREWALL=/etc/debsway/wifi-signin.nft
-UNIT=/etc/systemd/system/debsway-incognito-firewall.service
+SUDOERS=/etc/sudoers.d/wren-incognito
+LIMITS=/etc/security/limits.d/50-wren-incognito.conf
+FIREWALL=/etc/wren/incognito.nft
+SIGNIN_FIREWALL=/etc/wren/wifi-signin.nft
+UNIT=/etc/systemd/system/wren-incognito-firewall.service
 
 if [ "${1:-}" = --remove ]; then
-    sudo systemctl disable --now debsway-incognito-firewall.service >/dev/null 2>&1 || true
-    sudo nft delete table inet debsway_incognito 2>/dev/null || true
-    sudo nft delete table inet debsway_wifi_signin 2>/dev/null || true
+    sudo systemctl disable --now wren-incognito-firewall.service >/dev/null 2>&1 || true
+    sudo nft delete table inet wren_incognito 2>/dev/null || true
+    sudo nft delete table inet wren_wifi_signin 2>/dev/null || true
     # the media sandbox needs it too
     [ -f "$BIN/media-sandbox" ] || remove_bin wayland-restrict
     sudo rm -f "$SUDOERS" "$LIMITS" "$CMD" /usr/local/bin/wifi-signin "$SESSION" "$PREFS" "$FIREWALL" "$SIGNIN_FIREWALL" "$UNIT"
     remove_no_abstract
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
-    sudo rmdir "$SHARE" /usr/local/libexec /etc/debsway 2>/dev/null || true
+    sudo rmdir "$SHARE" /usr/local/libexec /etc/wren 2>/dev/null || true
     for u in "$NAME" "$SIGNIN"; do
         if id "$u" >/dev/null 2>&1; then
             sudo pkill -KILL -u "$u" 2>/dev/null || true
@@ -107,22 +107,22 @@ sandbox_user() {
     note "$1: no password, no login, no home folder, no groups but its own and render (cage needs the GPU's render node)."
 }
 say "The $NAME and $SIGNIN users"
-sandbox_user "$NAME" "debsway incognito Firefox"
-sandbox_user "$SIGNIN" "debsway Wi-Fi sign-in window"
+sandbox_user "$NAME" "Wren Linux incognito Firefox"
+sandbox_user "$SIGNIN" "Wren Linux Wi-Fi sign-in window"
 
 say "The incognito command"
 sudo install -d -o root -g root -m 0755 "$SHARE" /usr/local/libexec
 install_bin wayland-restrict
 install_no_abstract
-sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/incognito" "$CMD"
+sudo install -o root -g root -m 0755 "$WREN_DIR/bin/incognito" "$CMD"
 # The Wi-Fi sign-in window (incognito --signin), next to it
-sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/wifi-signin" /usr/local/bin/wifi-signin
-sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/incognito-session" "$SESSION"
-sudo install -o root -g root -m 0644 "$DEBSWAY_DIR/data/incognito-user.js" "$PREFS"
+sudo install -o root -g root -m 0755 "$WREN_DIR/bin/wifi-signin" /usr/local/bin/wifi-signin
+sudo install -o root -g root -m 0755 "$WREN_DIR/bin/incognito-session" "$SESSION"
+sudo install -o root -g root -m 0644 "$WREN_DIR/data/incognito-user.js" "$PREFS"
 
 say "What your user may run as $NAME and $SIGNIN"
 rule=$(mktemp)
-printf '# Written by debsway parts/incognito.sh. %s may run the incognito wrapper,\n# and nothing else, as the users incognito and wifi-signin.\n%s ALL=(%s, %s) NOPASSWD: %s\n' \
+printf '# Written by Wren Linux parts/incognito.sh. %s may run the incognito wrapper,\n# and nothing else, as the users incognito and wifi-signin.\n%s ALL=(%s, %s) NOPASSWD: %s\n' \
     "$(id -un)" "$(id -un)" "$NAME" "$SIGNIN" "$SESSION" >"$rule"
 # A broken sudoers file locks you out of sudo, so it is checked first
 if ! sudo visudo -cf "$rule" >/dev/null; then
@@ -133,29 +133,29 @@ sudo install -o root -g root -m 0440 "$rule" "$SUDOERS"
 rm -f "$rule"
 note "Wrote $SUDOERS"
 
-printf '# Written by debsway parts/incognito.sh\n%s hard nproc 4096\n%s hard core 0\n%s hard nproc 4096\n%s hard core 0\n' \
+printf '# Written by Wren Linux parts/incognito.sh\n%s hard nproc 4096\n%s hard core 0\n%s hard nproc 4096\n%s hard core 0\n' \
     "$NAME" "$NAME" "$SIGNIN" "$SIGNIN" |
     sudo tee "$LIMITS" >/dev/null
 
 say "Keeping $NAME off your network, and $SIGNIN off this computer"
 sudo install -d -o root -g root -m 0755 "${FIREWALL%/*}"
-sudo install -o root -g root -m 0644 "$DEBSWAY_DIR/data/incognito-firewall.nft" "$FIREWALL"
-sudo install -o root -g root -m 0644 "$DEBSWAY_DIR/data/wifi-signin-firewall.nft" "$SIGNIN_FIREWALL"
+sudo install -o root -g root -m 0644 "$WREN_DIR/data/incognito-firewall.nft" "$FIREWALL"
+sudo install -o root -g root -m 0644 "$WREN_DIR/data/wifi-signin-firewall.nft" "$SIGNIN_FIREWALL"
 # Loaded before the network comes up, at every boot
-printf '%s\n' '# Written by debsway parts/incognito.sh' '[Unit]' \
-    'Description=Keep the incognito user off the local network (debsway)' \
+printf '%s\n' '# Written by Wren Linux parts/incognito.sh' '[Unit]' \
+    'Description=Keep the incognito user off the local network (Wren Linux)' \
     'Before=network-pre.target' 'Wants=network-pre.target' '' '[Service]' \
     'Type=oneshot' 'RemainAfterExit=yes' \
     "ExecStart=/usr/sbin/nft -f $FIREWALL" "ExecStart=/usr/sbin/nft -f $SIGNIN_FIREWALL" \
-    'ExecStop=/usr/sbin/nft delete table inet debsway_incognito' \
-    'ExecStop=-/usr/sbin/nft delete table inet debsway_wifi_signin' '' '[Install]' \
+    'ExecStop=/usr/sbin/nft delete table inet wren_incognito' \
+    'ExecStop=-/usr/sbin/nft delete table inet wren_wifi_signin' '' '[Install]' \
     'WantedBy=multi-user.target' | sudo tee "$UNIT" >/dev/null
 sudo systemctl daemon-reload
 # Restart, not just enable --now: the unit stays "active" after it first ran,
 # so a rule file changed by an update would otherwise not be loaded
-sudo systemctl enable debsway-incognito-firewall.service >/dev/null &&
-    sudo systemctl restart debsway-incognito-firewall.service ||
-    warn "Couldn't load the firewall rule; check: systemctl status debsway-incognito-firewall"
+sudo systemctl enable wren-incognito-firewall.service >/dev/null &&
+    sudo systemctl restart wren-incognito-firewall.service ||
+    warn "Couldn't load the firewall rule; check: systemctl status wren-incognito-firewall"
 note "$NAME can reach the internet, not your router, printers or your own local services."
 note "$SIGNIN (the Wi-Fi sign-in window: wifi-signin) can reach the local network too, not this computer."
 

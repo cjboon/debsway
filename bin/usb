@@ -1,5 +1,5 @@
 #!/bin/bash
-# usb: written by debsway parts/usb.sh
+# usb: written by Wren Linux parts/usb.sh
 # USB sticks and drives, mounted as you (by udisks2), never as root:
 #   usb                   list them: what is on each, and where it is mounted
 #   usb mount [NAME]      mount it under /media/$USER/ (an encrypted one asks for

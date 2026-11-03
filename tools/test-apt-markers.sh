@@ -98,53 +98,53 @@ dpkg-query() {
         *'${Status}'*) installed "$pkg" && echo "install ok installed" ;;
         *'${Depends}'*) installed "$pkg" && sed 's/ *$//' "$ST/pkg/$pkg.deps" ;;
         *Status-Abbrev*)
-            for a in "$ST"/pkg/debsway-*; do
+            for a in "$ST"/pkg/wren-*; do
                 case $a in *.deps) continue ;; esac
                 [ -f "$a" ] && echo "ii  $(basename -- "$a")"
             done ;;
     esac
     return 0
 }
-unset DEBSWAY_APT_UPDATED
+unset WREN_APT_UPDATED
 
 echo "Marker package names"
-check "named after the script" test "$(bash -c '. "$1/lib.sh"; apt_marker' "parts/Foo_Bar.sh" "$DEBSWAY_DIR")" = debsway-foo-bar
-check "DEBSWAY_OWNER wins" test "$(DEBSWAY_OWNER=Whonix bash -c '. "$1/lib.sh"; apt_marker' x "$DEBSWAY_DIR")" = debsway-whonix
+check "named after the script" test "$(bash -c '. "$1/lib.sh"; apt_marker' "parts/Foo_Bar.sh" "$WREN_DIR")" = wren-foo-bar
+check "WREN_OWNER wins" test "$(WREN_OWNER=Whonix bash -c '. "$1/lib.sh"; apt_marker' x "$WREN_DIR")" = wren-whonix
 
 echo "Building a marker"
 mkdir "$ST/b"
 # with the private umask parts/home-private.sh sets (077), as in a real login
-(umask 077; marker_build debsway-demo "$ST/b" mat2 mpv mat2)
-check "it is a valid package, also with umask 077" dpkg-deb -I "$ST/b/debsway-demo.deb"
-check "...readable by apt's own user (_apt)" test "$(stat -c %a "$ST/b/debsway-demo.deb")" = 644
-check "it depends on the sorted, unique packages" test "$(dpkg-deb -f "$ST/b/debsway-demo.deb" Depends)" = "mat2, mpv"
+(umask 077; marker_build wren-demo "$ST/b" mat2 mpv mat2)
+check "it is a valid package, also with umask 077" dpkg-deb -I "$ST/b/wren-demo.deb"
+check "...readable by apt's own user (_apt)" test "$(stat -c %a "$ST/b/wren-demo.deb")" = 644
+check "it depends on the sorted, unique packages" test "$(dpkg-deb -f "$ST/b/wren-demo.deb" Depends)" = "mat2, mpv"
 if [ -x /usr/bin/apt-get ]; then
-    check "apt can resolve it" /usr/bin/apt-get -s -o Debug::NoLocking=1 install --no-install-recommends "$ST/b/debsway-demo.deb"
+    check "apt can resolve it" /usr/bin/apt-get -s -o Debug::NoLocking=1 install --no-install-recommends "$ST/b/wren-demo.deb"
 fi
 
 echo "apt_install"
-export DEBSWAY_OWNER=alpha
+export WREN_OWNER=alpha
 apt_install aaa bbb >/dev/null
-check "the marker is installed" installed debsway-alpha
+check "the marker is installed" installed wren-alpha
 check "its packages came in as dependencies" bash -c "[ \"$(mark aaa)\" = auto ] && [ \"$(mark bbb)\" = auto ]"
-check "the marker itself is manual" test "$(mark debsway-alpha)" = manual
+check "the marker itself is manual" test "$(mark wren-alpha)" = manual
 n=$(count '^apt-get install')
 apt_install aaa >/dev/null
 check "asking for recorded packages again runs no apt" test "$(count '^apt-get install')" = "$n"
 apt_install ccc >/dev/null
-check "a second call merges with the first" test "$(tr -d ',\n' <"$ST/pkg/debsway-alpha.deps")" = "aaa bbb ccc"
+check "a second call merges with the first" test "$(tr -d ',\n' <"$ST/pkg/wren-alpha.deps")" = "aaa bbb ccc"
 check "apt-get update ran only once" test "$(count '^apt-get update')" = 1
 
 echo "Shared packages"
-export DEBSWAY_OWNER=beta
+export WREN_OWNER=beta
 apt_install bbb ddd >/dev/null
-export DEBSWAY_OWNER=alpha
+export WREN_OWNER=alpha
 apt_purge aaa bbb ccc >/dev/null
-check "purging removes the marker" bash -c "! [ -f '$ST/pkg/debsway-alpha' ]"
+check "purging removes the marker" bash -c "! [ -f '$ST/pkg/wren-alpha' ]"
 check "packages only alpha needed are gone" bash -c "! [ -f '$ST/pkg/aaa' ] && ! [ -f '$ST/pkg/ccc' ]"
 check "a package beta still needs stays" installed bbb
 check "autoremove ran" logged '^apt-get autoremove --purge'
-export DEBSWAY_OWNER=beta
+export WREN_OWNER=beta
 apt_purge >/dev/null
 check "beta's purge removes the rest" bash -c "! [ -f '$ST/pkg/bbb' ] && ! [ -f '$ST/pkg/ddd' ]"
 
@@ -155,9 +155,9 @@ mkdir -p "$ST/f/root/DEBIAN"
 chmod 0755 "$ST/f/root" "$ST/f/root/DEBIAN"
 printf 'Package: fakeapp\nVersion: 1\nArchitecture: all\nMaintainer: x <x@localhost>\nDescription: test\n' >"$ST/f/root/DEBIAN/control"
 dpkg-deb --root-owner-group --build "$ST/f/root" "$ST/f/fakeapp.deb" >/dev/null
-export DEBSWAY_OWNER=gamma
+export WREN_OWNER=gamma
 apt_install "$ST/f/fakeapp.deb" libfoo >/dev/null
-check "the marker depends on the package in the file" bash -c "grep -q fakeapp '$ST/pkg/debsway-gamma.deps' && grep -q libfoo '$ST/pkg/debsway-gamma.deps'"
+check "the marker depends on the package in the file" bash -c "grep -q fakeapp '$ST/pkg/wren-gamma.deps' && grep -q libfoo '$ST/pkg/wren-gamma.deps'"
 check "the file's package was made automatic" test "$(mark fakeapp)" = auto
 apt_purge fakeapp >/dev/null
 check "removing takes it away" bash -c "! [ -f '$ST/pkg/fakeapp' ]"
@@ -165,8 +165,8 @@ check "removing takes it away" bash -c "! [ -f '$ST/pkg/fakeapp' ]"
 echo "Packages installed before markers existed"
 fake_install oldpkg manual ""
 fake_install sharedpkg manual ""
-fake_install debsway-other manual "sharedpkg"
-export DEBSWAY_OWNER=delta
+fake_install wren-other manual "sharedpkg"
+export WREN_OWNER=delta
 apt_purge oldpkg sharedpkg >/dev/null
 check "an old package is purged by name" bash -c "! [ -f '$ST/pkg/oldpkg' ]"
 check "unless another script's marker needs it" installed sharedpkg
@@ -185,16 +185,16 @@ apt_purge >/dev/null
 check "with nothing recorded and no names, nothing is removed" installed untouched
 
 echo "Switching to a package that conflicts with the old one"
-export DEBSWAY_OWNER=epsilon
+export WREN_OWNER=epsilon
 apt_install oldname extra >/dev/null
 apt_drop oldname
 apt_install newname >/dev/null
-check "the dropped package leaves the marker" test "$(tr -d ',\n' <"$ST/pkg/debsway-epsilon.deps")" = "extra newname"
+check "the dropped package leaves the marker" test "$(tr -d ',\n' <"$ST/pkg/wren-epsilon.deps")" = "extra newname"
 APT_DROP=()
 apt_drop extra
 n=$(count '^apt-get install')
 apt_install newname >/dev/null
-check "dropping works even when nothing new is asked for" test "$(tr -d ',\n' <"$ST/pkg/debsway-epsilon.deps")" = newname
+check "dropping works even when nothing new is asked for" test "$(tr -d ',\n' <"$ST/pkg/wren-epsilon.deps")" = newname
 check "and the marker was rebuilt for it" test "$(count '^apt-get install')" -gt "$n"
 
 # need_tools: only the packages of what is missing, each once, through apt_install

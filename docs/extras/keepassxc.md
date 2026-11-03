@@ -3,16 +3,16 @@
 ## SYNOPSIS
 
 ```
-debsway install keepassxc                     install it (switches a full build to the minimal one)
-debsway remove keepassxc                      remove it (your .kdbx files stay)
-debsway manual keepassxc                      print the manual steps below
+wrenctl install keepassxc                     install it (switches a full build to the minimal one)
+wrenctl remove keepassxc                      remove it (your .kdbx files stay)
+wrenctl manual keepassxc                      print the manual steps below
 
 keepassxc                                     start it (or Super+d, then keepassxc)
   Ctrl+C on an entry copies its password: paste it into the page
 ```
 
 KeePassXC is a password manager that keeps all your passwords, and two-factor
-codes (TOTP) if you like, in one encrypted file you control. debsway installs
+codes (TOTP) if you like, in one encrypted file you control. Wren Linux installs
 Debian's minimal build, `keepassxc-minimal`: no browser integration and no
 KeePassXC-Browser add-on for Firefox, so no web page, and not the sandboxed
 Firefox either, has a way to talk to it. You copy and paste a password, or use

@@ -1,14 +1,14 @@
 # shellcheck shell=bash
-# Written by debsway parts/command-hints.sh (data/command-hints.bash), as
-# /usr/local/share/debsway/command-hints.bash; ~/.bashrc loads it.
-# A command that isn't installed anywhere: if a debsway extra provides it
+# Written by Wren Linux parts/command-hints.sh (data/command-hints.bash), as
+# /usr/local/share/wren/command-hints.bash; ~/.bashrc loads it.
+# A command that isn't installed anywhere: if a Wren Linux extra provides it
 # (its "# status:" line names bin:NAME or file:/usr/local/bin/NAME), this
 # says which script installs it. It only prints: it never installs or runs
 # anything, and it looks up plain names only. Bash calls it only when no
 # program of that name exists, so it never hides a real one. Anything else
 # goes to Debian's command-not-found, if installed, as /etc/bash.bashrc does.
 command_not_found_handle() {
-    local dir=@DEBSWAY_DIR@ f line w script='' words=()
+    local dir=@WREN_DIR@ f line w script='' words=()
     if [[ $1 =~ ^[A-Za-z0-9][A-Za-z0-9._+-]{0,63}$ ]]; then
         for f in "$dir"/extras/*.sh; do
             line=$(grep -m1 '^# status:' "$f" 2>/dev/null) || continue
@@ -19,7 +19,7 @@ command_not_found_handle() {
         done
     fi
     if [ -n "$script" ]; then
-        printf '%s: not installed. debsway installs it with:\n    debsway install %s\n(or the debsway menu: Install apps)\n' \
+        printf '%s: not installed. Wren Linux installs it with:\n    wrenctl install %s\n(or the Wren menu: Install apps)\n' \
             "$1" "${script%.sh}" >&2
         return 127
     fi

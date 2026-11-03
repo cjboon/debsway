@@ -6,18 +6,18 @@
 #
 # Several scripts need the same packages (QEMU for Whonix and mockvps-kvm,
 # XWayland for every X11 app). So a script's packages are not installed
-# directly: apt_install builds a tiny package, debsway-NAME, that does
+# directly: apt_install builds a tiny package, wren-NAME, that does
 # nothing but depend on what NAME asked for, and installs that. The packages
 # come in as its dependencies, which apt marks "automatic". apt_purge then
-# removes debsway-NAME and lets apt autoremove whatever nothing else needs:
+# removes wren-NAME and lets apt autoremove whatever nothing else needs:
 # a package another script's marker (or you, with apt-mark manual) still
-# needs is kept. NAME is the script's own name, or $DEBSWAY_OWNER.
+# needs is kept. NAME is the script's own name, or $WREN_OWNER.
 
 # apt_marker: the marker package for the running script
 apt_marker() {
-    local name=${DEBSWAY_OWNER:-$(basename -- "$0" .sh)}
+    local name=${WREN_OWNER:-$(basename -- "$0" .sh)}
     name=$(printf '%s' "$name" | tr 'A-Z_' 'a-z-' | tr -cd 'a-z0-9.+-')
-    printf 'debsway-%s\n' "${name:-script}"
+    printf 'wren-%s\n' "${name:-script}"
 }
 
 # marker_depends MARKER: the packages an installed MARKER depends on
@@ -42,12 +42,12 @@ marker_build() {
         # Newer than any earlier one, so a second call replaces the first
         echo "Version: 0.$(date +%s%N)"
         echo "Architecture: all"
-        echo "Maintainer: debsway <debsway@localhost>"
+        echo "Maintainer: Wren Linux <wren@localhost>"
         echo "Section: misc"
         echo "Priority: optional"
         echo "Depends: $deps"
-        echo "Description: what ${marker#debsway-} installed, written by debsway"
-        echo " Depends on the packages that debsway's ${marker#debsway-} script"
+        echo "Description: what ${marker#wren-} installed, written by Wren Linux"
+        echo " Depends on the packages that Wren Linux's ${marker#wren-} script"
         echo " installed. Removing this package (or running that script with"
         echo " --remove) lets apt autoremove the ones nothing else needs."
     } >"$root/DEBIAN/control"
@@ -88,10 +88,10 @@ apt_install() {
     if [ ${#new[@]} -eq 0 ] && [ ${#debs[@]} -eq 0 ] && ! $stale; then return 0; fi
 
     if $need_net || [ ${#debs[@]} -gt 0 ]; then
-        have_internet || die "No internet connection. Connect first: bash $DEBSWAY_DIR/wifi.sh"
-        if [ -z "${DEBSWAY_APT_UPDATED:-}" ]; then
+        have_internet || die "No internet connection. Connect first: bash $WREN_DIR/wifi.sh"
+        if [ -z "${WREN_APT_UPDATED:-}" ]; then
             $SUDO apt-get update
-            export DEBSWAY_APT_UPDATED=1
+            export WREN_APT_UPDATED=1
         fi
     fi
     if [ ${#debs[@]} -gt 0 ]; then
@@ -138,7 +138,7 @@ need_tools() {
 }
 
 # apt_purge PACKAGE...: removes what the running script installed with
-# apt_install, except what other debsway scripts still need. PACKAGEs are
+# apt_install, except what other Wren Linux scripts still need. PACKAGEs are
 # used only when this script has no marker: it installed its packages before
 # markers existed, or an earlier --remove purged the marker and was cut off.
 apt_purge() {
@@ -207,10 +207,10 @@ apt_needed_by_marker() {
     local m
     while read -r m; do
         if marker_depends "$m" | grep -qxF -- "$1"; then
-            echo "${m#debsway-}"
+            echo "${m#wren-}"
             return 0
         fi
-    done < <(dpkg-query -W -f='${db:Status-Abbrev} ${Package}\n' 'debsway-*' 2>/dev/null |
+    done < <(dpkg-query -W -f='${db:Status-Abbrev} ${Package}\n' 'wren-*' 2>/dev/null |
         awk '$1 == "ii" { print $2 }')
 }
 
@@ -230,9 +230,9 @@ apt_sources_ok() {
 # question can be answered with none. Before packages are downloaded: if
 # nothing in /etc/apt names the running release, add deb.debian.org's lines.
 # http unless ca-certificates is already there, so the first apt-get works.
-# (DEBSWAY_APT_DIR is where /etc/apt is, for tests.)
+# (WREN_APT_DIR is where /etc/apt is, for tests.)
 apt_sources_ensure() {
-    local dir=${DEBSWAY_APT_DIR:-/etc/apt} proto=https src
+    local dir=${WREN_APT_DIR:-/etc/apt} proto=https src
     [ -n "${VERSION_CODENAME:-}" ] || { warn "No VERSION_CODENAME: not touching apt sources."; return 0; }
     is_installed ca-certificates || proto=http
     if apt_sources_ok "$dir"; then
@@ -287,10 +287,10 @@ install_apt_key() {
 # updates from the apt repository at SITE. By default it only takes
 # Debian's, which would leave NAME's packages without security fixes.
 allow_unattended_updates() {
-    printf '%s\n' "// Written by debsway ($1)" \
+    printf '%s\n' "// Written by Wren Linux ($1)" \
         "Unattended-Upgrade::Origins-Pattern:: \"site=$2\";" |
-        $SUDO tee "/etc/apt/apt.conf.d/52debsway-$1" >/dev/null
+        $SUDO tee "/etc/apt/apt.conf.d/52wren-$1" >/dev/null
     note "Updates from $2 install themselves too."
 }
 
-forget_unattended_updates() { $SUDO rm -f "/etc/apt/apt.conf.d/52debsway-$1"; }
+forget_unattended_updates() { $SUDO rm -f "/etc/apt/apt.conf.d/52wren-$1"; }

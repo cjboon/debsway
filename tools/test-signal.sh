@@ -75,14 +75,14 @@ run
 check "the pinned key: it goes in" cmp "$T/good.asc" "$T/root/usr/share/keyrings/signal-desktop-keyring.asc"
 check "...the repository, trusted with that key only" \
     grep -qx 'deb \[arch=amd64 signed-by=/usr/share/keyrings/signal-desktop-keyring.asc\] https://updates.signal.org/desktop/apt xenial main' "$T/root/etc/apt/sources.list.d/signal-desktop.list"
-check "...updated by unattended-upgrades" grep -q 'site=updates.signal.org' "$T/root/etc/apt/apt.conf.d/52debsway-signal"
+check "...updated by unattended-upgrades" grep -q 'site=updates.signal.org' "$T/root/etc/apt/apt.conf.d/52wren-signal"
 check "...the sandbox helper made not setuid, by an override updates keep" grep -qx 'sudo dpkg-statoverride --add root root 0755 /opt/Signal/chrome-sandbox' "$T/calls"
 check "...before Signal is installed" \
-    bash -c 'o=$(grep -n "dpkg-statoverride --add" "$1" | cut -d: -f1); i=$(grep -n "apt-get install .*debsway-signal.deb" "$1" | cut -d: -f1); [ -n "$o" ] && [ -n "$i" ] && [ "$o" -lt "$i" ]' _ "$T/calls"
+    bash -c 'o=$(grep -n "dpkg-statoverride --add" "$1" | cut -d: -f1); i=$(grep -n "apt-get install .*wren-signal.deb" "$1" | cut -d: -f1); [ -n "$o" ] && [ -n "$i" ] && [ "$o" -lt "$i" ]' _ "$T/calls"
 printf '#!/bin/sh\necho "/opt/Signal/chrome-sandbox root root 0755"\n' >"$T/bin/dpkg-statoverride"
 run --remove
 check "--remove: the override, the repository, its key and the update rule go" \
-    bash -c 'grep -q "dpkg-statoverride --remove /opt/Signal/chrome-sandbox" "$1" && grep -q "rm -f /etc/apt/sources.list.d/signal-desktop.list /usr/share/keyrings/signal-desktop-keyring.asc" "$1" && grep -q "rm -f /etc/apt/apt.conf.d/52debsway-signal" "$1"' _ "$T/calls"
-check "...and Signal, through its marker" grep -q 'apt-get purge -y debsway-signal' "$T/calls"
+    bash -c 'grep -q "dpkg-statoverride --remove /opt/Signal/chrome-sandbox" "$1" && grep -q "rm -f /etc/apt/sources.list.d/signal-desktop.list /usr/share/keyrings/signal-desktop-keyring.asc" "$1" && grep -q "rm -f /etc/apt/apt.conf.d/52wren-signal" "$1"' _ "$T/calls"
+check "...and Signal, through its marker" grep -q 'apt-get purge -y wren-signal' "$T/calls"
 
 [ "$fails" -eq 0 ]

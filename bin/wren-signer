@@ -1,10 +1,10 @@
 #!/bin/bash
-# debsway-signer: written by debsway extras/signing-key.sh
-# Installed as /usr/local/libexec/debsway-signer, run as the user
-# debsway-signer, which holds debsway's signing subkey: that user has no
+# wren-signer: written by Wren Linux extras/signing-key.sh
+# Installed as /usr/local/libexec/wren-signer, run as the user
+# wren-signer, which holds Wren Linux's signing subkey: that user has no
 # password, no login and no network (a firewall rule drops all it sends), and
 # your own user can't read its files. Your user may run this, and nothing
-# else, as debsway-signer, after typing your sudo password. It does a few
+# else, as wren-signer, after typing your sudo password. It does a few
 # fixed things and never hands out a secret key:
 #   new NAME EMAIL   make the key (once): a primary key that only certifies and
 #                    a signing subkey; the passphrase for the backup on stdin.
@@ -25,20 +25,20 @@ set -euo pipefail
 umask 077
 export PATH=/usr/bin:/bin
 # (a test points these at a temp folder)
-HOME_DIR=/var/lib/debsway-signer
+HOME_DIR=/var/lib/wren-signer
 KEYRING=$HOME_DIR/gnupg
 SHM=/dev/shm
 
-die() { printf 'debsway-signer: %s\n' "$*" >&2; exit 1; }
+die() { printf 'wren-signer: %s\n' "$*" >&2; exit 1; }
 
-[ "$(id -un)" = debsway-signer ] ||
-    die "this runs as the user debsway-signer; use debsway-key."
-[ $# -ge 1 ] || die "usage: debsway-signer new NAME EMAIL | sign | clearsign | detach-sign | public | fingerprint | expires | renew"
+[ "$(id -un)" = wren-signer ] ||
+    die "this runs as the user wren-signer; use wren-key."
+[ $# -ge 1 ] || die "usage: wrenctl-signer new NAME EMAIL | sign | clearsign | detach-sign | public | fingerprint | expires | renew"
 cmd=$1
 shift
 
 G=(gpg --homedir "$KEYRING" --batch --no-tty --quiet --no-auto-key-retrieve --no-auto-key-locate)
-fpr() { cat "$KEYRING/fingerprint" 2>/dev/null || die "there is no key yet: debsway-key makes one."; }
+fpr() { cat "$KEYRING/fingerprint" 2>/dev/null || die "there is no key yet: wren-key makes one."; }
 # the arguments a command may have: exactly this many
 args() {
     local n=$1
@@ -53,7 +53,7 @@ primary_secret() { gpg --homedir "$1" --batch --with-colons --list-secret-keys "
 # scratch: a temp keyring in memory, for the moments the primary key is out
 scratch() {
     local d
-    d=$(mktemp -d "$SHM/debsway-signer.XXXXXXXX")
+    d=$(mktemp -d "$SHM/wren-signer.XXXXXXXX")
     mkdir -m 700 "$d/g" "$d/out" "$d/h"
     echo "$d"
 }
@@ -98,7 +98,7 @@ case $cmd in
         name=$1 email=$2
         [[ $name =~ ^[[:alnum:]][[:alnum:]\ .\'_-]{0,63}$ ]] || die "a name of letters, digits, spaces and . ' _ -, please."
         [[ $email =~ ^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24}$ ]] || die "that isn't an email address."
-        [ ! -s "$KEYRING/fingerprint" ] || die "there is a key already ($(cat "$KEYRING/fingerprint")). Renew it (debsway-key renew), or remove the extra first."
+        [ ! -s "$KEYRING/fingerprint" ] || die "there is a key already ($(cat "$KEYRING/fingerprint")). Renew it (wren-key renew), or remove the extra first."
         S=$(scratch)
         trap 'scratch_done "$S"' EXIT
         IFS= read -r pass || die "no passphrase was given."
@@ -112,15 +112,15 @@ case $cmd in
         "${T[@]}" --quick-add-key "$f" ed25519 sign 2y 2>/dev/null
         # the whole key, encrypted to the passphrase; checked before anything is kept
         "${T[@]}" --export-secret-keys "$f" >"$S/full.gpg"
-        encrypt_backup "$S/pass" "$S/full.gpg" "$S/out/debsway-signing-key-backup.asc"
+        encrypt_backup "$S/pass" "$S/full.gpg" "$S/out/wren-signing-key-backup.asc"
         gpg --homedir "$S/h" --batch --no-tty --quiet --pinentry-mode loopback --passphrase-file "$S/pass" \
-            --decrypt "$S/out/debsway-signing-key-backup.asc" 2>/dev/null | cmp -s - "$S/full.gpg" ||
+            --decrypt "$S/out/wren-signing-key-backup.asc" 2>/dev/null | cmp -s - "$S/full.gpg" ||
             die "the backup didn't decrypt to the key again; nothing was kept."
         rm -f "$S/full.gpg" "$S/pass"
-        cp "$S/g/openpgp-revocs.d/$f.rev" "$S/out/debsway-signing-key-revocation.asc"
-        "${T[@]}" --armor --export "$f" >"$S/out/debsway-signing-key-public.asc"
+        cp "$S/g/openpgp-revocs.d/$f.rev" "$S/out/wren-signing-key-revocation.asc"
+        "${T[@]}" --armor --export "$f" >"$S/out/wren-signing-key-public.asc"
         keep_subkey "$S/g" "$f"
-        tar -C "$S/out" -cf - debsway-signing-key-backup.asc debsway-signing-key-revocation.asc debsway-signing-key-public.asc ;;
+        tar -C "$S/out" -cf - wren-signing-key-backup.asc wren-signing-key-revocation.asc wren-signing-key-public.asc ;;
     sign)
         args 0 "$@"
         exec "${G[@]}" --status-fd=2 --armor --detach-sign --local-user "$(fpr)" ;;
@@ -164,11 +164,11 @@ case $cmd in
         # shellcheck disable=SC2086  # one fingerprint a word
         "${T[@]}" --quick-set-expire "$f" 2y $subs 2>/dev/null
         "${T[@]}" --export-secret-keys "$f" >"$S/full.gpg"
-        encrypt_backup "$S/pass" "$S/full.gpg" "$S/out/debsway-signing-key-backup.asc"
+        encrypt_backup "$S/pass" "$S/full.gpg" "$S/out/wren-signing-key-backup.asc"
         rm -f "$S/full.gpg" "$S/pass"
-        "${T[@]}" --armor --export "$f" >"$S/out/debsway-signing-key-public.asc"
+        "${T[@]}" --armor --export "$f" >"$S/out/wren-signing-key-public.asc"
         keep_subkey "$S/g" "$f"
-        tar -C "$S/out" -cf - debsway-signing-key-backup.asc debsway-signing-key-public.asc ;;
+        tar -C "$S/out" -cf - wren-signing-key-backup.asc wren-signing-key-public.asc ;;
     *)
         die "unknown command \"$cmd\"." ;;
 esac

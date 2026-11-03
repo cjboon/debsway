@@ -1,4 +1,4 @@
-# Keeps the wifi-signin user off this computer (debsway parts/incognito.sh).
+# Keeps the wifi-signin user off this computer (Wren Linux parts/incognito.sh).
 # Only that user's traffic is touched. It runs the Wi-Fi sign-in window
 # (bin/wifi-signin), a throwaway Firefox that lives only while you sign in.
 # Unlike incognito it may reach the local network: a café's or hotel's sign-in
@@ -9,10 +9,10 @@
 #     as for incognito, since it is what the window is for
 #   - multicast and broadcast addresses (no sign-in page lives there)
 
-table inet debsway_wifi_signin
-delete table inet debsway_wifi_signin
+table inet wren_wifi_signin
+delete table inet wren_wifi_signin
 
-table inet debsway_wifi_signin {
+table inet wren_wifi_signin {
     chain output {
         type filter hook output priority 0; policy accept;
         meta skuid "wifi-signin" jump wifi_signin

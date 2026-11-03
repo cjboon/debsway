@@ -2,7 +2,7 @@
 Type=Application
 Name=Firefox (sandboxed)
 GenericName=Web Browser
-Comment=Firefox as its own locked-down user (debsway)
+Comment=Firefox as its own locked-down user (Wren Linux)
 Exec=/usr/local/bin/firefox %u
 Terminal=false
 Categories=Network;WebBrowser;

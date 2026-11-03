@@ -5,16 +5,16 @@
 # All of them share one system group, so one firewall rule covers every one of
 # them and a new profile never has to touch the firewall.
 
-FX_GROUP=debsway-fx
-FX_HOME_ROOT=/var/lib/debsway-fx
+FX_GROUP=wren-fx
+FX_HOME_ROOT=/var/lib/wren-fx
 # (these three paths can be pointed elsewhere by a test)
-FX_PROFILE_DIR=${DEBSWAY_FX_PROFILE_DIR:-/etc/debsway/firefox-profiles}
-FX_SESSION=${DEBSWAY_FX_SESSION:-/usr/local/libexec/firefox-session}
-FX_CLIENT=${DEBSWAY_FX_CLIENT:-/usr/local/bin/firefox}
+FX_PROFILE_DIR=${WREN_FX_PROFILE_DIR:-/etc/wren/firefox-profiles}
+FX_SESSION=${WREN_FX_SESSION:-/usr/local/libexec/firefox-session}
+FX_CLIENT=${WREN_FX_CLIENT:-/usr/local/bin/firefox}
 
 # fx_profile_name_ok NAME: a name that makes a valid user, fx-NAME (at most 31
 # characters), and a command, firefox-NAME, that isn't one already: firefox-esr
-# is Firefox itself, and debsway has firefox-restart-check and firefox-session
+# is Firefox itself, and Wren Linux has firefox-restart-check and firefox-session
 fx_profile_name_ok() {
     [[ $1 =~ ^[a-z][a-z0-9-]{0,27}$ ]] || return 1
     case $1 in esr | restart-check | session) return 1 ;; esac
@@ -52,17 +52,17 @@ fx_create_user() {
 fx_allow_session() {
     local user=$1 rule
     rule=$(mktemp)
-    printf '# Written by debsway (sandboxed Firefox). %s may run the firefox session script,\n# and nothing else, as the user %s.\n%s ALL=(%s) NOPASSWD: %s\n' \
+    printf '# Written by Wren Linux (sandboxed Firefox). %s may run the firefox session script,\n# and nothing else, as the user %s.\n%s ALL=(%s) NOPASSWD: %s\n' \
         "$(id -un)" "$user" "$(id -un)" "$user" "$FX_SESSION" >"$rule"
     if ! sudo visudo -cf "$rule" >/dev/null; then
         rm -f "$rule"
         die "The sudoers rule didn't pass visudo's check, so it wasn't installed."
     fi
-    sudo install -o root -g root -m 0440 "$rule" "/etc/sudoers.d/debsway-$user"
+    sudo install -o root -g root -m 0440 "$rule" "/etc/sudoers.d/wren-$user"
     rm -f "$rule"
 }
 
-fx_disallow_session() { sudo rm -f "/etc/sudoers.d/debsway-$1"; }
+fx_disallow_session() { sudo rm -f "/etc/sudoers.d/wren-$1"; }
 
 # fx_sandbox_unused: stops (die) while profiles with a user of their own exist.
 # They run through the sandbox (its firefox command, session script, firewall

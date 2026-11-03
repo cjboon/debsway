@@ -1,9 +1,9 @@
 #!/bin/bash
-# Shows what debsway has set up on this machine.
+# Shows what Wren Linux has set up on this machine.
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
-. "$DEBSWAY_DIR/packages.sh"
-. "$DEBSWAY_DIR/lib/secure-dns.sh"
-. "$DEBSWAY_DIR/lib/apt-keys.sh"
+. "$WREN_DIR/packages.sh"
+. "$WREN_DIR/lib/secure-dns.sh"
+. "$WREN_DIR/lib/apt-keys.sh"
 
 show() {
     if is_installed "$1"; then printf '  [x] %s\n' "$1"; else printf '  [ ] %s\n' "$1"; fi
@@ -14,11 +14,11 @@ on_crypt() { lsblk -s -no TYPE "$1" 2>/dev/null | grep -qx crypt; }
 
 # Security at a glance: the few things that matter most, each checked here,
 # with what to run when one isn't done. [x] yes, [~] partly, [ ] no. The
-# details follow below. (DEBSWAY_ETC and DEBSWAY_FX_CLIENT: where /etc and
+# details follow below. (WREN_ETC and WREN_FX_CLIENT: where /etc and
 # the firefox command are, for tests.)
 glance() { printf '  [%s] %s\n' "$1" "$2"; }
-ETC=${DEBSWAY_ETC:-/etc}
-FX=${DEBSWAY_FX_CLIENT:-/usr/local/bin/firefox}
+ETC=${WREN_ETC:-/etc}
+FX=${WREN_FX_CLIENT:-/usr/local/bin/firefox}
 echo "Security at a glance:"
 root_src=$(findmnt -no SOURCE / 2>/dev/null | sed 's/\[.*//')
 if [ -n "$root_src" ] && on_crypt "$root_src"; then
@@ -43,7 +43,7 @@ if is_installed unattended-upgrades && grep -qs 'Unattended-Upgrade "1"' "$ETC/a
 else
     glance " " "Security updates don't install by themselves: bash parts/unattended-upgrades.sh"
 fi
-if [ -x "$FX" ] && [ "$(sed -n 's|^x-scheme-handler/https=||p' "$HOME/.config/mimeapps.list" 2>/dev/null | head -1)" = debsway-firefox.desktop ]; then
+if [ -x "$FX" ] && [ "$(sed -n 's|^x-scheme-handler/https=||p' "$HOME/.config/mimeapps.list" 2>/dev/null | head -1)" = wren-firefox.desktop ]; then
     glance x "Web links open in the sandboxed Firefox"
 elif [ -x "$FX" ]; then
     glance "~" "The sandboxed Firefox is there, but links open in another browser: bash extras/firefox-sandbox.sh"
@@ -53,9 +53,9 @@ fi
 if secure_dns_on; then
     glance x "DNS encrypted, for every program"
 elif [ -x "$FX" ]; then
-    # (debsway's Firefox encrypts its own while secure DNS is off: bin/firefox-session)
+    # (Wren Linux's Firefox encrypts its own while secure DNS is off: bin/firefox-session)
     if secure_dns_installed; then
-        glance "~" "Secure DNS switched off: Firefox encrypts its own, other programs don't (debsway menu: Secure DNS)"
+        glance "~" "Secure DNS switched off: Firefox encrypts its own, other programs don't (Wren menu: Secure DNS)"
     else
         glance "~" "DNS encrypted for Firefox only: bash parts/secure-dns.sh, for every program"
     fi
@@ -101,19 +101,20 @@ status_of() {
 }
 
 echo "Parts (parts/):"
-for part in "${PARTS[@]}"; do status_of "$DEBSWAY_DIR/parts/$part.sh"; done
+for part in "${PARTS[@]}"; do status_of "$WREN_DIR/parts/$part.sh"; done
 
 echo "Extras (optional, extras/):"
-for f in "$DEBSWAY_DIR"/extras/*.sh; do status_of "$f"; done
+for f in "$WREN_DIR"/extras/*.sh; do status_of "$f"; done
 for f in "$OFFLINE_DIR"/torbrowser/tor-browser-linux-*.tar.xz "$OFFLINE_DIR"/whonix/Whonix-*.libvirt.xz; do
-    [ -f "$f" ] && printf '      saved: %s\n' "${f#"$DEBSWAY_DIR"/}"
+    [ -f "$f" ] && printf '      saved: %s\n' "${f#"$WREN_DIR"/}"
 done
 
-echo "Packages debsway installed (one marker per script; apt purge debsway-NAME removes it):"
-markers=$(dpkg-query -W -f='${db:Status-Abbrev} ${Package}\n' 'debsway-*' 2>/dev/null | awk '$1 == "ii" { print $2 }')
+echo "Packages Wren Linux installed (one marker per script; apt purge wren-NAME removes it):"
+# (dpkg-query fails when no package matches, as on a fresh install)
+markers=$({ dpkg-query -W -f='${db:Status-Abbrev} ${Package}\n' 'wren-*' 2>/dev/null || true; } | awk '$1 == "ii" { print $2 }')
 if [ -n "$markers" ]; then
     for m in $markers; do
-        printf '  %s: %s\n' "${m#debsway-}" "$(marker_depends "$m" | paste -sd' ')"
+        printf '  %s: %s\n' "${m#wren-}" "$(marker_depends "$m" | paste -sd' ')"
     done
 else
     echo "  (none recorded yet)"
@@ -125,13 +126,13 @@ if [ -x /usr/local/bin/incognito ]; then
 else
     echo "  [ ] incognito command (throwaway Firefox as the locked-down user)"
 fi
-if [ -f /etc/firefox-esr/debsway-hardening.js ]; then
+if [ -f /etc/firefox-esr/wren-hardening.js ]; then
     echo "  [x] HTTPS-Only Mode, JavaScript JIT off"
 else
     echo "  [ ] HTTPS-Only Mode, JavaScript JIT off"
 fi
-if [ -f /usr/share/firefox-esr/distribution/.debsway-written ]; then
-    n=$(grep -cv '^#' /etc/firefox-esr/debsway-ublock-allow 2>/dev/null || true)
+if [ -f /usr/share/firefox-esr/distribution/.wren-written ]; then
+    n=$(grep -cv '^#' /etc/firefox-esr/wren-ublock-allow 2>/dev/null || true)
     echo "  [x] uBlock Origin medium mode (${n:-0} sites allowed: ublock-allow --list)"
 else
     echo "  [ ] uBlock Origin medium mode"
@@ -145,7 +146,7 @@ fi
 echo "Firefox profile commands (extras/firefox-profiles/new-profile.sh):"
 found=false
 for c in "$HOME"/.local/bin/firefox-*; do
-    if grep -qsE 'debsway (extras/)?firefox-profiles/' "$c"; then
+    if grep -qsE 'Wren Linux (extras/)?firefox-profiles/' "$c"; then
         printf '  %s\n' "${c##*/}"
         found=true
     fi
@@ -156,8 +157,8 @@ echo "Screen lock:"
 # Without swaylock nothing locks, whatever the idle settings say
 if ! command -v swaylock >/dev/null; then
     echo "  NONE: swaylock isn't installed, so the screen never locks (put it back: bash parts/swaylock.sh)"
-elif [ -x "$HOME/.local/bin/debsway-idle" ] && [ -f "$SWAY_SNIPPETS/idle.conf" ]; then
-    echo "  after $("$HOME/.local/bin/debsway-idle" --minutes) minutes idle (change it: timer lock MINUTES)"
+elif [ -x "$HOME/.local/bin/wren-idle" ] && [ -f "$SWAY_SNIPPETS/idle.conf" ]; then
+    echo "  after $("$HOME/.local/bin/wren-idle" --minutes) minutes idle (change it: timer lock MINUTES)"
 elif [ -f "$SWAY_SNIPPETS/idle.conf" ]; then
     echo "  after 5 minutes idle (to change it with timer lock: bash parts/swayidle.sh again)"
 else
@@ -166,7 +167,7 @@ fi
 
 echo "Theme:"
 if [ -x "$HOME/.local/bin/theme" ]; then
-    "$HOME/.local/bin/theme" | sed 's/^Theme: /  /; s/$/ (switch: theme light, theme dark, or the debsway menu)/'
+    "$HOME/.local/bin/theme" | sed 's/^Theme: /  /; s/$/ (switch: theme light, theme dark, or the Wren menu)/'
 else
     echo "  dark (bash parts/theme.sh: theme light or dark)"
 fi
@@ -175,7 +176,7 @@ echo "Wallpaper:"
 if [ -x "$HOME/.local/bin/wallpaper" ]; then
     "$HOME/.local/bin/wallpaper" status | sed 's/^Wallpaper: //; s/^/  /'
 else
-    echo "  sway's own setting (bash parts/wallpaper.sh: your picture from ~/Pictures/debsway/desktop)"
+    echo "  sway's own setting (bash parts/wallpaper.sh: your picture from ~/Pictures/wren/desktop)"
 fi
 
 echo "sway snippets in $SWAY_SNIPPETS:"
@@ -189,7 +190,7 @@ for ifc in $(wifi_ifaces); do
     if systemctl is-active --quiet NetworkManager &&
         nmcli -t -f DEVICE,STATE device 2>/dev/null | grep -q "^$ifc:connected"; then
         how="NetworkManager"
-    elif [ -f "/etc/network/interfaces.d/debsway-wifi-$ifc" ]; then
+    elif [ -f "/etc/network/interfaces.d/wren-wifi-$ifc" ]; then
         how="ifupdown + wpa_supplicant (wifi.sh)"
     elif systemctl is-enabled --quiet "wpa_supplicant@$ifc.service" 2>/dev/null; then
         how="wpa_supplicant@$ifc + systemd-networkd (wifi.sh)"
@@ -198,7 +199,7 @@ for ifc in $(wifi_ifaces); do
     fi
     printf '  %s: %s\n' "$ifc" "$how"
 done
-if [ -e /etc/tor/.debsway-apt-tor ]; then
+if [ -e /etc/tor/.wren-apt-tor ]; then
     echo "  apt downloads through Tor (parts/apt-tor.sh)"
 else
     echo "  apt downloads directly"
@@ -208,7 +209,7 @@ if [ -n "$(apt_keys_installed)" ]; then
     echo "Signing keys of added apt repositories:"
     apt_keys_status
 fi
-if [ -f /etc/NetworkManager/conf.d/90-debsway-random-mac.conf ]; then
+if [ -f /etc/NetworkManager/conf.d/90-wren-random-mac.conf ]; then
     echo "  random Wi-Fi MAC address: on"
 else
     echo "  random Wi-Fi MAC address: off"

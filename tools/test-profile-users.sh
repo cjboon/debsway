@@ -42,10 +42,10 @@ if [[ "\${1:-}" == fx-* || "\${2:-}" == fx-* ]]; then
 fi
 exec /usr/bin/id "\$@"
 FAKE
-printf '#!/bin/sh\nexit 1\n' >"$T/fake/getent"   # no group debsway-fx, no render group yet
+printf '#!/bin/sh\nexit 1\n' >"$T/fake/getent"   # no group wren-fx, no render group yet
 chmod +x "$T/fake/"*
-export HOME="$T/home" DEBSWAY_FX_CLIENT="$T/sandbox/firefox" DEBSWAY_FX_SESSION="$T/sandbox/firefox-session"
-export DEBSWAY_TEST_ANSWERS="$T/answers"
+export HOME="$T/home" WREN_FX_CLIENT="$T/sandbox/firefox" WREN_FX_SESSION="$T/sandbox/firefox-session"
+export WREN_TEST_ANSWERS="$T/answers"
 
 run() { # script body, run with the helpers loaded and the pretend commands first
     env PATH="$T/fake:$PATH" bash -c '. "$1/lib.sh"; PATH="$2:$PATH"; . "$1/lib/firefox-sandbox.sh"; . "$1/lib/firefox-profiles.sh"; '"$3" _ "$HERE" "$T/fake"
@@ -53,31 +53,31 @@ run() { # script body, run with the helpers loaded and the pretend commands firs
 
 : >"$T/calls"; : >"$T/answers"
 : >"$T/made"
-run x x 'fx_create_user fx-bank /var/lib/debsway-fx/bank "debsway Firefox profile bank"' >/dev/null 2>&1
-check "a new profile's user is made through useradd" grep -q 'sudo useradd --system --gid debsway-fx --create-home --home-dir /var/lib/debsway-fx/bank --shell /usr/sbin/nologin' "$T/calls"
-check "...in the shared group, which is made first if it is missing" grep -q 'sudo groupadd --system debsway-fx' "$T/calls"
+run x x 'fx_create_user fx-bank /var/lib/wren-fx/bank "Wren Linux Firefox profile bank"' >/dev/null 2>&1
+check "a new profile's user is made through useradd" grep -q 'sudo useradd --system --gid wren-fx --create-home --home-dir /var/lib/wren-fx/bank --shell /usr/sbin/nologin' "$T/calls"
+check "...in the shared group, which is made first if it is missing" grep -q 'sudo groupadd --system wren-fx' "$T/calls"
 check "...locked, with no login shell" grep -q 'sudo usermod --lock --shell /usr/sbin/nologin fx-bank' "$T/calls"
-check "...and a home only that user can enter" grep -q 'sudo chmod 0700 /var/lib/debsway-fx/bank' "$T/calls"
+check "...and a home only that user can enter" grep -q 'sudo chmod 0700 /var/lib/wren-fx/bank' "$T/calls"
 
 : >"$T/calls"
 run x x 'fx_allow_session fx-bank' >/dev/null 2>&1
 check "the sudo rule is checked with visudo" grep -q 'sudo visudo -cf' "$T/calls"
-check "...and installed read-only for root, named for the user" grep -q 'sudo install -o root -g root -m 0440 .* /etc/sudoers.d/debsway-fx-bank' "$T/calls"
-rule=$(grep -h 'NOPASSWD' "$T/files/debsway-fx-bank")
+check "...and installed read-only for root, named for the user" grep -q 'sudo install -o root -g root -m 0440 .* /etc/sudoers.d/wren-fx-bank' "$T/calls"
+rule=$(grep -h 'NOPASSWD' "$T/files/wren-fx-bank")
 check "it lets your user run the session script as fx-bank" grep -qF "ALL=(fx-bank) NOPASSWD: $T/sandbox/firefox-session" <<<"$rule"
-check "...and nothing else (one rule line)" test "$(grep -c NOPASSWD "$T/files/debsway-fx-bank")" -eq 1
+check "...and nothing else (one rule line)" test "$(grep -c NOPASSWD "$T/files/wren-fx-bank")" -eq 1
 
 # a whole profile
 : >"$T/calls"; rm -rf "$T/files"/*; rm -f "$T/home/.local/bin/firefox-bank"
 echo fx-bank >"$T/made"
 out=$(run x x 'make_profile bank https://bank.example/ no' 2>&1)
-check "make_profile writes the profile's settings where only root can" test -f "$T/files/bank.conf" && grep -q 'sudo tee /etc/debsway/firefox-profiles/bank.conf' "$T/calls"
+check "make_profile writes the profile's settings where only root can" test -f "$T/files/bank.conf" && grep -q 'sudo tee /etc/wren/firefox-profiles/bank.conf' "$T/calls"
 check "...the address" grep -qx 'url=https://bank.example/' "$T/files/bank.conf"
 check "...and the JavaScript choice" grep -qx 'fast_js=no' "$T/files/bank.conf"
-check "it allows the session for that user only" test -f "$T/files/debsway-fx-bank"
+check "it allows the session for that user only" test -f "$T/files/wren-fx-bank"
 check "the firefox-bank command runs the sandbox with the profile name" grep -q "firefox --profile bank" "$T/home/.local/bin/firefox-bank"
 check "...and is executable" test -x "$T/home/.local/bin/firefox-bank"
-check "...and is one remove_profile will recognise as ours" grep -q 'Written by debsway extras/firefox-profiles/new-profile.sh' "$T/home/.local/bin/firefox-bank"
+check "...and is one remove_profile will recognise as ours" grep -q 'Written by Wren Linux extras/firefox-profiles/new-profile.sh' "$T/home/.local/bin/firefox-bank"
 check "it tells where the downloads go" grep -q 'Downloads/bank' <<<"$out"
 : >"$T/calls"
 run x x 'make_profile shop https://shop.example/ yes' >/dev/null 2>&1
@@ -111,7 +111,7 @@ check "...and nothing was run for them" test ! -s "$T/calls"
 mkdir -p "$T/home/.local/bin"
 printf '#!/bin/sh\necho mine\n' >"$T/home/.local/bin/firefox-work"
 : >"$T/calls"
-check "a name whose firefox-NAME command isn't debsway's is refused" not run x x 'make_profile work https://work.example/ no'
+check "a name whose firefox-NAME command isn't Wren Linux's is refused" not run x x 'make_profile work https://work.example/ no'
 check "...before any user, rule or settings file is made" test ! -s "$T/calls"
 check "...and that command is left as it was" grep -qx 'echo mine' "$T/home/.local/bin/firefox-work"
 
@@ -119,12 +119,12 @@ check "...and that command is left as it was" grep -qx 'echo mine' "$T/home/.loc
 # (the guard is tested on its own: the extra itself would run the real sudo)
 mkdir -p "$T/profiles"
 echo 'url=https://bank.example/' >"$T/profiles/bank.conf"
-out=$(DEBSWAY_FX_PROFILE_DIR="$T/profiles" run x x 'fx_sandbox_unused' 2>&1)
+out=$(WREN_FX_PROFILE_DIR="$T/profiles" run x x 'fx_sandbox_unused' 2>&1)
 rc=$?
 check "removing the sandbox with a profile left is refused" test "$rc" -ne 0
 check "...naming the profile and how to remove it" bash -c 'grep -q "bank" <<<"$1" && grep -q "new-profile.sh --remove" <<<"$1"' _ "$out"
 rm -f "$T/profiles/bank.conf"
-DEBSWAY_FX_PROFILE_DIR="$T/profiles" run x x 'fx_sandbox_unused' >/dev/null 2>&1
+WREN_FX_PROFILE_DIR="$T/profiles" run x x 'fx_sandbox_unused' >/dev/null 2>&1
 check "with no profile left it goes ahead" test $? -eq 0
 check "the extra asks it first thing when removing, before any change" \
     bash -c 'sed -n "/--remove ]; then/,/^fi/p" "$1" | sed -n 2p | grep -qx "    fx_sandbox_unused"' _ "$HERE/extras/firefox-sandbox.sh"
@@ -134,19 +134,19 @@ check "the extra asks it first thing when removing, before any change" \
 echo fx-bank >"$T/made"
 run x x 'remove_profile bank' >/dev/null 2>&1
 check "removing takes away the command" test ! -e "$T/home/.local/bin/firefox-bank"
-check "...the permission to run the session" grep -q 'sudo rm -f /etc/sudoers.d/debsway-fx-bank' "$T/calls"
-check "...and the settings file" grep -q 'sudo rm -f /etc/debsway/firefox-profiles/bank.conf' "$T/calls"
+check "...the permission to run the session" grep -q 'sudo rm -f /etc/sudoers.d/wren-fx-bank' "$T/calls"
+check "...and the settings file" grep -q 'sudo rm -f /etc/wren/firefox-profiles/bank.conf' "$T/calls"
 check "saying no keeps the user and the logins" not grep -q 'userdel' "$T/calls"
 : >"$T/calls"
 run x x 'make_profile bank https://bank.example/ no' >/dev/null 2>&1
 : >"$T/calls"; echo y >"$T/answers"
 run x x 'remove_profile bank' >/dev/null 2>&1
 check "saying yes deletes the user" grep -q 'sudo userdel fx-bank' "$T/calls"
-check "...and its home folder" grep -q 'sudo rm -rf /var/lib/debsway-fx/bank' "$T/calls"
+check "...and its home folder" grep -q 'sudo rm -rf /var/lib/wren-fx/bank' "$T/calls"
 
 # an older profile (in your own Firefox) is removed the old way: no sudo at all
 mkdir -p "$T/home/.local/bin"
-printf '#!/bin/sh\n# Written by debsway extras/firefox-profiles/new-profile.sh\nexec firefox-esr --name firefox-old -P old "$@"\n' >"$T/home/.local/bin/firefox-old"
+printf '#!/bin/sh\n# Written by Wren Linux extras/firefox-profiles/new-profile.sh\nexec firefox-esr --name firefox-old -P old "$@"\n' >"$T/home/.local/bin/firefox-old"
 : >"$T/calls"
 run x x 'remove_profile old' >/dev/null 2>&1
 check "an older profile's command is removed" test ! -e "$T/home/.local/bin/firefox-old"

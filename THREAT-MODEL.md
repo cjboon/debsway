@@ -1,6 +1,6 @@
-# What debsway protects against, and what it doesn't
+# What Wren Linux protects against, and what it doesn't
 
-debsway is a minimal Debian desktop with careful defaults. It makes the
+Wren Linux is a minimal Debian desktop with careful defaults. It makes the
 common attacks harder; it doesn't make you invisible or untouchable. Use
 this page to decide what else you need.
 
@@ -37,9 +37,9 @@ this page to decide what else you need.
   (`parts/random-mac.sh`).
 - **Your network seeing which packages you install**, if you chose to
   download through Tor (`parts/apt-tor.sh`, with a bridge if you need one).
-- **A tampered debsway update**, once debsway's signing key is pinned
-  (`DEBSWAY_SIGNING_FPR` in `pins.sh`, the key in
-  `data/debsway-signing-key.asc`). `update.sh` runs what it brings in with
+- **A tampered wrenctl update**, once Wren Linux's signing key is pinned
+  (`WREN_SIGNING_FPR` in `pins.sh`, the key in
+  `data/wren-signing-key.asc`). `update.sh` runs what it brings in with
   sudo, so whoever could change what GitHub serves (a taken-over account, or
   someone on the way) could otherwise run anything as root. With the key
   pinned, `update.sh` brings a change in only if the newest commit has a good
@@ -48,14 +48,14 @@ this page to decide what else you need.
   you first got (a stick, or the download in the README) is trusted as it is;
   someone in the way can still hold updates back; and until the key is
   pinned, updates come in unchecked (`update.sh` says so each time).
-  On the computer debsway is published from, `extras/signing-key.sh` keeps
-  the signing subkey with its own user, `debsway-signer`, off every network
+  On the computer Wren Linux is published from, `extras/signing-key.sh` keeps
+  the signing subkey with its own user, `wren-signer`, off every network
   and unreadable to your user, and signs only after your sudo password; the
   primary key lives only in the encrypted backup on your USB stick. Root
   there can still read the subkey, and a program running as you can have
   something signed while sudo remembers your password (a few minutes, in
   that terminal).
-- **Tampered downloads.** Everything debsway downloads from outside
+- **Tampered downloads.** Everything Wren Linux downloads from outside
   Debian is checked against the project's signing key, pinned by
   fingerprint in `pins.sh`, before it's used. `test.sh` re-checks them.
   The Wi-Fi packages carried on a USB stick (`offline/debs`) are matched,
@@ -169,11 +169,11 @@ With the extras:
 
 - **Anything running as you.** If you run a malicious program, or an
   attack escapes the browser, it can read all your files, every Firefox
-  profile's logins and your wallets. debsway doesn't sandbox your own
-  user. Only install software you trust. (With the debsway package
-  installed, the scripts debsway runs with sudo are root's files in
-  `/usr/share/debsway`, so such a program can't change them to wait for your
-  password; from your own copy in `~/debsway` it could.) `claude-regular`
+  profile's logins and your wallets. Wren Linux doesn't sandbox your own
+  user. Only install software you trust. (With the Wren Linux package
+  installed, the scripts Wren Linux runs with sudo are root's files in
+  `/usr/share/wren`, so such a program can't change them to wait for your
+  password; from your own copy in `~/wren` it could.) `claude-regular`
   (`extras/claude-regular.sh`) and `mullvad-browser-regular` run as you on
   purpose, for ease: a hacked page in Mullvad Browser reaches your files, and
   so does `firefox-esr` started by name. `claude-regular`'s
@@ -194,10 +194,10 @@ With the extras:
   elsewhere (thumbnails, recent-file lists, swap) isn't covered.
 - **Physical tampering.** Someone with the laptop alone for a while
   could install a hardware keylogger or tamper with the boot process.
-  debsway doesn't set up Secure Boot measurement or tamper evidence.
+  Wren Linux doesn't set up Secure Boot measurement or tamper evidence.
 - **A program listening through the microphone.** With the sound extra, the
   microphone is muted at every login and stays off until you switch it on
-  (`debsway --mic on`, or the debsway menu). Wi-Fi and Bluetooth have the same
+  (`wrenctl --mic on`, or the Wren menu). Wi-Fi and Bluetooth have the same
   switches, on the radio itself (rfkill), and the Bluetooth extra starts its
   adapter off. The microphone mute is software: a program running as you can
   unmute it, so against that a hardware switch or unplugging is the stronger
@@ -219,7 +219,7 @@ With the extras:
   read and write `~/projects`, and it has your network. Anything it leaves
   there is untrusted: read scripts before you run them, and look at
   `.git/config` and `.git/hooks` before you tell your own git to trust a
-  repository it made. debsway puts a guard in front of your git inside
+  repository it made. Wren Linux puts a guard in front of your git inside
   `~/projects` (`bin/git`): it refuses to run when a repository's
   `.git/config` or `.git/hooks` could run a program as you. A file could
   change between that check and the run, so it stops a confused assistant,
@@ -243,7 +243,7 @@ With the extras:
   each name, and anyone on the way can answer with a false address. HTTPS
   and apt's signatures catch a false answer for the browser and for
   packages (a certificate or a signature that doesn't match is refused);
-  other programs may not check. debsway's Firefox never sends your lookups
+  other programs may not check. Wren Linux's Firefox never sends your lookups
   to a provider it picked: with secure DNS on its own DNS-over-HTTPS
   is off and it uses the system's (encrypted); with it off, it encrypts its
   own lookups to Quad9, strictly (never plain DNS) unless "fallback" was
@@ -278,7 +278,7 @@ With the extras:
 - **A determined, well-funded attacker who targets you.** That needs
   more than a well-set-up laptop: look at Tails or Qubes OS, and at your
   habits.
-- **Mistakes in debsway itself.** It's a small project. Read the scripts
+- **Mistakes in Wren Linux itself.** It's a small project. Read the scripts
   before running them; they're written to be readable.
 
 ## Trade-offs it makes
@@ -294,7 +294,7 @@ With the extras:
   JavaScript").
 - **Wi-Fi login pages may ask again** after reconnecting, because of the
   random MAC address. Switch to one made-up address per network in
-  `/etc/NetworkManager/conf.d/90-debsway-random-mac.conf` (`stable`).
+  `/etc/NetworkManager/conf.d/90-wren-random-mac.conf` (`stable`).
 - **The screen locks by itself only after 30 minutes idle**, so a laptop
   left open is usable by whoever sits down until then. Lock it yourself
   when you step away (Super+Escape), or make the wait shorter:

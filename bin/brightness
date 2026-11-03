@@ -1,5 +1,5 @@
 #!/bin/sh
-# brightness up|down [STEP]: written by debsway parts/brightnessctl.sh
+# brightness up|down [STEP]: written by Wren Linux parts/brightnessctl.sh
 # Changes screen brightness by STEP percent (default 5), never below 5%,
 # then tells sway-status to redraw the bar.
 step=${2:-5}

@@ -12,12 +12,12 @@
 # Usage: bash lid-awake.sh [--remove | --manual]
 # summary: Closing the lid locks, but doesn't suspend
 # security: some
-# status: file:/etc/systemd/logind.conf.d/60-debsway-lid.conf
+# status: file:/etc/systemd/logind.conf.d/60-wren-lid.conf
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
-CONF=/etc/systemd/logind.conf.d/60-debsway-lid.conf
+CONF=/etc/systemd/logind.conf.d/60-wren-lid.conf
 
 # logind reads its settings again on SIGHUP; a restart could end the session
 reload_logind() { sudo systemctl kill -s HUP systemd-logind >/dev/null 2>&1 || true; }
@@ -35,7 +35,7 @@ fi
 has_battery || warn "No battery found: this is for laptops, where the lid suspends. Setting it up anyway."
 
 say "The lid doesn't suspend"
-sudo install -D -o root -g root -m 0644 "$DEBSWAY_DIR/data/lid-logind.conf" "$CONF"
+sudo install -D -o root -g root -m 0644 "$WREN_DIR/data/lid-logind.conf" "$CONF"
 reload_logind
 note "Wrote $CONF"
 
@@ -43,7 +43,7 @@ say "Closing the lid locks the screen"
 install_bin lid
 # --locked: it also works while the screen is locked; --reload: right after a reload too
 put_snippet lid <<'EOF'
-# The lid: lock and panel off, no suspend (debsway extras/lid-awake.sh)
+# The lid: lock and panel off, no suspend (Wren Linux extras/lid-awake.sh)
 bindswitch --reload --locked lid:on exec ~/.local/bin/lid close
 bindswitch --reload --locked lid:off exec ~/.local/bin/lid open
 EOF

@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-debsway install mullvad-vpn                     install it
-debsway remove mullvad-vpn                      disconnect and remove it (and Mullvad's repository, if Mullvad Browser isn't installed)
-debsway manual mullvad-vpn                      print the manual steps below
+wrenctl install mullvad-vpn                     install it
+wrenctl remove mullvad-vpn                      disconnect and remove it (and Mullvad's repository, if Mullvad Browser isn't installed)
+wrenctl manual mullvad-vpn                      print the manual steps below
 
 mullvad account login 1234123412341234    log in with your account number
 mullvad relay set location se [mma]       a country (se = Sweden), or a city in it
@@ -49,14 +49,14 @@ echo "deb [signed-by=/usr/share/keyrings/mullvad-keyring.asc arch=$(dpkg --print
 
 # Let unattended-upgrades install its updates too (it takes only Debian's otherwise)
 echo 'Unattended-Upgrade::Origins-Pattern:: "site=repository.mullvad.net";' |
-    sudo tee /etc/apt/apt.conf.d/52debsway-mullvad
+    sudo tee /etc/apt/apt.conf.d/52wren-mullvad
 
 # The VPN
 sudo apt update
 sudo apt install --no-install-recommends mullvad-vpn
 
 # A command for the app, which lives in /opt, so Super+d finds it
-install -D -m 0755 @DEBSWAY_DIR@/bin/mullvad-vpn ~/.local/bin/mullvad-vpn
+install -D -m 0755 @WREN_DIR@/bin/mullvad-vpn ~/.local/bin/mullvad-vpn
 ```
 
 To undo:
@@ -68,6 +68,6 @@ sudo apt purge mullvad-vpn
 rm ~/.local/bin/mullvad-vpn
 # Only if Mullvad Browser isn't installed either: the repository, its key and the update rule
 sudo rm /etc/apt/sources.list.d/mullvad.list /usr/share/keyrings/mullvad-keyring.asc
-sudo rm /etc/apt/apt.conf.d/52debsway-mullvad
+sudo rm /etc/apt/apt.conf.d/52wren-mullvad
 sudo apt update
 ```

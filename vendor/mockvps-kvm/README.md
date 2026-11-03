@@ -31,11 +31,11 @@ The script adds your user to the `kvm` group if needed (uses `sudo`). It does no
 
 ## Quick start
 
-In debsway, `bash extras/mockvps-kvm.sh` installs what it needs and a
+In Wren Linux, `bash extras/mockvps-kvm.sh` installs what it needs and a
 `mockvps-kvm` command, so below `./mockvps-kvm.sh` is simply `mockvps-kvm`.
-Inside a debsway folder the script refuses to run directly until that setup
+Inside a Wren Linux folder the script refuses to run directly until that setup
 is done (it prints what to run; `MOCKVPS_FORCE=1` overrides). A copy of the
-script on its own, outside debsway, works straight from its folder:
+script on its own, outside Wren Linux, works straight from its folder:
 
 ```bash
 ./mockvps-kvm.sh                 # install and wait for SSH

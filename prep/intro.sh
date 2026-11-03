@@ -9,7 +9,7 @@ bold=$(printf '\033[1m')
 off=$(printf '\033[0m')
 
 text=$(cat <<EOF
-${bold}debsway: what the base install does${off}
+${bold}Wren Linux: what the base install does${off}
 
 It turns this Debian 13 (trixie) system into a small sway desktop. It will:
 
@@ -50,7 +50,7 @@ bash status.sh shows afterwards what is set up.
 
 ${bold}Disclaimer${off}
 
-debsway is free software, provided "as is", without warranty of any kind
+Wren Linux is free software, provided "as is", without warranty of any kind
 (see the LICENSE file). It makes changes to your system with administrator
 rights, and a mistake, a bug, or a package that changes upstream could
 leave something not working. Back up what you care about first.
@@ -72,7 +72,7 @@ else
 fi
 
 
-if [ "${DEBSWAY_ASSUME_YES:-}" = 1 ]; then exit 0; fi
+if [ "${WREN_ASSUME_YES:-}" = 1 ]; then exit 0; fi
 if ! { : </dev/tty; } 2>/dev/null; then
     warn "There is no terminal to ask on. Run it from a terminal, or use: bash install-base.sh --yes"
     exit 1

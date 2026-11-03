@@ -1,26 +1,26 @@
 #!/bin/bash
-# theme: written by debsway parts/theme.sh
-# debsway's colors, light or dark, from one place:
+# theme: written by Wren Linux parts/theme.sh
+# Wren Linux's colors, light or dark, from one place:
 #   theme                 which theme is set (dark unless you chose light)
-#   theme light | dark    switch to it (the debsway menu's Theme line too)
+#   theme light | dark    switch to it (the Wren menu's Theme line too)
 #   theme toggle          the other one
 #   theme get NAME        one of its colors (e.g. LOCK), for the lock screen
-#   theme env             all of them as NAME='value' lines, for debsway's
-#                         commands (debsway-menu, nmtui, powermenu, wallpaper)
+#   theme env             all of them as NAME='value' lines, for Wren Linux's
+#                         commands (wren-menu, nmtui, powermenu, wallpaper)
 #   theme apply           write the current theme's colors again
 # Switching writes the bar's colors and the plain background (no wallpaper)
 # in a sway snippet, foot's [colors], mako's colors and the launcher's
 # (Super+d), GTK apps' light or dark (settings.ini, and the color-scheme
 # setting libadwaita apps read), then reloads sway. The sandboxed Firefox and
 # incognito are told at their next start (bin/firefox, bin/incognito). Windows open now keep their colors until they
-# open again. The text console (tmux) stays dark. Only debsway's own files are
+# open again. The text console (tmux) stays dark. Only Wren Linux's own files are
 # changed: a foot.ini or mako config you wrote yourself is left alone.
 # The colors are data/themes/dark and light, read strictly: NAME=colour lines
 # (rrggbb or rrggbbaa), lists of them, nothing else.
 set -uo pipefail
 
-STATE=${XDG_CONFIG_HOME:-$HOME/.config}/debsway/theme
-THEMES=$HOME/.local/share/debsway/themes
+STATE=${XDG_CONFIG_HOME:-$HOME/.config}/wren/theme
+THEMES=$HOME/.local/share/wren/themes
 SWAY_CONF=$HOME/.config/sway/config
 SNIPPET=$HOME/.config/sway/config.d/theme.conf
 FOOT=$HOME/.config/foot/foot.ini
@@ -59,7 +59,7 @@ load() {
 # snippet: the bar's colors and the plain background, for sway
 snippet() {
     cat <<EOF
-# debsway's theme ($1): written by bin/theme; "theme light" or "theme dark" rewrites it
+# Wren Linux's theme ($1): written by bin/theme; "theme light" or "theme dark" rewrites it
 output * bg #${C[DESKTOP_BG]} solid_color
 bar bar-0 colors {
     background #${C[BAR_BG]}
@@ -98,26 +98,26 @@ gtk() {
     done
     if command -v gsettings >/dev/null; then
         gsettings set org.gnome.desktop.interface color-scheme "prefer-$1" 2>/dev/null || true
-        # Mousepad: debsway's scheme to match (extras/mousepad.sh), while it
-        # is one of debsway's two; one you chose yourself stays
+        # Mousepad: Wren Linux's scheme to match (extras/mousepad.sh), while it
+        # is one of Wren Linux's two; one you chose yourself stays
         if gsettings list-schemas 2>/dev/null | grep -qx org.xfce.mousepad.preferences.view; then
             case $(gsettings get org.xfce.mousepad.preferences.view color-scheme 2>/dev/null) in
-                "'debsway-dark'" | "'debsway-light'")
-                    gsettings set org.xfce.mousepad.preferences.view color-scheme "debsway-$1" 2>/dev/null || true ;;
+                "'wren-dark'" | "'wren-light'")
+                    gsettings set org.xfce.mousepad.preferences.view color-scheme "wren-$1" 2>/dev/null || true ;;
             esac
         fi
     fi
 }
 
-# apply: the current theme's colors into debsway's files, then sway reloads
+# apply: the current theme's colors into Wren Linux's files, then sway reloads
 apply() {
     local t tmp
     t=$(current)
-    load "$t" || die "the $t theme's colors ($THEMES/$t) can't be read; run debsway part theme"
+    load "$t" || die "the $t theme's colors ($THEMES/$t) can't be read; run wrenctl part theme"
     mkdir -p "${SNIPPET%/*}"
     snippet "$t" >"$SNIPPET.new" && mv -f "$SNIPPET.new" "$SNIPPET"
-    # foot: only debsway's foot.ini; its [colors] section, up to the next section
-    if grep -qs 'Written by debsway' "$FOOT"; then
+    # foot: only Wren Linux's foot.ini; its [colors] section, up to the next section
+    if grep -qs 'Written by Wren Linux' "$FOOT"; then
         tmp=$(mktemp)
         awk -v colors="$(foot_colors)" '
             /^\[colors\]/ { print colors; skip = 1; next }
@@ -125,14 +125,14 @@ apply() {
             !skip { print }' "$FOOT" >"$tmp" && cat "$tmp" >"$FOOT"
         rm -f "$tmp"
     fi
-    # mako: only debsway's config
-    if grep -qsxF '# Written by debsway parts/mako.sh' "$MAKO"; then
+    # mako: only Wren Linux's config
+    if grep -qsxF '# Written by Wren Linux parts/mako.sh' "$MAKO"; then
         sed -i -E '/^(background-color|text-color|border-color)=/d' "$MAKO"
         printf 'background-color=#%s\ntext-color=#%s\nborder-color=#%s\n' \
             "${C[NOTIFY_BG]}" "${C[NOTIFY_TEXT]}" "${C[NOTIFY_BORDER]}" >>"$MAKO"
         if pgrep -x mako >/dev/null; then makoctl reload >/dev/null 2>&1 || true; fi
     fi
-    # the launcher (Super+d): only the line debsway styled (lib/sway.sh)
+    # the launcher (Super+d): only the line Wren Linux styled (lib/sway.sh)
     if [ -f "$SWAY_CONF" ]; then
         sed -i -E "s/^(set \\\$menu wmenu-run -f 'monospace 12') -N [0-9a-f]{6} -n [0-9a-f]{6} -M [0-9a-f]{6} -m [0-9a-f]{6} -S [0-9a-f]{6} -s [0-9a-f]{6}\$/\\1 -N ${C[WMENU_BG]} -n ${C[WMENU_TEXT]} -M ${C[WMENU_BG]} -m ${C[WMENU_TEXT]} -S ${C[WMENU_TEXT]} -s ${C[WMENU_BG]}/" "$SWAY_CONF"
     fi
@@ -144,7 +144,7 @@ case ${1:-} in
     "" | status)
         echo "Theme: $(current)" ;;
     light | dark)
-        load "$1" || die "the $1 theme's colors ($THEMES/$1) can't be read; run debsway part theme"
+        load "$1" || die "the $1 theme's colors ($THEMES/$1) can't be read; run wrenctl part theme"
         mkdir -p "${STATE%/*}"
         echo "$1" >"$STATE"
         apply

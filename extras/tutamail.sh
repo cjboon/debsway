@@ -10,10 +10,10 @@
 # security: some
 # status: opt:tuta
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/lib/appimage.sh"
+. "$WREN_DIR/lib/appimage.sh"
 
 NAME=tuta
-KEY=$DEBSWAY_DIR/data/tuta-pub.pem
+KEY=$WREN_DIR/data/tuta-pub.pem
 URL=$TUTA_DESKTOP_URL
 ASSET=tutanota-desktop-linux.AppImage
 # The system libraries its Electron binary links to (readelf -d), and
@@ -78,5 +78,5 @@ fi
 # Wayland directly, so it needs no XWayland.
 write_launcher "$NAME" tutamail.sh tutanota-desktop ELECTRON_OZONE_PLATFORM_HINT=wayland
 note "Tuta keeps you logged in only with a keyring to store that in. Without one"
-note "(bash $DEBSWAY_DIR/extras/seahorse.sh), you log in at every start."
-note "Updates: run this script again; bash $DEBSWAY_DIR/test.sh says when one is out."
+note "(bash $WREN_DIR/extras/seahorse.sh), you log in at every start."
+note "Updates: run this script again; bash $WREN_DIR/test.sh says when one is out."

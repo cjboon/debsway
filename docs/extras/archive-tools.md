@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-debsway install archive-tools                     install them
-debsway remove archive-tools                      remove them (bzip2 stays: it is part of Debian's standard system)
-debsway manual archive-tools                      print the manual steps below
+wrenctl install archive-tools                     install them
+wrenctl remove archive-tools                      remove them (bzip2 stays: it is part of Debian's standard system)
+wrenctl manual archive-tools                      print the manual steps below
 
 unzip -l file.zip              list what is inside first
 unzip file.zip -d folder       unpack into "folder"

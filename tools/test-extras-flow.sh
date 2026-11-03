@@ -1,7 +1,7 @@
 #!/bin/bash
 # Checks install-extras.sh --choose and --install (how install-base.sh asks for
 # the extras right after you agree and installs them after the base), in a
-# throwaway copy of debsway with pretend extras that only write down that they
+# throwaway copy of Wren Linux with pretend extras that only write down that they
 # ran. Changes nothing outside a temp folder. Run by test.sh, or:
 #   bash tools/test-extras-flow.sh
 # shellcheck disable=SC2016  # sed and the inner shells expand their own variables
@@ -17,7 +17,7 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 }
 not() { ! "$@"; }
 
-D=$T/debsway
+D=$T/wren
 mkdir -p "$D/extras" "$D/lib"
 cp "$HERE/pins.sh" "$HERE/packages.sh" "$HERE/install-extras.sh" "$D/"
 # (its lib.sh keeps the test's PATH, so pretend programs can be found)
@@ -26,7 +26,7 @@ export FLOW_TEST_PATH="$T/fake:$PATH"
 mkdir -p "$T/fake" "$D/data"
 cp "$HERE"/lib/*.sh "$D/lib/"
 for n in alpha beta gamma delta; do
-    printf '#!/bin/bash\n# summary: the %s extra\n# status: file:%s/nowhere-%s\necho "%s${1:+ $1} $DEBSWAY_SETUP_GH" >>"%s/ran"\n[ "%s" != "$FAIL_ON" ]\n' "$n" "$T" "$n" "$n" "$T" "$n" >"$D/extras/$n.sh"
+    printf '#!/bin/bash\n# summary: the %s extra\n# status: file:%s/nowhere-%s\necho "%s${1:+ $1} $WREN_SETUP_GH" >>"%s/ran"\n[ "%s" != "$FAIL_ON" ]\n' "$n" "$T" "$n" "$n" "$T" "$n" >"$D/extras/$n.sh"
 done
 # their groups: gamma most secure, alpha least, beta somewhat, delta has no line (somewhat)
 sed -i 's/^# summary: the gamma extra$/&\n# security: most/' "$D/extras/gamma.sh"
@@ -51,7 +51,7 @@ check "every extra says how secure it is (# security: most, some or least)${miss
 # A renamed extra keeps its package marker's old name, or a computer that
 # installed it before the rename would lose track of what it installed
 check "mullvad-browser-regular.sh keeps the marker of mullvad-browser.sh" \
-    test "$(cd "$HERE" && bash -c '. ./lib.sh; eval "$(grep -x "export DEBSWAY_OWNER=.*" extras/mullvad-browser-regular.sh)"; apt_marker')" = debsway-mullvad-browser
+    test "$(cd "$HERE" && bash -c '. ./lib.sh; eval "$(grep -x "export WREN_OWNER=.*" extras/mullvad-browser-regular.sh)"; apt_marker')" = wren-mullvad-browser
 
 # The list itself (lib/checklist.sh), driven by keys and clicks in a
 # pseudo-terminal: LIST MODE KEYS... runs install-extras.sh (--choose into
@@ -63,7 +63,7 @@ pid, fd = pty.fork()
 if pid == 0:
     fcntl.ioctl(0, termios.TIOCSWINSZ, struct.pack("HHHH", 24, 80, 0, 0))
     args = ["bash", script, "--choose", out] if mode == "choose" else ["bash", script, "--remove"]
-    os.execvpe("bash", args, dict(os.environ, TERM="xterm-256color", DEBSWAY_ESC_WAIT="0.2"))
+    os.execvpe("bash", args, dict(os.environ, TERM="xterm-256color", WREN_ESC_WAIT="0.2"))
 drawn = b""
 def pump(t):
     global drawn
@@ -137,17 +137,17 @@ check "a box that goes alone (CL_ALONE): checking it unchecks the others" test "
 check "...checking another then unchecks it" test "$(alone '\x1b[B' '\x1b[B' ' ' '\x1b[A' ' ' '\r')" = b
 check "...the same with a click" test "$(alone '\x1b[B' ' ' click:none click:Install)" = none
 check "...and without CL_ALONE, boxes stay as they were" test "$(ALONE='' alone '\x1b[B' '\x1b[B' ' ' '\r')" = a,b,none
-# ticked by the install stick (~/.config/debsway/preselect): in the first list only
-mkdir -p "$HOME/.config/debsway"
-echo beta >"$HOME/.config/debsway/preselect"
+# ticked by the install stick (~/.config/wren/preselect): in the first list only
+mkdir -p "$HOME/.config/wren"
+echo beta >"$HOME/.config/wren/preselect"
 check "a name the stick left in preselect starts ticked" test "$(pick '\r')" = beta
 check "...once: the list after starts empty" test "$(pick '\r')" = ""
-echo beta >"$HOME/.config/debsway/preselect"
+echo beta >"$HOME/.config/wren/preselect"
 check "...and can be unticked" test "$(pick '\x1b[B' ' ' '\r')" = ""
 
 # Remove apps (--remove): a list of only what is installed; what you check is
 # removed with its own --remove, after a question (Enter is no)
-rmlist() { : >"$T/ran"; printf '%s\n' "$1" >"$T/answers"; shift; DEBSWAY_TEST_ANSWERS=$T/answers python3 -I "$T/drive.py" "$D/install-extras.sh" remove - "$T/drawn" "$@"; }
+rmlist() { : >"$T/ran"; printf '%s\n' "$1" >"$T/answers"; shift; WREN_TEST_ANSWERS=$T/answers python3 -I "$T/drive.py" "$D/install-extras.sh" remove - "$T/drawn" "$@"; }
 rmlist '' '\x1b'
 check "--remove with nothing installed: says so, removes nothing" bash -c 'grep -aq "nothing to remove" "$1" && [ ! -s "$2" ]' _ "$T/drawn" "$T/ran"
 : >"$T/nowhere-beta"; : >"$T/nowhere-delta"
@@ -168,7 +168,7 @@ check "...and installs nothing" test ! -s "$T/ran"
 # --install installs exactly the names in the file, in order, and nothing else
 printf 'gamma\nalpha\n' >"$T/picked"
 : >"$T/ran"
-DEBSWAY_SETUP_GH=1 run --install "$T/picked" >/dev/null
+WREN_SETUP_GH=1 run --install "$T/picked" >/dev/null
 check "--install runs the picked extras in the order picked" test "$(paste -sd, "$T/ran")" = "gamma 1,alpha 1"
 check "...and not the others" not grep -q beta "$T/ran"
 check "...passing the environment on (git's setup flag)" grep -q 'alpha 1' "$T/ran"
@@ -177,7 +177,7 @@ check "...passing the environment on (git's setup flag)" grep -q 'alpha 1' "$T/r
 : >"$T/ran"; : >"$T/picked"
 out=$(run --install "$T/picked")
 check "an empty list installs nothing" test ! -s "$T/ran"
-check "...and says how to add some later" grep -q 'debsway --apps' <<<"$out"
+check "...and says how to add some later" grep -q 'wrenctl --apps' <<<"$out"
 printf '\n\n' >"$T/picked"; : >"$T/ran"
 run --install "$T/picked" >/dev/null
 check "blank lines are ignored" test ! -s "$T/ran"

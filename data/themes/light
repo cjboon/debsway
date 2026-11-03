@@ -1,4 +1,4 @@
-# debsway's light theme: warm light backgrounds, dark text. Read by bin/theme,
+# Wren Linux's light theme: warm light backgrounds, dark text. Read by bin/theme,
 # which accepts only NAME=colour lines (see data/themes/dark, same names).
 DESKTOP_BG=f2efe9
 BAR_BG=f2efe9b3

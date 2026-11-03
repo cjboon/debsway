@@ -9,7 +9,7 @@
 need_user
 
 CONF="$HOME/.config/foot/foot.ini"
-MARK='Written by debsway parts/foot-config.sh'
+MARK='Written by Wren Linux parts/foot-config.sh'
 
 if [ "${1:-}" = --remove ]; then
     if grep -qs "$MARK" "$CONF"; then
@@ -28,13 +28,13 @@ apt_install fonts-dejavu-mono
 
 say "foot config"
 mkdir -p "${CONF%/*}"
-if [ -f "$CONF" ] && ! grep -qs "$MARK" "$CONF" && ! cmp -s "$DEBSWAY_DIR/data/foot.ini" "$CONF"; then
+if [ -f "$CONF" ] && ! grep -qs "$MARK" "$CONF" && ! cmp -s "$WREN_DIR/data/foot.ini" "$CONF"; then
     cp "$CONF" "$CONF.bak"
     note "Your foot.ini is kept as $CONF.bak"
 fi
-cp "$DEBSWAY_DIR/data/foot.ini" "$CONF"
+cp "$WREN_DIR/data/foot.ini" "$CONF"
 # The text size chosen with console-font (in a terminal window) stays
-FONT_CHOICE="$HOME/.config/debsway/foot-font"
+FONT_CHOICE="$HOME/.config/wren/foot-font"
 if [ -s "$FONT_CHOICE" ]; then
     font=$(head -n1 "$FONT_CHOICE")
     case $font in

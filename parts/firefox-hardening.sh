@@ -9,13 +9,13 @@
 #    profile can turn it back on (extras/firefox-profiles/new-profile.sh asks).
 #  - HTTPS-Only Mode: Firefox won't load unencrypted pages without asking,
 #    so nobody on café or hotel Wi-Fi can tamper with them.
-#  - (Firefox's own DNS is set by each debsway Firefox at its start, not here:
+#  - (Firefox's own DNS is set by each Wren Linux Firefox at its start, not here:
 #    bin/firefox-session and bin/incognito-session.)
 #  - A notice when Firefox was updated while it's running: the running
 #    browser keeps the old, unfixed version until you restart it.
 # These are defaults: change one in a profile at about:config.
 # Usage: bash firefox-hardening.sh [--remove]
-# status: file:/etc/firefox-esr/debsway-hardening.js
+# status: file:/etc/firefox-esr/wren-hardening.js
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
@@ -23,7 +23,7 @@ need_user
 # policies from /usr/share/firefox-esr/distribution/policies.json
 ETC=/etc/firefox-esr
 DIST=/usr/share/firefox-esr/distribution
-PREFS="$ETC/debsway-hardening.js"
+PREFS="$ETC/wren-hardening.js"
 ALLOW=/usr/local/bin/ublock-allow
 UNITS="$HOME/.config/systemd/user"
 
@@ -33,12 +33,12 @@ if [ "${1:-}" = --remove ]; then
     remove_bin firefox-restart-check
     # DIST is where it is now; ETC/policies is where an earlier version put it
     for d in "$DIST" "$ETC/policies"; do
-        if [ -f "$d/.debsway-written" ] && sha256sum --status -c "$d/.debsway-written"; then
-            sudo rm -f "$d/policies.json" "$d/.debsway-written"
+        if [ -f "$d/.wren-written" ] && sha256sum --status -c "$d/.wren-written"; then
+            sudo rm -f "$d/policies.json" "$d/.wren-written"
             sudo rmdir "$d" 2>/dev/null || true
         fi
     done
-    sudo rm -f "$PREFS" "$ETC/debsway-ublock-allow" "$ALLOW"
+    sudo rm -f "$PREFS" "$ETC/wren-ublock-allow" "$ALLOW"
     # Firefox and uBlock Origin stay while the Firefox extra is installed (its own
     # marker package keeps them); extras/firefox-sandbox.sh --remove takes them out
     apt_purge
@@ -49,10 +49,10 @@ fi
 say "Firefox hardening"
 apt_install firefox-esr webext-ublock-origin-firefox libnotify-bin
 
-sudo install -m 0644 "$DEBSWAY_DIR/data/firefox-hardening.js" "$PREFS"
+sudo install -m 0644 "$WREN_DIR/data/firefox-hardening.js" "$PREFS"
 note "HTTPS-Only Mode on, JavaScript JIT off, blank foxy home page ($PREFS)"
 
-sudo install -m 0755 "$DEBSWAY_DIR/bin/ublock-allow" "$ALLOW"
+sudo install -m 0755 "$WREN_DIR/bin/ublock-allow" "$ALLOW"
 if sudo "$ALLOW" --refresh; then
     note "uBlock Origin blocks other sites' scripts and frames. When a site breaks:"
     note "  ublock-allow example.com   (then restart Firefox; ublock-allow --list shows them)"
@@ -65,7 +65,7 @@ mkdir -p "$UNITS"
 install_bin firefox-restart-check
 cat >"$UNITS/firefox-restart-check.service" <<EOF
 [Unit]
-Description=Tell me when Firefox needs a restart after an update (debsway)
+Description=Tell me when Firefox needs a restart after an update (Wren Linux)
 
 [Service]
 Type=oneshot
@@ -73,7 +73,7 @@ ExecStart=$BIN/firefox-restart-check
 EOF
 cat >"$UNITS/firefox-restart-check.timer" <<'EOF'
 [Unit]
-Description=Check every 10 minutes whether Firefox needs a restart (debsway)
+Description=Check every 10 minutes whether Firefox needs a restart (Wren Linux)
 
 [Timer]
 OnStartupSec=2min

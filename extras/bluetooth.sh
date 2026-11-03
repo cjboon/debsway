@@ -2,10 +2,10 @@
 # Bluetooth, for headphones, keyboards, mice and a phone's connection. Installs
 # bluez (bluetoothctl pairs devices in a terminal) and, if sound is set up, the
 # part of PipeWire that plays sound over Bluetooth. The adapter starts switched
-# OFF at every boot: switch it on from the debsway menu (Bluetooth) or with
-# debsway --bluetooth on, and off again when you are done, so no radio is
+# OFF at every boot: switch it on from the Wren menu (Bluetooth) or with
+# wrenctl --bluetooth on, and off again when you are done, so no radio is
 # listening when you are not using it.
-# Pair a device: debsway --bluetooth on, then  bluetoothctl  and type:
+# Pair a device: wrenctl --bluetooth on, then  bluetoothctl  and type:
 #   scan on          (wait until the device shows up)
 #   pair AA:BB:...   trust AA:BB:...   connect AA:BB:...
 # Usage: bash bluetooth.sh [--remove | --manual]
@@ -36,7 +36,7 @@ fi
 
 has_bluetooth || warn "No Bluetooth adapter found on this computer; installing it anyway (a USB adapter works once plugged in)."
 say "Installing bluez"
-# rfkill: what switches the radio on and off (bin/radios, the debsway menu)
+# rfkill: what switches the radio on and off (bin/radios, the Wren menu)
 apt_install bluez rfkill
 # Sound over Bluetooth needs PipeWire's Bluetooth module; only if sound is set up
 if is_installed pipewire-audio; then apt_install libspa-0.2-bluetooth; fi
@@ -51,5 +51,5 @@ rm -f "$tmp"
 sudo systemctl enable --now bluetooth.service >/dev/null 2>&1 || warn "Couldn't start the Bluetooth service now."
 # Off now too, not only after the next boot
 "$HOME/.local/bin/radios" bluetooth off >/dev/null 2>&1 || true
-note "Bluetooth is off. Switch it on: debsway menu > Bluetooth, or  debsway --bluetooth on"
+note "Bluetooth is off. Switch it on: Wren menu > Bluetooth, or  wrenctl --bluetooth on"
 note "Pair a device with  bluetoothctl  (scan on, pair, trust, connect)."

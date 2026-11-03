@@ -1,11 +1,11 @@
 #!/bin/bash
-# For working on debsway itself, on the computer where you build its package:
+# For working on Wren Linux itself, on the computer where you build its package:
 # lintian, Debian's checker for packages (tools/build-deb.sh runs it on every
 # package it builds), and shellcheck, which test.sh runs on every script. Both
 # from Debian. Only that computer needs them: they aren't in the base install,
-# which keeps every other debsway computer to what it uses.
-# Usage: bash debsway-dev.sh [--remove | --manual]
-# summary: For working on debsway: lintian and shellcheck
+# which keeps every other Wren Linux computer to what it uses.
+# Usage: bash wren-dev.sh [--remove | --manual]
+# summary: For working on Wren Linux: lintian and shellcheck
 # security: some
 # status: apt:lintian
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
@@ -18,7 +18,7 @@ if [ "${1:-}" = --remove ]; then
     exit
 fi
 
-say "Tools for working on debsway"
+say "Tools for working on Wren Linux"
 apt_install lintian shellcheck
 
 cat <<'EOF2'

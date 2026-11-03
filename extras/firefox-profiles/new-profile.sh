@@ -13,14 +13,14 @@
 #   bash new-profile.sh --remove NAME         removes firefox-NAME; asks whether to delete the profile and its user
 #   bash new-profile.sh --manual              prints the steps to make one by hand
 #
-# --fast-js turns the JavaScript JIT back on for this profile (debsway's
+# --fast-js turns the JavaScript JIT back on for this profile (Wren Linux's
 # parts/firefox-hardening.sh turns it off everywhere), for heavy web apps.
 # --show-toolbars keeps Firefox's tabs and address bar for this profile.
 # --no-sound: no sound from it (a bank needs none; a video site does).
 # Run without NAME and URL, it asks, fast JavaScript and sound included.
 . "$(dirname -- "${BASH_SOURCE[0]}")/../../lib.sh"
-. "$DEBSWAY_DIR/lib/firefox-sandbox.sh"
-. "$DEBSWAY_DIR/lib/firefox-profiles.sh"
+. "$WREN_DIR/lib/firefox-sandbox.sh"
+. "$WREN_DIR/lib/firefox-profiles.sh"
 if [ "${1:-}" = --manual ]; then print_manual firefox-profiles; exit; fi
 not_root
 

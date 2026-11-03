@@ -1,5 +1,5 @@
 #!/bin/sh
-# partman/early_command for debsway's install ISO (prep/make-install-iso.sh):
+# partman/early_command for Wren Linux's install ISO (prep/make-install-iso.sh):
 # runs inside the Debian installer just before partitioning, when the disks
 # are known. It never erases anything itself; it only answers "which disk".
 #
@@ -8,11 +8,11 @@
 # the boot loader goes on it too. If there are none or several, nothing is
 # chosen and the installer asks. Either way the installer then asks once more
 # before it writes anything ("Write the changes to disks?"), naming the disk.
-# (DEBSWAY_MOUNTS, DEBSWAY_LIST and DEBSWAY_SET are for tests.)
+# (WREN_MOUNTS, WREN_LIST and WREN_SET are for tests.)
 
-MOUNTS=${DEBSWAY_MOUNTS:-/proc/mounts}
-LIST=${DEBSWAY_LIST:-list-devices}
-SET=${DEBSWAY_SET:-debconf-set}
+MOUNTS=${WREN_MOUNTS:-/proc/mounts}
+LIST=${WREN_LIST:-list-devices}
+SET=${WREN_SET:-debconf-set}
 
 # whole_disk DEVICE: /dev/sdb1 -> /dev/sdb, /dev/nvme0n1p2 -> /dev/nvme0n1,
 # /dev/mmcblk0p1 -> /dev/mmcblk0, /dev/sdb -> /dev/sdb
@@ -35,8 +35,8 @@ count=$(printf '%s\n' "$candidates" | sed '/^$/d' | wc -l | tr -d ' ')
 if [ "$count" = 1 ]; then
     $SET partman-auto/disk "$candidates"
     $SET grub-installer/bootdev "$candidates"
-    logger -t debsway "installing on $candidates (the installer's own medium: ${medium:-none})" 2>/dev/null || true
+    logger -t wren "installing on $candidates (the installer's own medium: ${medium:-none})" 2>/dev/null || true
 else
-    logger -t debsway "$count disks besides the installer's own medium: the installer asks which" 2>/dev/null || true
+    logger -t wren "$count disks besides the installer's own medium: the installer asks which" 2>/dev/null || true
 fi
 exit 0

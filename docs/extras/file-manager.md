@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-debsway install file-manager                     install it
-debsway remove file-manager                      remove it
-debsway manual file-manager                      print the manual steps below
+wrenctl install file-manager                     install it
+wrenctl remove file-manager                      remove it
+wrenctl manual file-manager                      print the manual steps below
 
 thunar                 open your home folder (or Super+d, then thunar)
 thunar ~/Downloads     open a folder

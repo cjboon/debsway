@@ -21,7 +21,7 @@ not() { ! "$@"; }
 printf '%s\n' '[General]' '#Name = BlueZ' '' '[Policy]' '#ReconnectAttempts=7' '#AutoEnable=true' >"$T/stock"
 cp "$T/stock" "$T/c"
 set_bluetooth_autoenable "$T/c" false
-check "the commented AutoEnable line becomes false, in its place" grep -qx 'AutoEnable=false # debsway' "$T/c"
+check "the commented AutoEnable line becomes false, in its place" grep -qx 'AutoEnable=false # Wren Linux' "$T/c"
 check "...once" test "$(grep -c AutoEnable "$T/c")" -eq 1
 check "the rest of the file is unchanged" test "$(diff "$T/stock" "$T/c" | grep -c '^[<>]')" -eq 2
 set_bluetooth_autoenable "$T/c" false
@@ -32,13 +32,13 @@ check "undoing it puts bluez's own line back" cmp -s "$T/c" "$T/stock"
 printf '%s\n' '[General]' 'Name = x' >"$T/nokey"
 set_bluetooth_autoenable "$T/nokey" false
 check "with no AutoEnable line, a [Policy] section is added" grep -qx '\[Policy\]' "$T/nokey"
-check "...with the line in it" grep -qx 'AutoEnable=false # debsway' "$T/nokey"
+check "...with the line in it" grep -qx 'AutoEnable=false # Wren Linux' "$T/nokey"
 
 printf '%s\n' '[Policy]' 'AutoEnable=true' >"$T/on"
 set_bluetooth_autoenable "$T/on" false
-check "an uncommented AutoEnable=true is switched too" grep -qx 'AutoEnable=false # debsway' "$T/on"
+check "an uncommented AutoEnable=true is switched too" grep -qx 'AutoEnable=false # Wren Linux' "$T/on"
 set_bluetooth_autoenable "$T/on" true
-check "a line debsway did not write is not touched when undoing" not grep -q 'AutoEnable=false' "$T/on"
+check "a line Wren Linux did not write is not touched when undoing" not grep -q 'AutoEnable=false' "$T/on"
 
 # the new extras fit the checklist
 for n in bluetooth phone-tethering; do

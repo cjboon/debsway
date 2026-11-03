@@ -8,11 +8,11 @@
 # tools that read it, like powertop and perf probes, stop working).
 # It needs GRUB and a reboot; check afterwards with: cat /proc/cmdline
 # Usage: bash boot-hardening.sh [--remove]
-# status: file:/etc/default/grub.d/60-debsway-hardening.cfg
+# status: file:/etc/default/grub.d/60-wren-hardening.cfg
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
-CONF=/etc/default/grub.d/60-debsway-hardening.cfg
+CONF=/etc/default/grub.d/60-wren-hardening.cfg
 PARAMS='slab_nomerge init_on_alloc=1 init_on_free=1 page_alloc.shuffle=1 randomize_kstack_offset=on vsyscall=none debugfs=off'
 
 if [ "${1:-}" = --remove ]; then
@@ -30,7 +30,7 @@ if ! command -v update-grub >/dev/null || [ ! -d /etc/default/grub.d ]; then
 fi
 
 say "Boot parameters"
-printf '%s\n' "# Written by debsway parts/boot-hardening.sh" \
+printf '%s\n' "# Written by Wren Linux parts/boot-hardening.sh" \
     "GRUB_CMDLINE_LINUX_DEFAULT=\"\$GRUB_CMDLINE_LINUX_DEFAULT $PARAMS\"" |
     sudo tee "$CONF" >/dev/null
 # If GRUB can't build its menu with it, take it out again

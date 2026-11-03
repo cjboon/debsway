@@ -1,20 +1,20 @@
 #!/bin/bash
-# make-apt-repo.sh: a signed apt repository of debsway's packages, made on
+# make-apt-repo.sh: a signed apt repository of Wren Linux's packages, made on
 # your own computer with your own key, never on the server. What you upload
 # (the website, a mirror) is only files: whoever runs that server can hold
 # updates back, or serve an older signed set until it expires, but can't
 # change a package, because apt checks every file against InRelease, and
 # InRelease against your key.
 #   bash tools/make-apt-repo.sh --key FINGERPRINT --out FOLDER DEB...
-#   bash tools/make-apt-repo.sh --sign-cmd debsway-key --out FOLDER DEB...
+#   bash tools/make-apt-repo.sh --sign-cmd wren-key --out FOLDER DEB...
 #     [--sign-cmd CMD]   sign with CMD (CMD fingerprint, CMD clearsign, CMD
 #                        detach-sign, CMD public) instead of gpg's own keyring:
-#                        debsway-key, whose key never leaves its own user
+#                        wren-key, whose key never leaves its own user
 #     [--valid-days N]   InRelease is good for N days (default 14): sign again
 #                        within that time, or apt stops taking the repository
 #                        (so a server can't keep serving an old, fixed hole)
-# FOLDER gets pool/ and dists/trixie/ for amd64 (debsway's packages are for every
-# architecture), and the key as debsway-archive-keyring.asc. Any older
+# FOLDER gets pool/ and dists/trixie/ for amd64 (Wren Linux's packages are for every
+# architecture), and the key as wren-archive-keyring.asc. Any older
 # repository in FOLDER is replaced. Needs apt-ftparchive (apt-utils) and gpg
 # with the key's secret part (gpg asks for its passphrase or token).
 set -euo pipefail
@@ -45,16 +45,16 @@ fi
 [[ $days =~ ^[0-9]+$ ]] && [ "$days" -ge 1 ] && [ "$days" -le 90 ] || die "--valid-days is 1 to 90."
 command -v apt-ftparchive >/dev/null || die "apt-ftparchive is missing: sudo apt install apt-utils"
 command -v gpg >/dev/null || die "gpg is missing."
-# Only the key the debsway computers pin: a repository signed with another
+# Only the key the Wren Linux computers pin: a repository signed with another
 # would only make every one of them refuse it
-if [ -n "${DEBSWAY_SIGNING_FPR:-}" ] && [ "$key" != "$DEBSWAY_SIGNING_FPR" ]; then
-    die "pins.sh pins $DEBSWAY_SIGNING_FPR; a repository signed with $key would be refused by every debsway computer."
+if [ -n "${WREN_SIGNING_FPR:-}" ] && [ "$key" != "$WREN_SIGNING_FPR" ]; then
+    die "pins.sh pins $WREN_SIGNING_FPR; a repository signed with $key would be refused by every Wren Linux computer."
 fi
 [ -n "$signcmd" ] || gpg --batch --list-secret-keys "$key" >/dev/null 2>&1 || die "gpg has no secret key $key here."
 for d in "${debs[@]}"; do
     [ -f "$d" ] || die "no file $d"
     p=$(dpkg-deb -f "$d" Package 2>/dev/null) || die "$d isn't a package."
-    case $p in debsway | debsway-*) ;; *) die "$d is $p, not one of debsway's packages." ;; esac
+    case $p in wren-linux | wren-*) ;; *) die "$d is $p, not one of Wren Linux's packages." ;; esac
 done
 
 mkdir -p "$out"
@@ -72,13 +72,13 @@ done
     gzip -9nk "dists/$DEBIAN_RELEASE/main/binary-amd64/Packages"
     xz -kf "dists/$DEBIAN_RELEASE/main/binary-amd64/Packages"
     apt-ftparchive \
-        -o APT::FTPArchive::Release::Origin=debsway \
-        -o APT::FTPArchive::Release::Label=debsway \
+        -o APT::FTPArchive::Release::Origin=wren \
+        -o APT::FTPArchive::Release::Label=wren \
         -o APT::FTPArchive::Release::Suite="$DEBIAN_RELEASE" \
         -o APT::FTPArchive::Release::Codename="$DEBIAN_RELEASE" \
         -o APT::FTPArchive::Release::Architectures=amd64 \
         -o APT::FTPArchive::Release::Components=main \
-        -o APT::FTPArchive::Release::Description="debsway's own packages" \
+        -o APT::FTPArchive::Release::Description="Wren Linux's own packages" \
         release "dists/$DEBIAN_RELEASE" >"$out/Release.tmp"
 )
 # Valid-Until: apt refuses the repository after that, so a server that keeps
@@ -93,11 +93,11 @@ R=$out/dists/$DEBIAN_RELEASE
 if [ -n "$signcmd" ]; then
     "$signcmd" clearsign <"$R/Release" >"$R/InRelease" || die "$signcmd didn't sign."
     "$signcmd" detach-sign <"$R/Release" >"$R/Release.gpg" || die "$signcmd didn't sign."
-    "$signcmd" public >"$out/debsway-archive-keyring.asc"
+    "$signcmd" public >"$out/wren-archive-keyring.asc"
 else
     gpg --batch --yes --local-user "$key" --clearsign -o "$R/InRelease" "$R/Release"
     gpg --batch --yes --local-user "$key" --armor --detach-sign -o "$R/Release.gpg" "$R/Release"
-    gpg --batch --armor --export "$key" >"$out/debsway-archive-keyring.asc"
+    gpg --batch --armor --export "$key" >"$out/wren-archive-keyring.asc"
 fi
 
 echo "Repository in $out, signed by $key, good until $(LC_ALL=C date -u -d "+$days days" +%Y-%m-%d)."

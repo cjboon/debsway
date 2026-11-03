@@ -2,7 +2,7 @@
 # w3m, a web browser that runs inside the terminal. No JavaScript, no
 # plugins, no images in foot: good for reading pages, documentation and
 # search results, and a way to get a page when nothing else is installed.
-# Cookies last only while it is open: the w3m command debsway puts in
+# Cookies last only while it is open: the w3m command Wren Linux puts in
 # ~/.local/bin (bin/w3m) deletes the ones w3m keeps (~/.w3m/cookie) when it
 # starts and when it ends, so no site recognises you the next time.
 # Usage: bash w3m.sh [--remove | --manual]

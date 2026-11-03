@@ -1,7 +1,7 @@
 #!/bin/bash
-# wallpaper: written by debsway parts/wallpaper.sh
+# wallpaper: written by Wren Linux parts/wallpaper.sh
 # Your own picture on the desktop: the newest JPEG or PNG in
-# ~/Pictures/debsway/desktop becomes the wallpaper; with none there, nothing
+# ~/Pictures/wren/desktop becomes the wallpaper; with none there, nothing
 # changes (your sway config's "output * bg" line, or sway's plain background).
 # sway runs it at every start and reload (parts/wallpaper.sh).
 #   wallpaper           put the picture up (or nothing, if there is none)
@@ -17,9 +17,9 @@
 # stays the same way: until you choose one, or copy a newer picture in.
 set -uo pipefail
 
-DIR=${DEBSWAY_WALLPAPER_DIR:-$HOME/Pictures/debsway/desktop}
-COLL=${DEBSWAY_WALLPAPERS:-$HOME/Pictures/Wallpapers}
-CACHE=${XDG_CACHE_HOME:-$HOME/.cache}/debsway
+DIR=${WREN_WALLPAPER_DIR:-$HOME/Pictures/wren/desktop}
+COLL=${WREN_WALLPAPERS:-$HOME/Pictures/Wallpapers}
+CACHE=${XDG_CACHE_HOME:-$HOME/.cache}/wren
 # the collection's file last chosen, for next and previous ("none": no
 # wallpaper, since this file's time)
 CURRENT=$CACHE/chosen-wallpaper
@@ -129,7 +129,7 @@ step() {
     local pics=() cur i n=0
     mapfile -t pics < <(collection)
     n=${#pics[@]}
-    [ "$n" -gt 0 ] || { echo "wallpaper: no pictures in $COLL (debsway install wallpapers fetches some)" >&2; return 1; }
+    [ "$n" -gt 0 ] || { echo "wallpaper: no pictures in $COLL (wrenctl install wallpapers fetches some)" >&2; return 1; }
     cur=$(cat "$CURRENT" 2>/dev/null)
     i=-1
     for ((k = 0; k < n; k++)); do [ "${pics[k]##*/}" = "$cur" ] && i=$k; done
@@ -142,7 +142,7 @@ step() {
     use "${pics[i]}"
 }
 
-# pick: a list of the collection by name, newest first, in debsway's wmenu look
+# pick: a list of the collection by name, newest first, in Wren Linux's wmenu look
 # none: no wallpaper: the chosen picture goes, and sway reloads its own
 # background (its config's "output * bg" line, or its plain one); pictures of
 # your own in the desktop folder stay, but don't go up until one is newer

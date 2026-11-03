@@ -152,7 +152,7 @@ bridge_summary() {
 
 # snowflake_lines: the "snowflake ..." bridge lines for Debian's snowflake-client
 snowflake_lines() {
-    grep -E '^snowflake ' "$DEBSWAY_DIR/data/snowflake-bridges.txt"
+    grep -E '^snowflake ' "$WREN_DIR/data/snowflake-bridges.txt"
 }
 
 # tor_bridge_config: torrc lines for the chosen bridges, for a tor that runs
@@ -198,12 +198,12 @@ bridge_packages() {
 # Debian's; lyrebird is one program and a man page, with no install scripts.
 # Its updates install themselves (unattended-upgrades). Through Tor when apt
 # goes through Tor (apt-tor.sh), once lyrebird is there to connect with.
-TORPROJECT_KEY=/usr/share/keyrings/debsway-torproject.asc
-TORPROJECT_LIST=/etc/apt/sources.list.d/debsway-torproject.list
-TORPROJECT_PREF=/etc/apt/preferences.d/debsway-torproject.pref
+TORPROJECT_KEY=/usr/share/keyrings/wren-torproject.asc
+TORPROJECT_LIST=/etc/apt/sources.list.d/wren-torproject.list
+TORPROJECT_PREF=/etc/apt/preferences.d/wren-torproject.pref
 torproject_pref() {
     cat <<'EOF'
-# Written by debsway (lib/tor.sh): from the Tor Project's repository,
+# Written by Wren Linux (lib/tor.sh): from the Tor Project's repository,
 # lyrebird only. Nothing else there can be installed.
 Package: lyrebird
 Pin: origin deb.torproject.org
@@ -221,11 +221,11 @@ add_torproject_repo() {
     install_apt_key "$TORPROJECT_FPR" "$TORPROJECT_KEY_URL" "$TORPROJECT_KEY"
     torproject_pref | sudo tee "$TORPROJECT_PREF" >/dev/null
     # apt over Tor, with lyrebird already here: this repository through Tor too
-    if [ -e "${DEBSWAY_ETC:-/etc}/tor/.debsway-apt-tor" ] && is_installed lyrebird; then proto=tor+https; fi
+    if [ -e "${WREN_ETC:-/etc}/tor/.wren-apt-tor" ] && is_installed lyrebird; then proto=tor+https; fi
     echo "deb [signed-by=$TORPROJECT_KEY arch=$(dpkg --print-architecture)] $proto://deb.torproject.org/torproject.org $cn main" |
         sudo tee "$TORPROJECT_LIST" >/dev/null
     allow_unattended_updates torproject deb.torproject.org
-    unset DEBSWAY_APT_UPDATED
+    unset WREN_APT_UPDATED
 }
 # Only once lyrebird is gone
 remove_torproject_repo_if_unused() {
@@ -237,18 +237,18 @@ remove_torproject_repo_if_unused() {
     ! $had || note "Removed the Tor Project's apt repository."
 }
 
-# The debsway scripts that use the system tor service (tor@default), each
+# The Wren Linux scripts that use the system tor service (tor@default), each
 # marked by a file in /etc/tor. OnionShare runs its own tor and masks the system
 # one, but only while none of these needs it.
-TOR_SERVICE_MARKS=".debsway-apt-tor .debsway-remote-access .debsway-onion-site"
+TOR_SERVICE_MARKS=".wren-apt-tor .wren-remote-access .wren-onion-site"
 
 # system_tor_wanted [MARK]: one of them, other than MARK (the script asking,
-# while it removes itself), is set up. DEBSWAY_ETC is where /etc is, for tests.
+# while it removes itself), is set up. WREN_ETC is where /etc is, for tests.
 system_tor_wanted() {
     local m
     for m in $TOR_SERVICE_MARKS; do
         [ "$m" != "${1:-}" ] || continue
-        [ ! -e "${DEBSWAY_ETC:-/etc}/tor/$m" ] || return 0
+        [ ! -e "${WREN_ETC:-/etc}/tor/$m" ] || return 0
     done
     return 1
 }

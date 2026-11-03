@@ -31,7 +31,7 @@
 # Another account (a second Claude login, apart from the first): --account
 # NAME makes the user claude-vm-NAME with a VM of its own (its own disk, keys
 # and Claude login), its own console port (2250-2299, in
-# /etc/debsway/claude-vm-ports) that only it may reach, a firewall line and a
+# /etc/wren/claude-vm-ports) that only it may reach, a firewall line and a
 # sudo rule; claude-vm --account NAME runs it. --remove-account NAME takes it
 # out again.
 # Usage: bash claude-vm.sh [--remove | --manual | --account NAME | --remove-account NAME]
@@ -40,7 +40,7 @@
 # files: bin/no-abstract-sockets lib/claude-accounts.sh
 # status: bin:claude-vm file:/usr/local/libexec/claude-vm-session
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/lib/claude-accounts.sh"
+. "$WREN_DIR/lib/claude-accounts.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
@@ -48,9 +48,9 @@ AGENT=claude-vm
 AGENT_HOME=/home/$AGENT
 SESSION=/usr/local/libexec/claude-vm-session
 MOCKVPS=/usr/local/libexec/claude-vm-mockvps-kvm
-SUDOERS=/etc/sudoers.d/debsway-claude-vm
-FIREWALL=/etc/debsway/claude-vm.nft
-UNIT=/etc/systemd/system/debsway-claude-vm-firewall.service
+SUDOERS=/etc/sudoers.d/wren-claude-vm
+FIREWALL=/etc/wren/claude-vm.nft
+UNIT=/etc/systemd/system/wren-claude-vm-firewall.service
 PROVISION_DST=$AGENT_HOME/.config/claude-vm/provision.sh
 VM_USER=agent
 
@@ -59,7 +59,7 @@ setup_vm_user() {
     say "The $AGENT user"
     if ! id "$AGENT" >/dev/null 2>&1; then
         sudo useradd --create-home --home-dir "$AGENT_HOME" --shell /bin/bash --user-group \
-            --comment "debsway Claude Code VM" "$AGENT"
+            --comment "Wren Linux Claude Code VM" "$AGENT"
     fi
     sudo usermod --lock "$AGENT"
     sudo chmod 700 "$AGENT_HOME"
@@ -75,7 +75,7 @@ setup_vm_user() {
 write_firewall() {
     local rules
     rules=$(mktemp)
-    claude_vm_firewall_text "$DEBSWAY_DIR/data/claude-vm-firewall.nft" >"$rules"
+    claude_vm_firewall_text "$WREN_DIR/data/claude-vm-firewall.nft" >"$rules"
     if ! sudo nft -c -f "$rules" >/dev/null; then
         rm -f "$rules"
         die "nft didn't accept the new firewall rule, so the old one stays."
@@ -84,8 +84,8 @@ write_firewall() {
     sudo install -o root -g root -m 0644 "$rules" "$FIREWALL"
     rm -f "$rules"
     [ "${1:-}" = no ] && return 0
-    sudo systemctl restart debsway-claude-vm-firewall.service ||
-        warn "Couldn't load the firewall rule; check: systemctl status debsway-claude-vm-firewall"
+    sudo systemctl restart wren-claude-vm-firewall.service ||
+        warn "Couldn't load the firewall rule; check: systemctl status wren-claude-vm-firewall"
 }
 
 # install_provision: the provisioning script, with Anthropic's pinned key
@@ -97,7 +97,7 @@ install_provision() {
     sed -e "s|@ANTHROPIC_FPR@|$ANTHROPIC_FPR|g" \
         -e "s|@ANTHROPIC_KEY_URL@|$ANTHROPIC_KEY_URL|g" \
         -e "s|@VM_USER@|$VM_USER|g" \
-        "$DEBSWAY_DIR/data/claude-vm-provision.sh" >"$prov"
+        "$WREN_DIR/data/claude-vm-provision.sh" >"$prov"
     sudo install -o "$AGENT" -g "$AGENT" -m 0600 "$prov" "$PROVISION_DST"
     rm -f "$prov"
 }
@@ -107,7 +107,7 @@ install_provision() {
 sudoers_rule() {
     local rule
     rule=$(mktemp)
-    printf '# Written by debsway extras/claude-vm.sh. %s may run the claude-vm-session script,\n# and nothing else, as the user %s.\n%s ALL=(%s) NOPASSWD: %s\n' \
+    printf '# Written by Wren Linux extras/claude-vm.sh. %s may run the claude-vm-session script,\n# and nothing else, as the user %s.\n%s ALL=(%s) NOPASSWD: %s\n' \
         "$(id -un)" "$AGENT" "$(id -un)" "$AGENT" "$SESSION" >"$rule"
     if ! sudo visudo -cf "$rule" >/dev/null; then
         rm -f "$rule"
@@ -154,7 +154,7 @@ account() {
     AGENT=$CLAUDE_VM_PREFIX$1
     AGENT_HOME=/home/$AGENT
     PROVISION_DST=$AGENT_HOME/.config/claude-vm/provision.sh
-    ACCOUNT_SUDOERS=/etc/sudoers.d/debsway-claude-vm-$1
+    ACCOUNT_SUDOERS=/etc/sudoers.d/wren-claude-vm-$1
 }
 
 # remove_account NAME: its sudo rule and port, its VM powered off, and (if you
@@ -185,7 +185,7 @@ if [ "${1:-}" = --account ] || [ "${1:-}" = --remove-account ]; then
         exit
     fi
     { [ -x "$SESSION" ] && id claude-vm >/dev/null 2>&1; } ||
-        die "Set up the claude-vm sandbox first: bash $DEBSWAY_DIR/extras/claude-vm.sh"
+        die "Set up the claude-vm sandbox first: bash $WREN_DIR/extras/claude-vm.sh"
     [ -e /dev/kvm ] || die "No /dev/kvm: turn on virtualization (VT-x / AMD-V) in the firmware settings."
     port=$(claude_vm_port "$2")
     if [ -z "$port" ]; then
@@ -222,12 +222,12 @@ if [ "${1:-}" = --remove ]; then
     # claude-pull is shared with extras/claude-code.sh; keep it if that
     # sandbox is still set up (its session wrapper is the tell)
     [ -e /usr/local/libexec/claude-session ] || remove_bin claude-pull
-    sudo systemctl disable --now debsway-claude-vm-firewall.service >/dev/null 2>&1 || true
-    sudo nft delete table inet debsway_claude_vm 2>/dev/null || true
+    sudo systemctl disable --now wren-claude-vm-firewall.service >/dev/null 2>&1 || true
+    sudo nft delete table inet wren_claude_vm 2>/dev/null || true
     sudo rm -f "$SUDOERS" "$SESSION" "$MOCKVPS" "$FIREWALL" "$UNIT"
     remove_no_abstract
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
-    sudo rmdir /usr/local/libexec /etc/debsway 2>/dev/null || true
+    sudo rmdir /usr/local/libexec /etc/wren 2>/dev/null || true
     if id "$AGENT" >/dev/null 2>&1; then
         if ask "Delete the user $AGENT and its home folder $AGENT_HOME (the VM disk, its ssh key and settings)?" n; then
             sudo pkill -KILL -u "$AGENT" 2>/dev/null || true
@@ -259,28 +259,28 @@ setup_vm_user
 say "Keeping $AGENT (and so the guest) off your network"
 # (with each other account's lines)
 write_firewall no
-printf '%s\n' '# Written by debsway extras/claude-vm.sh' '[Unit]' \
-    'Description=Keep the claude-vm user (and its guest) off the local network (debsway)' \
+printf '%s\n' '# Written by Wren Linux extras/claude-vm.sh' '[Unit]' \
+    'Description=Keep the claude-vm user (and its guest) off the local network (Wren Linux)' \
     'Before=network-pre.target' 'Wants=network-pre.target' '' '[Service]' \
     'Type=oneshot' 'RemainAfterExit=yes' \
     "ExecStart=/usr/sbin/nft -f $FIREWALL" \
-    'ExecStop=/usr/sbin/nft delete table inet debsway_claude_vm' '' '[Install]' \
+    'ExecStop=/usr/sbin/nft delete table inet wren_claude_vm' '' '[Install]' \
     'WantedBy=multi-user.target' | sudo tee "$UNIT" >/dev/null
 sudo systemctl daemon-reload
 # Restart, not just enable --now: the unit stays "active" after it first ran,
 # so a rule file changed by an update would otherwise not be loaded
-sudo systemctl enable debsway-claude-vm-firewall.service >/dev/null &&
-    sudo systemctl restart debsway-claude-vm-firewall.service ||
-    warn "Couldn't load the firewall rule; check: systemctl status debsway-claude-vm-firewall"
+sudo systemctl enable wren-claude-vm-firewall.service >/dev/null &&
+    sudo systemctl restart wren-claude-vm-firewall.service ||
+    warn "Couldn't load the firewall rule; check: systemctl status wren-claude-vm-firewall"
 note "$AGENT can reach the internet and the guest's console, nothing else."
 
 say "The VM engine and the claude-vm command"
 sudo install -d -o root -g root -m 0755 /usr/local/libexec
 # The bundled mockvps-kvm, where claude-vm (which has no access to your home)
-# can run it. It looks at its own location, so the debsway-only reminder in it
+# can run it. It looks at its own location, so the wren-only reminder in it
 # stays quiet here.
-sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/vendor/mockvps-kvm/mockvps-kvm.sh" "$MOCKVPS"
-sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/claude-vm-session" "$SESSION"
+sudo install -o root -g root -m 0755 "$WREN_DIR/vendor/mockvps-kvm/mockvps-kvm.sh" "$MOCKVPS"
+sudo install -o root -g root -m 0755 "$WREN_DIR/bin/claude-vm-session" "$SESSION"
 install_no_abstract
 
 install_provision

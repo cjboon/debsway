@@ -11,9 +11,9 @@
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
-SCRIPT="$DEBSWAY_DIR/vendor/mockvps-kvm/mockvps-kvm.sh"
-# Where earlier versions of debsway kept it
-OLD_SCRIPT="$DEBSWAY_DIR/extras/mockvps-kvm/mockvps-kvm.sh"
+SCRIPT="$WREN_DIR/vendor/mockvps-kvm/mockvps-kvm.sh"
+# Where earlier versions of Wren Linux kept it
+OLD_SCRIPT="$WREN_DIR/extras/mockvps-kvm/mockvps-kvm.sh"
 CMD="$HOME/.local/bin/mockvps-kvm"
 
 if [ "${1:-}" = --remove ]; then
@@ -42,7 +42,7 @@ if [ -e "$CMD" ] || [ -L "$CMD" ]; then
     if [ "$(readlink -- "$CMD")" = "$OLD_SCRIPT" ]; then rm -f "$CMD"; fi
 fi
 if [ -e "$CMD" ] && [ "$(readlink -- "$CMD")" != "$SCRIPT" ]; then
-    die "$CMD already exists and isn't debsway's; leaving it."
+    die "$CMD already exists and isn't Wren Linux's; leaving it."
 fi
 ln -sfn "$SCRIPT" "$CMD"
 chmod +x "$SCRIPT"

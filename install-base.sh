@@ -18,10 +18,10 @@ if [ "${1:-}" = --yes ]; then
     assume_yes=true
     shift
 else
-    bash "$DEBSWAY_DIR/prep/intro.sh" || exit 1
+    bash "$WREN_DIR/prep/intro.sh" || exit 1
 fi
 
-. "$DEBSWAY_DIR/packages.sh"
+. "$WREN_DIR/packages.sh"
 
 need_user
 # A root account with a password is another way to full control of the system
@@ -42,7 +42,7 @@ apt_sources_ensure
 # install, and installed once the base is done. Nothing is checked for you.
 picked=$(mktemp)
 trap 'rm -f "$picked"' EXIT
-bash "$DEBSWAY_DIR/install-extras.sh" --choose "$picked" || : >"$picked"
+bash "$WREN_DIR/install-extras.sh" --choose "$picked" || : >"$picked"
 
 # Before anything is downloaded, so all of it can go through Tor
 if ! $assume_yes; then
@@ -51,7 +51,7 @@ if ! $assume_yes; then
     note "that you paste in: your network then can't see which packages you get, and it's"
     note "slower. You can also do it later: bash parts/apt-tor.sh"
     if ask "Download packages through Tor?" n; then
-        bash "$DEBSWAY_DIR/parts/apt-tor.sh" ||
+        bash "$WREN_DIR/parts/apt-tor.sh" ||
             warn "apt-tor didn't finish; packages will download the normal way."
     fi
 fi
@@ -66,40 +66,40 @@ note "$SWAY_CONFIG (stock config + include for $SWAY_SNIPPETS)"
 
 say "Key cheat sheet"
 # Super+? shows data/keys.txt; it also opens once on the first login
-KEYS="$HOME/.local/share/debsway/keys.txt"
+KEYS="$HOME/.local/share/wren/keys.txt"
 mkdir -p "${KEYS%/*}"
-install -m 0644 "$DEBSWAY_DIR/data/keys.txt" "$KEYS"
+install -m 0644 "$WREN_DIR/data/keys.txt" "$KEYS"
 # Easy to find again: ~/KEYS.txt and the keys command. Both show only the lines
 # for what is installed; keys rewrites ~/KEYS.txt each time it runs.
 ln -sfn "$KEYS" "$HOME/KEYS.txt"
-# (parts/core-commands.sh puts these in place again, so debsway --update can refresh them)
+# (parts/core-commands.sh puts these in place again, so wrenctl --update can refresh them)
 install_bin keys
-install_bin debsway-welcome
+install_bin wren-welcome
 install_bin timer
 # Shift+slash is ? on a US keyboard; "question" follows the layout on others
 put_snippet help <<'EOF'
-# Key cheat sheet on Super+? (debsway install-base.sh)
-bindsym $mod+Shift+slash exec foot -o colors.alpha=0.85 --app-id=debsway-keys ~/.local/bin/keys
-bindsym $mod+question exec foot -o colors.alpha=0.85 --app-id=debsway-keys ~/.local/bin/keys
-exec ~/.local/bin/debsway-welcome
+# Key cheat sheet on Super+? (Wren Linux install-base.sh)
+bindsym $mod+Shift+slash exec foot -o colors.alpha=0.85 --app-id=wren-keys ~/.local/bin/keys
+bindsym $mod+question exec foot -o colors.alpha=0.85 --app-id=wren-keys ~/.local/bin/keys
+exec ~/.local/bin/wren-welcome
 EOF
 note "Super+? shows it (also: type keys, or open ~/KEYS.txt). It opens by itself on your first login."
 
 # Super+t, or a click on the time in the bar (bin/sway-status), opens the timer menu
 put_snippet timer <<'EOF'
-# Timers and alarms on Super+t (debsway install-base.sh)
-bindsym $mod+t exec foot -o colors.alpha=0.85 --app-id=debsway-timer ~/.local/bin/timer
+# Timers and alarms on Super+t (Wren Linux install-base.sh)
+bindsym $mod+t exec foot -o colors.alpha=0.85 --app-id=wren-timer ~/.local/bin/timer
 EOF
-# All the pop-up windows (key sheet, Wi-Fi, timer, the debsway menu) look and behave alike:
+# All the pop-up windows (key sheet, Wi-Fi, timer, the Wren menu) look and behave alike:
 # floating, centered, over whatever you were doing. focus_follows_mouse is off because
 # with it on, a pointer resting over another window (say a terminal running claude)
 # takes the keyboard back from the pop-up, and Esc lands in that window instead.
 put_snippet popups <<'EOF'
-# Pop-up windows (debsway install-base.sh)
-for_window [app_id="debsway-keys"] floating enable, resize set width 72 ppt height 85 ppt, move position center
-for_window [app_id="debsway-run"] floating enable, resize set width 72 ppt height 85 ppt, move position center
-for_window [app_id="debsway-nmtui"] floating enable, resize set width 60 ppt height 70 ppt, move position center
-for_window [app_id="debsway-timer"] floating enable, resize set width 60 ppt height 60 ppt, move position center
+# Pop-up windows (Wren Linux install-base.sh)
+for_window [app_id="wren-keys"] floating enable, resize set width 72 ppt height 85 ppt, move position center
+for_window [app_id="wren-run"] floating enable, resize set width 72 ppt height 85 ppt, move position center
+for_window [app_id="wren-nmtui"] floating enable, resize set width 60 ppt height 70 ppt, move position center
+for_window [app_id="wren-timer"] floating enable, resize set width 60 ppt height 60 ppt, move position center
 focus_follows_mouse no
 EOF
 note "Pop-up windows are floating and centered; focus follows clicks, not the mouse pointer."
@@ -107,7 +107,7 @@ note "Super+t, or a click on the time in the bar: timers and alarms (or type: ti
 
 say "Look"
 put_snippet appearance <<'EOF'
-# No window borders (debsway install-base.sh)
+# No window borders (Wren Linux install-base.sh)
 default_border none
 default_floating_border none
 hide_edge_borders both
@@ -119,13 +119,13 @@ say "Sharp screens"
 # when a sharp one is still at scale 1 (also when one is plugged in later)
 install_bin display-scale
 put_snippet display-watch <<'EOF'
-# Notice sharp screens whose text is small (debsway display-scale)
+# Notice sharp screens whose text is small (Wren Linux display-scale)
 exec ~/.local/bin/display-scale watch
 EOF
 note "Text too small on a sharp screen? display-scale makes it bigger (sway tells you once)."
 
 say "sway status bar"
-# bin/sway-status shows debsway (clickable: parts/debsway-menu.sh) | wifi | volume | brightness | battery | date
+# bin/sway-status shows Wren Linux (clickable: parts/wren-menu.sh) | wifi | volume | brightness | battery | date
 install_bin sway-status
 # Edit the stock bar in place; a second bar block would add a second bar
 if grep -q 'status_command while date' "$SWAY_CONFIG"; then
@@ -143,7 +143,7 @@ reload_sway
 say "Start sway on tty1 login"
 PROFILE="$HOME/.profile"
 first_run=0
-if grep -q '>>> debsway \(autostart\|console\)' "$PROFILE" 2>/dev/null; then
+if grep -q '>>> Wren Linux \(autostart\|console\)' "$PROFILE" 2>/dev/null; then
     note "Already set up in $PROFILE"
 else
     first_run=1
@@ -151,14 +151,14 @@ else
     note "Added to $PROFILE. Other ttys (Ctrl+Alt+F2) still give a plain shell."
 fi
 # On a plain text console (Ctrl+Alt+F2, or tty1 without autostart) say where the keys are
-if ! grep -q '>>> debsway hint' "$PROFILE" 2>/dev/null; then
+if ! grep -q '>>> Wren Linux hint' "$PROFILE" 2>/dev/null; then
     cat >>"$PROFILE" <<'EOF'
 
-# >>> debsway hint >>>
+# >>> Wren Linux hint >>>
 case "$(tty 2>/dev/null)" in
-    /dev/tty[0-9]*) [ -n "${WAYLAND_DISPLAY:-}" ] || echo "debsway: type keys for the key cheat sheet" ;;
+    /dev/tty[0-9]*) [ -n "${WAYLAND_DISPLAY:-}" ] || echo "Wren Linux: type keys for the key cheat sheet" ;;
 esac
-# <<< debsway hint <<<
+# <<< Wren Linux hint <<<
 EOF
 fi
 
@@ -166,7 +166,7 @@ fi
 failed=()
 for part in "${PARTS[@]}"; do
     say "Part: $part"
-    DEBSWAY_FROM_BASE=1 bash "$DEBSWAY_DIR/parts/$part.sh" || failed+=("$part")
+    WREN_FROM_BASE=1 bash "$WREN_DIR/parts/$part.sh" || failed+=("$part")
 done
 
 if [ ${#failed[@]} -gt 0 ]; then
@@ -179,17 +179,17 @@ fi
 # console) but not for the GitHub login, which needs a browser that isn't
 # running yet: log in later with  gh auth login
 if [ -s "$picked" ]; then
-    DEBSWAY_SETUP_GH=1 DEBSWAY_GH_LOGIN=0 bash "$DEBSWAY_DIR/install-extras.sh" --install "$picked" ||
+    WREN_SETUP_GH=1 WREN_GH_LOGIN=0 bash "$WREN_DIR/install-extras.sh" --install "$picked" ||
         warn "Some extras didn't install; the message above says which."
 else
-    note "No extras chosen. Pick some any time with: debsway --apps"
+    note "No extras chosen. Pick some any time with: wrenctl --apps"
 fi
 
 say "Done"
 cat <<'EOF'
     Super+? lists every key; it also opens by itself the first time.
-    debsway --status shows what's installed;
-    debsway --apps picks more extras any time (sound, a browser, screenshots,
+    wrenctl --status shows what's installed;
+    wrenctl --apps picks more extras any time (sound, a browser, screenshots,
     USB automount... are there if you didn't pick them now).
     Reboot once: the boot hardening applies after it
     (check with: cat /proc/cmdline).
@@ -197,13 +197,13 @@ EOF
 
 # First run, on a text console with no desktop yet: start sway now instead of
 # making you log out and in. (The boot hardening still waits for a reboot.)
-if [ "$first_run" = 1 ] && [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${DEBSWAY_NO_SWAY:-}" ] &&
+if [ "$first_run" = 1 ] && [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${WREN_NO_SWAY:-}" ] &&
     [ -t 0 ] && case "$(tty 2>/dev/null)" in /dev/tty[0-9]*) true ;; *) false ;; esac; then
     note "Starting in 5 seconds (Ctrl+C to stay in the text console)..."
     sleep 5
     # This login's PATH was set before ~/.local/bin existed (~/.profile adds it
     # only if it is there), and sway and everything started from it inherit
-    # PATH: without this, the commands debsway installs there (debsway, whonix,
+    # PATH: without this, the commands Wren Linux installs there (Wren Linux, whonix,
     # onion-site...) aren't found until you log out and in again
     case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac
     # the console-only extra may have been picked: then it is tmux that starts

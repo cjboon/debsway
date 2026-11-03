@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# lib/apt-keys.sh: the signing keys of the apt repositories debsway adds,
+# lib/apt-keys.sh: the signing keys of the apt repositories Wren Linux adds,
 # kept fresh. Sourced after lib.sh, by update.sh and status.sh.
 #
 # A key is installed when its extra runs, and an extra only runs again when
@@ -18,11 +18,11 @@ APT_KEYS=(
     "Claude Code|/etc/apt/keyrings/claude-code.asc|ANTHROPIC_FPR|ANTHROPIC_KEY_URL"
     "Signal|/usr/share/keyrings/signal-desktop-keyring.asc|SIGNAL_FPR|SIGNAL_KEY_URL"
     "Mullvad|/usr/share/keyrings/mullvad-keyring.asc|MULLVAD_FPR|MULLVAD_KEY_URL"
-    "the Tor Project (lyrebird)|/usr/share/keyrings/debsway-torproject.asc|TORPROJECT_FPR|TORPROJECT_KEY_URL"
+    "the Tor Project (lyrebird)|/usr/share/keyrings/wren-torproject.asc|TORPROJECT_FPR|TORPROJECT_KEY_URL"
 )
 APT_KEY_WARN_DAYS=60
 # (a test reads the key files from under this folder; sudo still writes to the real path)
-APT_KEYS_ROOT=${DEBSWAY_KEYS_ROOT:-}
+APT_KEYS_ROOT=${WREN_KEYS_ROOT:-}
 
 # key_sign_until FILE: until when (seconds since 1970; 0 for never) a key in
 # FILE that isn't expired or revoked can sign; fails if none can

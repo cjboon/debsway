@@ -1,5 +1,5 @@
 #!/bin/bash
-# Checks bin/wallpaper (the newest real JPEG or PNG in ~/Pictures/debsway/desktop
+# Checks bin/wallpaper (the newest real JPEG or PNG in ~/Pictures/wren/desktop
 # goes up; a file that only says it's a picture, an odd file name or an empty
 # folder changes nothing), parts/wallpaper.sh (the sway snippet), and
 # extras/wallpapers.sh (every source in one folder, named after it; Budgie's
@@ -33,8 +33,8 @@ printf '#!/bin/sh\n[ "$1" = -v ] && exit 0\necho "sudo $*" >>"%s/sudo"\nexit 1\n
 chmod +x "$T/fake/"*
 png() { printf '\x89PNG\r\n\x1a\n' >"$1"; head -c "${2:-200000}" /dev/zero >>"$1"; }
 jpg() { printf '\xff\xd8\xff\xe0' >"$1"; head -c "${2:-200000}" /dev/zero >>"$1"; }
-D=$T/home/Pictures/debsway/desktop
-C=$T/home/.cache/debsway
+D=$T/home/Pictures/wren/desktop
+C=$T/home/.cache/wren
 wp() { : >"$T/sway"; env PATH="$T/fake:$PATH" HOME="$T/home" XDG_CACHE_HOME="$T/home/.cache" bash "$HERE/bin/wallpaper" "$@" >"$T/out" 2>&1; }
 
 # ---- bin/wallpaper
@@ -179,10 +179,10 @@ check "the part: sway runs wallpaper at every start and reload" grep -qx "exec_a
 check "...Super+] and Super+[ step through the pictures, Super+Shift+w lists them, Super+\\ is none" \
     bash -c 'grep -qx "bindsym \$mod+bracketright exec $2/wallpaper next" "$1" && grep -qx "bindsym \$mod+bracketleft exec $2/wallpaper previous" "$1" && grep -qx "bindsym \$mod+Shift+w exec $2/wallpaper pick" "$1" && grep -qx "bindsym \$mod+backslash exec $2/wallpaper none" "$1"' _ "$P/home/.config/sway/config.d/wallpaper.conf" "$P/home/.local/bin"
 check "...the command is installed, the desktop and firefox folders made, with a README" \
-    bash -c '[ -x "$1/.local/bin/wallpaper" ] && [ -d "$1/Pictures/debsway/desktop" ] && [ -d "$1/Pictures/debsway/firefox" ] && grep -q "Super+Shift+c" "$1/Pictures/debsway/README.txt" && grep -q "^firefox/" "$1/Pictures/debsway/README.txt"' _ "$P/home"
+    bash -c '[ -x "$1/.local/bin/wallpaper" ] && [ -d "$1/Pictures/wren/desktop" ] && [ -d "$1/Pictures/wren/firefox" ] && grep -q "Super+Shift+c" "$1/Pictures/wren/README.txt" && grep -q "^firefox/" "$1/Pictures/wren/README.txt"' _ "$P/home"
 env -u SWAYSOCK WP_TEST_PATH="$T/fake:$PATH" HOME="$P/home" bash "$R/parts/wallpaper.sh" --remove >"$T/out" 2>&1
 check "...--remove takes the snippet and the command, and leaves your pictures" \
-    bash -c '[ ! -e "$1/.config/sway/config.d/wallpaper.conf" ] && [ ! -e "$1/.local/bin/wallpaper" ] && [ -d "$1/Pictures/debsway/desktop" ]' _ "$P/home"
+    bash -c '[ ! -e "$1/.config/sway/config.d/wallpaper.conf" ] && [ ! -e "$1/.local/bin/wallpaper" ] && [ -d "$1/Pictures/wren/desktop" ]' _ "$P/home"
 check "it's in the base" bash -c '. "$1/packages.sh"; printf "%s\n" "${PARTS[@]}" | grep -qx wallpaper' _ "$HERE"
 
 # ---- extras/wallpapers.sh, with packages built here
@@ -245,12 +245,12 @@ check "...nothing is installed: no sudo, no package script ran" bash -c '[ ! -e 
 check "...two pictures with the same name both kept, under their own names" \
     test "$(find "$W" -name 'budgie_*1920x1080.jpg' | wc -l)" = 2
 check "...the downloads are on the list; paths out of the folder or into one, and another source's names, aren't" \
-    bash -c 'grep -qx webb_A1.jpg "$1" && grep -qx CREDITS.txt "$1" && ! grep -qE "\.\.|/" "$1" && [ "$(grep -c "^nasa_not-mine" "$1")" = 1 ]' _ "$W/.debsway-wallpapers"
+    bash -c 'grep -qx webb_A1.jpg "$1" && grep -qx CREDITS.txt "$1" && ! grep -qE "\.\.|/" "$1" && [ "$(grep -c "^nasa_not-mine" "$1")" = 1 ]' _ "$W/.wren-wallpapers"
 check "...a README, which says your own pictures can go there too" bash -c '[ ! -e "$1/personal" ] && grep -q "Your own pictures" "$1/README.txt"' _ "$W"
 check "...and the run succeeds" test "$rc" -eq 0
 n=$(find "$W" -type f | wc -l)
 xw
-check "run again: the same files, nothing doubled" bash -c '[ "$(find "$1" -type f | wc -l)" = "$2" ] && [ "$(sort "$1/.debsway-wallpapers" | uniq -d | wc -l)" = 0 ]' _ "$W" "$n"
+check "run again: the same files, nothing doubled" bash -c '[ "$(find "$1" -type f | wc -l)" = "$2" ] && [ "$(sort "$1/.wren-wallpapers" | uniq -d | wc -l)" = 0 ]' _ "$W" "$n"
 echo "my notes" >"$W/README.txt"
 xw
 check "a README you rewrote yourself is left alone" grep -qx "my notes" "$W/README.txt"
@@ -262,11 +262,11 @@ check "a source failing is said, and the run fails" bash -c '[ "$1" -ne 0 ] && g
 rm "$T/fails-webb"
 png "$W/mine.png"
 mkdir -p "$W/inner"; png "$W/inner/found.png"
-echo "../mine.png" >>"$W/.debsway-wallpapers"
-echo "inner/found.png" >>"$W/.debsway-wallpapers"
+echo "../mine.png" >>"$W/.wren-wallpapers"
+echo "inner/found.png" >>"$W/.wren-wallpapers"
 xw --remove
 check "--remove takes out what it put there" \
-    bash -c '[ ! -e "$1/budgie_big.png" ] && [ ! -e "$1/nasa_A1.jpg" ] && [ ! -e "$1/CREDITS.txt" ] && [ ! -e "$1/.debsway-wallpapers" ]' _ "$W"
+    bash -c '[ ! -e "$1/budgie_big.png" ] && [ ! -e "$1/nasa_A1.jpg" ] && [ ! -e "$1/CREDITS.txt" ] && [ ! -e "$1/.wren-wallpapers" ]' _ "$W"
 check "...and keeps what you added, in the folder or below, whatever the list says" \
     bash -c '[ -f "$1/mine.png" ] && [ -f "$1/inner/found.png" ]' _ "$W"
 check "...no sudo there either" test ! -e "$T/sudo"
@@ -292,7 +292,7 @@ check "the list has \"No wallpapers downloaded, I'll find my own\", unticked" \
     bash -c 'grep -A2 -x none "$1" | sed -n 2,3p | paste -sd"|" | grep -qx "No wallpapers downloaded, I.ll find my own|OFF"' _ "$T/seen"
 check "...ticked: nothing is downloaded, whatever else is ticked" test ! -s "$T/apt"
 check "...but the folder, its README and its list are set up (the extra counts as installed)" \
-    bash -c '[ -f "$1/README.txt" ] && [ -f "$1/.debsway-wallpapers" ] && [ -z "$(find "$1" -name "*.jpg")" ]' _ "$H2/Pictures/Wallpapers"
+    bash -c '[ -f "$1/README.txt" ] && [ -f "$1/.wren-wallpapers" ] && [ -z "$(find "$1" -name "*.jpg")" ]' _ "$H2/Pictures/Wallpapers"
 check "...and it says where your own pictures go" grep -q "Put pictures (JPEG or PNG) in" "$T/out"
 
 # ---- lib/wallpaper-sources.py's rules, offline (no connection is made)

@@ -1,5 +1,5 @@
 # Keeps the incognito user off your computer and your local network
-# (debsway parts/incognito.sh). Only that user's traffic is touched.
+# (Wren Linux parts/incognito.sh). Only that user's traffic is touched.
 # A hacked page can still reach the internet, but not:
 #   - programs on this machine that listen on the network (a local server,
 #     the Tor Browser proxy, a printing service, ...)
@@ -8,10 +8,10 @@
 # often on the local network, so the Wi-Fi sign-in window runs as another user,
 # wifi-signin, with a rule of its own (wifi-signin-firewall.nft).
 
-table inet debsway_incognito
-delete table inet debsway_incognito
+table inet wren_incognito
+delete table inet wren_incognito
 
-table inet debsway_incognito {
+table inet wren_incognito {
     chain output {
         type filter hook output priority 0; policy accept;
         meta skuid "incognito" jump incognito

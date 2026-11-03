@@ -12,7 +12,7 @@
 #    Tor and remote access), with its defences against floods of visits.
 #  - Public (anyone with the address) or private (only visitors you give a
 #    client key; without one the site can't even be found): you choose.
-#  - The VM starts at every boot (debsway-onion-site.service), so the site is
+#  - The VM starts at every boot (wren-onion-site.service), so the site is
 #    up whenever this computer is on; onion-site stop takes it down until the
 #    next boot or onion-site start.
 #  - Security updates for the VM: onion-site update, which lends the VM this
@@ -27,7 +27,7 @@
 # files: bin/no-abstract-sockets
 # status: bin:onion-site file:/usr/local/libexec/onion-site-session
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/lib/onion-site.sh"
+. "$WREN_DIR/lib/onion-site.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
@@ -35,16 +35,16 @@ AGENT=$ONION_SITE_USER
 AGENT_HOME=/home/$AGENT
 SESSION=/usr/local/libexec/onion-site-session
 MOCKVPS=/usr/local/libexec/onion-site-mockvps-kvm
-SUDOERS=/etc/sudoers.d/debsway-onion-site
-FIREWALL=/etc/debsway/onion-site.nft
-UNIT=/etc/systemd/system/debsway-onion-site-firewall.service
-VM_UNIT=/etc/systemd/system/debsway-onion-site.service
-SETTINGS=/etc/debsway/onion-site.conf
+SUDOERS=/etc/sudoers.d/wren-onion-site
+FIREWALL=/etc/wren/onion-site.nft
+UNIT=/etc/systemd/system/wren-onion-site-firewall.service
+VM_UNIT=/etc/systemd/system/wren-onion-site.service
+SETTINGS=/etc/wren/onion-site.conf
 PROVISION_DST=$AGENT_HOME/.config/onion-site/provision.sh
 TORRC=/etc/tor/torrc
 SVC_DIR=$ONION_SITE_SVC_DIR
 MARK=$ONION_SITE_MARK
-ADDRESS=${XDG_STATE_HOME:-$HOME/.local/state}/debsway/onion-site-address
+ADDRESS=${XDG_STATE_HOME:-$HOME/.local/state}/wren/onion-site-address
 
 drop_torrc_block() {
     sudo sed -i "\\|^$ONION_SITE_BEGIN\$|,\\|^$ONION_SITE_END\$|d" "$TORRC" 2>/dev/null || true
@@ -62,7 +62,7 @@ if [ "${1:-}" = --remove ]; then
         sudo -u "$AGENT" "$SESSION" stop >/dev/null 2>&1 || true
     fi
     drop_torrc_block
-    sudo sed -i "\\|^# >>> debsway onion-site bridges >>>\$|,\\|^# <<< debsway onion-site bridges <<<\$|d" "$TORRC" 2>/dev/null || true
+    sudo sed -i "\\|^# >>> Wren Linux onion-site bridges >>>\$|,\\|^# <<< Wren Linux onion-site bridges <<<\$|d" "$TORRC" 2>/dev/null || true
     sudo rm -f "$MARK"
     if sudo test -d "$SVC_DIR"; then
         warn "The site's .onion address lives in $SVC_DIR. Deleted, it is gone for good:"
@@ -74,19 +74,19 @@ if [ "${1:-}" = --remove ]; then
             note "Kept $SVC_DIR (back it up as root to keep the address)."
         fi
     fi
-    if system_tor_wanted .debsway-onion-site; then
+    if system_tor_wanted .wren-onion-site; then
         sudo systemctl restart tor@default.service >/dev/null 2>&1 || true
     else
         tor_service_off
     fi
     remove_bin onion-site
-    sudo systemctl disable debsway-onion-site.service >/dev/null 2>&1 || true
-    sudo systemctl disable --now debsway-onion-site-firewall.service >/dev/null 2>&1 || true
-    sudo nft delete table inet debsway_onion_site 2>/dev/null || true
+    sudo systemctl disable wren-onion-site.service >/dev/null 2>&1 || true
+    sudo systemctl disable --now wren-onion-site-firewall.service >/dev/null 2>&1 || true
+    sudo nft delete table inet wren_onion_site 2>/dev/null || true
     sudo rm -f "$SUDOERS" "$SESSION" "$MOCKVPS" "$FIREWALL" "$UNIT" "$VM_UNIT" "$SETTINGS"
     remove_no_abstract
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
-    sudo rmdir /usr/local/libexec /etc/debsway 2>/dev/null || true
+    sudo rmdir /usr/local/libexec /etc/wren 2>/dev/null || true
     if id "$AGENT" >/dev/null 2>&1; then
         if ask "Delete the user $AGENT and its home $AGENT_HOME (the VM, with the site's files and data)?" n; then
             sudo pkill -KILL -u "$AGENT" 2>/dev/null || true
@@ -135,7 +135,7 @@ if [ -z "$access" ]; then
     case $choice in 1 | public) access=public ;; 2 | private) access=private ;; *) die "Nothing chosen, so nothing was changed." ;; esac
 fi
 bridge_block=false
-if ! system_tor_wanted .debsway-onion-site && ! is_installed tor; then
+if ! system_tor_wanted .wren-onion-site && ! is_installed tor; then
     say "Bridges"
     pick_bridges system-tor
     if $BRIDGE_WANTED && [ "$BRIDGE_TYPE" = none ]; then
@@ -165,7 +165,7 @@ apt_install "${pkgs[@]}"
 say "The $AGENT user"
 if ! id "$AGENT" >/dev/null 2>&1; then
     sudo useradd --create-home --home-dir "$AGENT_HOME" --shell /bin/bash --user-group \
-        --comment "debsway onion site VM" "$AGENT"
+        --comment "Wren Linux onion site VM" "$AGENT"
 fi
 sudo usermod --lock "$AGENT"
 sudo chmod 700 "$AGENT_HOME"
@@ -174,33 +174,33 @@ note "$AGENT: no password, no login, in the kvm group only."
 
 say "Keeping $AGENT off your network"
 sudo install -d -o root -g root -m 0755 "${FIREWALL%/*}"
-sudo install -o root -g root -m 0644 "$DEBSWAY_DIR/data/onion-site-firewall.nft" "$FIREWALL"
-printf '%s\n' '# Written by debsway extras/onion-site.sh' '[Unit]' \
-    'Description=Keep the onion-site user (and its VM) off the local network (debsway)' \
+sudo install -o root -g root -m 0644 "$WREN_DIR/data/onion-site-firewall.nft" "$FIREWALL"
+printf '%s\n' '# Written by Wren Linux extras/onion-site.sh' '[Unit]' \
+    'Description=Keep the onion-site user (and its VM) off the local network (Wren Linux)' \
     'Before=network-pre.target' 'Wants=network-pre.target' '' '[Service]' \
     'Type=oneshot' 'RemainAfterExit=yes' \
     "ExecStart=/usr/sbin/nft -f $FIREWALL" \
-    'ExecStop=/usr/sbin/nft delete table inet debsway_onion_site' '' '[Install]' \
+    'ExecStop=/usr/sbin/nft delete table inet wren_onion_site' '' '[Install]' \
     'WantedBy=multi-user.target' | sudo tee "$UNIT" >/dev/null
 sudo systemctl daemon-reload
-sudo systemctl enable debsway-onion-site-firewall.service >/dev/null &&
-    sudo systemctl restart debsway-onion-site-firewall.service ||
-    warn "Couldn't load the firewall rule; check: systemctl status debsway-onion-site-firewall"
+sudo systemctl enable wren-onion-site-firewall.service >/dev/null &&
+    sudo systemctl restart wren-onion-site-firewall.service ||
+    warn "Couldn't load the firewall rule; check: systemctl status wren-onion-site-firewall"
 
 say "The VM engine and the onion-site command"
 sudo install -d -o root -g root -m 0755 /usr/local/libexec
-sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/vendor/mockvps-kvm/mockvps-kvm.sh" "$MOCKVPS"
-sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/onion-site-session" "$SESSION"
+sudo install -o root -g root -m 0755 "$WREN_DIR/vendor/mockvps-kvm/mockvps-kvm.sh" "$MOCKVPS"
+sudo install -o root -g root -m 0755 "$WREN_DIR/bin/onion-site-session" "$SESSION"
 install_no_abstract
-printf '# Written by debsway extras/onion-site.sh\napp=%s\naccess=%s\n' "$app" "$access" |
+printf '# Written by Wren Linux extras/onion-site.sh\napp=%s\naccess=%s\n' "$app" "$access" |
     sudo install -o root -g root -m 0644 /dev/stdin "$SETTINGS"
 sudo install -d -o "$AGENT" -g "$AGENT" -m 0700 "$AGENT_HOME/.config" "$AGENT_HOME/.config/onion-site"
 prov=$(mktemp)
-sed -e "s|@APP@|$app|g" -e "s|@VM_USER@|site|g" "$DEBSWAY_DIR/data/onion-site-provision.sh" >"$prov"
+sed -e "s|@APP@|$app|g" -e "s|@VM_USER@|site|g" "$WREN_DIR/data/onion-site-provision.sh" >"$prov"
 sudo install -o "$AGENT" -g "$AGENT" -m 0600 "$prov" "$PROVISION_DST"
 rm -f "$prov"
 rule=$(mktemp)
-printf '# Written by debsway extras/onion-site.sh. %s may run the onion-site-session script,\n# and nothing else, as the user %s.\n%s ALL=(%s) NOPASSWD: %s\n' \
+printf '# Written by Wren Linux extras/onion-site.sh. %s may run the onion-site-session script,\n# and nothing else, as the user %s.\n%s ALL=(%s) NOPASSWD: %s\n' \
     "$(id -un)" "$AGENT" "$(id -un)" "$AGENT" "$SESSION" >"$rule"
 if ! sudo visudo -cf "$rule" >/dev/null; then
     rm -f "$rule"
@@ -212,9 +212,9 @@ install_bin onion-site
 
 say "The onion service"
 if $bridge_block; then
-    sudo sed -i "\\|^# >>> debsway onion-site bridges >>>\$|,\\|^# <<< debsway onion-site bridges <<<\$|d" "$TORRC"
+    sudo sed -i "\\|^# >>> Wren Linux onion-site bridges >>>\$|,\\|^# <<< Wren Linux onion-site bridges <<<\$|d" "$TORRC"
     if [ "$BRIDGE_TYPE" != none ]; then
-        { echo "# >>> debsway onion-site bridges >>>"; tor_bridge_config; echo "# <<< debsway onion-site bridges <<<"; } |
+        { echo "# >>> Wren Linux onion-site bridges >>>"; tor_bridge_config; echo "# <<< Wren Linux onion-site bridges <<<"; } |
             sudo tee -a "$TORRC" >/dev/null
     fi
 fi
@@ -234,7 +234,7 @@ if ! tor_config_ok >/dev/null 2>&1; then
         die "tor didn't accept the onion service's settings, so they were taken out again."
     fi
 fi
-printf '%s\n' 'Written by debsway extras/onion-site.sh: the system tor service runs the onion site.' |
+printf '%s\n' 'Written by Wren Linux extras/onion-site.sh: the system tor service runs the onion site.' |
     sudo tee "$MARK" >/dev/null
 
 show_client=false
@@ -279,21 +279,21 @@ fi
 say "Starting the site at every boot"
 # The site is only up while its VM runs: start it with the computer (after its
 # firewall rule, which it needs), and power it off cleanly at shutdown.
-printf '%s\n' '# Written by debsway extras/onion-site.sh' '[Unit]' \
-    "Description=The onion site's VM (debsway)" \
-    'Requires=debsway-onion-site-firewall.service' \
-    'After=debsway-onion-site-firewall.service tor@default.service' '' '[Service]' \
+printf '%s\n' '# Written by Wren Linux extras/onion-site.sh' '[Unit]' \
+    "Description=The onion site's VM (Wren Linux)" \
+    'Requires=wren-onion-site-firewall.service' \
+    'After=wren-onion-site-firewall.service tor@default.service' '' '[Service]' \
     'Type=oneshot' 'RemainAfterExit=yes' "User=$AGENT" \
     "ExecStart=$SESSION start" "ExecStop=$SESSION stop" \
     'TimeoutStartSec=600' 'TimeoutStopSec=120' '' '[Install]' \
     'WantedBy=multi-user.target' | sudo tee "$VM_UNIT" >/dev/null
 sudo systemctl daemon-reload
-sudo systemctl enable debsway-onion-site.service >/dev/null 2>&1 ||
-    warn "Couldn't set the site to start at boot; check: systemctl status debsway-onion-site"
+sudo systemctl enable wren-onion-site.service >/dev/null 2>&1 ||
+    warn "Couldn't set the site to start at boot; check: systemctl status wren-onion-site"
 if $built; then
     # (the build left the VM running; this makes systemd its keeper, for shutdown)
-    sudo systemctl start debsway-onion-site.service ||
-        warn "The site's VM didn't start; check: systemctl status debsway-onion-site"
+    sudo systemctl start wren-onion-site.service ||
+        warn "The site's VM didn't start; check: systemctl status wren-onion-site"
     if sudo -u "$AGENT" "$SESSION" status 2>/dev/null | grep -q Running; then
         note "The VM is running: the site is up. It starts again at every boot."
     fi

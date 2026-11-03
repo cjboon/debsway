@@ -3,15 +3,15 @@
 ## SYNOPSIS
 
 ```
-debsway install feather-wallet                     install it, or update to the newest release
-debsway remove feather-wallet                      remove it (your wallet files stay)
-debsway manual feather-wallet                      print the manual steps below
+wrenctl install feather-wallet                     install it, or update to the newest release
+wrenctl remove feather-wallet                      remove it (your wallet files stay)
+wrenctl manual feather-wallet                      print the manual steps below
 
 feather                                            start it (or Super+d, then feather)
-bash ~/debsway/test.sh                             says when a newer release is out
+bash ~/wren/test.sh                             says when a newer release is out
 ```
 
-Feather is a Monero wallet. debsway installs the official AppImage from
+Feather is a Monero wallet. Wren Linux installs the official AppImage from
 featherwallet.org only if it matches the list of SHA-256 checksums that
 Feather signs with its key, pinned in `pins.sh` (`FEATHER_FPR`). The newest
 version is read from GitHub and must be plain numbers. The AppImage is

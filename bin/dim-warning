@@ -1,17 +1,17 @@
 #!/bin/bash
-# dim-warning start|stop: written by debsway parts/swayidle.sh
+# dim-warning start|stop: written by Wren Linux parts/swayidle.sh
 # A warning before the screen locks. swayidle runs "start" 30 seconds before the
 # lock: the screen fades down slowly to 10% and a notification says it is about
 # to lock. Any key or mouse movement makes swayidle run "stop", which puts the
 # brightness back exactly where it was. A screen with no backlight (a desktop
 # monitor) can't be dimmed, so it only gets the notification.
-#   DEBSWAY_DIM_SECONDS  how long the fade takes (default 30)
-#   DEBSWAY_DIM_TO       the brightness it fades down to, in percent (default 10)
-#   DEBSWAY_DIM_TICK     seconds between steps (default 1; a test makes it small)
+#   WREN_DIM_SECONDS  how long the fade takes (default 30)
+#   WREN_DIM_TO       the brightness it fades down to, in percent (default 10)
+#   WREN_DIM_TICK     seconds between steps (default 1; a test makes it small)
 STATE=${XDG_RUNTIME_DIR:-/tmp}/dim-warning
-SECONDS_TOTAL=${DEBSWAY_DIM_SECONDS:-30}
-TO=${DEBSWAY_DIM_TO:-10}
-TICK=${DEBSWAY_DIM_TICK:-1}
+SECONDS_TOTAL=${WREN_DIM_SECONDS:-30}
+TO=${WREN_DIM_TO:-10}
+TICK=${WREN_DIM_TICK:-1}
 
 backlight() { command -v brightnessctl >/dev/null && brightnessctl -m 2>/dev/null | grep -q .; }
 percent() { brightnessctl -m | cut -d, -f4 | tr -d %; }
@@ -45,7 +45,7 @@ fade() {
 case ${1:-} in
     start)
         if command -v notify-send >/dev/null; then
-            notify-send -a debsway -u critical -t $((SECONDS_TOTAL * 1000)) \
+            notify-send -a wren -u critical -t $((SECONDS_TOTAL * 1000)) \
                 "Locking soon" "Move the mouse or press a key to stay unlocked." 2>/dev/null
         fi
         backlight || exit 0

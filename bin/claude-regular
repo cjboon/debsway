@@ -1,7 +1,7 @@
 #!/bin/bash
-# claude-regular [--account NAME] [ARGS...]: written by debsway extras/claude-regular.sh
+# claude-regular [--account NAME] [ARGS...]: written by Wren Linux extras/claude-regular.sh
 # Claude Code as you, in the folder you start it from, with your files and the
-# deny rules debsway added to ~/.claude/settings.json. (claude, from
+# deny rules Wren Linux added to ~/.claude/settings.json. (claude, from
 # extras/claude-code.sh, runs it as its own user instead.)
 # --account NAME: another account, with its own login, memories and settings
 # in ~/.claude-NAME (set up with extras/claude-regular.sh --account NAME). It
@@ -16,7 +16,7 @@ esac
 if [ -n "$account" ]; then
     [[ $account =~ ^[a-z][a-z0-9]{0,14}$ ]] || die "an account name is small letters and digits, a letter first."
     [ -f "$HOME/.claude-$account/settings.json" ] ||
-        die "the account $account isn't set up. Run: debsway install claude-regular --account $account"
+        die "the account $account isn't set up. Run: wrenctl install claude-regular --account $account"
     export CLAUDE_CONFIG_DIR=$HOME/.claude-$account
 fi
 exec /usr/bin/claude "$@"

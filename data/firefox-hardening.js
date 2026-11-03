@@ -1,4 +1,4 @@
-// Written by debsway (data/firefox-hardening.js, installed by
+// Written by Wren Linux (data/firefox-hardening.js, installed by
 // parts/firefox-hardening.sh). Defaults for every
 // profile; a profile can change them at about:config.
 

@@ -3,11 +3,11 @@
 ## SYNOPSIS
 
 ```
-debsway install bluetooth                     install it (the adapter is off at every boot)
-debsway remove bluetooth                      remove it
-debsway manual bluetooth                      print the manual steps below
+wrenctl install bluetooth                     install it (the adapter is off at every boot)
+wrenctl remove bluetooth                      remove it
+wrenctl manual bluetooth                      print the manual steps below
 
-debsway --bluetooth on|off     switch the adapter (or the debsway menu > Bluetooth)
+wrenctl --bluetooth on|off     switch the adapter (or the Wren menu > Bluetooth)
 bluetoothctl                   pair a device: type
   scan on                      (wait until the device shows up)
   pair AA:BB:...   trust AA:BB:...   connect AA:BB:...
@@ -18,7 +18,7 @@ from Debian (its `bluetoothctl` pairs devices in a terminal), rfkill to switch
 the radio, and, if sound is set up (`extras/pipewire-audio.sh`), the part of
 PipeWire that plays sound over Bluetooth. The adapter starts switched off at
 every boot (`AutoEnable=false` in `/etc/bluetooth/main.conf`), so no radio
-listens while you aren't using it; switch it on from the debsway menu, and off
+listens while you aren't using it; switch it on from the Wren menu, and off
 again when you are done. Without this extra the menu has no Bluetooth switch,
 and removing it leaves the radio blocked.
 
@@ -35,8 +35,8 @@ and removing it leaves the radio blocked.
 sudo apt install --no-install-recommends bluez rfkill
 # Only with sound set up: PipeWire's Bluetooth sound
 sudo apt install --no-install-recommends libspa-0.2-bluetooth
-# The switch the debsway menu uses (debsway --bluetooth calls it)
-install -D -m 0755 @DEBSWAY_DIR@/bin/radios ~/.local/bin/radios
+# The switch the Wren menu uses (wrenctl --bluetooth calls it)
+install -D -m 0755 @WREN_DIR@/bin/radios ~/.local/bin/radios
 
 # Off at every boot: set AutoEnable=false (add a [Policy] section with it if
 # the file has no AutoEnable line), then check it shows "AutoEnable=false"

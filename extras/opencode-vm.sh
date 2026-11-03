@@ -40,20 +40,20 @@ AGENT=opencode-vm
 AGENT_HOME=/home/$AGENT
 SESSION=/usr/local/libexec/opencode-vm-session
 MOCKVPS=/usr/local/libexec/opencode-vm-mockvps-kvm
-SUDOERS=/etc/sudoers.d/debsway-opencode-vm
-FIREWALL=/etc/debsway/opencode-vm.nft
-UNIT=/etc/systemd/system/debsway-opencode-vm-firewall.service
+SUDOERS=/etc/sudoers.d/wren-opencode-vm
+FIREWALL=/etc/wren/opencode-vm.nft
+UNIT=/etc/systemd/system/wren-opencode-vm-firewall.service
 PROVISION_DST=$AGENT_HOME/.config/opencode-vm/provision.sh
 VM_USER=agent
 
 if [ "${1:-}" = --remove ]; then
     remove_bin opencode-vm
-    sudo systemctl disable --now debsway-opencode-vm-firewall.service >/dev/null 2>&1 || true
-    sudo nft delete table inet debsway_opencode_vm 2>/dev/null || true
+    sudo systemctl disable --now wren-opencode-vm-firewall.service >/dev/null 2>&1 || true
+    sudo nft delete table inet wren_opencode_vm 2>/dev/null || true
     sudo rm -f "$SUDOERS" "$SESSION" "$MOCKVPS" "$FIREWALL" "$UNIT"
     remove_no_abstract
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
-    sudo rmdir /usr/local/libexec /etc/debsway 2>/dev/null || true
+    sudo rmdir /usr/local/libexec /etc/wren 2>/dev/null || true
     if id "$AGENT" >/dev/null 2>&1; then
         if ask "Delete the user $AGENT and its home folder $AGENT_HOME (the VM disk, its ssh key and settings)?" n; then
             sudo pkill -KILL -u "$AGENT" 2>/dev/null || true
@@ -83,7 +83,7 @@ apt_install qemu-system-x86 qemu-utils socat nftables openssh-client \
 say "The $AGENT user"
 if ! id "$AGENT" >/dev/null 2>&1; then
     sudo useradd --create-home --home-dir "$AGENT_HOME" --shell /bin/bash --user-group \
-        --comment "debsway opencode VM" "$AGENT"
+        --comment "Wren Linux opencode VM" "$AGENT"
 fi
 sudo usermod --lock "$AGENT"
 sudo chmod 700 "$AGENT_HOME"
@@ -95,29 +95,29 @@ note "$AGENT: no password, no login, in the kvm group only."
 
 say "Keeping $AGENT (and so the guest) off your network"
 sudo install -d -o root -g root -m 0755 "${FIREWALL%/*}"
-sudo install -o root -g root -m 0644 "$DEBSWAY_DIR/data/opencode-vm-firewall.nft" "$FIREWALL"
-printf '%s\n' '# Written by debsway extras/opencode-vm.sh' '[Unit]' \
-    'Description=Keep the opencode-vm user (and its guest) off the local network (debsway)' \
+sudo install -o root -g root -m 0644 "$WREN_DIR/data/opencode-vm-firewall.nft" "$FIREWALL"
+printf '%s\n' '# Written by Wren Linux extras/opencode-vm.sh' '[Unit]' \
+    'Description=Keep the opencode-vm user (and its guest) off the local network (Wren Linux)' \
     'Before=network-pre.target' 'Wants=network-pre.target' '' '[Service]' \
     'Type=oneshot' 'RemainAfterExit=yes' \
     "ExecStart=/usr/sbin/nft -f $FIREWALL" \
-    'ExecStop=/usr/sbin/nft delete table inet debsway_opencode_vm' '' '[Install]' \
+    'ExecStop=/usr/sbin/nft delete table inet wren_opencode_vm' '' '[Install]' \
     'WantedBy=multi-user.target' | sudo tee "$UNIT" >/dev/null
 sudo systemctl daemon-reload
 # Restart, not just enable --now: the unit stays "active" after it first ran,
 # so a rule file changed by an update would otherwise not be loaded
-sudo systemctl enable debsway-opencode-vm-firewall.service >/dev/null &&
-    sudo systemctl restart debsway-opencode-vm-firewall.service ||
-    warn "Couldn't load the firewall rule; check: systemctl status debsway-opencode-vm-firewall"
+sudo systemctl enable wren-opencode-vm-firewall.service >/dev/null &&
+    sudo systemctl restart wren-opencode-vm-firewall.service ||
+    warn "Couldn't load the firewall rule; check: systemctl status wren-opencode-vm-firewall"
 note "$AGENT can reach the internet and the guest's console, nothing else."
 
 say "The VM engine and the opencode-vm command"
 sudo install -d -o root -g root -m 0755 /usr/local/libexec
 # The bundled mockvps-kvm, where opencode-vm (which has no access to your home)
-# can run it. It looks at its own location, so the debsway-only reminder in it
+# can run it. It looks at its own location, so the wren-only reminder in it
 # stays quiet here.
-sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/vendor/mockvps-kvm/mockvps-kvm.sh" "$MOCKVPS"
-sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/opencode-vm-session" "$SESSION"
+sudo install -o root -g root -m 0755 "$WREN_DIR/vendor/mockvps-kvm/mockvps-kvm.sh" "$MOCKVPS"
+sudo install -o root -g root -m 0755 "$WREN_DIR/bin/opencode-vm-session" "$SESSION"
 install_no_abstract
 
 # The provisioning script, with the repository filled in, where only
@@ -126,12 +126,12 @@ sudo install -d -o "$AGENT" -g "$AGENT" -m 0700 "$AGENT_HOME/.config" "$AGENT_HO
 prov=$(mktemp)
 sed -e "s|@OPENCODE_REPO@|$OPENCODE_REPO|g" \
     -e "s|@VM_USER@|$VM_USER|g" \
-    "$DEBSWAY_DIR/data/opencode-vm-provision.sh" >"$prov"
+    "$WREN_DIR/data/opencode-vm-provision.sh" >"$prov"
 sudo install -o "$AGENT" -g "$AGENT" -m 0600 "$prov" "$PROVISION_DST"
 rm -f "$prov"
 
 rule=$(mktemp)
-printf '# Written by debsway extras/opencode-vm.sh. %s may run the opencode-vm-session script,\n# and nothing else, as the user %s.\n%s ALL=(%s) NOPASSWD: %s\n' \
+printf '# Written by Wren Linux extras/opencode-vm.sh. %s may run the opencode-vm-session script,\n# and nothing else, as the user %s.\n%s ALL=(%s) NOPASSWD: %s\n' \
     "$(id -un)" "$AGENT" "$(id -un)" "$AGENT" "$SESSION" >"$rule"
 if ! sudo visudo -cf "$rule" >/dev/null; then
     rm -f "$rule"

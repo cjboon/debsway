@@ -1,48 +1,48 @@
 #!/bin/bash
-# debsway-key: written by debsway extras/signing-key.sh
-# Makes and uses debsway's signing key, the key every debsway computer checks
-# updates against. The key is held by its own user, debsway-signer, with no
+# wren-key: written by Wren Linux extras/signing-key.sh
+# Makes and uses Wren Linux's signing key, the key every Wren Linux computer checks
+# updates against. The key is held by its own user, wren-signer, with no
 # network, that your user can't read; this asks it to sign, after your sudo
-# password. man debsway-key has the details.
-#   debsway-key                    the first time: questions, the key, its backup
-#   debsway-key status             the key, and until when it signs
-#   debsway-key git-setup [DIR]    git in DIR signs every commit and tag with it
-#   debsway-key pin [DIR]          DIR's pins.sh and data/ name the key (then commit and push)
-#   debsway-key sign-repo FOLDER DEB...   a signed apt repository (tools/make-apt-repo.sh)
-#   debsway-key renew BACKUP       two more years for the signing subkey, from the backup
-#   debsway-key public | fingerprint | clearsign | detach-sign
+# password. man wren-key has the details.
+#   wren-key                    the first time: questions, the key, its backup
+#   wren-key status             the key, and until when it signs
+#   wren-key git-setup [DIR]    git in DIR signs every commit and tag with it
+#   wren-key pin [DIR]          DIR's pins.sh and data/ name the key (then commit and push)
+#   wren-key sign-repo FOLDER DEB...   a signed apt repository (tools/make-apt-repo.sh)
+#   wren-key renew BACKUP       two more years for the signing subkey, from the backup
+#   wren-key public | fingerprint | clearsign | detach-sign
 set -uo pipefail
 umask 077
 
-die() { printf 'debsway-key: %s\n' "$*" >&2; exit 1; }
+die() { printf 'wren-key: %s\n' "$*" >&2; exit 1; }
 say() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
 note() { printf '    %s\n' "$*"; }
 warn() { printf '\033[1;33m!!\033[0m %s\n' "$*" >&2; }
 
 # (a test points these at a pretend sudo and a copy of the signer)
-SUDO=${DEBSWAY_SUDO:-sudo}
-SIGNER=${DEBSWAY_SIGNER:-/usr/local/libexec/debsway-signer}
-STATE=${XDG_DATA_HOME:-$HOME/.local/share}/debsway/signing-key
+SUDO=${WREN_SUDO:-sudo}
+SIGNER=${WREN_SIGNER:-/usr/local/libexec/wren-signer}
+STATE=${XDG_DATA_HOME:-$HOME/.local/share}/wren/signing-key
 BIN=$HOME/.local/bin
-# Where debsway is: DEBSWAY_DIR if you set it; else the root-owned copy the
-# debsway package installs, which no program running as you can change; else
-# your own copy, ~/debsway
-if [ -n "${DEBSWAY_DIR:-}" ]; then
-    DIR=$DEBSWAY_DIR
-elif [ -f "${DEBSWAY_SYSTEM_DIR:-/usr/share/debsway}/lib.sh" ]; then
-    DIR=${DEBSWAY_SYSTEM_DIR:-/usr/share/debsway}
+# Where Wren Linux is: WREN_DIR if you set it; else the root-owned copy the
+# Wren Linux package installs, which no program running as you can change; else
+# your own copy, ~/wren
+if [ -n "${WREN_DIR:-}" ]; then
+    DIR=$WREN_DIR
+elif [ -f "${WREN_SYSTEM_DIR:-/usr/share/wren}/lib.sh" ]; then
+    DIR=${WREN_SYSTEM_DIR:-/usr/share/wren}
 else
-    DIR=$HOME/debsway
+    DIR=$HOME/wren
 fi
 
-signer() { "$SUDO" -u debsway-signer "$SIGNER" "$@"; }
+signer() { "$SUDO" -u wren-signer "$SIGNER" "$@"; }
 
 # answer VAR "Question" [DEFAULT]: a line from the terminal (or, for a test, the
-# file DEBSWAY_KEY_ANSWERS, a line each); hidden with HIDE=1
+# file WREN_KEY_ANSWERS, a line each); hidden with HIDE=1
 answer() {
     local _v=$1 _q=$2 _d=${3:-} _a=''
-    if [ -n "${DEBSWAY_KEY_ANSWERS:-}" ]; then
-        [ -e /proc/self/fd/7 ] || exec 7<"$DEBSWAY_KEY_ANSWERS"
+    if [ -n "${WREN_KEY_ANSWERS:-}" ]; then
+        [ -e /proc/self/fd/7 ] || exec 7<"$WREN_KEY_ANSWERS"
         printf '    %s%s ' "$_q" "${_d:+ [$_d]}" >&2
         IFS= read -r _a <&7 || _a=''
         printf '\n' >&2
@@ -84,8 +84,8 @@ expiry_warning() {
     d=$(days_left)
     [ -n "$d" ] || return 0
     if [ "$d" -lt 90 ]; then
-        warn "The signing subkey stops signing in $d days. Renew it before then: debsway-key renew BACKUP"
-        warn "(after it has stopped, every debsway computer refuses updates until a new key reaches it by hand)"
+        warn "The signing subkey stops signing in $d days. Renew it before then: wren-key renew BACKUP"
+        warn "(after it has stopped, every Wren Linux computer refuses updates until a new key reaches it by hand)"
     fi
 }
 
@@ -95,15 +95,15 @@ setup() {
         return
     fi
     command -v gpg >/dev/null || die "gpg is missing."
-    [ -x "$SIGNER" ] || die "the signer isn't set up. Run: debsway install signing-key"
+    [ -x "$SIGNER" ] || die "the signer isn't set up. Run: wrenctl install signing-key"
     cat <<'EOF'
 
-    debsway's signing key
+    Wren Linux's signing key
     ---------------------
-    Every debsway computer will trust this key: update.sh brings in only
+    Every Wren Linux computer will trust this key: update.sh brings in only
     commits it signed, and apt only packages from a repository it signed.
     Whoever has it can put anything onto every one of those computers, as root.
-    Whoever loses it can't publish debsway any more (and computers keep the old
+    Whoever loses it can't publish Wren Linux any more (and computers keep the old
     key until a new one reaches them by hand).
 
     So it is made in two parts:
@@ -111,7 +111,7 @@ setup() {
         encrypted with a passphrase you choose, and is then deleted from this
         computer. You need it only to renew (every two years) or replace the
         signing key.
-      - the signing key, kept here by its own user (debsway-signer), with no
+      - the signing key, kept here by its own user (wren-signer), with no
         network, that your own user can't read. It signs when you type your
         sudo password, and never hands itself out.
 
@@ -119,7 +119,7 @@ setup() {
 
 EOF
     local name email dest pass pass2 suggestion f
-    answer name "Name on the key:" "debsway signing key"
+    answer name "Name on the key:" "Wren Linux signing key"
     answer email "Email on the key (public, in every signature):" "$(git config --global user.email 2>/dev/null || true)"
     [ -n "$email" ] || die "an email address is needed."
 
@@ -130,15 +130,15 @@ EOF
     mapfile -t sticks < <(find "/media/$(id -un)" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
     [ ${#sticks[@]} -eq 0 ] || note "Sticks mounted now: ${sticks[*]} (usb mount mounts one)"
     answer dest "Backup folder:" "${sticks[0]:-}"
-    [ -n "$dest" ] && [ -d "$dest" ] && [ -w "$dest" ] || die "\"$dest\" isn't a folder you can write to. Mount the stick (usb mount) and run debsway-key again."
+    [ -n "$dest" ] && [ -d "$dest" ] && [ -w "$dest" ] || die "\"$dest\" isn't a folder you can write to. Mount the stick (usb mount) and run wren-key again."
     dest=$(cd "$dest" && pwd)
     case $dest/ in
         "$HOME"/* | /tmp/* | /var/tmp/*)
             warn "$dest is on this computer, not on a stick."
             yes_no "Put the backup there anyway (and copy it to a stick yourself later)?" || die "nothing was made." ;;
     esac
-    [ ! -e "$dest/debsway-signing-key/debsway-signing-key-backup.asc" ] ||
-        die "$dest/debsway-signing-key already holds a backup. Use another folder."
+    [ ! -e "$dest/wren-signing-key/wren-signing-key-backup.asc" ] ||
+        die "$dest/wren-signing-key already holds a backup. Use another folder."
 
     say "The backup's passphrase"
     note "It protects the primary key in the backup. Write it on paper and keep that"
@@ -154,13 +154,13 @@ EOF
     [ ${#pass} -ge 20 ] || die "at least 20 characters, please (six or seven random words); nothing was made."
 
     say "Making the key (sudo asks for your password)"
-    mkdir -p "$dest/debsway-signing-key"
-    printf '%s\n' "$pass" | signer new "$name" "$email" >"$dest/debsway-signing-key/new.tar" ||
-        { rm -rf "$dest/debsway-signing-key"; die "the key wasn't made (see above)."; }
+    mkdir -p "$dest/wren-signing-key"
+    printf '%s\n' "$pass" | signer new "$name" "$email" >"$dest/wren-signing-key/new.tar" ||
+        { rm -rf "$dest/wren-signing-key"; die "the key wasn't made (see above)."; }
     unset pass pass2
-    tar -C "$dest/debsway-signing-key" -xf "$dest/debsway-signing-key/new.tar" &&
-        rm -f "$dest/debsway-signing-key/new.tar" || die "the backup couldn't be written to $dest."
-    chmod 600 "$dest"/debsway-signing-key/*
+    tar -C "$dest/wren-signing-key" -xf "$dest/wren-signing-key/new.tar" &&
+        rm -f "$dest/wren-signing-key/new.tar" || die "the backup couldn't be written to $dest."
+    chmod 600 "$dest"/wren-signing-key/*
     sync
     remember
     f=$(cat "$STATE/fingerprint")
@@ -169,10 +169,10 @@ EOF
     The key: $f
     (the primary key's fingerprint: this is what pins.sh pins)
 
-    In $dest/debsway-signing-key:
-      debsway-signing-key-backup.asc      the whole key, encrypted with your passphrase
-      debsway-signing-key-revocation.asc  declares the key void, if it is ever stolen
-      debsway-signing-key-public.asc      the public key (anyone may have it)
+    In $dest/wren-signing-key:
+      wren-signing-key-backup.asc      the whole key, encrypted with your passphrase
+      wren-signing-key-revocation.asc  declares the key void, if it is ever stolen
+      wren-signing-key-public.asc      the public key (anyone may have it)
 
     Now, please:
       1. Copy that folder to a second stick. Keep the two in different places.
@@ -186,13 +186,13 @@ EOF
 EOF
     if git -C "$DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 && [ -w "$DIR" ]; then
         if yes_no "Sign every commit and tag in $DIR with it from now on?"; then git_setup "$DIR"; fi
-        if yes_no "Pin it in $DIR (pins.sh and data/debsway-signing-key.asc), for you to commit?"; then pin "$DIR"; fi
+        if yes_no "Pin it in $DIR (pins.sh and data/wren-signing-key.asc), for you to commit?"; then pin "$DIR"; fi
     fi
 }
 
 status() {
     local f d
-    f=$(cat "$STATE/fingerprint" 2>/dev/null) || die "there is no key yet: run debsway-key"
+    f=$(cat "$STATE/fingerprint" 2>/dev/null) || die "there is no key yet: run wren-key"
     d=$(days_left)
     echo "Key: $f"
     if [ -z "$d" ]; then echo "Signs: with no end date"; else echo "Signs: until $(date -d "@$(cat "$STATE/expires")" +%F) ($d days)"; fi
@@ -200,24 +200,24 @@ status() {
         if [ "$(git -C "$DIR" config user.signingkey)" = "$f" ] && [ "$(git -C "$DIR" config commit.gpgsign)" = true ]; then
             echo "git in $DIR: signs every commit with it"
         else
-            echo "git in $DIR: doesn't sign with it (debsway-key git-setup)"
+            echo "git in $DIR: doesn't sign with it (wren-key git-setup)"
         fi
     fi
-    if grep -qx "DEBSWAY_SIGNING_FPR=$f" "$DIR/pins.sh" 2>/dev/null; then
+    if grep -qx "WREN_SIGNING_FPR=$f" "$DIR/pins.sh" 2>/dev/null; then
         echo "pins.sh in $DIR: pins it"
     else
-        echo "pins.sh in $DIR: doesn't pin it yet (debsway-key pin)"
+        echo "pins.sh in $DIR: doesn't pin it yet (wren-key pin)"
     fi
     expiry_warning
 }
 
 git_setup() {
     local d=${1:-$DIR} f
-    f=$(cat "$STATE/fingerprint" 2>/dev/null) || die "there is no key yet: run debsway-key"
+    f=$(cat "$STATE/fingerprint" 2>/dev/null) || die "there is no key yet: run wren-key"
     git -C "$d" rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "$d isn't a git checkout."
     git -C "$d" config user.signingkey "$f"
     git -C "$d" config gpg.format openpgp
-    git -C "$d" config gpg.program "$BIN/debsway-key-gpg"
+    git -C "$d" config gpg.program "$BIN/wren-key-gpg"
     git -C "$d" config commit.gpgsign true
     git -C "$d" config tag.gpgSign true
     note "git in $d signs every commit and tag with $f (sudo asks for your password now and then)."
@@ -226,22 +226,22 @@ git_setup() {
 
 pin() {
     local d=${1:-$DIR} f
-    f=$(cat "$STATE/fingerprint" 2>/dev/null) || die "there is no key yet: run debsway-key"
-    [ -f "$d/pins.sh" ] && [ -w "$d/pins.sh" ] || die "$d has no pins.sh you can change (give your own copy: debsway-key pin DIR)."
-    grep -q '^DEBSWAY_SIGNING_FPR=' "$d/pins.sh" || die "$d/pins.sh has no DEBSWAY_SIGNING_FPR line (an older debsway)."
-    install -m 0644 "$STATE/public.asc" "$d/data/debsway-signing-key.asc"
-    sed -i "s/^DEBSWAY_SIGNING_FPR=.*/DEBSWAY_SIGNING_FPR=$f/" "$d/pins.sh"
+    f=$(cat "$STATE/fingerprint" 2>/dev/null) || die "there is no key yet: run wren-key"
+    [ -f "$d/pins.sh" ] && [ -w "$d/pins.sh" ] || die "$d has no pins.sh you can change (give your own copy: wren-key pin DIR)."
+    grep -q '^WREN_SIGNING_FPR=' "$d/pins.sh" || die "$d/pins.sh has no WREN_SIGNING_FPR line (an older Wren Linux)."
+    install -m 0644 "$STATE/public.asc" "$d/data/wren-signing-key.asc"
+    sed -i "s/^WREN_SIGNING_FPR=.*/WREN_SIGNING_FPR=$f/" "$d/pins.sh"
     say "Pinned in $d"
-    note "pins.sh: DEBSWAY_SIGNING_FPR=$f"
-    note "data/debsway-signing-key.asc: the public key"
+    note "pins.sh: WREN_SIGNING_FPR=$f"
+    note "data/wren-signing-key.asc: the public key"
     note "Look at it (git -C $d diff), then commit it, signed, and push:"
-    note "  git -C $d commit -am 'debsway is signed with its own key now'"
-    note "From then on every debsway computer that updates past it takes only what this key signed."
+    note "  git -C $d commit -am 'Wren Linux is signed with its own key now'"
+    note "From then on every Wren Linux computer that updates past it takes only what this key signed."
 }
 
 renew() {
     local backup=${1:-} pass dir
-    [ -n "$backup" ] && [ -f "$backup" ] || die "usage: debsway-key renew BACKUP (the debsway-signing-key-backup.asc on your stick)"
+    [ -n "$backup" ] && [ -f "$backup" ] || die "usage: wrenctl-key renew BACKUP (the wren-signing-key-backup.asc on your stick)"
     dir=$(cd "$(dirname -- "$backup")" && pwd)
     [ -w "$dir" ] || die "$dir isn't writable: the renewed backup goes next to the old one."
     HIDE=1 answer pass "The backup's passphrase:"
@@ -250,20 +250,20 @@ renew() {
     unset pass
     mv "$backup" "$backup.old"
     tar -C "$dir" -xf "$dir/renew.tar" && rm -f "$dir/renew.tar" || die "the renewed backup couldn't be written to $dir."
-    chmod 600 "$dir"/debsway-signing-key-*
+    chmod 600 "$dir"/wren-signing-key-*
     sync
     remember
     note "Renewed: it signs until $(date -d "@$(cat "$STATE/expires")" +%F). The old backup is kept as $backup.old."
     note "Copy the new backup to your second stick too. Then, before the old date, put the"
-    note "renewed public key in debsway and publish it, signed: debsway-key pin, commit, push."
+    note "renewed public key in Wren Linux and publish it, signed: wren-key pin, commit, push."
 }
 
 sign_repo() {
-    [ $# -ge 2 ] || die "usage: debsway-key sign-repo FOLDER DEB..."
+    [ $# -ge 2 ] || die "usage: wrenctl-key sign-repo FOLDER DEB..."
     local out=$1
     shift
     expiry_warning
-    exec bash "$DIR/tools/make-apt-repo.sh" --sign-cmd "$BIN/debsway-key" --out "$out" "$@"
+    exec bash "$DIR/tools/make-apt-repo.sh" --sign-cmd "$BIN/wren-key" --out "$out" "$@"
 }
 
 case ${1:-} in
@@ -274,9 +274,9 @@ case ${1:-} in
     renew) renew "${2:-}" ;;
     sign-repo) shift; sign_repo "$@" ;;
     public | fingerprint | clearsign | detach-sign)
-        [ $# -eq 1 ] || die "usage: debsway-key $1"
+        [ $# -eq 1 ] || die "usage: wrenctl-key $1"
         [ "$1" = public ] || [ "$1" = fingerprint ] || expiry_warning
         signer "$1" ;;
     -h | --help | help) sed -n '2,/^set /{ /^set /d; s/^# \{0,1\}//; p }' "$0" ;;
-    *) die "unknown command \"$1\" (debsway-key --help)" ;;
+    *) die "unknown command \"$1\" (wren-key --help)" ;;
 esac

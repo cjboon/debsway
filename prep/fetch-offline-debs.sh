@@ -3,7 +3,7 @@
 # the one you're about to reinstall). It downloads wpasupplicant, iw and
 # the firmware your network cards need, with their dependencies, into
 # offline/debs, so wifi.sh can get a fresh install online with no cable.
-# Copy the whole debsway folder to a USB stick afterwards.
+# Copy the whole Wren Linux folder to a USB stick afterwards.
 #
 # Debian's packages aren't signed one by one, so this also saves Debian's
 # signed Release and Packages files in offline/debs/verify/. wifi.sh checks
@@ -16,7 +16,7 @@
 #   bash prep/fetch-offline-debs.sh --check    only refresh the signed lists and
 #                                              check the packages already saved
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/lib/offline.sh"
+. "$WREN_DIR/lib/offline.sh"
 
 OUT="$OFFLINE_DIR/debs"
 # What it needs, installed now if missing: gpgv and Debian's keyring check the

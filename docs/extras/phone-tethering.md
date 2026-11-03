@@ -3,14 +3,14 @@
 ## SYNOPSIS
 
 ```
-debsway install phone-tethering                     install it
-debsway remove phone-tethering                      remove it
-debsway manual phone-tethering                      print the manual steps below
+wrenctl install phone-tethering                     install it
+wrenctl remove phone-tethering                      remove it
+wrenctl manual phone-tethering                      print the manual steps below
 
 Android: plug it in, then Settings > Network > Hotspot & tethering > USB tethering
 iPhone:  plug it in, tap Trust, then Settings > Personal Hotspot
          (if the computer doesn't see it: idevicepair pair)
-debsway --wifi off     use only the phone's data
+wrenctl --wifi off     use only the phone's data
 ```
 
 This uses a phone's mobile data on this computer through the USB cable. An

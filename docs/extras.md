@@ -1,26 +1,26 @@
 # extras/
 
-Install one with `debsway install NAME` (Tab completes the name; it runs
+Install one with `wrenctl install NAME` (Tab completes the name; it runs
 `extras/NAME.sh`); run it again to repair it or, for downloaded apps, update
-to the newest release; undo it with `debsway remove NAME`.
-The debsway menu's Install apps and Remove apps (`bash install-extras.sh`,
+to the newest release; undo it with `wrenctl remove NAME`.
+The Wren menu's Install apps and Remove apps (`bash install-extras.sh`,
 `bash install-extras.sh --remove`) do the same from a list.
-`debsway manual NAME` prints the steps to do it all by hand instead,
+`wrenctl manual NAME` prints the steps to do it all by hand instead,
 and changes nothing. Each one has a page in [extras/](extras/README.md): its
 commands, what it is, what it doesn't protect against, and those manual steps.
 Removing an app never deletes its data: wallets, chats and keyrings stay.
 
 | Script | What you get |
 |---|---|
-| `pipewire-audio.sh` | Sound. `timer` and the alarm clock ring with `pw-play` (part of PipeWire) and debsway's own bell sound (an alarm repeats it for up to 5 minutes; click or dismiss the notification, or `timer stop`, to end it); without sound set up they only show a notification, and say so. The microphone is muted at every login and stays off until you switch it on (debsway menu > Microphone, or `debsway --mic on`); that is software muting, so a program running as you could unmute it, and a hardware switch is stronger. `volume up\|down\|mute\|micmute [STEP]` (5% steps, never above 100%, unmutes on a change, refreshes the bar); the volume and mute keys use it, and Super+F10 / F11 / F12 (mute / down / up) do for keyboards without them (packages: pipewire-audio) |
+| `pipewire-audio.sh` | Sound. `timer` and the alarm clock ring with `pw-play` (part of PipeWire) and Wren Linux's own bell sound (an alarm repeats it for up to 5 minutes; click or dismiss the notification, or `timer stop`, to end it); without sound set up they only show a notification, and say so. The microphone is muted at every login and stays off until you switch it on (Wren menu > Microphone, or `wrenctl --mic on`); that is software muting, so a program running as you could unmute it, and a hardware switch is stronger. `volume up\|down\|mute\|micmute [STEP]` (5% steps, never above 100%, unmutes on a change, refreshes the bar); the volume and mute keys use it, and Super+F10 / F11 / F12 (mute / down / up) do for keyboards without them (packages: pipewire-audio) |
 | `grim-slurp.sh` | `screenshot` and its keys (packages: grim, slurp) |
 | `udiskie.sh` | USB drives mount under `/media/$USER/` with `nosuid,nodev,noexec`; encrypted (LUKS) sticks ask for their passphrase (packages: udiskie, udisks2, cryptsetup, polkitd) |
 | `emoji-font.sh` | Color emoji (packages: fonts-noto-color-emoji) |
-| `bluetooth.sh` | Bluetooth for headphones, keyboards and mice (bluez; `bluetoothctl` pairs). The adapter starts **off** at every boot; switch it from the debsway menu or `debsway --bluetooth on`. With sound set up, also installs PipeWire's Bluetooth audio |
+| `bluetooth.sh` | Bluetooth for headphones, keyboards and mice (bluez; `bluetoothctl` pairs). The adapter starts **off** at every boot; switch it from the Wren menu or `wrenctl --bluetooth on`. With sound set up, also installs PipeWire's Bluetooth audio |
 | `autologin.sh` | Log in on tty1 without your password, straight into sway (the disk passphrase, the screen lock and sudo still ask). Warns and asks first on a disk that isn't encrypted. See [extras/autologin.md](extras/autologin.md) |
 | `lid-awake.sh` | Closing the lid no longer suspends the laptop (Debian's default does): it locks the screen and turns the laptop's own panel off, while the network, downloads and the timer's alarms keep going; an external screen stays on. A `systemd-logind` setting (`HandleLidSwitch=ignore`, plugged in and docked too) and sway's lid switch (`bin/lid`). It keeps running in a closed bag, getting warm: power it off before packing it |
 | `one-workspace.sh` | One workspace: Super+1 … 0 and Super+Shift+1 … 0 do nothing and the bar shows no workspace buttons, so no window ends up out of sight (`make-install-iso.sh --simplesway` ticks it in the first install list) |
-| `webcam.sh` | A webcam switch: a USB camera (most laptops' built-in ones) starts **off** at every boot and when plugged in, and the debsway menu gets a Webcam line (`debsway --camera on\|off`). Off disconnects its USB device, as if unplugged. A root helper does it; your user may run it with `on` or `off` only. See [extras/webcam.md](extras/webcam.md) |
+| `webcam.sh` | A webcam switch: a USB camera (most laptops' built-in ones) starts **off** at every boot and when plugged in, and the Wren menu gets a Webcam line (`wrenctl --camera on\|off`). Off disconnects its USB device, as if unplugged. A root helper does it; your user may run it with `on` or `off` only. See [extras/webcam.md](extras/webcam.md) |
 | `phone-tethering.sh` | Use a phone's mobile data over the USB cable (usbmuxd and the iPhone pairing tools; Android needs nothing but its own "USB tethering" switch). Switch Wi-Fi off from the menu to use only the phone |
 | `firefox-sandbox.sh` | `firefox`: Firefox as its own locked-down user (`firefox`), as a normal window. Your logins and history are kept in that user's home, not yours; a hacked page reaches only that, not your files. Clipboard shared while it has focus; `~/Downloads` shared both ways; sound through a pipe (it cannot hear your microphone); firewalled off your router and local services; links from other programs open in the running window. `firefox-esr` still runs Firefox as you. See the section below |
 | `pdf-viewer.sh` | zathura PDF viewer, in a sandbox |
@@ -30,8 +30,8 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `vim.sh` | Debian's full vim, with colors for each programming language, and a `~/.vimrc` (light or dark with the theme, modelines off) |
 | `console-only.sh` | log in to tmux (the same bar and keys) instead of starting sway |
 | `keepassxc.sh` | KeePassXC password manager, the minimal build (`keepassxc-minimal`): no browser integration and no Firefox add-on, so no web page can talk to it; copy and paste a password, or use auto-type. On a computer with the full build and the add-on, running it again switches to the minimal one |
-| `signing-key.sh` | debsway's signing key, for the computer you publish debsway from: `debsway-key` makes it (the first run explains and asks), writes an encrypted backup of the whole key to your USB stick, and keeps only the signing subkey here, held by its own user `debsway-signer` with no network, that your user can't read; signing asks for your sudo password. Then git signs every commit with it, `pins.sh` pins it and `debsway-key sign-repo` signs the apt repository. See [extras/signing-key.md](extras/signing-key.md) and `man debsway-key` |
-| `debsway-dev.sh` | For working on debsway itself, on the computer where you build its package: lintian (Debian's package checker, which `tools/build-deb.sh` runs) and shellcheck (which `test.sh` runs). Not in the base: lintian brings over a hundred packages that other computers never use |
+| `signing-key.sh` | Wren Linux's signing key, for the computer you publish Wren Linux from: `wren-key` makes it (the first run explains and asks), writes an encrypted backup of the whole key to your USB stick, and keeps only the signing subkey here, held by its own user `wren-signer` with no network, that your user can't read; signing asks for your sudo password. Then git signs every commit with it, `pins.sh` pins it and `wren-key sign-repo` signs the apt repository. See [extras/signing-key.md](extras/signing-key.md) and `man wren-key` |
+| `wren-dev.sh` | For working on Wren Linux itself, on the computer where you build its package: lintian (Debian's package checker, which `tools/build-deb.sh` runs) and shellcheck (which `test.sh` runs). Not in the base: lintian brings over a hundred packages that other computers never use |
 | `git.sh` | git, and optionally GitHub's `gh`; sets your commit name and email |
 | `claude-regular.sh` | Claude Code as you, the easy way (`--account NAME` adds a second login in `~/.claude-NAME`, not walled off: both run as you): in any folder, from Anthropic's signed apt repo (shared with `claude-code.sh`; removing one keeps the other's updates). Claude Code's own sandbox is on (bubblewrap: its commands write only in your project and can't read your keys, passwords or wallets), and its file tools are kept from those and from what runs at login. Command: `claude-regular` (and `claude`, unless `claude-code.sh` is set up). See [extras/claude-regular.md](extras/claude-regular.md) |
 | `claude-code.sh` | Claude Code, from Anthropic's signed apt repo. `claude` runs it as its own user (`claude-agent`), working in `~/projects` and unable to read the rest of your home (the lighter sandbox: it shares your kernel, so prefer `claude-vm.sh` if your computer has KVM); `claude-unsandboxed` runs it as you. `--account NAME` adds another account (its own login and memories) as its own user, `claude-agent-NAME`, in `~/projects-NAME`, walled off from the first: `claude --account NAME`. Your own `git` gets a guard inside `~/projects` (and each `~/projects-NAME`) that refuses repositories with hooks or settings that could run a program |
@@ -44,7 +44,7 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `tails-usb.sh` | `tails-usb`: downloads the newest Tails (through Tor when Tor runs here), uses it only if it is signed by the pinned Tails key and is the current release, writes it to a USB stick you pick and type the name of, and reads it back to check. See [extras/tails-usb.md](extras/tails-usb.md) |
 | `remote-access.sh` | ssh into this computer from another one over a Tor onion service, with no firewall port opened. sshd listens on 127.0.0.1 only (keys only, your user only) and the onion service needs a client key. Shows the address and the exact setup lines for the other computer. See below |
 | `mullvad-vpn.sh` | Mullvad VPN (app and `mullvad` command), from Mullvad's signed apt repo. Prints `mullvad` examples |
-| `mullvad-browser-regular.sh` | Mullvad Browser as you: Tor Browser's anti-tracking without Tor, for use with a VPN (no sandbox from debsway) |
+| `mullvad-browser-regular.sh` | Mullvad Browser as you: Tor Browser's anti-tracking without Tor, for use with a VPN (no sandbox from Wren Linux) |
 | `sparrow-wallet.sh` | Sparrow Bitcoin wallet, the signed official .deb. Command: `sparrow` |
 | `electrum.sh` | Electrum Bitcoin wallet, from Debian |
 | `feather-wallet.sh` | Feather Monero wallet, the signed official AppImage. Command: `feather` |
@@ -57,8 +57,8 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `metadata-cleaner.sh` | Metadata Cleaner, the graphical program Tails ships, and the `mat2` command: removes hidden metadata from photos, PDFs and documents before you share them. Prints examples |
 | `media.sh` | imv (images) and mpv (video, music), each started in a bubblewrap sandbox that sees only the files you open. Prints examples and keys |
 | `yt-dlp.sh` | yt-dlp, the video downloader, as its own locked-down user (`ytdlp`): `yt-dlp URL` works as usual and the files land in `~/Downloads`, copied out as you. The official release, checked against yt-dlp's pinned signing key and installed as root's file (it can't change itself); YouTube's JavaScript runs in Debian's QuickJS, as `ytdlp`; config files ignored; a firewall rule keeps it off your local network. Run it again to update yt-dlp. See [extras/yt-dlp.md](extras/yt-dlp.md) |
-| `mockvps-kvm.sh` | `mockvps-kvm`: a disposable Debian "VPS" in a local QEMU/KVM VM for trying out server setups, with snapshots and one-command removal. See `vendor/mockvps-kvm/README.md`. Run `debsway install mockvps-kvm` once, then use the `mockvps-kvm` command; the script in `vendor/` is the program itself and refuses to run directly until that setup is done (`MOCKVPS_FORCE=1` overrides) |
-| `mousepad.sh` | Mousepad, a simple graphical text editor (made the default for text files). It also sets its look: white text on black in the terminal's colours with dark menus, DejaVu Sans Mono 14, tabs of 4 spaces, line numbers, matching braces highlighted and a line at column 80 (`data/mousepad.settings`, `data/mousepad-dark.xml`); later runs leave your changes alone unless debsway's settings changed |
+| `mockvps-kvm.sh` | `mockvps-kvm`: a disposable Debian "VPS" in a local QEMU/KVM VM for trying out server setups, with snapshots and one-command removal. See `vendor/mockvps-kvm/README.md`. Run `wrenctl install mockvps-kvm` once, then use the `mockvps-kvm` command; the script in `vendor/` is the program itself and refuses to run directly until that setup is done (`MOCKVPS_FORCE=1` overrides) |
+| `mousepad.sh` | Mousepad, a simple graphical text editor (made the default for text files). It also sets its look: white text on black in the terminal's colours with dark menus, DejaVu Sans Mono 14, tabs of 4 spaces, line numbers, matching braces highlighted and a line at column 80 (`data/mousepad.settings`, `data/mousepad-dark.xml`); later runs leave your changes alone unless Wren Linux's settings changed |
 | `file-manager.sh` | Thunar, a light graphical file manager, with Trash and thumbnails (made the default for folders). Prints its keys |
 
 Programs from Mullvad's and Anthropic's apt repositories are updated by
@@ -116,9 +116,9 @@ is best) and creates an encrypted restic repository there. The password
 is asked for every time and stored nowhere: keep it somewhere safe
 outside the laptop. For backups that run without you, give `backup.sh` a
 command that prints the password (it is stored in
-`~/.config/debsway/backup.conf`, the password never is). Then `backup` backs up your home folder (caches,
+`~/.config/wren/backup.conf`, the password never is). Then `backup` backs up your home folder (caches,
 trash, VM disks and big downloads are left out; see
-`~/.config/debsway/backup-excludes`), and `backup snapshots`,
+`~/.config/wren/backup-excludes`), and `backup snapshots`,
 `backup restore latest --target ~/restored` and the like work on it.
 
 **Not included: a BitTorrent client.** BitTorrent always shares: every
@@ -152,7 +152,7 @@ ls -l /dev/kvm                       # the file exists: the kernel can too
 ```
 
 No `/dev/kvm` usually means one of: virtualization (Intel VT-x or AMD-V) is
-switched off in the BIOS/firmware, the CPU is too old, or debsway itself is
+switched off in the BIOS/firmware, the CPU is too old, or Wren Linux itself is
 running inside a VM that doesn't pass virtualization through. The first is
 fixable in the BIOS; the others mean `claude-code.sh` is your option.
 
@@ -169,24 +169,24 @@ window. What is shared with you, and what is not:
 | | |
 |---|---|
 | Your files, ssh keys, passwords | **not** reachable (only `~/Downloads`) |
-| Logins, history, bookmarks | kept, in `/var/lib/debsway-firefox` (that user's home) |
+| Logins, history, bookmarks | kept, in `/var/lib/wren-firefox` (that user's home) |
 | Clipboard | shared while its window has focus |
 | `~/Downloads` | shared both ways; treat what lands there as untrusted |
 | Screen and keyboard | **no** screen reading, typing for you or session locking: it gets a restricted Wayland socket (`wayland-restrict`) |
 | Microphone and your audio server | **no**: sound goes through one pipe into a player of yours |
-| Your local network and this computer's services | **blocked** by a firewall rule; `sudo systemctl stop debsway-firefox-firewall` lifts it for a while |
+| Your local network and this computer's services | **blocked** by a firewall rule; `sudo systemctl stop wren-firefox-firewall` lifts it for a while |
 | Other programs' links | open in the running Firefox (a private message bus carries them) |
-| KeePassXC | no browser add-on (debsway's KeePassXC has none); copy and paste a password |
+| KeePassXC | no browser add-on (Wren Linux's KeePassXC has none); copy and paste a password |
 
 It also becomes your **default browser**: links from other programs (a terminal, a file
-manager) open in it, because the desktop entry `debsway-firefox.desktop` is set as the
+manager) open in it, because the desktop entry `wren-firefox.desktop` is set as the
 handler for web links in `~/.config/mimeapps.list` (undone by `--remove`).
 
 `firefox-esr` runs the same Firefox as you, with everything you can reach, if the
 sandbox is ever in the way; it stays installed, and starting it by name still works.
 Profiles made with `firefox-profiles/new-profile.sh` each get a user of their own like
 this one (`fx-NAME`), so a hacked page in one reaches neither your files nor the other
-profiles; they share the one firewall rule through the group `debsway-fx`.
+profiles; they share the one firewall rule through the group `wren-fx`.
 
 ## Your onion site (`extras/onion-site.sh`)
 
@@ -232,7 +232,7 @@ What it can't hide: the site is only up while this computer is on and the VM
 runs (it starts at every boot; `onion-site stop` and `start` by hand), and that
 timing can link it to you; a dedicated
 machine is the right host for anything serious. A hole in your app gets the
-VM and the site's data, not this computer. Back up `/var/lib/tor/debsway-onion-site`
+VM and the site's data, not this computer. Back up `/var/lib/tor/wren-onion-site`
 (as root) to keep the address; `--remove` asks before deleting it.
 
 ## Remote access (`extras/remote-access.sh`)
@@ -255,7 +255,7 @@ the firewall stays closed, and nothing on the local network can reach ssh.
   script prints all of it, ready to paste.
 - **Run it again** to see the address or to authorize another computer (a new
   client key). The address stays the same as long as
-  `/var/lib/tor/debsway-ssh` does; back that folder up (as root).
+  `/var/lib/tor/wren-ssh` does; back that folder up (as root).
 - **If you're logged in over ssh when you run it**, it warns you: ssh
   moves to `127.0.0.1`, so that way in closes. Use Tor, or the machine's
   own screen.
@@ -278,7 +278,7 @@ Installs Firefox ESR with the video codecs and uBlock Origin, runs the
 hardening below, runs it as its own locked-down user (`firefox`), and sets up
 `incognito` too. `firefox-esr` still runs the same Firefox as you, for the odd
 page the sandbox's firewall blocks (your router's, say).
-`debsway remove firefox-sandbox` takes all of it out again (it asks
+`wrenctl remove firefox-sandbox` takes all of it out again (it asks
 about incognito; your profiles stay).
 
 ### Firefox hardening
@@ -294,7 +294,7 @@ about incognito; your profiles stay).
   `ublock-allow --mode standard|medium` switches later.
   `ublock-allow --list` and `ublock-allow --remove example.com` manage
   the list. Changes made by clicking in uBlock's popup work too, but
-  only until Firefox restarts, because uBlock re-reads debsway's rules at
+  only until Firefox restarts, because uBlock re-reads Wren Linux's rules at
   every start.
 - **The JavaScript JIT is off.** Most serious Firefox exploits target the
   JIT, the part that turns JavaScript into fast machine code. JavaScript
@@ -316,7 +316,7 @@ about incognito; your profiles stay).
   off and it looks names up the way the rest of the system does, encrypted;
   with it off, Firefox encrypts its own lookups to Quad9 (DNS over HTTPS),
   strict by default (never plain DNS) or with fallback to the network's, as
-  chosen at the sandboxed Firefox's install. Every Firefox debsway runs gets
+  chosen at the sandboxed Firefox's install. Every Firefox Wren Linux runs gets
   this, `incognito` and the sandboxed `firefox` included, except the Wi-Fi
   sign-in window (`wifi-signin`), which uses the network's DNS so a sign-in
   page can load, and is thrown away when it closes.
@@ -324,7 +324,7 @@ about incognito; your profiles stay).
   browser keeps the old, unfixed version until you restart it. A check
   every 10 minutes shows a notification when that's the case.
 
-How: default prefs in `/etc/firefox-esr/debsway-hardening.js` (any
+How: default prefs in `/etc/firefox-esr/wren-hardening.js` (any
 profile can change them at `about:config`), a uBlock and DNS policy in
 `/usr/share/firefox-esr/distribution/policies.json` (only written if no other
 policies file exists), and a systemd user timer.
@@ -334,7 +334,7 @@ policies file exists), and a systemd user timer.
 
 `incognito` opens Firefox as a different, locked-down user, for sites you
 don't trust or don't want tied to the rest of your browsing. `incognito
-https://example.org/` opens a page. `wifi-signin` (the debsway menu's
+https://example.org/` opens a page. `wifi-signin` (the Wren menu's
 "Wi-Fi sign-in") opens it as the Wi-Fi sign-in window: the network's own DNS
 and plain http allowed, for a café's or hotel's sign-in page, with secure
 DNS off only while it is open. What `parts/incognito.sh` sets up:
@@ -352,7 +352,7 @@ DNS off only while it is open. What `parts/incognito.sh` sets up:
   (`/dev/shm`) and the folder is deleted when you close the window; the
   profile is always in private browsing, with tracking protection and
   fingerprinting resistance on and WebRTC off (`data/incognito-user.js`; some
-  sites break with fingerprinting resistance, turn it off there). debsway's defaults for every profile
+  sites break with fingerprinting resistance, turn it off there). Wren Linux's defaults for every profile
   still apply: HTTPS-Only Mode, no JavaScript JIT, uBlock Origin.
 - **Sound and video**: YouTube and the like play, with sound. `incognito`
   has no sound card, so it runs its own small audio server (PipeWire) whose
@@ -377,7 +377,7 @@ DNS off only while it is open. What `parts/incognito.sh` sets up:
   window, and the two can be open at the same time.
 - **A narrow door**: your user may run one thing as `incognito` (and as
   `wifi-signin`), the wrapper `/usr/local/libexec/incognito-session`, through a rule in
-  `/etc/sudoers.d/debsway-incognito` that was checked with `visudo`. The
+  `/etc/sudoers.d/wren-incognito` that was checked with `visudo`. The
   `incognito` command gives that user a restricted Wayland socket only
   while the window is open, and takes it away afterwards. It is made with
   sway's security-context protocol (`bin/wayland-restrict`): the window
@@ -388,11 +388,11 @@ DNS off only while it is open. What `parts/incognito.sh` sets up:
   other X11-only apps) listens on an "abstract" socket that every user on
   the computer can connect to, and anyone connected to X11 can read its
   windows and type into them. `incognito`, `claude` and `claude-vm` start
-  through `/usr/local/libexec/debsway-no-abstract-sockets`, which uses the
+  through `/usr/local/libexec/wren-no-abstract-sockets`, which uses the
   kernel's Landlock (Linux 6.12 or newer, Debian 13's own) to stop them
   connecting to abstract sockets made outside them. Files, the network and
   their own sockets are unaffected. On an older kernel they refuse to start
-  (`DEBSWAY_ALLOW_ABSTRACT_SOCKETS=1` runs one without it).
+  (`WREN_ALLOW_ABSTRACT_SOCKETS=1` runs one without it).
 
 What it doesn't do: it uses your network and your IP address (use Tor
 Browser or a VPN for that), and it uses the same kernel, so a kernel bug

@@ -1,5 +1,5 @@
 #!/bin/bash
-# no-abstract-sockets COMMAND [ARGS...]: written by debsway (parts/incognito.sh
+# no-abstract-sockets COMMAND [ARGS...]: written by Wren Linux (parts/incognito.sh
 # and extras/claude-code.sh install it as root, under /usr/local/libexec).
 # Runs COMMAND so that it (and everything it starts) can't connect to an
 # "abstract" Unix socket made by any program outside it. Those sockets have no
@@ -10,7 +10,7 @@
 # restricted: files, the network and ordinary sockets work as before, and
 # COMMAND can still make and use abstract sockets of its own.
 # Stops with an error if the kernel can't do it, unless
-# DEBSWAY_ALLOW_ABSTRACT_SOCKETS=1 is set (then COMMAND runs unrestricted).
+# WREN_ALLOW_ABSTRACT_SOCKETS=1 is set (then COMMAND runs unrestricted).
 set -euo pipefail
 [ $# -ge 1 ] || { echo "usage: no-abstract-sockets COMMAND [ARGS...]" >&2; exit 2; }
 code=$(cat <<'PY'
@@ -28,10 +28,10 @@ libc = ctypes.CDLL(None, use_errno=True)
 
 
 def fail(why):
-    if os.environ.get("DEBSWAY_ALLOW_ABSTRACT_SOCKETS") == "1":
+    if os.environ.get("WREN_ALLOW_ABSTRACT_SOCKETS") == "1":
         os.execvp(sys.argv[1], sys.argv[1:])
     print("no-abstract-sockets: " + why, file=sys.stderr)
-    print("no-abstract-sockets: (DEBSWAY_ALLOW_ABSTRACT_SOCKETS=1 runs it without this protection.)",
+    print("no-abstract-sockets: (WREN_ALLOW_ABSTRACT_SOCKETS=1 runs it without this protection.)",
           file=sys.stderr)
     sys.exit(1)
 

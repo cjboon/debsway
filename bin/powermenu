@@ -1,5 +1,5 @@
 #!/bin/sh
-# powermenu: written by debsway parts/power-menu.sh
+# powermenu: written by Wren Linux parts/power-menu.sh
 # Lock, suspend, log out, reboot or power off, picked from a small menu.
 # Escape closes it without doing anything.
 # the theme's menu colors (bin/theme), else black and white

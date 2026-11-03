@@ -1,15 +1,15 @@
 #!/bin/sh
-# debsway-idle: written by debsway parts/swayidle.sh
-# Runs swayidle with debsway's timeouts. The screen locks after the minutes set
+# wren-idle: written by Wren Linux parts/swayidle.sh
+# Runs swayidle with Wren Linux's timeouts. The screen locks after the minutes set
 # with  timer lock MINUTES  (30 unless you changed it; 1 to 120); for the 30
 # seconds before that it fades down with a notice (bin/dim-warning), and it
 # turns off 5 minutes after the lock. It always locks before the laptop sleeps.
-# Just before each lock it runs every program in ~/.config/debsway/on-lock.d
+# Just before each lock it runs every program in ~/.config/wren/on-lock.d
 # (each for at most 10 seconds): the vault extra closes its folder there.
 # sway starts it (~/.config/sway/config.d/idle.conf); timer lock restarts it.
-#   debsway-idle              run swayidle
-#   debsway-idle --minutes    print the minutes until the lock
-conf=${XDG_CONFIG_HOME:-$HOME/.config}/debsway/lock
+#   wren-idle              run swayidle
+#   wren-idle --minutes    print the minutes until the lock
+conf=${XDG_CONFIG_HOME:-$HOME/.config}/wren/lock
 
 minutes=$(sed -n 's/^minutes=//p' "$conf" 2>/dev/null | tail -n 1)
 case $minutes in '' | *[!0-9]*) minutes=30 ;; esac
@@ -27,7 +27,7 @@ DIM=$HOME/.local/bin/dim-warning
 # the same as LOCK_CMD in lib/sway.sh (test.sh checks)
 # shellcheck disable=SC2016  # expanded where it runs; one word: a checked color
 LOCK='swaylock -f -c $(~/.local/bin/theme get LOCK 2>/dev/null || echo 000000)'
-hooks=${XDG_CONFIG_HOME:-$HOME/.config}/debsway/on-lock.d
+hooks=${XDG_CONFIG_HOME:-$HOME/.config}/wren/on-lock.d
 case $hooks in *"'"*) HOOKS=: ;; *) HOOKS="for h in '$hooks'/*; do [ -x \"\$h\" ] && timeout 10 \"\$h\"; done" ;; esac
 exec swayidle -w \
     timeout "$dim" "$DIM start" resume "$DIM stop" \

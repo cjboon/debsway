@@ -1,5 +1,5 @@
 #!/bin/bash
-# yt-dlp: written by debsway extras/yt-dlp.sh, installed as /usr/local/bin/yt-dlp.
+# yt-dlp: written by Wren Linux extras/yt-dlp.sh, installed as /usr/local/bin/yt-dlp.
 # Downloads videos with yt-dlp, which runs as its own locked-down user (ytdlp),
 # never as you: it can't read your files and is kept off your local network.
 # Use it like yt-dlp, e.g.  yt-dlp URL   or  yt-dlp -x URL  (sound only).
@@ -7,15 +7,15 @@
 # you, so the copies are yours); ytdlp never gets into your home.
 #
 # Updating yt-dlp (sites change, and an old yt-dlp stops working):
-#   debsway install yt-dlp
-# Treat what it downloads as untrusted; play it with mpv, which debsway's media
+#   wrenctl install yt-dlp
+# Treat what it downloads as untrusted; play it with mpv, which Wren Linux's media
 # extra runs in a sandbox.
-# (The DEBSWAY_ ones: a test points these elsewhere)
+# (The WREN_ ones: a test points these elsewhere)
 set -u
 
-SUDO=${DEBSWAY_SUDO:-sudo}
-SESSION=${DEBSWAY_YTDLP_SESSION:-/usr/local/libexec/yt-dlp-session}
-OUT=${DEBSWAY_YTDLP_OUT:-/var/lib/debsway-ytdlp-out}
+SUDO=${WREN_SUDO:-sudo}
+SESSION=${WREN_YTDLP_SESSION:-/usr/local/libexec/yt-dlp-session}
+OUT=${WREN_YTDLP_OUT:-/var/lib/wren-ytdlp-out}
 
 die() { printf 'yt-dlp: %s\n' "$*" >&2; exit 1; }
 
@@ -65,6 +65,6 @@ if [ "$failed" -gt 0 ]; then
 fi
 
 if [ "$rc" -eq 1 ] && [ "$copied" -eq 0 ]; then
-    printf 'yt-dlp: if a site stopped working, a newer yt-dlp may fix it: debsway install yt-dlp\n' >&2
+    printf 'yt-dlp: if a site stopped working, a newer yt-dlp may fix it: wrenctl install yt-dlp\n' >&2
 fi
 exit "$rc"

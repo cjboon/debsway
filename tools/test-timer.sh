@@ -26,7 +26,7 @@ export PATH="$T/fake:$PATH" HOME="$T/home" XDG_RUNTIME_DIR="$T/run" XDG_CONFIG_H
 
 t() { bash "$TIMER" "$@"; }
 calls() { cat "$T/calls" 2>/dev/null; }
-files() { find "$T/run/debsway-timers" -type f 2>/dev/null | wc -l; }
+files() { find "$T/run/wren-timers" -type f 2>/dev/null | wc -l; }
 
 # 1. how long a person may say it takes
 for pair in 90s=90 10m=600 1h30m=5400 1h30=5400 5m30=330 90=5400 1.5h=5400 45S=45; do
@@ -51,7 +51,7 @@ check "list has both" test "$(t list | wc -l)" = 2
 
 # 4. cancel one, then all
 t cancel 1 >/dev/null
-check "cancel 1 stops that timer's unit" grep -q 'systemctl --user stop debsway-timer-' <<<"$(calls)"
+check "cancel 1 stops that timer's unit" grep -q 'systemctl --user stop wren-timer-' <<<"$(calls)"
 check "one is left" test "$(files)" = 1
 check "the one left is the other" bash -c "[[ \$(bash '$TIMER' next) == bake\ [12]h* ]]"
 t cancel all >/dev/null
@@ -68,13 +68,13 @@ for when in "7am" "7:30 pm" "19:30" "at 6:15 wake up" "tomorrow 8am"; do
 done
 now=$(date +%s)
 ok=1
-for f in "$T/run/debsway-timers/"*; do
+for f in "$T/run/wren-timers/"*; do
     due=$(sed -n 's/^due=//p' "$f")
     [ "$due" -gt "$now" ] && [ "$due" -le $((now + 2 * 86400)) ] || ok=0
 done
 check "five alarms made five files" test "$(files)" = 5
 check "every alarm is in the future, within two days" test "$ok" = 1
-check "alarm keeps its name" grep -q 'label=wake up' "$T/run/debsway-timers/"*
+check "alarm keeps its name" grep -q 'label=wake up' "$T/run/wren-timers/"*
 check "an alarm shows in the bar as alarm text" bash -c "[[ \$(bash '$TIMER' next) == *' +4' ]]"
 t cancel all >/dev/null
 
@@ -86,18 +86,18 @@ check "refused things leave no files" test "$(files)" = 0
 
 # 7. ringing: a notification, then the file is gone
 t 1m "pasta" >/dev/null
-id=$(find "$T/run/debsway-timers" -type f -printf '%f')
+id=$(find "$T/run/wren-timers" -type f -printf '%f')
 : >"$T/calls"
 t fire "$id"
-check "ringing sends a notification with the name" grep -q 'notify-send -u critical -t 0 -a debsway Timer done pasta' <<<"$(calls)"
+check "ringing sends a notification with the name" grep -q 'notify-send -u critical -t 0 -a wren Timer done pasta' <<<"$(calls)"
 check "with the alarm sound missing the notification says so" grep -q 'Timer done pasta (no sound: the alarm sound is missing' <<<"$(calls)"
 check "...and nothing is played" bash -c "! grep -q '^pw-play' '$T/calls'"
 check "ringing removes the timer" test "$(files)" = 0
 check "ringing twice does nothing" t fire "$id"
 mkdir -p "$T/sounds" && : >"$T/sounds/alarm.wav"
-export DEBSWAY_SOUND_DIR="$T/sounds"
+export WREN_SOUND_DIR="$T/sounds"
 t 1m "tea" >/dev/null
-id=$(find "$T/run/debsway-timers" -type f -printf '%f')
+id=$(find "$T/run/wren-timers" -type f -printf '%f')
 : >"$T/calls"
 t fire "$id"
 check "a timer rings the sound twice (about 20 seconds)" test "$(grep -c "^pw-play $T/sounds/alarm.wav" "$T/calls")" -eq 2
@@ -119,29 +119,29 @@ esac
 FAKE
 chmod +x "$T/ring/"*
 ringing() { local saved=$PATH rc; PATH="$T/ring:$PATH"; "$@"; rc=$?; PATH=$saved; return $rc; }
-alarm_id() { t at 7:30 wake >/dev/null; find "$T/run/debsway-timers" -type f -name '[0-9]*' -printf '%f\n' | head -1; }
+alarm_id() { t at 7:30 wake >/dev/null; find "$T/run/wren-timers" -type f -name '[0-9]*' -printf '%f\n' | head -1; }
 
 # how long: an alarm 30 plays by default (5 minutes), a timer 2 (about 20 seconds)
-check "an alarm rings for 300 seconds, a timer for 20, unless told otherwise" bash -c "grep -q 'RING_ALARM=\${DEBSWAY_RING_ALARM:-300}' '$TIMER' && grep -q 'RING_TIMER=\${DEBSWAY_RING_TIMER:-20}' '$TIMER'"
+check "an alarm rings for 300 seconds, a timer for 20, unless told otherwise" bash -c "grep -q 'RING_ALARM=\${WREN_RING_ALARM:-300}' '$TIMER' && grep -q 'RING_TIMER=\${WREN_RING_TIMER:-20}' '$TIMER'"
 id=$(alarm_id)
 : >"$T/calls"
-DEBSWAY_RING_ALARM=300 FAKE_PLAY=1 FAKE_NOTIFY_WAIT=4 ringing t fire "$id" &
+WREN_RING_ALARM=300 FAKE_PLAY=1 FAKE_NOTIFY_WAIT=4 ringing t fire "$id" &
 fire_pid=$!
 /bin/sleep 2.5
 check "an alarm repeats the sound (30 times in all) until it is stopped" test "$(grep -c '^pw-play' "$T/calls")" -ge 2
-check "the notification offers a Stop action and says how to stop it" grep -q 'notify-send --wait -A default=Stop -u critical -t 0 -a debsway Alarm wake. Click or dismiss this to stop the sound.' "$T/calls"
+check "the notification offers a Stop action and says how to stop it" grep -q 'notify-send --wait -A default=Stop -u critical -t 0 -a wren Alarm wake. Click or dismiss this to stop the sound.' "$T/calls"
 t stop >"$T/out" 2>&1
 wait "$fire_pid"
 check "timer stop ends the ringing" grep -q 'Stopped the sound' "$T/out"
 check "...and the alarm stops repeating" test "$(grep -c '^pw-play' "$T/calls")" -lt 30
-check "...and leaves no ring behind" test ! -e "$T/run/debsway-timers/ringing"
+check "...and leaves no ring behind" test ! -e "$T/run/wren-timers/ringing"
 check "timer stop with nothing ringing and nothing pending says so" grep -q 'Nothing is running' <(t stop 2>&1)
 
 # clicking or dismissing the notification ends it (the notify-send --wait returns)
 id=$(alarm_id)
 : >"$T/calls"
 start=$SECONDS
-DEBSWAY_RING_ALARM=300 FAKE_PLAY=3 FAKE_NOTIFY_WAIT=0.7 ringing t fire "$id"
+WREN_RING_ALARM=300 FAKE_PLAY=3 FAKE_NOTIFY_WAIT=0.7 ringing t fire "$id"
 took=$((SECONDS - start))
 check "dismissing the notification stops the sound at once, not after the whole alarm" test "$took" -lt 6
 check "...after one play" test "$(grep -c '^pw-play' "$T/calls")" -eq 1
@@ -149,28 +149,28 @@ check "...after one play" test "$(grep -c '^pw-play' "$T/calls")" -eq 1
 # without --wait support the notification is plain and the sound plays through
 id=$(alarm_id)
 : >"$T/calls"
-DEBSWAY_RING_ALARM=30 env PATH="$T/fake:$PATH" bash "$TIMER" fire "$id"
-check "a notify-send without --wait gets a plain notification" bash -c "grep -q '^notify-send -u critical -t 0 -a debsway Alarm' '$T/calls' && ! grep -q -e '--wait' '$T/calls'"
+WREN_RING_ALARM=30 env PATH="$T/fake:$PATH" bash "$TIMER" fire "$id"
+check "a notify-send without --wait gets a plain notification" bash -c "grep -q '^notify-send -u critical -t 0 -a wren Alarm' '$T/calls' && ! grep -q -e '--wait' '$T/calls'"
 check "...and the alarm still rings its full length (3 plays for 30 seconds here)" test "$(grep -c '^pw-play' "$T/calls")" -eq 3
 
 # with a pending timer, stop still cancels it as before
 t 5m soon >/dev/null
 check "timer stop with nothing ringing cancels a pending timer, as before" bash -c "bash '$TIMER' stop | grep -q -i 'cancel'"
-unset DEBSWAY_SOUND_DIR
+unset WREN_SOUND_DIR
 
 # 8. the clock setting
 t clock date off >/dev/null
-check "date off is remembered" grep -qx 'date=no' "$T/config/debsway/clock"
+check "date off is remembered" grep -qx 'date=no' "$T/config/wren/clock"
 check "no date looks like a weekday and the time with am or pm" bash -c "[[ \$(bash '$TIMER' clock date off) =~ ^The\ bar\ shows:\ [A-Z][a-z]{2}\ [0-9]{1,2}:[0-9]{2}\ [AP]M\$ ]]"
 check "date on looks like the usual bar" bash -c "[[ \$(bash '$TIMER' clock date on) =~ ^The\ bar\ shows:\ [A-Z][a-z]{2}\ [0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{1,2}:[0-9]{2}\ [AP]M\$ ]]"
 check "24 hour is not an option" bash -c "! bash '$TIMER' clock 24h"
-check "the clock file never has an hours setting" bash -c "! grep -q hours '$T/config/debsway/clock'"
+check "the clock file never has an hours setting" bash -c "! grep -q hours '$T/config/wren/clock'"
 check "a wrong clock option fails" bash -c "! bash '$TIMER' clock sideways"
-check "the clock file keeps one line per setting" test "$(sort "$T/config/debsway/clock" | uniq -d | wc -l)" = 0
+check "the clock file keeps one line per setting" test "$(sort "$T/config/wren/clock" | uniq -d | wc -l)" = 0
 
 # 9. an old file with nothing behind it is dropped
-mkdir -p "$T/run/debsway-timers"
-printf 'kind=timer\ndue=%s\nlabel=old\n' $(($(date +%s) - 1000)) >"$T/run/debsway-timers/old"
+mkdir -p "$T/run/wren-timers"
+printf 'kind=timer\ndue=%s\nlabel=old\n' $(($(date +%s) - 1000)) >"$T/run/wren-timers/old"
 t list >/dev/null
 check "a timer long past is forgotten" test "$(files)" = 0
 
@@ -227,7 +227,7 @@ esc=$(python3 -I "$T/esc.py" "$TIMER" 2>&1)
 check "...even with the date turned off in the bar" grep -qx 'date True' <<<"$esc"
 bash "$TIMER" clock date on >/dev/null
 
-# the sound debsway ships: a short, small, valid mono WAV, made by tools/make-alarm-sound.py
+# the sound Wren Linux ships: a short, small, valid mono WAV, made by tools/make-alarm-sound.py
 check "data/alarm.wav is a valid mono 16-bit sound of a few seconds, under 600 KB" python3 -I -c '
 import os, sys, wave
 f = sys.argv[1]
@@ -240,22 +240,22 @@ assert os.path.getsize(f) < 600000
 check "the base part installs it" grep -q 'data/alarm.wav' "$HERE/parts/core-commands.sh"
 check "the sound extra no longer needs a sound theme package" bash -c "! grep -q 'sound-theme' '$HERE/extras/pipewire-audio.sh'"
 
-# How long before the screen locks: timer lock writes it, bin/debsway-idle runs
+# How long before the screen locks: timer lock writes it, bin/wren-idle runs
 # swayidle with it. swayidle, swaymsg and pkill are pretend ones.
-IDLE=$HERE/bin/debsway-idle
+IDLE=$HERE/bin/wren-idle
 for c in swayidle swaymsg pkill; do
     printf '#!/bin/sh\necho "%s $*" >>"%s/calls"\nexit 0\n' "$c" "$T" >"$T/fake/$c"
     chmod +x "$T/fake/$c"
 done
-export DEBSWAY_IDLE=$IDLE
+export WREN_IDLE=$IDLE
 check "with nothing set the screen locks after 30 minutes" test "$("$IDLE" --minutes)" = 30
 check "timer lock alone says how long" grep -q 'after 30 minutes' <<<"$(t lock)"
 : >"$T/calls"
 out=$(SWAYSOCK=/pretend t lock 10 2>&1)
 check "timer lock 10 says so" grep -q 'now locks after 10 minutes' <<<"$out"
-check "...and debsway-idle reads 10" test "$("$IDLE" --minutes)" = 10
+check "...and wren-idle reads 10" test "$("$IDLE" --minutes)" = 10
 check "...and swayidle is started again with it (sway keeps the old timeouts otherwise)" \
-    bash -c 'grep -q "^pkill -x swayidle" "$1" && grep -q "^swaymsg exec .*debsway-idle" "$1"' _ "$T/calls"
+    bash -c 'grep -q "^pkill -x swayidle" "$1" && grep -q "^swaymsg exec .*wren-idle" "$1"' _ "$T/calls"
 t lock 15m >/dev/null
 check "timer lock 15m works too" test "$("$IDLE" --minutes)" = 15
 for bad in 0 121 abc 5h -3; do
@@ -263,7 +263,7 @@ for bad in 0 121 abc 5h -3; do
 done
 check "...and the time stays as it was" test "$("$IDLE" --minutes)" = 15
 check "without the idle lock set up it says how to get it" \
-    bash -c 'out=$(DEBSWAY_IDLE=/nonexistent bash "$1" lock 10 2>&1); [ $? -ne 0 ] && grep -q "debsway part swayidle" <<<"$out"' _ "$TIMER"
+    bash -c 'out=$(WREN_IDLE=/nonexistent bash "$1" lock 10 2>&1); [ $? -ne 0 ] && grep -q "wrenctl part swayidle" <<<"$out"' _ "$TIMER"
 : >"$T/calls"
 t lock 10 >/dev/null
 "$IDLE"
@@ -272,10 +272,10 @@ check "swayidle fades 30 seconds before the lock (570 s)" grep -q 'timeout 570 .
 check "...locks at 600 s (after the on-lock programs)" grep -qF "; swaylock -f -c \$(~/.local/bin/theme get LOCK 2>/dev/null || echo 000000)" <<<"$(grep -o "timeout 600 .*" <<<"$run")"
 check "...turns the screen off 5 minutes later (900 s)" grep -q 'timeout 900 swaymsg "output \* power off"' <<<"$run"
 check "...and locks before sleep (after them too)" grep -qF '; swaylock -f -c $(~/.local/bin/theme get LOCK 2>/dev/null || echo 000000)' <<<"$(grep -o 'before-sleep .*on-lock.d.*' <<<"$run")"
-printf 'minutes=500\n' >"$T/config/debsway/lock"
+printf 'minutes=500\n' >"$T/config/wren/lock"
 check "a time out of range in the file falls back to 30" test "$("$IDLE" --minutes)" = 30
 check "the timer menu offers it" grep -q 'lock after $("$IDLE" --minutes) min idle' "$TIMER"
-check "parts/swayidle.sh starts swayidle through debsway-idle" grep -qx 'IDLE_CMD="$HOME/.local/bin/debsway-idle"' "$HERE/parts/swayidle.sh"
+check "parts/swayidle.sh starts swayidle through wren-idle" grep -qx 'IDLE_CMD="$HOME/.local/bin/wren-idle"' "$HERE/parts/swayidle.sh"
 
 # the menu's screen: one box with this month (ncal's cal) and the timers, centred
 mkdir -p "$T/calbin"
@@ -307,7 +307,7 @@ check "with nothing set it says so" grep -q 'Nothing set yet' <<<"$(plain <<<"$o
 check "...and the box keeps its shape" test "$(shape "$out")" = "19 86 14"
 out=$(LANG=C.UTF-8 env PATH="$T/fake:/usr/bin:/bin" COLUMNS=100 LINES=30 bash "$TIMER" screen 2>&1)
 if ! command -v cal >/dev/null; then
-    check "without cal it says how to get it" grep -q 'debsway --update' <<<"$out"
+    check "without cal it says how to get it" grep -q 'wrenctl --update' <<<"$out"
     check "...in the same shape" test "$(shape "$out")" = "19 86 14"
 fi
 out=$(LANG=C scr)

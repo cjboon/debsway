@@ -12,7 +12,7 @@
         "~/.electrum",
         "~/.sparrow",
         "~/.config/tutanota-desktop",
-        "~/.config/debsway/backup.conf"
+        "~/.config/wren/backup.conf"
       ]
     }
   },

@@ -1,5 +1,5 @@
 #!/bin/bash
-# firefox [URL...]: written by debsway extras/firefox-sandbox.sh
+# firefox [URL...]: written by Wren Linux extras/firefox-sandbox.sh
 # Opens Firefox as a different, locked-down user (firefox), as a normal window
 # on your sway. Your logins and history are kept (in that user's own home), but
 # a hacked page reaches only that user: not your files, ssh keys or passwords.
@@ -12,7 +12,7 @@
 #   yours plays (as in incognito). It cannot hear your microphone.
 # - Network: the firewall keeps it off your router, printers and this computer's
 #   own services (data/firefox-firewall.nft). To use one for a while:
-#   sudo systemctl stop debsway-firefox-firewall
+#   sudo systemctl stop wren-firefox-firewall
 # - Links from other programs open in the Firefox that is already running.
 # firefox-esr runs Firefox as you, with all your files and no such rules.
 # - A profile made with new-profile.sh has a user of its own (fx-NAME), its own
@@ -38,8 +38,8 @@ done
 # user, lock, socket and sound pipe names: "firefox" alone, or one set per profile
 if [ -z "$name" ]; then user=firefox tag=; else user=fx-$name tag=-$name; fi
 # sound off when that was the choice: at the install for the main Firefox
-# (/etc/debsway/firefox.conf), at new-profile.sh for a profile (its own file)
-if [ -z "$name" ]; then choices=/etc/debsway/firefox.conf; else choices=/etc/debsway/firefox-profiles/$name.conf; fi
+# (/etc/wren/firefox.conf), at new-profile.sh for a profile (its own file)
+if [ -z "$name" ]; then choices=/etc/wren/firefox.conf; else choices=/etc/wren/firefox-profiles/$name.conf; fi
 [ "$(sed -n 's/^sound=//p' "$choices" 2>/dev/null | head -1)" != no ] || audio=false
 
 [ "$(id -u)" -ne 0 ] || die "run it as your normal user, not root."
@@ -56,7 +56,7 @@ done
 SESSION=/usr/local/libexec/firefox-session
 # The one command your user may run as that user (see /etc/sudoers.d)
 sudo -n -u "$user" -l "$SESSION" >/dev/null 2>&1 ||
-    die "your user isn't set up to start it. Run: debsway install firefox-sandbox${name:+  (or new-profile.sh for the profile $name)}  (firefox-esr runs Firefox as you.)"
+    die "your user isn't set up to start it. Run: wrenctl install firefox-sandbox${name:+  (or new-profile.sh for the profile $name)}  (firefox-esr runs Firefox as you.)"
 command -v flock >/dev/null || die "flock is missing (package util-linux)."
 
 # Already open? Then the link (or a new window) goes to that Firefox.
@@ -67,7 +67,7 @@ if ! flock -n 9; then
 fi
 
 sock=$rt/firefox$tag-wayland
-restrict=$(command -v wayland-restrict) || die "wayland-restrict is missing. Run: debsway install firefox-sandbox"
+restrict=$(command -v wayland-restrict) || die "wayland-restrict is missing. Run: wrenctl install firefox-sandbox"
 command -v setfacl >/dev/null || die "setfacl is missing (package acl)."
 # (firefox-session accepts only /home/NAME/Downloads, or .../Downloads/PROFILE)
 downloads=$HOME/Downloads${name:+/$name}
@@ -75,17 +75,17 @@ downloads=$HOME/Downloads${name:+/$name}
 fifo=$rt/firefox$tag-audio.fifo
 player=
 # The theme (bin/theme, light or dark): the sandbox gets just the word
-theme=$(head -c 16 "${XDG_CONFIG_HOME:-$HOME/.config}/debsway/theme" 2>/dev/null || true)
+theme=$(head -c 16 "${XDG_CONFIG_HOME:-$HOME/.config}/wren/theme" 2>/dev/null || true)
 case $theme in light | dark) ;; *) theme=dark ;; esac
 # Your New Tab picture, for the main Firefox: the newest JPEG or PNG in
-# ~/Pictures/debsway/firefox. The sandbox never sees that folder: a checked
+# ~/Pictures/wren/firefox. The sandbox never sees that folder: a checked
 # copy goes into your runtime folder, readable by firefox alone, and goes
 # again when Firefox closes. (firefox-session checks it once more.)
 picture=
 picture_arg=-
 if [ -z "$name" ]; then
     best=
-    for p in "$HOME/Pictures/debsway/firefox"/*; do
+    for p in "$HOME/Pictures/wren/firefox"/*; do
         [ -f "$p" ] && [ -r "$p" ] || continue
         case ${p,,} in *.jpg | *.jpeg | *.png) ;; *) continue ;; esac
         [ "$(stat -L -c %s -- "$p")" -le $((10 * 1024 * 1024)) ] || continue

@@ -1,12 +1,12 @@
   KEYS (text console)
   ──────────────────────────────────────────────────────────────────
   Press Esc to close this; arrows and Space scroll.
-  Open it again any time: Alt+?, debsway menu (Alt+m) > Help, or type  keys.
-  (The debsway menu: arrows and Enter. Esc closes every screen of it.)
-  Lines for things you have not installed are left out; add them with debsway --apps.
+  Open it again any time: Alt+?, Wren menu (Alt+m) > Help, or type  keys.
+  (The Wren menu: arrows and Enter. Esc closes every screen of it.)
+  Lines for things you have not installed are left out; add them with wrenctl --apps.
 
   START HERE
-    Alt+m                  debsway menu: help, update, apps, text size
+    Alt+m                  Wren menu: help, update, apps, text size
     Alt+?                  this page
     Alt+t                  timers and alarms
     Alt+Enter              new pane beside this one (Alt+v: below)
@@ -30,7 +30,7 @@
 @end
 
   TEXT SIZE
-    console-font           list the sizes and pick one (or debsway menu > Font size)
+    console-font           list the sizes and pick one (or Wren menu > Font size)
     console-font dejavu-43   a size by name; it is kept for next login
 
   TMUX BASICS (tmux is what shows the panes and the bar)
@@ -51,8 +51,8 @@
 
   FROM A TERMINAL
     keys                   this page
-    bash ~/debsway/status.sh          what is installed
-    bash ~/debsway/install-extras.sh  add programs
+    bash ~/wren/status.sh          what is installed
+    bash ~/wren/install-extras.sh  add programs
 @if nmtui
     nmtui                  pick a Wi-Fi network (or Alt+w)
 @end

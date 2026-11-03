@@ -12,7 +12,7 @@
 
 TAILS_LATEST_URL=https://tails.net/install/v2/Tails/amd64/stable/latest.json
 TAILS_SIG_BASE=https://tails.net/torrents/files
-TAILS_OFFLINE=${OFFLINE_DIR:-$DEBSWAY_DIR/offline}/tails
+TAILS_OFFLINE=${OFFLINE_DIR:-$WREN_DIR/offline}/tails
 
 # tails_latest JSON-FILE: "VERSION URL SHA256 SIZE" of the USB image (.img) in
 # Tails' release file, or nothing (and status 1) if it isn't as expected

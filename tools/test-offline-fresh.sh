@@ -16,8 +16,8 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 }
 not() { ! "$@"; }
 at() { # DATE: the pretend "now"
-    DEBSWAY_NOW=$(date -d "$1" +%s)
-    export DEBSWAY_NOW
+    WREN_NOW=$(date -d "$1" +%s)
+    export WREN_NOW
 }
 
 # What Debian's lists look like (see dists/trixie, -updates and -security)
@@ -42,7 +42,7 @@ at "2026-10-29 00:00 UTC"
 check "a list with no Date is refused" not release_fresh "$T/nodate" odd
 at "2027-06-01 00:00 UTC"
 # shellcheck disable=SC2016  # expanded by the inner bash, on purpose
-check "DEBSWAY_OFFLINE_ALLOW_STALE=1 accepts an old list" env DEBSWAY_OFFLINE_ALLOW_STALE=1 DEBSWAY_NOW="$DEBSWAY_NOW" \
+check "WREN_OFFLINE_ALLOW_STALE=1 accepts an old list" env WREN_OFFLINE_ALLOW_STALE=1 WREN_NOW="$WREN_NOW" \
     bash -c '. "$1/lib.sh"; . "$1/lib/offline.sh"; release_fresh "$2" security' _ "$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" "$T/security"
 
 # The signature: checked with sqv (apt in Debian 13 depends on it, so a new

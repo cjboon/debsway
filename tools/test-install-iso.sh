@@ -4,7 +4,7 @@
 # answers (nothing secret, the three questions left to you), the boot menu
 # edits (on excerpts of Debian 13's own menu files), md5sum.txt, the three
 # scripts that run inside the installer (skipping network setup without a
-# cable, choosing the disk, copying debsway), and the apt sources an install
+# cable, choosing the disk, copying Wren Linux), and the apt sources an install
 # without a network is left with. Changes nothing outside a temp folder.
 # Run by test.sh, or:  bash tools/test-install-iso.sh
 # shellcheck disable=SC2016  # the inner shells expand their own variables
@@ -34,7 +34,7 @@ printf '%s  %s\n' "$(h 1)" 'debian-live-13.7.0-amd64-standard.iso;rm' "$(h 2)" '
 check "a list entry that isn't a live standard image name is ignored" test -z "$(live_name "$T/BAD")"
 check "the live image is the only one (no DVD-1 left)" bash -c '! grep -q "dvd_name\|DEBIAN_CD_BASE\|DVD-1 installer" "$1/prep/make-install-iso.sh" "$1/lib/install-iso.sh"' _ "$HERE"
 check "--live still works, doing nothing" grep -q '^        --live) shift ;;$' "$HERE/prep/make-install-iso.sh"
-echo "debsway test image" >"$T/debian-live-13.7.0-amd64-standard.iso"
+echo "wrenctl test image" >"$T/debian-live-13.7.0-amd64-standard.iso"
 sum=$(sha512sum "$T/debian-live-13.7.0-amd64-standard.iso" | cut -d' ' -f1)
 printf '%s  %s\n' "$sum" debian-live-13.7.0-amd64-standard.iso >"$T/SUMS"
 check "an image with the listed checksum passes" debian_cd_image_ok "$T/SUMS" "$T/debian-live-13.7.0-amd64-standard.iso" debian-live-13.7.0-amd64-standard.iso
@@ -53,14 +53,14 @@ check "age and diceware are part of the base install" \
 check "xorriso isn't part of the base install" \
     bash -c '. "$1/packages.sh"; ! printf "%s\n" "${PKGS[@]}" | grep -qx xorriso' _ "$HERE"
 check "a missing xorriso is installed for this run, under a marker of its own" \
-    bash -c 'grep -q "^    DEBSWAY_OWNER=\$XORRISO_OWNER apt_install xorriso$" "$1" && ! grep -q "^need_tools .*xorriso" "$1"' _ "$HERE/prep/make-install-iso.sh"
+    bash -c 'grep -q "^    WREN_OWNER=\$XORRISO_OWNER apt_install xorriso$" "$1" && ! grep -q "^need_tools .*xorriso" "$1"' _ "$HERE/prep/make-install-iso.sh"
 # the clean-up, run on its own: it takes xorriso out only if this run put it in,
 # and only xorriso's marker (not the one holding wget, gpg and git)
 eval "$(sed -n '/^XORRISO_OWNER=/p; /^cleanup() {/,/^}/p' "$HERE/prep/make-install-iso.sh")"
 apt_purge() { apt_marker >>"$T/purged"; }
 work=$T/work; mkdir -p "$work"; installed_here=true
 cleanup >/dev/null 2>&1
-check "at the end, xorriso is removed again if this run installed it" grep -qx debsway-make-install-iso-xorriso "$T/purged"
+check "at the end, xorriso is removed again if this run installed it" grep -qx wren-make-install-iso-xorriso "$T/purged"
 check "...and nothing else this script installed" test "$(wc -l <"$T/purged")" -eq 1
 check "...and the temporary folder is gone" test ! -e "$T/work"
 : >"$T/purged"; work=''; installed_here=false
@@ -68,7 +68,7 @@ cleanup >/dev/null 2>&1
 check "an xorriso that was there before stays" test ! -s "$T/purged"
 check "the clean-up runs whatever happens (on exit)" grep -qx 'trap cleanup EXIT' "$HERE/prep/make-install-iso.sh"
 check "...and the marker is named for the script, so it comes out cleanly" \
-    test "$(cd "$HERE" && env -u DEBSWAY_OWNER bash -c '. ./lib.sh; apt_marker' "$HERE/prep/make-install-iso.sh")" = debsway-make-install-iso
+    test "$(cd "$HERE" && env -u WREN_OWNER bash -c '. ./lib.sh; apt_marker' "$HERE/prep/make-install-iso.sh")" = wren-make-install-iso
 
 # ---- the offline Wi-Fi packages: refreshed before they get too old ----
 O=$T/odir
@@ -84,7 +84,7 @@ echo "fetch \$*" >>"$T/fetched"
 [ -z "\${FETCH_FAILS:-}" ] || exit 1
 mkdir -p "$O/offline/debs/verify/debian" && echo "Date: Mon, 02 Nov 2026 00:00:00 UTC" >"$O/offline/debs/verify/debian/InRelease"
 EOF
-refresh() { : >"$T/fetched"; (DEBSWAY_DIR=$O OFFLINE_DIR=$O/offline DEBSWAY_NOW=$(date -d '2026-11-02 12:00 UTC' +%s) offline_debs_refresh) >"$T/said" 2>&1; }
+refresh() { : >"$T/fetched"; (WREN_DIR=$O OFFLINE_DIR=$O/offline WREN_NOW=$(date -d '2026-11-02 12:00 UTC' +%s) offline_debs_refresh) >"$T/said" 2>&1; }
 . "$HERE/lib/offline.sh"
 inrelease debian 'Sat, 12 Sep 2026 07:55:41 UTC'
 inrelease security 'Sat, 31 Oct 2026 22:02:52 UTC' 'Sat, 07 Nov 2026 22:02:52 UTC'
@@ -109,7 +109,7 @@ check "a saved package changed since (--check fails): the same firmware is fetch
 rm -rf "$O/offline"; mkdir -p "$O/offline/debs"
 FETCH_FAILS=1 refresh
 check "no network to fetch them: the build goes on, saying the laptop needs a cable" grep -q 'needs a cable or a phone' "$T/said"
-check "make-install-iso.sh does this before it puts debsway on the image" \
+check "make-install-iso.sh does this before it puts Wren Linux on the image" \
     bash -c 'grep -n "^offline_debs_refresh$\|^say \"What goes on it\"$" "$1" | cut -d: -f2 | paste -sd, | grep -qx "offline_debs_refresh,say \"What goes on it\""' _ "$HERE/prep/make-install-iso.sh"
 
 # ---- the installer's answers ----
@@ -129,21 +129,21 @@ check "--noencrypt: plain partitions, no encryption" grep -qx 'd-i partman-auto/
 check "...asked for, after a warning, and not the default" \
     bash -c 'grep -q "^        --noencrypt) encrypt=false; shift ;;$" "$1" && grep -q "ask \"Build an image that installs without disk encryption?\" n" "$1"' _ "$HERE/prep/make-install-iso.sh"
 check "--simplesway: the image carries the extras to tick" \
-    grep -q 'if \$simplesway; then echo one-workspace >"\$stage/debsway-install/preselect"; fi' "$HERE/prep/make-install-iso.sh"
+    grep -q 'if \$simplesway; then echo one-workspace >"\$stage/wren-install/preselect"; fi' "$HERE/prep/make-install-iso.sh"
 check "--autologin: the image carries the autologin rule for the user" \
-    grep -q 'if \$autologin; then autologin_conf "\$user" >"\$stage/debsway-install/autologin.conf"; fi' "$HERE/prep/make-install-iso.sh"
+    grep -q 'if \$autologin; then autologin_conf "\$user" >"\$stage/wren-install/autologin.conf"; fi' "$HERE/prep/make-install-iso.sh"
 check "the autologin rule logs that user in on tty1, with login -f" \
-    bash -c 'c=$(DEBSWAY_DIR=$1 bash -c ". \"\$DEBSWAY_DIR/lib/install-iso.sh\"; autologin_conf me"); grep -qx "ExecStart=" <<<"$c" && grep -qF -- "-o '"'"'-p -f -- \\\\u'"'"'" <<<"$c" && grep -qF -- "--autologin me - \${TERM}" <<<"$c"' _ "$HERE"
-check "...and no user name that isn't one" bash -c '! DEBSWAY_DIR=$1 bash -c ". \"\$DEBSWAY_DIR/lib/install-iso.sh\"; autologin_conf \"me x\""' _ "$HERE"
+    bash -c 'c=$(WREN_DIR=$1 bash -c ". \"\$WREN_DIR/lib/install-iso.sh\"; autologin_conf me"); grep -qx "ExecStart=" <<<"$c" && grep -qF -- "-o '"'"'-p -f -- \\\\u'"'"'" <<<"$c" && grep -qF -- "--autologin me - \${TERM}" <<<"$c"' _ "$HERE"
+check "...and no user name that isn't one" bash -c '! WREN_DIR=$1 bash -c ". \"\$WREN_DIR/lib/install-iso.sh\"; autologin_conf \"me x\""' _ "$HERE"
 check "the time zone is the one asked for" grep -qx 'd-i time/zone string Europe/Berlin' <(fill_preseed "$HERE/data/install-iso-preseed.cfg" me de_DE.UTF-8 de true Europe/Berlin)
 check "...UTC when none is given" grep -qx 'd-i time/zone string UTC' <<<"$ans"
 check "...and the clock is kept right over NTP" grep -qx 'd-i clock-setup/ntp boolean true' <<<"$ans"
 for good in UTC Europe/Berlin America/New_York America/Argentina/Buenos_Aires Etc/GMT+5; do check "the time zone '$good' is taken" timezone_ok "$good"; done
 for bad in 'Europe/Berlin;id' 'x|y' '../etc' 'Europe/ Berlin' '' utc; do check "the time zone '$bad' is refused" not timezone_ok "$bad"; done
 mkdir -p "$T/tzetc"; ln -s /usr/share/zoneinfo/Europe/Paris "$T/tzetc/localtime"
-check "the default time zone is this computer's" test "$(DEBSWAY_ETC=$T/tzetc this_timezone)" = Europe/Paris
+check "the default time zone is this computer's" test "$(WREN_ETC=$T/tzetc this_timezone)" = Europe/Paris
 rm "$T/tzetc/localtime"; ln -s /usr/share/zoneinfo/Etc/UTC "$T/tzetc/localtime"
-check "...UTC for a computer on UTC" test "$(DEBSWAY_ETC=$T/tzetc this_timezone)" = UTC
+check "...UTC for a computer on UTC" test "$(WREN_ETC=$T/tzetc this_timezone)" = UTC
 check "only standard system utilities, no desktop" grep -qx 'tasksel tasksel/first multiselect standard' <<<"$ans"
 check "no popularity contest" grep -qx 'popularity-contest popularity-contest/participate boolean false' <<<"$ans"
 check "packages come over https" grep -qx 'd-i mirror/protocol string https' <<<"$ans"
@@ -183,8 +183,8 @@ EOF
 cp "$T/grub.cfg" "$T/grub.orig"
 grub_add_entry "$T/grub.cfg"
 check "GRUB: the automatic install is the first entry (the default)" \
-    test "$(grep -m1 '^menuentry' "$T/grub.cfg")" = "menuentry --hotkey=d 'Automatic install with debsway (asks for your passphrase and password)' {"
-check "...starting the live image's installer with debsway's answers" \
+    test "$(grep -m1 '^menuentry' "$T/grub.cfg")" = "menuentry --hotkey=d 'Automatic install with Wren Linux (asks for your passphrase and password)' {"
+check "...starting the live image's installer with Wren Linux's answers" \
     bash -c 'grep -qF "linux    /install/gtk/vmlinuz vga=788 $2 --- quiet" "$1" && grep -qF "initrd   /install/gtk/initrd.gz" "$1"' _ "$T/grub.cfg" "$AUTO_ARGS"
 check "...and only that entry gets them" test "$(grep -c 'preseed/file=' "$T/grub.cfg")" = 1
 check "...its hotkey isn't one the menu already uses" bash -c '! grep -q "hotkey=d" "$1"' _ "$T/grub.orig"
@@ -197,7 +197,7 @@ printf '%s\n' 'label live-amd64' '	menu label ^Live system (amd64)' '	menu defau
     '	menu label Live system (amd64 fail-safe mode)' '	linux /live/vmlinuz' >"$T/live.cfg"
 isolinux_edit "$T/menu.cfg" "$T/live.cfg"
 check "BIOS: the menu includes the automatic install before the live system" \
-    test "$(grep -n 'include debsway.cfg' "$T/menu.cfg" | cut -d: -f1)" -lt "$(grep -n 'include live.cfg' "$T/menu.cfg" | cut -d: -f1)"
+    test "$(grep -n 'include wren.cfg' "$T/menu.cfg" | cut -d: -f1)" -lt "$(grep -n 'include live.cfg' "$T/menu.cfg" | cut -d: -f1)"
 check "...which is the default" grep -qx '	menu default' <(isolinux_entry)
 check "...starting the live image's installer" grep -qF "append vga=788 initrd=/install/gtk/initrd.gz $AUTO_ARGS --- quiet" <(isolinux_entry)
 check "...and the live system no longer is (its entries stay)" \
@@ -219,7 +219,7 @@ disk() { # MOUNTED-ON-/cdrom DISK...: what disk.sh sets
     printf '#!/bin/sh\necho "$@" >>"%s/set"\n' "$T" >"$T/setq"
     chmod +x "$T/list" "$T/setq"
     : >"$T/set"
-    DEBSWAY_MOUNTS=$T/mounts DEBSWAY_LIST=$T/list DEBSWAY_SET=$T/setq sh "$D"
+    WREN_MOUNTS=$T/mounts WREN_LIST=$T/list WREN_SET=$T/setq sh "$D"
     cat "$T/set"
 }
 out=$(disk /dev/sdb1 /dev/nvme0n1 /dev/sdb)
@@ -242,7 +242,7 @@ net() { # PORT:CARRIER... (w = wifi): what net.sh emits for the installer
         [ "$c" = - ] || echo "$c" >"$T/net/$n/carrier"
     done
     : >"$T/inc"; : >"$T/out"
-    DEBSWAY_NET=$T/net DEBSWAY_INC=$T/inc DEBSWAY_WAIT=1 sh "$N" >"$T/out"
+    WREN_NET=$T/net WREN_INC=$T/inc WREN_WAIT=1 sh "$N" >"$T/out"
     cat "$T/inc"; echo "stdout:[$(cat "$T/out")]"
 }
 check "a cable plugged in: the network is left alone" test "$(net eth0:1 wlan0:1)" = 'stdout:[]'
@@ -254,7 +254,7 @@ check "a wired port with no cable: switched off" grep -qx 'd-i netcfg/enable boo
 check "a wired port that reports no carrier at all: switched off" grep -qx 'd-i netcfg/enable boolean false' <<<"$(net eth0:-)"
 check "no ports at all: switched off" grep -qx 'd-i netcfg/enable boolean false' <<<"$(net)"
 check "wifi only: net.sh's stdout is exactly the part's location" test "$(cat "$T/out")" = "file://$T/inc"
-check "net.sh is in the preseed" grep -q 'preseed/include_command string sh /cdrom/debsway-install/net.sh' "$HERE/data/install-iso-preseed.cfg"
+check "net.sh is in the preseed" grep -q 'preseed/include_command string sh /cdrom/wren-install/net.sh' "$HERE/data/install-iso-preseed.cfg"
 check "the installer picks the interface again (auto is netcfg's default too)" \
     grep -q '^d-i netcfg/choose_interface select auto' "$HERE/data/install-iso-preseed.cfg"
 check "the boot line leaves the network to net.sh (nothing is forced off)" \
@@ -269,7 +269,7 @@ apt_fix() { # HTTPS(true|false): apt_sources_ensure's work in $A (for trixie)
           true) is_installed() { return 0; } ;;   # ca-certificates is there
           false) is_installed() { return 1; } ;;  # and it is not
       esac
-      VERSION_CODENAME=trixie DEBSWAY_APT_DIR=$A SUDO='' apt_sources_ensure )
+      VERSION_CODENAME=trixie WREN_APT_DIR=$A SUDO='' apt_sources_ensure )
 }
 sources '# deb cdrom:[Debian GNU/Linux 13.7.0 _Trixie_ - Official]/ trixie main non-free-firmware'
 apt_fix true >/dev/null
@@ -294,45 +294,45 @@ apt_fix false >/dev/null
 check "without ca-certificates the new lines come over http" \
     bash -c '! grep -q "^deb https://" "$1" && grep -q "^deb http://deb.debian.org/debian" "$1"' _ "$A/sources.list"
 n=$(grep -c '' "$A/sources.list")
-( VERSION_CODENAME='' DEBSWAY_APT_DIR=$A SUDO='' apt_sources_ensure ) >/dev/null 2>&1
+( VERSION_CODENAME='' WREN_APT_DIR=$A SUDO='' apt_sources_ensure ) >/dev/null 2>&1
 check "the release name is missing: nothing is bolted on (it would be broken)" test "$(grep -c '' "$A/sources.list")" = "$n"
 
-# ---- inside the installer: debsway into ~/debsway ----
+# ---- inside the installer: Wren Linux into ~/wrenctl ----
 L=$T/late.sh
 sed -e "s|/cdrom|$T/cdrom|g" -e "s|/target|$T/target|g" "$HERE/data/install-iso-late.sh" >"$L"
-mkdir -p "$T/cdrom/debsway/bin" "$T/cdrom/debsway/extras" "$T/cdrom/debsway-install/scripts" "$T/target/home/me" "$T/fake"
-echo x >"$T/cdrom/debsway/README.md"; echo x >"$T/cdrom/debsway/start.sh"; echo x >"$T/cdrom/debsway/bin/keys"
-echo x >"$T/cdrom/debsway-install/scripts/mine.txt"
-cp "$HERE/data/install-iso-first-login.sh" "$T/cdrom/debsway-install/first-login.sh"
+mkdir -p "$T/cdrom/wren/bin" "$T/cdrom/wren/extras" "$T/cdrom/wren-install/scripts" "$T/target/home/me" "$T/fake"
+echo x >"$T/cdrom/wren/README.md"; echo x >"$T/cdrom/wren/start.sh"; echo x >"$T/cdrom/wren/bin/keys"
+echo x >"$T/cdrom/wren-install/scripts/mine.txt"
+cp "$HERE/data/install-iso-first-login.sh" "$T/cdrom/wren-install/first-login.sh"
 printf '%s\n' '# ~/.profile: Debian'"'"'s own' 'PATH="$HOME/.local/bin:$PATH"' >"$T/target/home/me/.profile"
 chmod -R a-w "$T/cdrom"
 printf '#!/bin/sh\necho "in-target $*" >>"%s/intarget"\n' "$T" >"$T/fake/in-target"
 chmod +x "$T/fake/in-target"
 PATH="$T/fake:$PATH" sh "$L" me
-check "debsway is copied to ~/debsway" test -f "$T/target/home/me/debsway/start.sh"
+check "Wren Linux is copied to ~/wren" test -f "$T/target/home/me/wren/start.sh"
 check "...with scripts runnable and files writable again" \
-    bash -c '[ "$(stat -c %a "$1/start.sh")" = 755 ] && [ "$(stat -c %a "$1/bin/keys")" = 755 ] && [ "$(stat -c %a "$1/README.md")" = 644 ]' _ "$T/target/home/me/debsway"
-check "...owned by the new user" grep -qx 'in-target chown -R me:me /home/me/debsway' "$T/intarget"
+    bash -c '[ "$(stat -c %a "$1/start.sh")" = 755 ] && [ "$(stat -c %a "$1/bin/keys")" = 755 ] && [ "$(stat -c %a "$1/README.md")" = 644 ]' _ "$T/target/home/me/wren"
+check "...owned by the new user" grep -qx 'in-target chown -R me:me /home/me/wren' "$T/intarget"
 check "your own scripts go to ~/scripts" test -f "$T/target/home/me/scripts/mine.txt"
 check "a bad user name is refused" not env PATH="$T/fake:$PATH" sh "$L" '../x'
 check "the new user's .profile gets the first-login question, after what it had" \
-    bash -c 'head -1 "$1" | grep -q "Debian" && grep -qx "# >>> debsway first login >>>" "$1"' _ "$T/target/home/me/.profile"
+    bash -c 'head -1 "$1" | grep -q "Debian" && grep -qx "# >>> Wren Linux first login >>>" "$1"' _ "$T/target/home/me/.profile"
 PATH="$T/fake:$PATH" sh "$L" me
-check "...once, even if the installer's step runs again" test "$(grep -c '^# >>> debsway first login >>>$' "$T/target/home/me/.profile")" = 1
+check "...once, even if the installer's step runs again" test "$(grep -c '^# >>> Wren Linux first login >>>$' "$T/target/home/me/.profile")" = 1
 check "without --autologin, tty1 asks for the password as usual" test ! -e "$T/target/etc/systemd/system/getty@tty1.service.d"
 chmod -R u+w "$T/cdrom"
-echo '[Service]' >"$T/cdrom/debsway-install/autologin.conf"
+echo '[Service]' >"$T/cdrom/wren-install/autologin.conf"
 chmod -R a-w "$T/cdrom"
 PATH="$T/fake:$PATH" sh "$L" me
 check "with --autologin, the rule goes into the new system's tty1" \
-    cmp "$T/cdrom/debsway-install/autologin.conf" "$T/target/etc/systemd/system/getty@tty1.service.d/50-debsway-autologin.conf"
-check "without --simplesway, nothing is ticked for the first install list" test ! -e "$T/target/home/me/.config/debsway/preselect"
+    cmp "$T/cdrom/wren-install/autologin.conf" "$T/target/etc/systemd/system/getty@tty1.service.d/50-wren-autologin.conf"
+check "without --simplesway, nothing is ticked for the first install list" test ! -e "$T/target/home/me/.config/wren/preselect"
 chmod -R u+w "$T/cdrom"
-echo one-workspace >"$T/cdrom/debsway-install/preselect"
+echo one-workspace >"$T/cdrom/wren-install/preselect"
 chmod -R a-w "$T/cdrom"
 PATH="$T/fake:$PATH" sh "$L" me
 check "with --simplesway, the first install list gets one-workspace ticked, owned by the user" \
-    bash -c 'grep -qx one-workspace "$1/.config/debsway/preselect" && grep -qx "in-target chown -R me:me /home/me/.config" "$2"' _ "$T/target/home/me" "$T/intarget"
+    bash -c 'grep -qx one-workspace "$1/.config/wren/preselect" && grep -qx "in-target chown -R me:me /home/me/.config" "$2"' _ "$T/target/home/me" "$T/intarget"
 chmod -R u+w "$T/cdrom"
 
 # ---- the first login: asks once, on the console ----
@@ -341,26 +341,26 @@ login() { # TTY ANSWER: a login shell reading that ~/.profile; what it printed i
     printf '%s\n' '# ~/.profile: Debian'"'"'s own' 'echo before' >"$F/.profile"
     cat "$HERE/data/install-iso-first-login.sh" >>"$F/.profile"
     echo 'echo after' >>"$F/.profile"
-    printf '%s\n' "$2" | HOME=$F DEBSWAY_TTY=$1 sh -c '. "$HOME/.profile"' >"$T/said" 2>&1
+    printf '%s\n' "$2" | HOME=$F WREN_TTY=$1 sh -c '. "$HOME/.profile"' >"$T/said" 2>&1
 }
-mkdir -p "$F/debsway"
-printf '#!/bin/sh\necho "start.sh ran as $(id -un)"\n' >"$F/debsway/start.sh"
+mkdir -p "$F/wren"
+printf '#!/bin/sh\necho "start.sh ran as $(id -un)"\n' >"$F/wren/start.sh"
 login /dev/tty1 ''
 check "first login on the console: asks \"Set it up now?\", and Enter runs start.sh" \
     bash -c 'grep -q "Set it up now? \[Y/n\]" "$1" && grep -q "start.sh ran as" "$1"' _ "$T/said"
 check "...then the question is gone from ~/.profile, the rest kept" \
-    bash -c '! grep -q "debsway first login" "$1" && grep -qx "echo before" "$1" && grep -qx "echo after" "$1"' _ "$F/.profile"
+    bash -c '! grep -q "Wren Linux first login" "$1" && grep -qx "echo before" "$1" && grep -qx "echo after" "$1"' _ "$F/.profile"
 check "...and the login goes on" grep -qx after "$T/said"
 login /dev/tty1 n
 check "no: start.sh doesn't run, it says how to later, and doesn't ask again" \
-    bash -c '! grep -q "start.sh ran" "$1" && grep -q "Later: bash ~/debsway/start.sh" "$1" && ! grep -q "debsway first login" "$2"' _ "$T/said" "$F/.profile"
+    bash -c '! grep -q "start.sh ran" "$1" && grep -q "Later: bash ~/wren/start.sh" "$1" && ! grep -q "Wren Linux first login" "$2"' _ "$T/said" "$F/.profile"
 login /dev/pts/0 ''
 check "a login over ssh or in a terminal window doesn't ask, and keeps the question for the console" \
-    bash -c '! grep -q "Set it up" "$1" && grep -q "debsway first login" "$2"' _ "$T/said" "$F/.profile"
-mv "$F/debsway" "$F/gone"
+    bash -c '! grep -q "Set it up" "$1" && grep -q "Wren Linux first login" "$2"' _ "$T/said" "$F/.profile"
+mv "$F/wren" "$F/gone"
 login /dev/tty1 ''
-check "without ~/debsway it says nothing, and takes the question out" \
-    bash -c '! grep -q "Set it up" "$1" && ! grep -q "debsway first login" "$2"' _ "$T/said" "$F/.profile"
+check "without ~/wren it says nothing, and takes the question out" \
+    bash -c '! grep -q "Set it up" "$1" && ! grep -q "Wren Linux first login" "$2"' _ "$T/said" "$F/.profile"
 
 # ---- trying the image in a VM (tools/try-install-iso.sh), its commands only ----
 TRY=$HERE/tools/try-install-iso.sh
@@ -370,9 +370,9 @@ booted=$(sed -n '/^# the installed system:/{n;p}' <<<"$q")
 check "VM: the image is plugged in as a USB stick, read-only, and started first" \
     bash -c 'grep -qF -- "-drive if=none,id=stick,format=raw,readonly=on,file=/x/my.iso" <<<"$1" && grep -qF -- "-device usb-storage,drive=stick,bootindex=0" <<<"$1"' _ "$inst"
 check "...with UEFI, as on a laptop (the firmware read-only, its settings a copy)" \
-    bash -c 'grep -qF "if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd" <<<"$1" && grep -qF "if=pflash,format=raw,file=$2/debsway/iso-test/vars.fd" <<<"$1"' _ "$inst" "$T/cache"
+    bash -c 'grep -qF "if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE_4M.fd" <<<"$1" && grep -qF "if=pflash,format=raw,file=$2/wren/iso-test/vars.fd" <<<"$1"' _ "$inst" "$T/cache"
 check "...and one empty disk, in the user's cache folder" \
-    bash -c 'grep -qF "if=none,id=disk,file=$2/debsway/iso-test/disk.qcow2" <<<"$1" && ! grep -q disk2 <<<"$1"' _ "$inst" "$T/cache"
+    bash -c 'grep -qF "if=none,id=disk,file=$2/wren/iso-test/disk.qcow2" <<<"$1" && ! grep -q disk2 <<<"$1"' _ "$inst" "$T/cache"
 check "VM: when the installer restarts at the end, QEMU stops (not the stick again)" grep -qF -- ' -no-reboot' <<<"$inst"
 check "...but the installed system can restart normally" not grep -qF -- '-no-reboot' <<<"$booted"
 check "VM: QEMU is asked for a window (not a hidden VNC screen), for both runs" \
@@ -394,9 +394,9 @@ check "VM: --no-net is in the usage, and the what-to-check mentions it" \
     bash -c 'grep -qF "NO network questions at all" "$1" && bash "$1" --help | grep -q -- --no-net' _ "$TRY"
 check "VM: a missing image is refused" not env XDG_CACHE_HOME="$T/cache" bash "$TRY" --iso "$T/nothing.iso"
 check "VM: an unknown option is refused" not bash "$TRY" --frobnicate
-mkdir -p "$T/cache/debsway/iso-test" && echo x >"$T/cache/debsway/iso-test/disk.qcow2"
+mkdir -p "$T/cache/wren/iso-test" && echo x >"$T/cache/wren/iso-test/disk.qcow2"
 XDG_CACHE_HOME=$T/cache bash "$TRY" --clean </dev/null >/dev/null 2>&1
-check "VM: --clean deletes the VM's files" test ! -e "$T/cache/debsway/iso-test"
+check "VM: --clean deletes the VM's files" test ! -e "$T/cache/wren/iso-test"
 clean_block=$(sed -n '/^if \[ "\$mode" = clean \]/,/^fi/p' "$TRY")
 remove_block=$(sed -n '/^if \[ "\$mode" = remove \]/,/^fi/p' "$TRY")
 check "...and removes no software (that is --remove)" bash -c '[ -n "$1" ] && ! grep -qE "apt_purge|ask " <<<"$1"' _ "$clean_block"

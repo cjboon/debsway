@@ -36,8 +36,8 @@ ln -s "$T/home/secret" link.mp4
 exit \${RC:-0}
 EOF
 chmod +x "$T/fake/"* "$T/session"
-yt() { env PATH="$T/fake:/usr/bin:/bin" HOME="$T/home" DEBSWAY_SUDO="$T/fake/sudo" \
-    DEBSWAY_YTDLP_SESSION="$T/session" DEBSWAY_YTDLP_OUT="$T/out" bash "$HERE/bin/yt-dlp" "$@"; }
+yt() { env PATH="$T/fake:/usr/bin:/bin" HOME="$T/home" WREN_SUDO="$T/fake/sudo" \
+    WREN_YTDLP_SESSION="$T/session" WREN_YTDLP_OUT="$T/out" bash "$HERE/bin/yt-dlp" "$@"; }
 
 said=$(yt -x 'https://example.org/v?a=1&b=2' --opt "two words" 2>&1)
 check "it runs the session as ytdlp, without asking for a password" grep -q "^-n -u ytdlp $T/session " "$T/sudo-args"
@@ -68,8 +68,8 @@ echo ok >fine.mp4
 echo locked >locked.mp4 && chmod 000 locked.mp4
 EOF
 chmod +x "$T/session-unreadable"
-said=$(env PATH="$T/fake:/usr/bin:/bin" HOME="$T/home" DEBSWAY_SUDO="$T/fake/sudo" DEBSWAY_YTDLP_SESSION="$T/session-unreadable" \
-    DEBSWAY_YTDLP_OUT="$T/out" bash "$HERE/bin/yt-dlp" URL 2>&1)
+said=$(env PATH="$T/fake:/usr/bin:/bin" HOME="$T/home" WREN_SUDO="$T/fake/sudo" WREN_YTDLP_SESSION="$T/session-unreadable" \
+    WREN_YTDLP_OUT="$T/out" bash "$HERE/bin/yt-dlp" URL 2>&1)
 check "a file it can't copy: the run's folder is kept, nothing downloaded is lost" \
     bash -c 'ls "$1"/*/locked.mp4' _ "$T/out"
 check "...and it says so, and where" grep -q "1 file(s) could not be copied; they are still in $T/out/" <<<"$said"
@@ -77,9 +77,9 @@ check "...the others are still copied" test -f "$T/home/Downloads/fine.mp4"
 chmod -R u+rwx "$T/out" && rm -rf "${T:?}/out/"*
 printf '#!/bin/bash\nexit 1\n' >"$T/session-fails"
 chmod +x "$T/session-fails"
-said=$(env PATH="$T/fake:/usr/bin:/bin" HOME="$T/home" DEBSWAY_SUDO="$T/fake/sudo" DEBSWAY_YTDLP_SESSION="$T/session-fails" \
-    DEBSWAY_YTDLP_OUT="$T/out" bash "$HERE/bin/yt-dlp" URL 2>&1)
-check "when it fails with nothing downloaded, it says how to update yt-dlp" grep -q 'debsway install yt-dlp' <<<"$said"
+said=$(env PATH="$T/fake:/usr/bin:/bin" HOME="$T/home" WREN_SUDO="$T/fake/sudo" WREN_YTDLP_SESSION="$T/session-fails" \
+    WREN_YTDLP_OUT="$T/out" bash "$HERE/bin/yt-dlp" URL 2>&1)
+check "when it fails with nothing downloaded, it says how to update yt-dlp" grep -q 'wrenctl install yt-dlp' <<<"$said"
 
 # ---- the session script, as ytdlp would run it (paths moved into the temp folder) ----
 S=$T/yt-dlp-session
@@ -137,7 +137,7 @@ check "the firewall keeps ytdlp off the network with the sandboxed Firefox's rul
     b=$(sed -n "/chain ytdlp {/,\$p" "$1/data/yt-dlp-firewall.nft" | sed "s/chain ytdlp/chain X/")
     [ -n "$a" ] && [ "$a" = "$b" ] && grep -qF "meta skuid \"ytdlp\" jump ytdlp" "$1/data/yt-dlp-firewall.nft"' _ "$HERE"
 remove=$(sed -n '/^if \[ "${1:-}" = --remove \]/,/^fi$/p' "$X")
-for thing in '"$SUDOERS"' '"$CMD"' '"$SESSION"' '"$FIREWALL"' '"$LIBDIR"' '"$OUT"' 'userdel "$NAME"' 'nft delete table inet debsway_ytdlp' 'apt_purge'; do
+for thing in '"$SUDOERS"' '"$CMD"' '"$SESSION"' '"$FIREWALL"' '"$LIBDIR"' '"$OUT"' 'userdel "$NAME"' 'nft delete table inet wren_ytdlp' 'apt_purge'; do
     check "--remove takes out $thing" grep -qF -- "$thing" <<<"$remove"
 done
 

@@ -1,21 +1,21 @@
 #!/bin/bash
-# console-font [list | NAME | NUMBER]: written by debsway parts/console-tmux.sh
+# console-font [list | NAME | NUMBER]: written by Wren Linux parts/console-tmux.sh
 # Changes the text size on a text console (console-only mode) at once, and
-# remembers it in ~/.config/debsway/console-font for the next login.
+# remembers it in ~/.config/wren/console-font for the next login.
 # With no argument it shows the list and asks which one.
 # Names are a typeface and the height of a character in pixels: dejavu-43,
 # terminus-bold-24. A file name from /usr/share/consolefonts also works.
 # In a terminal window (foot, in sway) it sets foot's text size instead, in
 # points (dejavu-16, dejavu-bold-18): the font= line of ~/.config/foot/foot.ini,
 # for every terminal opened after (Ctrl+plus/minus still changes the one you
-# are in), remembered in ~/.config/debsway/foot-font so that
+# are in), remembered in ~/.config/wren/foot-font so that
 # parts/foot-config.sh keeps it when it writes foot.ini again.
 #   console-font --foot | --console ...   the one or the other, wherever you are
 dir=/usr/share/consolefonts
-conf="$HOME/.config/debsway/console-font"
+conf="$HOME/.config/wren/console-font"
 default=Uni3-Terminus28x14
 FOOT_INI=${XDG_CONFIG_HOME:-$HOME/.config}/foot/foot.ini
-FOOT_CONF="$HOME/.config/debsway/foot-font"
+FOOT_CONF="$HOME/.config/wren/foot-font"
 FOOT_DEFAULT="DejaVu Sans Mono:size=14"
 
 # name file size
@@ -75,7 +75,7 @@ apply() {
             if setfont -C "$tty" "$file" 2>/dev/null; then
                 [ -z "${TMUX:-}" ] || tmux refresh-client 2>/dev/null
                 echo "Console font is now $file."
-            elif [ -n "${TMUX:-}" ] && [ -n "${DEBSWAY_LOGIN_LOOP:-}" ]; then
+            elif [ -n "${TMUX:-}" ] && [ -n "${WREN_LOGIN_LOOP:-}" ]; then
                 # the console device is root's, so only the login shell can set the font:
                 # leave tmux for a moment and let ~/.profile set it and reattach
                 touch "${conf%/*}/console-redraw"
@@ -121,7 +121,7 @@ if [ "$where" = foot ]; then
     }
     apply() {
         local font=$1 new
-        [ -f "$FOOT_INI" ] || { echo "console-font: there is no $FOOT_INI (debsway part foot-config writes it)" >&2; return 1; }
+        [ -f "$FOOT_INI" ] || { echo "console-font: there is no $FOOT_INI (wrenctl part foot-config writes it)" >&2; return 1; }
         grep -q '^font=' "$FOOT_INI" || { echo "console-font: $FOOT_INI has no font= line to change" >&2; return 1; }
         new=$(mktemp)
         sed "s|^font=.*|font=$font|" "$FOOT_INI" >"$new"

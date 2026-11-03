@@ -1,5 +1,5 @@
 #!/bin/bash
-# claude-pull [DIR]: written by debsway extras/claude-code.sh
+# claude-pull [DIR]: written by Wren Linux extras/claude-code.sh
 # Brings what Claude pushed to GitHub into your own copy of a repository
 # (default: the one you're in), after showing you what it changes. Nothing
 # comes in unless you say yes, and only on top of what you have.

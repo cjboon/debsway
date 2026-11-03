@@ -7,7 +7,7 @@
 # security: most
 # status: apt:mullvad-vpn
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/lib/mullvad-repo.sh"
+. "$WREN_DIR/lib/mullvad-repo.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 

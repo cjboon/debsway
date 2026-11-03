@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-debsway install lid-awake                     set it up
-debsway remove lid-awake                      closing the lid suspends again
-debsway manual lid-awake                      print the manual steps below
+wrenctl install lid-awake                     set it up
+wrenctl remove lid-awake                      closing the lid suspends again
+wrenctl manual lid-awake                      print the manual steps below
 
 close the lid     the screen locks and the laptop's panel goes off; everything keeps running
 open the lid      the panel comes back on (unlock as usual)
@@ -29,12 +29,12 @@ instead, through `bin/lid`.
 
 ```
 # systemd-logind ignores the lid (on battery, plugged in and docked)
-sudo install -D -o root -g root -m 0644 @DEBSWAY_DIR@/data/lid-logind.conf /etc/systemd/logind.conf.d/60-debsway-lid.conf
+sudo install -D -o root -g root -m 0644 @WREN_DIR@/data/lid-logind.conf /etc/systemd/logind.conf.d/60-wren-lid.conf
 # logind reads it again on a HUP signal (a restart could end your session)
 sudo systemctl kill -s HUP systemd-logind
 
 # The lid command sway runs: lock and panel off, or panel on
-install -D -m 0755 @DEBSWAY_DIR@/bin/lid ~/.local/bin/lid
+install -D -m 0755 @WREN_DIR@/bin/lid ~/.local/bin/lid
 # sway runs it when the lid closes or opens, also while locked
 mkdir -p ~/.config/sway/config.d
 cat >~/.config/sway/config.d/lid.conf <<'EOF'
@@ -50,7 +50,7 @@ To undo:
 
 ```
 # logind suspends on the lid again
-sudo rm /etc/systemd/logind.conf.d/60-debsway-lid.conf
+sudo rm /etc/systemd/logind.conf.d/60-wren-lid.conf
 sudo systemctl kill -s HUP systemd-logind
 # sway no longer reacts to the lid
 rm ~/.config/sway/config.d/lid.conf ~/.local/bin/lid

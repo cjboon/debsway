@@ -13,7 +13,7 @@ It uses the first of these that works:
 |---|---|---|
 | NetworkManager (running) | `nmcli` | NetworkManager |
 | iwd | `iwctl` | iwd (it also enables iwd's own DHCP) |
-| wpa_supplicant + ifupdown + dhcpcd/dhclient | checks the password, then `ifup` | `/etc/network/interfaces.d/debsway-wifi-<dev>` |
+| wpa_supplicant + ifupdown + dhcpcd/dhclient | checks the password, then `ifup` | `/etc/network/interfaces.d/wren-wifi-<dev>` |
 | wpa_supplicant without a DHCP client | `wpa_supplicant@<dev>` service | that service + systemd-networkd |
 | nothing | installs wpasupplicant from `offline/debs/`, then as above | |
 | nothing, and no `offline/debs/` | asks for Ethernet or USB tethering, installs wpasupplicant with apt | |
@@ -47,7 +47,7 @@ old copy back over it.
 program running on the computer could read it: NetworkManager gets it on
 its standard input, iwd from a file only root can read, and wpa_supplicant
 from a config file only root can read. If your `nmcli` doesn't accept the
-password that way, `DEBSWAY_PASSWORD_ON_COMMAND_LINE=1 bash wifi.sh` uses
+password that way, `WREN_PASSWORD_ON_COMMAND_LINE=1 bash wifi.sh` uses
 the old way.
 
 ## Removing it: `wifi.sh --remove`
@@ -58,7 +58,7 @@ own and their services, its `ifupdown` stanzas, its `systemd-networkd` files and
 the DNS file it saved (which it puts back). Files of yours with similar names are
 left alone, and no package is removed.
 
-It then offers to remove the other Wi-Fi pieces debsway installs, NetworkManager
+It then offers to remove the other Wi-Fi pieces Wren Linux installs, NetworkManager
 and the random Wi-Fi address, leaving only the wired connection. Say no and it
 prints the two commands for later. `install-base.sh` skips both on a computer
 with no Wi-Fi adapter to begin with.

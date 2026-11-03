@@ -136,7 +136,7 @@ run unmount
 check "an internal SATA disk that says hot-pluggable isn't a stick: never unmounted or switched off" test ! -s "$T/calls"
 run
 check "...nor listed" grep -q "No USB sticks" "$T/out"
-check "the program has no switch for tests" not grep -q DEBSWAY_USB_TEST "$HERE/bin/usb"
+check "the program has no switch for tests" not grep -q WREN_USB_TEST "$HERE/bin/usb"
 
 check "the part installs it, with udisks2, in the base" \
     bash -c '. "$1/packages.sh"; printf "%s\n" "${PARTS[@]}" | grep -qx usb && grep -q "apt_install udisks2" "$1/parts/usb.sh" && grep -q "install_bin usb" "$1/parts/usb.sh"' _ "$HERE"

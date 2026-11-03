@@ -1,11 +1,11 @@
 #!/bin/bash
-# wifi-signin: written by debsway parts/incognito.sh
+# wifi-signin: written by Wren Linux parts/incognito.sh
 # For Wi-Fi with a sign-in page (cafés, hotels, trains). Opens a throwaway
 # window (incognito --signin: Firefox as the incognito user, in memory, gone
 # when it closes) that alone uses the network's own DNS, so the sign-in page
 # can load; every other Firefox keeps its encrypted DNS. If secure DNS is on,
 # it is switched off while the window is open and on again when you close it.
-# The debsway menu's "Wi-Fi sign-in" line runs this.
+# The Wren menu's "Wi-Fi sign-in" line runs this.
 set -euo pipefail
 
 # Mozilla's page for exactly this: plain http, so the network can put its
@@ -15,15 +15,15 @@ INCOGNITO=/usr/local/bin/incognito
 SECURE_DNS=$HOME/.local/bin/secure-dns
 # While this has secure DNS off: the next login says so if it is still off
 # (bin/secure-dns login-check); switching on removes it
-LEFT_OFF=${XDG_STATE_HOME:-$HOME/.local/state}/debsway/secure-dns-left-off
+LEFT_OFF=${XDG_STATE_HOME:-$HOME/.local/state}/wren/secure-dns-left-off
 
 # say: in the terminal, or as a notification when started from the menu
 say() {
     printf 'wifi-signin: %s\n' "$*" >&2
-    if [ ! -t 2 ] && command -v notify-send >/dev/null; then notify-send -a debsway "Wi-Fi sign-in" "$*" 2>/dev/null || true; fi
+    if [ ! -t 2 ] && command -v notify-send >/dev/null; then notify-send -a wren "Wi-Fi sign-in" "$*" 2>/dev/null || true; fi
 }
 
-[ -x "$INCOGNITO" ] || { say "the incognito window isn't set up: debsway part incognito"; exit 1; }
+[ -x "$INCOGNITO" ] || { say "the incognito window isn't set up: wrenctl part incognito"; exit 1; }
 
 was_on=false
 if [ -x "$SECURE_DNS" ] && [ "$("$SECURE_DNS" status)" = on ]; then
@@ -38,7 +38,7 @@ back_on() {
     if "$SECURE_DNS" on >/dev/null 2>&1; then
         say "signed in? Secure DNS is on again."
     else
-        say "secure DNS couldn't switch on again (not signed in yet?): the debsway menu's Secure DNS line, or secure-dns on."
+        say "secure DNS couldn't switch on again (not signed in yet?): the Wren menu's Secure DNS line, or secure-dns on."
     fi
 }
 trap back_on EXIT

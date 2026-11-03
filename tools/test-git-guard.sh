@@ -99,17 +99,17 @@ echo "\$*" >>"$T/calls"
 EOF
 chmod +x "$T/fakegit"
 : >"$T/calls"
-(cd "$P" && DEBSWAY_REAL_GIT="$T/fakegit" DEBSWAY_AGENT_USER=$(id -un) bash "$GUARD" status)
+(cd "$P" && WREN_REAL_GIT="$T/fakegit" WREN_AGENT_USER=$(id -un) bash "$GUARD" status)
 check "one made by claude-agent gets safe.directory for that command" grep -q -- "-c safe.directory=$P -c safe.directory=$P/\* status" "$T/calls"
 : >"$T/calls"
-(cd "$P" && DEBSWAY_REAL_GIT="$T/fakegit" DEBSWAY_AGENT_USER=nobody-here bash "$GUARD" status)
+(cd "$P" && WREN_REAL_GIT="$T/fakegit" WREN_AGENT_USER=nobody-here bash "$GUARD" status)
 check "one made by you gets nothing added" grep -qx "status" "$T/calls"
 : >"$T/calls"
-(cd "$T/home/other" && DEBSWAY_REAL_GIT="$T/fakegit" DEBSWAY_AGENT_USER=$(id -un) bash "$GUARD" status)
+(cd "$T/home/other" && WREN_REAL_GIT="$T/fakegit" WREN_AGENT_USER=$(id -un) bash "$GUARD" status)
 check "outside ~/projects nothing is ever added" grep -qx "status" "$T/calls"
 : >"$T/calls"
 printf '#!/bin/sh\n' >"$P/.git/hooks/pre-commit"
-(cd "$P" && DEBSWAY_REAL_GIT="$T/fakegit" DEBSWAY_AGENT_USER=$(id -un) bash "$GUARD" status 2>/dev/null)
+(cd "$P" && WREN_REAL_GIT="$T/fakegit" WREN_AGENT_USER=$(id -un) bash "$GUARD" status 2>/dev/null)
 check "a bad repository is not trusted, and git is not run" bash -c "! grep -q status '$T/calls'"
 rm -f "$P/.git/hooks/pre-commit"
 

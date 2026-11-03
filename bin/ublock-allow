@@ -1,6 +1,6 @@
 #!/bin/bash
 # ublock-allow: sites allowed to load scripts and frames from other sites.
-# Written by debsway parts/firefox-hardening.sh.
+# Written by Wren Linux parts/firefox-hardening.sh.
 #
 # uBlock Origin runs in one of two modes for every Firefox profile, chosen
 # when the sandboxed Firefox is installed (extras/firefox-sandbox.sh):
@@ -20,17 +20,17 @@
 # Restart Firefox afterwards.
 set -euo pipefail
 
-ETC=${DEBSWAY_FIREFOX_ETC:-/etc/firefox-esr}
-LIST="$ETC/debsway-ublock-allow"
-# standard or medium; no file: medium, as debsway was before the choice
-MODE_FILE="$ETC/debsway-ublock-mode"
+ETC=${WREN_FIREFOX_ETC:-/etc/firefox-esr}
+LIST="$ETC/wren-ublock-allow"
+# standard or medium; no file: medium, as Wren Linux was before the choice
+MODE_FILE="$ETC/wren-ublock-mode"
 # Debian's Firefox only finds policies.json in its install folder (it looks
 # in /etc/firefox-esr/policies too, but the Debian build never reads it)
-DIST=${DEBSWAY_FIREFOX_DIST:-/usr/share/firefox-esr/distribution}
+DIST=${WREN_FIREFOX_DIST:-/usr/share/firefox-esr/distribution}
 POLICY="$DIST/policies.json"
-OURS="$DIST/.debsway-written"
-OLD="$ETC/policies"  # where an earlier debsway put it, which Firefox ignored
-if [ "$(id -u)" -eq 0 ] || [ -n "${DEBSWAY_FIREFOX_ETC:-}" ]; then SUDO=; else SUDO=sudo; fi
+OURS="$DIST/.wren-written"
+OLD="$ETC/policies"  # where an earlier Wren Linux put it, which Firefox ignored
+if [ "$(id -u)" -eq 0 ] || [ -n "${WREN_FIREFOX_ETC:-}" ]; then SUDO=; else SUDO=sudo; fi
 
 die() { printf 'ublock-allow: %s\n' "$*" >&2; exit 1; }
 
@@ -67,7 +67,7 @@ write_policy() {
     inner="{\"userSettings\":{\"advancedUserEnabled\":true},\"dynamicFilteringString\":\"${inner%\\n}\"}"
     inner=$(sed 's/\\/\\\\/g; s/"/\\"/g' <<<"$inner")
     $SUDO mkdir -p "$DIST"
-    # Firefox reads one policies.json, so debsway's other Firefox policies live
+    # Firefox reads one policies.json, so Wren Linux's other Firefox policies live
     # here too (parts/firefox-hardening.sh has no separate file to put them in):
     #   SearchEngines.Default  - DuckDuckGo is the default search engine (Firefox
     #                            locks the default engine to enterprise policy).
@@ -77,7 +77,7 @@ write_policy() {
     #                            for every add-on; incognito is private all the time).
     #   Override*Page          - no Mozilla first-run or what's-new tabs; Firefox
     #                            opens straight to the home page.
-    #   (Firefox's own DNS isn't set here: each Firefox debsway starts sets
+    #   (Firefox's own DNS isn't set here: each Firefox Wren Linux starts sets
     #   it at its start, firefox-session and incognito-session, so the Wi-Fi
     #   sign-in window can differ from the rest. A policy would lock it for all.)
     printf '{\n  "policies": {\n    "SearchEngines": { "Default": "DuckDuckGo", "DefaultPrivate": "DuckDuckGo" },\n    "OverrideFirstRunPage": "",\n    "OverridePostUpdatePage": "",\n    "ExtensionSettings": {\n      "uBlock0@raymondhill.net": { "private_browsing": true }\n    },\n    "3rdparty": {\n      "Extensions": {\n        "uBlock0@raymondhill.net": {\n          "adminSettings": "%s"\n        }\n      }\n    }\n  }\n}\n' "$inner" |
@@ -85,8 +85,8 @@ write_policy() {
     sum=$(sha256sum "$POLICY")
     echo "$sum" | $SUDO tee "$OURS" >/dev/null
     # The earlier, unread copy, if it is still ours
-    if [ -f "$OLD/.debsway-written" ] && sha256sum --status -c "$OLD/.debsway-written" 2>/dev/null; then
-        $SUDO rm -f "$OLD/policies.json" "$OLD/.debsway-written"
+    if [ -f "$OLD/.wren-written" ] && sha256sum --status -c "$OLD/.wren-written" 2>/dev/null; then
+        $SUDO rm -f "$OLD/policies.json" "$OLD/.wren-written"
         $SUDO rmdir "$OLD" 2>/dev/null || true
     fi
 }
@@ -94,7 +94,7 @@ write_policy() {
 # Someone else's policies.json is left alone, before anything changes
 policy_is_ours() {
     if [ -f "$POLICY" ] && ! { [ -f "$OURS" ] && sha256sum --status -c "$OURS" 2>/dev/null; }; then
-        die "$POLICY exists and wasn't written by debsway. Add uBlock's settings to it by hand."
+        die "$POLICY exists and wasn't written by Wren Linux. Add uBlock's settings to it by hand."
     fi
 }
 

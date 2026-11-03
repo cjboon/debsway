@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-debsway install opencode-vm                     set it up and build the VM (keeps a VM already built)
-debsway remove opencode-vm                      remove it (asks before deleting the user and its VM)
-debsway manual opencode-vm                      print the manual steps below
+wrenctl install opencode-vm                     set it up and build the VM (keeps a VM already built)
+wrenctl remove opencode-vm                      remove it (asks before deleting the user and its VM)
+wrenctl manual opencode-vm                      print the manual steps below
 
 opencode-vm              opencode inside the VM (boots it; powers it off when you exit)
 opencode-vm shell        a plain shell in the VM
@@ -37,7 +37,7 @@ comes from its newest GitHub release (`OPENCODE_REPO` in `pins.sh`).
 opencode publishes no signatures, so the guest takes only a release GitHub
 marks immutable (its files can't be replaced once published) and only a file
 with the SHA-256 GitHub's API gives for it: weaker than the signed checks
-elsewhere in debsway, which is why it happens only inside the VM. The agent
+elsewhere in Wren Linux, which is why it happens only inside the VM. The agent
 has its own git identity and ssh key, never yours, and hands work back only
 by pushing to a git host you pull from, after you have read it. It needs KVM.
 
@@ -60,42 +60,42 @@ sudo apt install --no-install-recommends qemu-system-x86 qemu-utils socat nftabl
     cpio gzip wget gpgv debian-archive-keyring
 
 # The opencode-vm user, locked, with /dev/kvm as its only extra group
-sudo useradd --create-home --home-dir /home/opencode-vm --shell /bin/bash --user-group --comment "debsway opencode VM" opencode-vm
+sudo useradd --create-home --home-dir /home/opencode-vm --shell /bin/bash --user-group --comment "Wren Linux opencode VM" opencode-vm
 sudo usermod --lock opencode-vm
 sudo chmod 700 /home/opencode-vm
 sudo usermod -aG kvm opencode-vm
 
 # The firewall rule on that user (and so the guest), loaded at every boot
-sudo install -D -o root -g root -m 0644 @DEBSWAY_DIR@/data/opencode-vm-firewall.nft /etc/debsway/opencode-vm.nft
+sudo install -D -o root -g root -m 0644 @WREN_DIR@/data/opencode-vm-firewall.nft /etc/wren/opencode-vm.nft
 printf '%s\n' '[Unit]' 'Description=Keep the opencode-vm user (and its guest) off the local network' \
     'Before=network-pre.target' 'Wants=network-pre.target' '' '[Service]' \
-    'Type=oneshot' 'RemainAfterExit=yes' 'ExecStart=/usr/sbin/nft -f /etc/debsway/opencode-vm.nft' \
-    'ExecStop=/usr/sbin/nft delete table inet debsway_opencode_vm' '' '[Install]' 'WantedBy=multi-user.target' |
-    sudo tee /etc/systemd/system/debsway-opencode-vm-firewall.service
+    'Type=oneshot' 'RemainAfterExit=yes' 'ExecStart=/usr/sbin/nft -f /etc/wren/opencode-vm.nft' \
+    'ExecStop=/usr/sbin/nft delete table inet wren_opencode_vm' '' '[Install]' 'WantedBy=multi-user.target' |
+    sudo tee /etc/systemd/system/wren-opencode-vm-firewall.service
 sudo systemctl daemon-reload
-sudo systemctl enable --now debsway-opencode-vm-firewall.service
+sudo systemctl enable --now wren-opencode-vm-firewall.service
 
 # The VM engine, the session script, and the no-abstract-sockets wrapper, as root's files
 sudo install -d -o root -g root -m 0755 /usr/local/libexec
-sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/vendor/mockvps-kvm/mockvps-kvm.sh /usr/local/libexec/opencode-vm-mockvps-kvm
-sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/opencode-vm-session /usr/local/libexec/opencode-vm-session
-sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/no-abstract-sockets /usr/local/libexec/debsway-no-abstract-sockets
+sudo install -o root -g root -m 0755 @WREN_DIR@/vendor/mockvps-kvm/mockvps-kvm.sh /usr/local/libexec/opencode-vm-mockvps-kvm
+sudo install -o root -g root -m 0755 @WREN_DIR@/bin/opencode-vm-session /usr/local/libexec/opencode-vm-session
+sudo install -o root -g root -m 0755 @WREN_DIR@/bin/no-abstract-sockets /usr/local/libexec/wren-no-abstract-sockets
 
 # The provisioning script, with the repository it installs from filled in, readable only by opencode-vm
 sudo install -d -o opencode-vm -g opencode-vm -m 0700 /home/opencode-vm/.config /home/opencode-vm/.config/opencode-vm
 sed -e 's|[@]OPENCODE_REPO@|@OPENCODE_REPO@|g' -e 's|[@]VM_USER@|agent|g' \
-    @DEBSWAY_DIR@/data/opencode-vm-provision.sh |
+    @WREN_DIR@/data/opencode-vm-provision.sh |
     sudo install -o opencode-vm -g opencode-vm -m 0600 /dev/stdin /home/opencode-vm/.config/opencode-vm/provision.sh
 
 # Your user may run the session script, and nothing else, as opencode-vm. visudo
 # checks the rule first: never put a rule in /etc/sudoers.d it hasn't passed.
-printf '%s ALL=(opencode-vm) NOPASSWD: /usr/local/libexec/opencode-vm-session\n' "$(id -un)" >/tmp/debsway-opencode-vm
-sudo visudo -cf /tmp/debsway-opencode-vm
-sudo install -o root -g root -m 0440 /tmp/debsway-opencode-vm /etc/sudoers.d/debsway-opencode-vm
-rm /tmp/debsway-opencode-vm
+printf '%s ALL=(opencode-vm) NOPASSWD: /usr/local/libexec/opencode-vm-session\n' "$(id -un)" >/tmp/wren-opencode-vm
+sudo visudo -cf /tmp/wren-opencode-vm
+sudo install -o root -g root -m 0440 /tmp/wren-opencode-vm /etc/sudoers.d/wren-opencode-vm
+rm /tmp/wren-opencode-vm
 
 # The commands
-install -D -m 0755 @DEBSWAY_DIR@/bin/opencode-vm ~/.local/bin/opencode-vm
+install -D -m 0755 @WREN_DIR@/bin/opencode-vm ~/.local/bin/opencode-vm
 
 # Build the VM (unattended, 10-20 minutes), then show its ssh key for your git host
 sudo -u opencode-vm /usr/local/libexec/opencode-vm-session install
@@ -112,13 +112,13 @@ To undo:
 # The command
 rm ~/.local/bin/opencode-vm
 # The firewall rule
-sudo systemctl disable --now debsway-opencode-vm-firewall.service
-sudo rm /etc/systemd/system/debsway-opencode-vm-firewall.service /etc/debsway/opencode-vm.nft
+sudo systemctl disable --now wren-opencode-vm-firewall.service
+sudo rm /etc/systemd/system/wren-opencode-vm-firewall.service /etc/wren/opencode-vm.nft
 sudo systemctl daemon-reload
 # The sudo rule and root's scripts (the no-abstract-sockets wrapper only if
 # incognito, the Claude extras and the Firefox sandbox don't use it)
-sudo rm /etc/sudoers.d/debsway-opencode-vm /usr/local/libexec/opencode-vm-session /usr/local/libexec/opencode-vm-mockvps-kvm
-sudo rm /usr/local/libexec/debsway-no-abstract-sockets
+sudo rm /etc/sudoers.d/wren-opencode-vm /usr/local/libexec/opencode-vm-session /usr/local/libexec/opencode-vm-mockvps-kvm
+sudo rm /usr/local/libexec/wren-no-abstract-sockets
 # The user, its home and the VM in it
 sudo pkill -KILL -u opencode-vm
 sudo userdel -r opencode-vm

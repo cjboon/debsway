@@ -11,22 +11,22 @@
 # Usage: bash remote-access.sh [--remove | --manual]
 # summary: ssh in over a Tor onion service (no open port)
 # security: some
-# status: file:/etc/tor/.debsway-remote-access
+# status: file:/etc/tor/.wren-remote-access
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
-MARK=/etc/tor/.debsway-remote-access
+MARK=/etc/tor/.wren-remote-access
 TORRC=/etc/tor/torrc
-SVC_DIR=/var/lib/tor/debsway-ssh
+SVC_DIR=/var/lib/tor/wren-ssh
 # 00-: sshd takes the first value it finds for a setting and reads the files in
 # sshd_config.d in name order, so a drop-in named 60- lost to any earlier one
-SSHD_CONF=/etc/ssh/sshd_config.d/00-debsway-remote-access.conf
-OLD_SSHD_CONF=/etc/ssh/sshd_config.d/60-debsway-remote-access.conf
-BEGIN='# >>> debsway remote-access >>>'
-END='# <<< debsway remote-access <<<'
-BR_BEGIN='# >>> debsway remote-access bridges >>>'
-BR_END='# <<< debsway remote-access bridges <<<'
+SSHD_CONF=/etc/ssh/sshd_config.d/00-wren-remote-access.conf
+OLD_SSHD_CONF=/etc/ssh/sshd_config.d/60-wren-remote-access.conf
+BEGIN='# >>> Wren Linux remote-access >>>'
+END='# <<< Wren Linux remote-access <<<'
+BR_BEGIN='# >>> Wren Linux remote-access bridges >>>'
+BR_END='# <<< Wren Linux remote-access bridges <<<'
 
 drop_torrc_blocks() {
     sudo sed -i "\\|^$BEGIN\$|,\\|^$END\$|d; \\|^$BR_BEGIN\$|,\\|^$BR_END\$|d" "$TORRC" 2>/dev/null || true
@@ -42,7 +42,7 @@ if [ "${1:-}" = --remove ]; then
     drop_torrc_blocks
     sudo rm -rf "$SVC_DIR"
     sudo rm -f "$MARK"
-    if system_tor_wanted .debsway-remote-access; then
+    if system_tor_wanted .wren-remote-access; then
         sudo systemctl restart tor@default.service >/dev/null 2>&1 || true
     else
         tor_service_off
@@ -52,7 +52,7 @@ if [ "${1:-}" = --remove ]; then
     apt_purge openssh-server tor openssl obfs4proxy lyrebird snowflake-client
     remove_torproject_repo_if_unused
     # OnionShare keeps the system tor service off
-    if ! system_tor_wanted .debsway-remote-access && is_installed onionshare-cli; then
+    if ! system_tor_wanted .wren-remote-access && is_installed onionshare-cli; then
         sudo systemctl mask tor.service tor@default.service >/dev/null
     fi
     note "Remote access is off and its onion address is gone."
@@ -103,11 +103,11 @@ if ! grep -qE '^(ssh-|ecdsa-|sk-)' "$AUTH_KEYS" 2>/dev/null; then
         tty_read choice "Which (1-3)? "
         case $choice in
             2) no_key=true; break ;;
-            3) die "Stopped; nothing was changed. Run this again when you have the key: bash $DEBSWAY_DIR/extras/remote-access.sh" ;;
+            3) die "Stopped; nothing was changed. Run this again when you have the key: bash $WREN_DIR/extras/remote-access.sh" ;;
         esac
         # (no terminal to answer on, or nothing that works after a few rounds)
         [ "$tries" -lt 5 ] && [ -n "$choice$pubkey" ] ||
-            die "No key given; nothing was changed. Run this again when you have it: bash $DEBSWAY_DIR/extras/remote-access.sh"
+            die "No key given; nothing was changed. Run this again when you have it: bash $WREN_DIR/extras/remote-access.sh"
     done
 fi
 
@@ -115,7 +115,7 @@ new_install=false
 [ -f "$MARK" ] || new_install=true
 bridge_block=false
 # (a tor that another script set up already has its bridges)
-if $new_install && ! system_tor_wanted .debsway-remote-access && ! is_installed tor; then
+if $new_install && ! system_tor_wanted .wren-remote-access && ! is_installed tor; then
     say "Bridges"
     pick_bridges system-tor
     if $BRIDGE_WANTED && [ "$BRIDGE_TYPE" = none ]; then
@@ -131,7 +131,7 @@ say "Setting up ssh"
 sudo mkdir -p "${SSHD_CONF%/*}"
 sudo rm -f "$OLD_SSHD_CONF"
 sudo tee "$SSHD_CONF" >/dev/null <<EOF
-# Written by debsway extras/remote-access.sh
+# Written by Wren Linux extras/remote-access.sh
 ListenAddress 127.0.0.1
 PasswordAuthentication no
 KbdInteractiveAuthentication no
@@ -182,7 +182,7 @@ sudo systemctl restart ssh.service
 listening=$(ss -Hltn 'sport = :22' | awk '{ print $4 }' | grep -vE '^(127\.0\.0\.1|\[::1\]):22$' || true)
 if [ -n "$listening" ]; then
     warn "ssh also listens on: $(paste -sd" " <<<"$listening")"
-    warn "Another sshd setting overrides the one debsway wrote. The firewall still blocks it,"
+    warn "Another sshd setting overrides the one Wren Linux wrote. The firewall still blocks it,"
     warn "but fix it (ListenAddress in /etc/ssh/sshd_config) before using this."
 else
     note "ssh listens on 127.0.0.1 only, key login only, for $USER only."
@@ -205,7 +205,7 @@ sudo sed -i "\\|^$BEGIN\$|,\\|^$END\$|d" "$TORRC"
     echo "$END"
 } | sudo tee -a "$TORRC" >/dev/null
 sudo install -d -m 0700 -o debian-tor -g debian-tor "$SVC_DIR" "$SVC_DIR/authorized_clients"
-printf '%s\n' 'Written by debsway extras/remote-access.sh: ssh over a Tor onion service.' | sudo tee "$MARK" >/dev/null
+printf '%s\n' 'Written by Wren Linux extras/remote-access.sh: ssh over a Tor onion service.' | sudo tee "$MARK" >/dev/null
 
 
 if ! sudo ls "$SVC_DIR/authorized_clients" 2>/dev/null | grep -q '\.auth$'; then
@@ -247,24 +247,24 @@ if $show_client; then
 
       sudo install -d -m 0700 -o debian-tor -g debian-tor /var/lib/tor/onion_auth
       echo '${onion%.onion}:descriptor:x25519:$CLIENT_PRIV' | \\
-        sudo tee /var/lib/tor/onion_auth/debsway.auth_private
+        sudo tee /var/lib/tor/onion_auth/wren.auth_private
       echo 'ClientOnionAuthDir /var/lib/tor/onion_auth' | sudo tee -a /etc/tor/torrc
       sudo systemctl restart tor@default
 
     then add this to ~/.ssh/config there:
 
-      Host debsway
+      Host Wren Linux
         HostName $onion
         User $USER
         ProxyCommand nc -X 5 -x 127.0.0.1:9050 %h %p
 
-    and connect with:  ssh debsway
+    and connect with:  ssh Wren Linux
     (The first connection through Tor can take a few seconds.)
 EOF
 else
     cat <<EOF
 
-    Connect from a computer set up with its client key:  ssh debsway
+    Connect from a computer set up with its client key:  ssh Wren Linux
     (Run this again to authorize another computer.)
 EOF
 fi
@@ -277,7 +277,7 @@ if $no_key; then
       cat ~/.ssh/id_ed25519.pub        (one line, starting with ssh-ed25519)
     Then, on this computer, either run this again (it asks for the key, and
     keeps the address and client key you already have):
-      bash $DEBSWAY_DIR/extras/remote-access.sh
+      bash $WREN_DIR/extras/remote-access.sh
     or add the line yourself:
       echo 'ssh-ed25519 AAAA... name' >>~/.ssh/authorized_keys
 EOF
@@ -285,5 +285,5 @@ fi
 cat <<'EOF'
 
     The firewall is unchanged: nothing is open for it. Turn it off with:
-      debsway remove remote-access
+      wrenctl remove remote-access
 EOF

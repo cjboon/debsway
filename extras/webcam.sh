@@ -1,10 +1,10 @@
 #!/bin/bash
 # A webcam switch. A USB camera (most laptops' built-in ones, and plugged-in
 # ones) starts switched OFF at every boot and whenever one is plugged in, and
-# the debsway menu gets a Webcam line to switch it on and off (also:
-# debsway --camera on|off). Off means its USB device is disconnected, as if
+# the Wren menu gets a Webcam line to switch it on and off (also:
+# wrenctl --camera on|off). Off means its USB device is disconnected, as if
 # it were unplugged, so no program can open it at all.
-#  - bin/debsway-camera does it, as root (it writes the kernel's "authorized"
+#  - bin/wren-camera does it, as root (it writes the kernel's "authorized"
 #    switch of the camera's USB device). Your user may run it with "on" or
 #    "off" and nothing else (a rule in /etc/sudoers.d), so the menu needs no
 #    password.
@@ -16,14 +16,14 @@
 # Usage: bash webcam.sh [--remove | --manual]
 # summary: Webcam off at start; switch it from the menu
 # security: most
-# status: file:/usr/local/libexec/debsway-camera
+# status: file:/usr/local/libexec/wren-camera
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
-HELPER=/usr/local/libexec/debsway-camera
-RULE=/etc/udev/rules.d/90-debsway-webcam.rules
-SUDOERS=/etc/sudoers.d/debsway-camera
+HELPER=/usr/local/libexec/wren-camera
+RULE=/etc/udev/rules.d/90-wren-webcam.rules
+SUDOERS=/etc/sudoers.d/wren-camera
 
 if [ "${1:-}" = --remove ]; then
     sudo rm -f "$RULE"
@@ -38,12 +38,12 @@ fi
 
 say "The webcam switch"
 sudo install -d -o root -g root -m 0755 /usr/local/libexec
-sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/debsway-camera" "$HELPER"
+sudo install -o root -g root -m 0755 "$WREN_DIR/bin/wren-camera" "$HELPER"
 # the menu's Webcam line goes through radios
 install_bin radios
 
 rule=$(mktemp)
-printf '# Written by debsway extras/webcam.sh. %s may switch the webcam on and off,\n# and nothing else, as root.\n%s ALL=(root) NOPASSWD: %s on, %s off\n' \
+printf '# Written by Wren Linux extras/webcam.sh. %s may switch the webcam on and off,\n# and nothing else, as root.\n%s ALL=(root) NOPASSWD: %s on, %s off\n' \
     "$(id -un)" "$(id -un)" "$HELPER" "$HELPER" >"$rule"
 if ! sudo visudo -cf "$rule" >/dev/null; then
     rm -f "$rule"
@@ -53,7 +53,7 @@ sudo install -o root -g root -m 0440 "$rule" "$SUDOERS"
 rm -f "$rule"
 
 say "Off at every boot, and when one is plugged in"
-sudo install -o root -g root -m 0644 "$DEBSWAY_DIR/data/webcam-off.rules" "$RULE"
+sudo install -o root -g root -m 0644 "$WREN_DIR/data/webcam-off.rules" "$RULE"
 sudo udevadm control --reload-rules 2>/dev/null || warn "Couldn't reload udev's rules; they apply from the next boot."
 
 case $("$HELPER" status) in
@@ -63,5 +63,5 @@ case $("$HELPER" status) in
     *)
         sudo "$HELPER" off >/dev/null && note "The webcam is off now." ;;
 esac
-note "Switch it from the debsway menu (Webcam), or: debsway --camera on   (and off)"
+note "Switch it from the Wren menu (Webcam), or: wrenctl --camera on   (and off)"
 note "A cover over the lens is still the stronger kind: a program running as you could switch it on."

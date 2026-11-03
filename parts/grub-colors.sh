@@ -1,16 +1,16 @@
 #!/bin/bash
-# GRUB's boot menu in debsway's colours: white text on red, the chosen entry
+# GRUB's boot menu in Wren Linux's colours: white text on red, the chosen entry
 # yellow. A small script in /etc/grub.d that update-grub runs (as root, like
 # the others there) when it builds the menu; it comes after Debian's own
 # colours (05_debian_theme), so these win. Colours only: what boots, and how,
 # doesn't change. It needs GRUB.
 # Usage: bash grub-colors.sh [--remove]
-# status: file:/etc/grub.d/06_debsway_colors
+# status: file:/etc/grub.d/06_wren_colors
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
-# DEBSWAY_GRUB_D: where /etc/grub.d is, for tests
-SCRIPT=${DEBSWAY_GRUB_D:-/etc/grub.d}/06_debsway_colors
+# WREN_GRUB_D: where /etc/grub.d is, for tests
+SCRIPT=${WREN_GRUB_D:-/etc/grub.d}/06_wren_colors
 
 if [ "${1:-}" = --remove ]; then
     sudo rm -f "$SCRIPT"
@@ -25,7 +25,7 @@ if ! command -v update-grub >/dev/null || [ ! -d "${SCRIPT%/*}" ]; then
 fi
 
 say "GRUB's colours"
-printf '%s\n' '#!/bin/sh' '# Written by debsway parts/grub-colors.sh' \
+printf '%s\n' '#!/bin/sh' '# Written by Wren Linux parts/grub-colors.sh' \
     "echo 'set color_normal=white/red'" \
     "echo 'set color_highlight=yellow/red'" \
     "echo 'set menu_color_normal=white/red'" \

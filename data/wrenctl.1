@@ -1,20 +1,20 @@
-.TH DEBSWAY 1 "debsway" "debsway" "User Commands"
+.TH WRENCTL 1 "wren" "wren" "User Commands"
 .SH NAME
-debsway \- set up, update and use the debsway desktop
+Wren Linux \- set up, update and use the Wren Linux desktop
 .SH SYNOPSIS
-.B debsway
+.B Wren Linux
 .RI [ OPTION ]
 .SH DESCRIPTION
-debsway is a set of shell scripts that turn a bare Debian 13 install into a
+Wren Linux is a set of shell scripts that turn a bare Debian 13 install into a
 small, privacy-minded sway desktop.
 This command is the one place to use it from: it opens the menu, brings the
 scripts up to date and runs the others.
-It does nothing a script in the debsway folder does not already do; it only
+It does nothing a script in the Wren Linux folder does not already do; it only
 starts them.
 Every option works without its dashes too:
-.B debsway install vim
+.B wrenctl install vim
 is
-.BR "debsway \-\-install vim" .
+.BR "Wren Linux \-\-install vim" .
 .PP
 With no option it opens the menu: a window on a sway screen, or right in the
 terminal on a text console or over ssh. With no terminal at all it shows the
@@ -29,7 +29,7 @@ Arrow keys and Enter choose, or click; Esc closes every screen of it.
 Without sway it opens in the terminal it was started from, the same menu
 with the keys (no mouse on a text console).
 Clicking
-.B debsway
+.B Wren Linux
 at the left of the status bar opens the same menu.
 .TP
 .B \-\-update
@@ -66,7 +66,7 @@ Only the exact name of an extra is accepted, so nothing else is ever run.
 Options after
 .I NAME
 go to its script, as in
-.BR "debsway install claude-vm \-\-account work" .
+.BR "wrenctl install claude-vm \-\-account work" .
 .TP
 .B \-\-remove
 .I NAME
@@ -92,7 +92,7 @@ Run one part of the base desktop again (a script in the
 folder), to repair it.
 .TP
 .B \-\-status
-Show what debsway has set up: disk encryption, the base packages, the parts
+Show what Wren Linux has set up: disk encryption, the base packages, the parts
 and the extras.
 .TP
 .B \-\-test
@@ -132,51 +132,51 @@ Show the key cheat sheet again, the screen that opens at the first login.
 Esc closes it.
 .TP
 .B \-\-version
-Print which version of debsway this is.
+Print which version of Wren Linux this is.
 .TP
 .B \-\-dir
-Print where the debsway folder is.
+Print where the Wren Linux folder is.
 .TP
 .B \-\-help
 Show the short help.
 .SH FILES
 .TP
-.I /usr/share/debsway
-The debsway folder as the debsway package installs it, owned by root, so no
+.I /usr/share/wren
+The Wren Linux folder as the Wren Linux package installs it, owned by root, so no
 program running as you can change the scripts that
-.B debsway
+.B Wren Linux
 runs with sudo.
 When it is there it is used, unless
-.B DEBSWAY_DIR
+.B WREN_DIR
 says otherwise.
 .TP
-.I ~/debsway
-Your own copy of the debsway folder (the scripts, and
+.I ~/wren
+Your own copy of the Wren Linux folder (the scripts, and
 .I README.md
 and
 .IR THREAT-MODEL.md ),
 used when the package isn't installed.
 .TP
 .I ~/.local/bin
-Where the commands the scripts install go (debsway, keys, timer, ...).
+Where the commands the scripts install go (Wren Linux, keys, timer, ...).
 .TP
-.I ~/.local/state/debsway/updated-to
+.I ~/.local/state/wren/updated-to
 The commit the last update brought this computer to.
 .TP
-.I ~/.local/share/debsway/keys.txt
+.I ~/.local/share/wren/keys.txt
 The key cheat sheet.
 .TP
-.I ~/.local/share/bash-completion/completions/debsway
+.I ~/.local/share/bash-completion/completions/wrenctl
 Tab completion for this command (Debian's bash-completion loads it).
 .SH ENVIRONMENT
 .TP
-.B DEBSWAY_DIR
-Use the debsway folder there, instead of
-.I /usr/share/debsway
+.B WREN_DIR
+Use the Wren Linux folder there, instead of
+.I /usr/share/wren
 or
-.IR ~/debsway .
+.IR ~/wren .
 .TP
-.B DEBSWAY_ESC_WAIT
+.B WREN_ESC_WAIT
 Seconds the menu waits for the rest of an arrow key after an Esc byte
 (default 0.1).
 .SH EXIT STATUS
@@ -185,5 +185,5 @@ folder); 2 for an option it does not know.
 .SH SEE ALSO
 .IR README.md ,
 .I THREAT-MODEL.md
-(what debsway protects against and what it does not),
+(what Wren Linux protects against and what it does not),
 .IR docs/ .

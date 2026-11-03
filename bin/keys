@@ -1,17 +1,17 @@
 #!/bin/sh
-# Shows the key cheat sheet (Esc closes it). Written by debsway install-base.sh
+# Shows the key cheat sheet (Esc closes it). Written by Wren Linux install-base.sh
 # data/keys.txt has blocks "@if COMMAND" ... "@end": a block is shown only if
 # COMMAND is installed, so the sheet lists just what this computer has. It is
 # written with Super as sway's key; when your sway config uses Alt instead
 # (set $mod Mod1), every Super shows as Alt.
-#   keys                the pager of the debsway menu when that is installed; less otherwise
+#   keys                the pager of the Wren menu when that is installed; less otherwise
 #   keys --text         the sheet as plain text on standard output
 #   keys --mod alt      sway's shortcuts use Alt (keys --mod super: the Windows key)
 #   keys --welcome      the first login: asks which key, then shows the sheet
-SHEET=$HOME/.local/share/debsway/keys.txt
+SHEET=$HOME/.local/share/wren/keys.txt
 SWAY_CONFIG=$HOME/.config/sway/config
 # on a text console (the same test as tmux's console.conf) the sheet for tmux
-CONSOLE_SHEET=$HOME/.local/share/debsway/keys-console.txt
+CONSOLE_SHEET=$HOME/.local/share/wren/keys-console.txt
 CONSOLE=
 if [ -z "${WAYLAND_DISPLAY:-}" ] && [ -f "$CONSOLE_SHEET" ]; then
     CONSOLE=1
@@ -71,11 +71,11 @@ set_mod() {
     echo "sway's shortcuts now start with $name ($name+d opens the launcher, $name+Enter a terminal); keys shows them that way."
 }
 
-# welcome: which key, the first time sway starts (bin/debsway-welcome)
+# welcome: which key, the first time sway starts (bin/wren-welcome)
 welcome() {
     cat <<'EOF'
 
-  Welcome to debsway.
+  Welcome to Wren Linux.
 
   sway's shortcuts all start with one key. Which one do you want?
 
@@ -105,10 +105,10 @@ esac
 shown=$(mktemp) || exit 1
 trap 'rm -f "$shown"' EXIT
 text >"$shown"
-# ~/KEYS.txt follows along (only if it is the link or copy debsway made)
+# ~/KEYS.txt follows along (only if it is the link or copy Wren Linux made)
 if [ -z "$CONSOLE" ] && { [ ! -e "$HOME/KEYS.txt" ] || [ -L "$HOME/KEYS.txt" ] || grep -q 'Super = the Windows' "$HOME/KEYS.txt" 2>/dev/null ||
     grep -q "Alt = sway's key" "$HOME/KEYS.txt" 2>/dev/null; }; then
     rm -f "$HOME/KEYS.txt"
     cp "$shown" "$HOME/KEYS.txt" 2>/dev/null
 fi
-if [ -x "$HOME/.local/bin/debsway-menu" ]; then "$HOME/.local/bin/debsway-menu" --pager "$shown"; else less "$shown"; fi
+if [ -x "$HOME/.local/bin/wren-menu" ]; then "$HOME/.local/bin/wren-menu" --pager "$shown"; else less "$shown"; fi

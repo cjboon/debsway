@@ -8,7 +8,7 @@
 #
 #   bash prep/fetch-tor-browser.sh
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/lib/appimage.sh"
+. "$WREN_DIR/lib/appimage.sh"
 
 # TB_FPR is in pins.sh. Its signing subkeys change every couple of
 # years, so the current key is saved next to the download for

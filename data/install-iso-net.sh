@@ -1,5 +1,5 @@
 #!/bin/sh
-# preseed/include_command for debsway's install ISO (prep/make-install-iso.sh):
+# preseed/include_command for Wren Linux's install ISO (prep/make-install-iso.sh):
 # runs inside the Debian installer before it sets up the network, and its
 # standard output must be empty or the location of a preseed part.
 #
@@ -8,12 +8,12 @@
 # wifi only), a small preseed part is written that switches network setup
 # off, so the installer doesn't stop with questions about wifi or "network
 # autoconfiguration failed", and it installs from the ISO alone. wifi.sh
-# sets up wifi after the install, when debsway's own install begins.
-# (DEBSWAY_NET, DEBSWAY_INC and DEBSWAY_WAIT are for tests.)
+# sets up wifi after the install, when Wren Linux's own install begins.
+# (WREN_NET, WREN_INC and WREN_WAIT are for tests.)
 
-NET=${DEBSWAY_NET:-/sys/class/net}
-INC=${DEBSWAY_INC:-/tmp/debsway-net.preseed}
-WAIT=${DEBSWAY_WAIT:-8}
+NET=${WREN_NET:-/sys/class/net}
+INC=${WREN_INC:-/tmp/wren-net.preseed}
+WAIT=${WREN_WAIT:-8}
 
 # wired: the names of the ports that are not loopback, wifi or virtual
 wired() {
@@ -37,7 +37,7 @@ i=0
 while :; do
     for n in $ports; do
         if [ "$(cat "$NET/$n/carrier" 2>/dev/null)" = 1 ]; then
-            logger -t debsway "wired link on $n: the installer sets up the network" 2>/dev/null || true
+            logger -t wren "wired link on $n: the installer sets up the network" 2>/dev/null || true
             exit 0
         fi
     done
@@ -58,5 +58,5 @@ done
         'd-i apt-setup/use_mirror boolean false' \
         'd-i pkgsel/upgrade select none'
 } >"$INC"
-logger -t debsway "no wired link: network setup skipped (wifi.sh does wifi after the install)" 2>/dev/null || true
+logger -t wren "no wired link: network setup skipped (wifi.sh does wifi after the install)" 2>/dev/null || true
 echo "file://$INC"

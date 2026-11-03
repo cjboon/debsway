@@ -1,7 +1,7 @@
-// Firefox settings for the incognito user (debsway parts/incognito.sh).
+// Firefox settings for the incognito user (Wren Linux parts/incognito.sh).
 // The profile is thrown away when the browser closes. These also stop it
 // from writing anything while it runs, and turn off what can leak. They
-// come on top of debsway's defaults for every profile (HTTPS-Only Mode,
+// come on top of Wren Linux's defaults for every profile (HTTPS-Only Mode,
 // JavaScript JIT off, uBlock Origin in medium mode).
 
 // Always private browsing; nothing kept on disk

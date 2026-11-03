@@ -1,5 +1,5 @@
 #!/bin/bash
-# Takes out what Debian's live image installs that debsway doesn't use (a
+# Takes out what Debian's live image installs that Wren Linux doesn't use (a
 # DVD or netinst install doesn't have it): avahi, which announces this
 # computer's name and services on every network it joins; hw-probe, which can
 # send your hardware details off; extrepo and the telnet client; and the
@@ -12,7 +12,7 @@
 # Usage: bash no-live-extras.sh [--remove]
 # status: gone:avahi-daemon gone:hw-probe
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/lib/live-extras.sh"
+. "$WREN_DIR/lib/live-extras.sh"
 need_user
 
 if [ "${1:-}" = --remove ]; then
@@ -52,7 +52,7 @@ if [ ${#go[@]} -eq 0 ]; then
     exit
 fi
 
-say "Removing what the live image installed and debsway doesn't use"
+say "Removing what the live image installed and Wren Linux doesn't use"
 # What apt would take out with them, before anything is done
 mapfile -t gone < <(apt-get -s purge --autoremove "${go[@]}" 2>/dev/null | awk '/^(Purg|Remv) / { print $2 }')
 [ ${#gone[@]} -gt 0 ] || die "apt couldn't work out what removing ${go[*]} would take. Nothing was removed."

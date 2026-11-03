@@ -20,12 +20,12 @@ fi
 
 say "One workspace"
 {
-    echo "# One workspace (debsway extras/one-workspace.sh)"
+    echo "# One workspace (Wren Linux extras/one-workspace.sh)"
     for k in 1 2 3 4 5 6 7 8 9 0; do
         echo "unbindsym \$mod+$k"
         echo "unbindsym \$mod+Shift+$k"
     done
-    # bar-0: the stock config's bar, the one debsway's status line is in
+    # bar-0: the stock config's bar, the one Wren Linux's status line is in
     echo "bar bar-0 workspace_buttons no"
 } | put_snippet one-workspace
 note "Super+1 … 0 now do nothing, and the bar shows no workspace buttons."

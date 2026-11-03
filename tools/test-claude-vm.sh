@@ -30,7 +30,7 @@ export PATH="$T/fake:$PATH" HOME="$T/home"
 run() { bash "$HERE/bin/claude-vm" "$@"; }
 
 check "claude-vm says what to do when the sandbox isn't set up" \
-    bash -c "! out=\$(bash '$HERE/bin/claude-vm' 2>&1) && [[ \$out == *'debsway install claude-vm'* ]]"
+    bash -c "! out=\$(bash '$HERE/bin/claude-vm' 2>&1) && [[ \$out == *'wrenctl install claude-vm'* ]]"
 touch "$T/rule-claude-vm"
 check "claude-vm rejects an unknown command" \
     bash -c "! out=\$(bash '$HERE/bin/claude-vm' bogus 2>&1) && [[ \$out == *'unknown command'* ]]"
@@ -93,7 +93,7 @@ check "the session never execs one of its own functions" \
 S=$T/session
 mkdir -p "$S/home/vm" "$S/home/.config/claude-vm" "$S/bin"
 sed -e "s|/home/claude-vm|$S/home|g" -e "s|\"/home/\$me\"|\"$S/home\"|" \
-    -e "s|/etc/debsway/claude-vm-ports|$S/ports|" \
+    -e "s|/etc/wren/claude-vm-ports|$S/ports|" \
     -e "s|/usr/local/libexec/claude-vm-mockvps-kvm|$S/bin/mockvps|" \
     -e "s|^export PATH=.*|export PATH=$S/bin:\$PATH|" \
     "$HERE/bin/claude-vm-session" >"$S/claude-vm-session"
@@ -112,7 +112,7 @@ MOCK
 printf '#!/bin/sh\necho "ssh $*" >>"%s/calls"\n' "$S" >"$S/bin/ssh"
 chmod +x "$S/bin/id" "$S/bin/mockvps" "$S/bin/ssh"
 touch "$S/home/.config/claude-vm/provision.sh"
-session() { PATH="$S/bin:$PATH" DEBSWAY_NOABS=1 bash "$S/claude-vm-session" "$@"; }
+session() { PATH="$S/bin:$PATH" WREN_NOABS=1 bash "$S/claude-vm-session" "$@"; }
 
 : >"$S/calls"
 session install >/dev/null 2>&1
@@ -197,7 +197,7 @@ check "provisioning calls it on the guest's real file" \
 echo claude-vm-work >"$S/me"
 out=$(session status 2>&1)
 check "an account without a console port (not set up by root) starts nothing, and says how" \
-    bash -c '[[ $1 == *"debsway install claude-vm --account work"* ]] && [ ! -s "$2" ]' _ "$out" "$S/calls"
+    bash -c '[[ $1 == *"wrenctl install claude-vm --account work"* ]] && [ ! -s "$2" ]' _ "$out" "$S/calls"
 printf 'other 2251\nwork 2250\n' >"$S/ports"
 touch "$S/vm-running"; echo disk >"$S/home/vm/claude-vm-work.qcow2"
 session connect >/dev/null 2>&1
@@ -214,7 +214,7 @@ rm -f "$S/me" "$S/home/vm/claude-vm-work.qcow2"
 : >"$T/calls"
 rm -f "$T/rule-claude-vm-work"
 check "claude-vm --account: not set up yet, it says how, and starts nothing" bash -c "
-    ! out=\$(bash '$HERE/bin/claude-vm' --account work status 2>&1) && [[ \$out == *'debsway install claude-vm --account work'* ]] && [ ! -s '$T/calls' ]"
+    ! out=\$(bash '$HERE/bin/claude-vm' --account work status 2>&1) && [[ \$out == *'wrenctl install claude-vm --account work'* ]] && [ ! -s '$T/calls' ]"
 touch "$T/rule-claude-vm-work"
 bash "$HERE/bin/claude-vm" --account work status >/dev/null 2>&1
 check "...set up: the session runs as claude-vm-work" grep -qx "sudo -n -u claude-vm-work /usr/local/libexec/claude-vm-session status" "$T/calls"
@@ -224,7 +224,7 @@ check "...a name that isn't one is refused" bash -c "! bash '$HERE/bin/claude-vm
 printf '%s\n' 'claude-vm:x:900:900::/home/claude-vm:/bin/bash' 'claude-vm-work:x:901:901::/home/claude-vm-work:/bin/bash' \
     'claude-vm-home:x:902:902::/home/claude-vm-home:/bin/bash' 'claude-vm-Bad:x:903:903::/x:/bin/sh' >"$T/passwd"
 printf 'work 2250\n' >"$T/ports"
-fw=$(DEBSWAY_PASSWD=$T/passwd DEBSWAY_CLAUDE_VM_PORTS=$T/ports bash -c '. "$1/lib/claude-accounts.sh"; claude_vm_firewall_text "$1/data/claude-vm-firewall.nft"' _ "$HERE")
+fw=$(WREN_PASSWD=$T/passwd WREN_CLAUDE_VM_PORTS=$T/ports bash -c '. "$1/lib/claude-accounts.sh"; claude_vm_firewall_text "$1/data/claude-vm-firewall.nft"' _ "$HERE")
 check "firewall: each account user through claude-vm's rules" bash -c '
     grep -qx "        meta skuid 901 jump claude_vm  # claude-vm-work" <<<"$1" && grep -qx "        meta skuid 902 jump claude_vm  # claude-vm-home" <<<"$1"' _ "$fw"
 check "...reaching its own console port only (claude-vm keeps 2242 to itself)" bash -c '
@@ -238,7 +238,7 @@ if unshare -rn /usr/sbin/nft -c -f "$T/empty.nft" >/dev/null 2>&1; then
     check "...which nft accepts" unshare -rn /usr/sbin/nft -c -f "$T/fw.nft"
 fi
 check "a free port: the lowest of 2250-2299 no account has" bash -c '
-    printf "a 2250\nb 2251\n" >"$1"; [ "$(DEBSWAY_CLAUDE_VM_PORTS=$1 bash -c ". \"$2/lib/claude-accounts.sh\"; claude_vm_free_port")" -ge 2252 ]' _ "$T/ports2" "$HERE"
+    printf "a 2250\nb 2251\n" >"$1"; [ "$(WREN_CLAUDE_VM_PORTS=$1 bash -c ". \"$2/lib/claude-accounts.sh\"; claude_vm_free_port")" -ge 2252 ]' _ "$T/ports2" "$HERE"
 
 # The install script: an account needs claude-vm set up; its port is written
 # (by root) before its firewall line; removing one takes the port out and
@@ -252,6 +252,6 @@ check "...removing an account: user and port first, then the firewall" bash -c '
     a=$(sed -n "/^if \[ \"\${1:-}\" = --account \]/,/^fi$/p" "$1"); [[ $a == *remove_account*write_firewall* ]] &&
     sed -n "/^remove_account() {/,/^}/p" "$1" | grep -qx "    set_port \"\$1\""' _ "$c"
 check "...each account has its own sudo rule, checked by visudo" bash -c '
-    grep -q "ACCOUNT_SUDOERS=/etc/sudoers.d/debsway-claude-vm-\$1" "$1" && sed -n "/^sudoers_rule() {/,/^}/p" "$1" | grep -q "visudo -cf"' _ "$c"
+    grep -q "ACCOUNT_SUDOERS=/etc/sudoers.d/wren-claude-vm-\$1" "$1" && sed -n "/^sudoers_rule() {/,/^}/p" "$1" | grep -q "visudo -cf"' _ "$c"
 
 [ "$fails" -eq 0 ]

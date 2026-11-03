@@ -1,5 +1,5 @@
 #!/bin/bash
-# Checks the webcam switch (bin/debsway-camera, extras/webcam.sh) on a pretend
+# Checks the webcam switch (bin/wren-camera, extras/webcam.sh) on a pretend
 # /sys with a USB camera, a USB keyboard and a root hub, and the menu's Webcam
 # line through bin/radios with a pretend helper and sudo. Nothing is run as
 # root and nothing outside a temp folder changes. Run by test.sh, or:
@@ -31,7 +31,7 @@ device() { # NAME CLASS
 device 1-6 14
 device 1-7 3
 mkdir -p "$U/usb1"; echo 1 >"$U/usb1/authorized"
-cam() { DEBSWAY_SYS=$T/sys bash "$HERE/bin/debsway-camera" "$@"; }
+cam() { WREN_SYS=$T/sys bash "$HERE/bin/wren-camera" "$@"; }
 
 check "a USB camera is found, and is on" test "$(cam status)" = on
 cam off
@@ -60,7 +60,7 @@ mkdir -p "$T/fake"
 printf '#!/bin/sh\ncase $1 in status) cat "%s/state" ;; on|off) echo "$1" >"%s/state" ;; esac\n' "$T" "$T" >"$T/fake/helper"
 printf '#!/bin/sh\necho "sudo $*" >>"%s/calls"\n[ "$1" != -n ] || shift\nexec "$@"\n' "$T" >"$T/fake/sudo"
 chmod +x "$T/fake/"*
-r() { PATH="$T/fake:$PATH" DEBSWAY_CAMERA="$T/fake/helper" DEBSWAY_SYS="$T/nosys" bash "$HERE/bin/radios" "$@"; }
+r() { PATH="$T/fake:$PATH" WREN_CAMERA="$T/fake/helper" WREN_SYS="$T/nosys" bash "$HERE/bin/radios" "$@"; }
 echo off >"$T/state"
 check "the menu lists the webcam with its state" grep -qx 'camera off' <<<"$(r list)"
 r camera toggle
@@ -68,11 +68,11 @@ check "switching it goes through sudo, with on or off only" grep -qx "sudo -n $T
 check "...and switches it" test "$(r camera status)" = on
 echo none >"$T/state"
 check "with no camera the menu has no Webcam line" not grep -q camera <<<"$(r list)"
-check "the menu calls it Webcam" grep -q 'camera) name=Webcam' "$HERE/bin/debsway-menu"
+check "the menu calls it Webcam" grep -q 'camera) name=Webcam' "$HERE/bin/wren-menu"
 
 # The pieces the extra installs
 check "udev runs it only for a whole USB device being added (not when switched on)" \
-    grep -q 'ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", RUN+="/usr/local/libexec/debsway-camera added %k"' "$HERE/data/webcam-off.rules"
+    grep -q 'ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", RUN+="/usr/local/libexec/wren-camera added %k"' "$HERE/data/webcam-off.rules"
 check "the sudo rule allows exactly on and off" grep -q 'NOPASSWD: %s on, %s off' "$HERE/extras/webcam.sh"
 
 [ "$fails" -eq 0 ]

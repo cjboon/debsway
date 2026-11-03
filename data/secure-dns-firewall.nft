@@ -1,5 +1,5 @@
 # Only Unbound sends DNS out of this computer, while secure DNS is switched on
-# (debsway parts/secure-dns.sh; the switch loads and unloads this).
+# (Wren Linux parts/secure-dns.sh; the switch loads and unloads this).
 # Every program asks Unbound on 127.0.0.1, and Unbound asks the resolver you
 # chose over an encrypted connection. A program that asks some other DNS server
 # itself (port 53, or DNS over TLS on 853) is refused, so nothing goes around
@@ -14,10 +14,10 @@
 # A VPN's tunnel (wg*, tun*) is allowed: Mullvad VPN points /etc/resolv.conf
 # at its own DNS server inside the tunnel while it is connected.
 
-table inet debsway_secure_dns
-delete table inet debsway_secure_dns
+table inet wren_secure_dns
+delete table inet wren_secure_dns
 
-table inet debsway_secure_dns {
+table inet wren_secure_dns {
     chain output {
         type filter hook output priority 0; policy accept;
         # Questions to Unbound itself, on this computer

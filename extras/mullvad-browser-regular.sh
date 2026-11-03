@@ -4,18 +4,18 @@
 # fingerprinting but without Tor. Meant for use with a VPN (Mullvad's or
 # another), and it forgets everything when closed. It's built on Tor
 # Browser, which runs on X11, so XWayland is installed. "-regular" as in
-# claude-regular: it runs as you, with no sandbox from debsway.
+# claude-regular: it runs as you, with no sandbox from Wren Linux.
 # Usage: bash mullvad-browser-regular.sh [--remove | --manual]
 # summary: Mullvad Browser, as you (no Tor: use a VPN)
 # security: least
 # status: apt:mullvad-browser
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/lib/mullvad-repo.sh"
+. "$WREN_DIR/lib/mullvad-repo.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 # Its package marker keeps the name it had as extras/mullvad-browser.sh, so a
 # computer that installed it then still has it held, and --remove finds it
-export DEBSWAY_OWNER=mullvad-browser
+export WREN_OWNER=mullvad-browser
 
 if [ "${1:-}" = --remove ]; then
     apt_purge mullvad-browser

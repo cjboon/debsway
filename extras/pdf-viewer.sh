@@ -4,7 +4,7 @@
 # that a viewer has to interpret, and crafted ones are a common way in, so
 # zathura starts inside bubblewrap (bin/media-sandbox, the same sandbox as imv
 # and mpv): it sees only the files you open, read-only, has no network and an
-# empty home. DEBSWAY_NO_SANDBOX=1 runs it without. Made the default for PDFs.
+# empty home. WREN_NO_SANDBOX=1 runs it without. Made the default for PDFs.
 # Usage: bash pdf-viewer.sh [--remove | --manual]
 # summary: zathura PDF viewer, in a sandbox
 # security: most
@@ -36,7 +36,7 @@ cat <<'EOF2'
 
     zathura runs in a sandbox: it sees only the files you name when you
     start it, read-only. Starting it by its full path (/usr/bin/zathura), or
-    from a launcher that does, skips the sandbox; so does DEBSWAY_NO_SANDBOX=1.
+    from a launcher that does, skips the sandbox; so does WREN_NO_SANDBOX=1.
 
     How to use zathura:
       zathura paper.pdf              open a PDF

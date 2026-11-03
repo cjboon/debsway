@@ -27,7 +27,7 @@ chmod +x "$T/fake/sudo"
 export PATH="$T/fake:$PATH" HOME="$T/home"
 run() { (cd "$1" && shift && bash "$HERE/bin/claude" "$@"); }
 
-check "claude says what to do when the sandbox isn't set up" bash -c "! out=\$(cd '$T/home/projects/app' && bash '$HERE/bin/claude' 2>&1) && [[ \$out == *'debsway install claude-code'* ]]"
+check "claude says what to do when the sandbox isn't set up" bash -c "! out=\$(cd '$T/home/projects/app' && bash '$HERE/bin/claude' 2>&1) && [[ \$out == *'wrenctl install claude-code'* ]]"
 touch "$T/rule-claude-agent"
 check "claude refuses to start outside ~/projects" bash -c "! out=\$(cd '$T/home/other' && bash '$HERE/bin/claude' 2>&1) && [[ \$out == *'only works inside ~/projects'* ]]"
 check "a refusal starts nothing" test ! -e "$T/calls"
@@ -49,7 +49,7 @@ check "claude-unsandboxed runs the real thing as you" grep -q 'exec /usr/bin/cla
 W=$(cd "$T/home/projects-work/app" && pwd -P)
 : >"$T/calls"
 check "--account: not set up yet, it says how, and starts nothing" bash -c "
-    ! out=\$(cd '$W' && bash '$HERE/bin/claude' --account work 2>&1) && [[ \$out == *'debsway install claude-code --account work'* ]] && [ ! -s '$T/calls' ]"
+    ! out=\$(cd '$W' && bash '$HERE/bin/claude' --account work 2>&1) && [[ \$out == *'wrenctl install claude-code --account work'* ]] && [ ! -s '$T/calls' ]"
 touch "$T/rule-claude-agent-work"
 run "$W" --account work --resume foo
 check "--account work: the session runs as claude-agent-work, in ~/projects-work, with the other arguments" \
@@ -68,7 +68,7 @@ check "...and none of those started anything" test ! -s "$T/calls"
 printf '%s\n' 'root:x:0:0::/root:/bin/sh' 'claude-agent:x:900:900::/home/claude-agent:/bin/bash' \
     'claude-agent-work:x:901:901::/home/claude-agent-work:/bin/bash' 'claude-agent-Bad:x:902:902::/x:/bin/sh' \
     'claude-agentx:x:903:903::/x:/bin/sh' 'claude-agent-home2:x:904:904::/home/claude-agent-home2:/bin/bash' >"$T/passwd"
-fw=$(DEBSWAY_PASSWD=$T/passwd bash -c '. "$1/lib/claude-accounts.sh"; claude_firewall_text "$1/data/claude-firewall.nft"' _ "$HERE")
+fw=$(WREN_PASSWD=$T/passwd bash -c '. "$1/lib/claude-accounts.sh"; claude_firewall_text "$1/data/claude-firewall.nft"' _ "$HERE")
 check "firewall: a line for each account (by number), after claude-agent's" bash -c '
     grep -A2 "meta skuid \"claude-agent\" jump claude" <<<"$1" | grep -qx "        meta skuid 901 jump claude  # claude-agent-work" &&
     grep -qx "        meta skuid 904 jump claude  # claude-agent-home2" <<<"$1"' _ "$fw"
@@ -93,7 +93,7 @@ check "...the firewall rule is checked by nft before it replaces the old one" ba
 check "...removing an account: its user goes first, then the firewall is written" bash -c '
     s=$(sed -n "/--remove-account \] ; then\|= --remove-account \]; then/,/exit/p" "$1"); [[ $s == *remove_account*write_firewall* ]]' _ "$c"
 check "...each account has its own sudo rule, checked by visudo" bash -c '
-    grep -q "ACCOUNT_SUDOERS=/etc/sudoers.d/debsway-claude-\$1" "$1" && grep -q "sudoers_rule \"\$ACCOUNT_SUDOERS\"" "$1" &&
+    grep -q "ACCOUNT_SUDOERS=/etc/sudoers.d/wren-claude-\$1" "$1" && grep -q "sudoers_rule \"\$ACCOUNT_SUDOERS\"" "$1" &&
     sed -n "/^sudoers_rule() {/,/^}/p" "$1" | grep -q "visudo -cf"' _ "$c"
 check "claude-session lets in the account users only (pattern)" grep -qF '[[ $me == claude-agent || $me =~ ^claude-agent-[a-z][a-z0-9]{0,14}$ ]]' "$HERE/bin/claude-session"
 

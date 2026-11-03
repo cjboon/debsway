@@ -5,7 +5,7 @@
 SWAY_CONFIG="$HOME/.config/sway/config"
 SWAY_SNIPPETS="$HOME/.config/sway/config.d"
 SWAY_INCLUDE="include $SWAY_SNIPPETS/*.conf"
-# The one definition of how debsway locks the screen
+# The one definition of how Wren Linux locks the screen
 # (the lock screen's color from the theme, bin/theme; black if it can't say)
 # shellcheck disable=SC2016  # expanded where it runs; one word: a checked color
 LOCK_CMD='swaylock -f -c $(~/.local/bin/theme get LOCK 2>/dev/null || echo 000000)'
@@ -31,7 +31,7 @@ replace_line() {
     rm -f "$tmp"
 }
 
-# style_launcher FILE: the stock launcher line becomes debsway's. A line you
+# style_launcher FILE: the stock launcher line becomes Wren Linux's. A line you
 # changed yourself is left alone (the return status says whether it was ours).
 style_launcher() {
     if grep -qxF "$LAUNCHER_STYLED" "$1"; then return 0; fi
@@ -63,7 +63,7 @@ ensure_sway_config() {
     # file" bar for a key bound twice, so the stock bindings go
     sed -i -E '/^[[:space:]]*bindsym( --locked)? (XF86(Audio(Mute|LowerVolume|RaiseVolume|MicMute)|MonBrightness(Down|Up))|Print) exec (pactl|brightnessctl|grim)/d' "$SWAY_CONFIG"
     if ! grep -qxF "$SWAY_INCLUDE" "$SWAY_CONFIG"; then
-        printf '\n# debsway feature snippets\n%s\n' "$SWAY_INCLUDE" >>"$SWAY_CONFIG"
+        printf '\n# Wren Linux feature snippets\n%s\n' "$SWAY_INCLUDE" >>"$SWAY_CONFIG"
     fi
 }
 

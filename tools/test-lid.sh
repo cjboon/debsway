@@ -61,10 +61,10 @@ check "logind is told to read its settings again, not restarted (that could end 
     grep -q 'systemctl kill -s HUP systemd-logind' "$E"
 
 # the light theme (bin/theme): the lock screen in its color
-mkdir -p "$T/home/.local/bin" "$T/home/.local/share/debsway/themes" "$T/home/.config/debsway"
+mkdir -p "$T/home/.local/bin" "$T/home/.local/share/wren/themes" "$T/home/.config/wren"
 cp "$HERE/bin/theme" "$T/home/.local/bin/theme"
-cp "$HERE/data/themes/dark" "$HERE/data/themes/light" "$T/home/.local/share/debsway/themes/"
-echo light >"$T/home/.config/debsway/theme"
+cp "$HERE/data/themes/dark" "$HERE/data/themes/light" "$T/home/.local/share/wren/themes/"
+echo light >"$T/home/.config/wren/theme"
 printf '#!/bin/sh\nexit 1\n' >"$T/fake/pgrep"
 : >"$T/calls"
 lid close

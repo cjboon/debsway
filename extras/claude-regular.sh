@@ -24,7 +24,7 @@
 # the other's folder another way, and two extra accounts aren't kept from each
 # other. For accounts that really can't see each other, use the sandboxed
 # claude (extras/claude-code.sh --account) or claude-vm (--account).
-# --remove-account NAME takes debsway's settings out again (asks before
+# --remove-account NAME takes Wren Linux's settings out again (asks before
 # deleting its login and memories).
 # Usage: bash claude-regular.sh [--remove | --manual | --account NAME | --remove-account NAME]
 # summary: Claude Code as you, with its own sandbox on
@@ -32,13 +32,13 @@
 # status: bin:claude-regular
 # files: data/claude-regular-settings.json lib/claude-settings.py
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/lib/claude-repo.sh"
+. "$WREN_DIR/lib/claude-repo.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 SETTINGS=$HOME/.claude/settings.json
-STATE=${XDG_STATE_HOME:-$HOME/.local/state}/debsway/claude-regular-settings.json
-merge() { python3 -I "$DEBSWAY_DIR/lib/claude-settings.py" "$1" "$SETTINGS" "$DEBSWAY_DIR/data/claude-regular-settings.json" "$STATE"; }
+STATE=${XDG_STATE_HOME:-$HOME/.local/state}/wren/claude-regular-settings.json
+merge() { python3 -I "$WREN_DIR/lib/claude-settings.py" "$1" "$SETTINGS" "$WREN_DIR/data/claude-regular-settings.json" "$STATE"; }
 
 # account NAME: its folder and the two state files (its own settings, and
 # what was added to the first account's to keep it out)
@@ -55,8 +55,8 @@ keep_out() {
 }
 remove_account() {
     account "$1"
-    [ ! -f "$MAIN_STATE" ] || python3 -I "$DEBSWAY_DIR/lib/claude-settings.py" remove "$SETTINGS" /dev/null "$MAIN_STATE" || true
-    [ ! -f "$ACCOUNT_STATE" ] || python3 -I "$DEBSWAY_DIR/lib/claude-settings.py" remove "$ACCOUNT_DIR/settings.json" /dev/null "$ACCOUNT_STATE" || true
+    [ ! -f "$MAIN_STATE" ] || python3 -I "$WREN_DIR/lib/claude-settings.py" remove "$SETTINGS" /dev/null "$MAIN_STATE" || true
+    [ ! -f "$ACCOUNT_STATE" ] || python3 -I "$WREN_DIR/lib/claude-settings.py" remove "$ACCOUNT_DIR/settings.json" /dev/null "$ACCOUNT_STATE" || true
     rm -f "$MAIN_STATE" "$ACCOUNT_STATE"
     if [ -d "$ACCOUNT_DIR" ] && ask "Delete $ACCOUNT_DIR (that account's Claude login, memories and settings)?" n; then
         rm -rf "${ACCOUNT_DIR:?}"
@@ -71,27 +71,27 @@ if [ "${1:-}" = --account ] || [ "${1:-}" = --remove-account ]; then
     account "$2"
     if [ "$1" = --remove-account ]; then
         remove_account "$2"
-        note "The account $2 is gone from debsway's settings."
+        note "The account $2 is gone from Wren Linux's settings."
         exit
     fi
-    [ -x "$BIN/claude-regular" ] || die "Set up claude-regular first: bash $DEBSWAY_DIR/extras/claude-regular.sh"
+    [ -x "$BIN/claude-regular" ] || die "Set up claude-regular first: bash $WREN_DIR/extras/claude-regular.sh"
     mkdir -p "$ACCOUNT_DIR"
     chmod 700 "$ACCOUNT_DIR"
     ours=$(mktemp)
-    # debsway's settings, and ~/.claude kept out
+    # Wren Linux's settings, and ~/.claude kept out
     # shellcheck disable=SC2088  # a literal ~: Claude Code's settings expand it themselves
     python3 -I -c 'import json, sys
 a = json.load(open(sys.argv[1])); b = json.loads(sys.argv[2])
 a["sandbox"]["filesystem"]["denyRead"] += b["sandbox"]["filesystem"]["denyRead"]
 a["permissions"]["deny"] += b["permissions"]["deny"]
-json.dump(a, open(sys.argv[3], "w"), indent=2)' "$DEBSWAY_DIR/data/claude-regular-settings.json" "$(keep_out "~/.claude")" "$ours" ||
+json.dump(a, open(sys.argv[3], "w"), indent=2)' "$WREN_DIR/data/claude-regular-settings.json" "$(keep_out "~/.claude")" "$ours" ||
         { rm -f "$ours"; die "Couldn't make the account's settings."; }
-    python3 -I "$DEBSWAY_DIR/lib/claude-settings.py" add "$ACCOUNT_DIR/settings.json" "$ours" "$ACCOUNT_STATE" ||
+    python3 -I "$WREN_DIR/lib/claude-settings.py" add "$ACCOUNT_DIR/settings.json" "$ours" "$ACCOUNT_STATE" ||
         { rm -f "$ours"; die "Couldn't write $ACCOUNT_DIR/settings.json."; }
     # and the first account kept out of this one's folder
     # shellcheck disable=SC2088  # a literal ~: Claude Code's settings expand it themselves
     keep_out "~/.claude-$2" >"$ours"
-    python3 -I "$DEBSWAY_DIR/lib/claude-settings.py" add "$SETTINGS" "$ours" "$MAIN_STATE" ||
+    python3 -I "$WREN_DIR/lib/claude-settings.py" add "$SETTINGS" "$ours" "$MAIN_STATE" ||
         { rm -f "$ours"; die "Couldn't write $SETTINGS."; }
     rm -f "$ours"
     note "claude-regular --account $2: its own login and memories in ~/.claude-$2."
@@ -108,7 +108,7 @@ if [ "${1:-}" = --remove ]; then
         remove_account "${n%-first.json}"
     done
     remove_bin claude-regular
-    if [ -f "$STATE" ]; then merge remove && note "Took debsway's settings out of $SETTINGS; yours stay."; fi
+    if [ -f "$STATE" ]; then merge remove && note "Took Wren Linux's settings out of $SETTINGS; yours stay."; fi
     # claude-code itself stays while the sandboxed claude needs it
     apt_purge claude-code
     remove_claude_repo_if_unused

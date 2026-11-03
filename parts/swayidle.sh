@@ -3,7 +3,7 @@
 # Half a minute before the lock the screen starts to fade down slowly and a
 # notification says it is about to lock, so moving the mouse in time stops it
 # (bin/dim-warning). Installs swaylock too, since that's what does the locking.
-# Change the time with  timer lock MINUTES  (bin/debsway-idle reads it, so
+# Change the time with  timer lock MINUTES  (bin/wren-idle reads it, so
 # running this again keeps your choice).
 # Usage: bash swayidle.sh [--remove]
 # status: apt:swayidle
@@ -15,7 +15,7 @@ if [ "${1:-}" = --remove ]; then
     remove_snippet idle
     pkill -x swayidle || true
     remove_bin dim-warning
-    remove_bin debsway-idle
+    remove_bin wren-idle
     apt_purge swayidle
     exit
 fi
@@ -24,11 +24,11 @@ say "Installing swayidle and swaylock"
 apt_install swayidle swaylock
 install_bin dim-warning
 # swayidle with the timeouts: the lock time comes from timer lock
-install_bin debsway-idle
-IDLE_CMD="$HOME/.local/bin/debsway-idle"
+install_bin wren-idle
+IDLE_CMD="$HOME/.local/bin/wren-idle"
 
 put_snippet idle <<EOF
-# Idle lock and screen off (debsway parts/swayidle.sh)
+# Idle lock and screen off (Wren Linux parts/swayidle.sh)
 exec $IDLE_CMD
 EOF
 

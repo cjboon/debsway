@@ -19,11 +19,11 @@
 # security: most
 # status: apt:torbrowser-launcher
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/lib/appimage.sh"
+. "$WREN_DIR/lib/appimage.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
-MARK=/etc/apt/debsway-enabled-contrib
+MARK=/etc/apt/wren-enabled-contrib
 CLASSIC=/etc/apt/sources.list
 
 # Debian's own sources: classic lines in sources.list, deb822 stanzas in
@@ -68,8 +68,8 @@ disable_contrib() {
 # notices (relays are IP addresses), but webtunnel and other bridges given
 # as hostnames fail with "Temporary failure in name resolution".
 TOR_LOCAL=/etc/apparmor.d/local/torbrowser.Tor.tor
-DNS_BEGIN='# >>> debsway: DNS through the resolv.conf symlink >>>'
-DNS_END='# <<< debsway <<<'
+DNS_BEGIN='# >>> Wren Linux: DNS through the resolv.conf symlink >>>'
+DNS_END='# <<< Wren Linux <<<'
 
 fix_apparmor_dns() {
     [ -f /etc/apparmor.d/torbrowser.Tor.tor ] || return 0
@@ -100,8 +100,8 @@ unfix_apparmor_dns() {
 TBB="$HOME/.local/share/torbrowser/tbb/$(uname -m)/tor-browser"
 PROFILE="$TBB/Browser/TorBrowser/Data/Browser/profile.default"
 USERJS="$PROFILE/user.js"
-JS_BEGIN='// >>> debsway extras/tor-browser.sh >>>'
-JS_END='// <<< debsway <<<'
+JS_BEGIN='// >>> Wren Linux extras/tor-browser.sh >>>'
+JS_END='// <<< Wren Linux <<<'
 
 OFFLINE="$OFFLINE_DIR/torbrowser"
 TBL_SETTINGS="$HOME/.config/torbrowser/settings.json"
@@ -157,7 +157,7 @@ write_userjs() {
     fi
     {
         echo "$JS_BEGIN"
-        cat "$DEBSWAY_DIR/data/tor-browser-safest.js"
+        cat "$WREN_DIR/data/tor-browser-safest.js"
         # source: 0 = Tor Browser's built-in bridges, 2 = lines you provide
         case $BRIDGE_TYPE in
             obfs4 | webtunnel)
@@ -224,7 +224,7 @@ if [ "${1:-}" = --remove ]; then
         note "Deleted."
     elif [ -f "$USERJS" ]; then
         sed -i "\|^$JS_BEGIN\$|,\|^$JS_END\$|d" "$USERJS"
-        note "Took the debsway settings out of $USERJS; Tor Browser keeps their last values."
+        note "Took the Wren Linux settings out of $USERJS; Tor Browser keeps their last values."
     fi
     exit
 fi
@@ -232,7 +232,7 @@ fi
 say "Debian contrib section"
 enable_contrib
 # A fresh update, so apt sees the contrib packages
-unset DEBSWAY_APT_UPDATED
+unset WREN_APT_UPDATED
 
 say "Installing torbrowser-launcher"
 need_xwayland

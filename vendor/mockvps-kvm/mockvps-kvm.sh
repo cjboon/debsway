@@ -165,9 +165,9 @@ gives up, stops the VM and removes the half-installed disk.
 EOF
 }
 
-### Running it from a debsway checkout ################################
+### Running it from a Wren Linux checkout ################################
 
-# Inside debsway this script is meant to be run as the "mockvps-kvm"
+# Inside Wren Linux this script is meant to be run as the "mockvps-kvm"
 # command, which extras/mockvps-kvm.sh sets up (it also installs QEMU and
 # socat, which a clean power-off needs). Run straight from its folder before
 # that setup, it stops and says what to do; MOCKVPS_FORCE=1 runs it anyway.
@@ -175,7 +175,7 @@ EOF
 # A standalone copy has no ../../extras/mockvps-kvm.sh, so none of this
 # applies to it. It looks at where the script file is, not at the current
 # folder, so it holds wherever you run it from.
-debsway_check() {
+wren_check() {
   local self setup cmd="$HOME/.local/bin/mockvps-kvm"
   self="$(readlink -f -- "${BASH_SOURCE[0]}" 2>/dev/null)" || return 0
   setup="$(readlink -f -- "$(dirname -- "$self")/../../extras/mockvps-kvm.sh" 2>/dev/null)" || return 0
@@ -183,14 +183,14 @@ debsway_check() {
   # Started through the command: nothing to say
   [[ "$0" != */.local/bin/mockvps-kvm ]] || return 0
   if [[ "$(readlink -f -- "$cmd" 2>/dev/null)" == "$self" ]]; then
-    warn "You are running the script inside debsway directly; the command 'mockvps-kvm' runs the same script."
+    warn "You are running the script inside Wren Linux directly; the command 'mockvps-kvm' runs the same script."
     return 0
   fi
   if [[ "${MOCKVPS_FORCE:-0}" == 1 ]]; then
-    warn "Running the debsway copy directly (MOCKVPS_FORCE=1), without the setup."
+    warn "Running the Wren Linux copy directly (MOCKVPS_FORCE=1), without the setup."
     return 0
   fi
-  die "Don't run this file directly: debsway sets it up first.
+  die "Don't run this file directly: Wren Linux sets it up first.
 
   1. Run this once (it installs QEMU and socat, and adds the 'mockvps-kvm' command):
          bash $setup
@@ -215,7 +215,7 @@ init_defaults() {
   SSH_HOST_IP="${SSH_HOST_IP:-127.0.0.1}"
   DEBIAN_SUITE="${DEBIAN_SUITE:-stable}"
   WEB_TUNNEL="${WEB_TUNNEL:-1}"
-  # (debsway) For a VM that must not reach any network: NET_RESTRICT=1 runs it
+  # (Wren Linux) For a VM that must not reach any network: NET_RESTRICT=1 runs it
   # with QEMU's restrict=on (the guest can't send a packet out; only the
   # forwards below get through), HOST_FORWARDS="127.0.0.1:18080:80 ..." adds
   # host-loopback ports that lead into the guest, and GUEST_SOCKS="10.0.2.100:9050"
@@ -862,7 +862,7 @@ define_cmd() {
     # SSH LocalForwards written to the ssh config block, so they exist only
     # while an 'ssh <name>' session is open (and never clash with QEMU).
     iface+=",hostfwd=tcp:$SSH_HOST_IP:$SSH_HOST_PORT-:22"
-    # (debsway) see NET_RESTRICT, HOST_FORWARDS and GUEST_SOCKS in init_defaults
+    # (Wren Linux) see NET_RESTRICT, HOST_FORWARDS and GUEST_SOCKS in init_defaults
     if [[ "$NET_RESTRICT" == 1 ]]; then iface+=",restrict=on"; fi
     for f in $HOST_FORWARDS; do
       iface+=",hostfwd=tcp:127.0.0.1:$(cut -d: -f2 <<<"$f")-:${f##*:}"
@@ -1439,7 +1439,7 @@ uninstall_run() {
   local script_path repo_dir remove_hint
   script_path="$(readlink -f -- "${BASH_SOURCE[0]:-$0}" 2>/dev/null)" || script_path="${BASH_SOURCE[0]:-$0}"
   repo_dir="$(dirname -- "$script_path")"
-  # Inside debsway the installer is extras/mockvps-kvm.sh; on its own it is
+  # Inside Wren Linux the installer is extras/mockvps-kvm.sh; on its own it is
   # the script's neighbour
   remove_hint="$repo_dir/../mockvps-kvm.sh"
   if [[ -f "$repo_dir/../../extras/mockvps-kvm.sh" ]]; then
@@ -1500,7 +1500,7 @@ main() {
   parse_args "$@"
   validate_config
   derive_paths
-  debsway_check
+  wren_check
 
   [[ "$(uname -s)" == "Linux" ]] || die "This script supports Linux hosts only."
   [[ "$(uname -m)" == "x86_64" ]] || die "This script supports x86_64 hosts only (ARM: look at Lima/multipass)."

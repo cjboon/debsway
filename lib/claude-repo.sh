@@ -17,7 +17,7 @@ add_claude_repo() {
         $SUDO tee "$CLAUDE_LIST" >/dev/null
     allow_unattended_updates claude-code downloads.claude.ai
     # A fresh update, so apt sees the repository
-    unset DEBSWAY_APT_UPDATED
+    unset WREN_APT_UPDATED
 }
 
 # remove_claude_repo_if_unused: called by each extra's --remove, after it has

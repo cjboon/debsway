@@ -35,7 +35,7 @@ echo "deb [arch=amd64 signed-by=$KEY] https://updates.signal.org/desktop/apt xen
     sudo tee "$LIST" >/dev/null
 allow_unattended_updates signal updates.signal.org
 # A fresh update, so apt sees the new repository
-unset DEBSWAY_APT_UPDATED
+unset WREN_APT_UPDATED
 
 say "Its sandbox helper without setuid root"
 # Before the install, so the package's own setup already leaves it this way
@@ -46,6 +46,6 @@ say "Installing Signal"
 apt_install signal-desktop
 if [ -e "$HELPER" ] && [ -u "$HELPER" ]; then sudo chmod 0755 "$HELPER"; fi
 
-note "Run it with: signal-desktop   (or Super+d, or the debsway menu)"
+note "Run it with: signal-desktop   (or Super+d, or the Wren menu)"
 note "The first time, it shows a QR code: scan it with Signal on your phone"
 note "(Settings > Linked devices) to link this computer."

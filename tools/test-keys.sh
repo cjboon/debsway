@@ -16,8 +16,8 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 }
 not() { ! "$@"; }
 
-mkdir -p "$T/home/.local/share/debsway" "$T/bin"
-cp "$HERE/data/keys.txt" "$T/home/.local/share/debsway/keys.txt"
+mkdir -p "$T/home/.local/share/wren" "$T/bin"
+cp "$HERE/data/keys.txt" "$T/home/.local/share/wren/keys.txt"
 # a PATH with the tools the filter itself needs, and only the commands we choose to add
 for c in sh awk sed cat grep rm cp mktemp; do ln -s "$(command -v "$c")" "$T/bin/$c"; done
 keys() { env -i HOME="$T/home" PATH="$T/bin" sh "$HERE/bin/keys" "$@"; }

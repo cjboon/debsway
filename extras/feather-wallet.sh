@@ -8,7 +8,7 @@
 # security: some
 # status: opt:feather
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/lib/appimage.sh"
+. "$WREN_DIR/lib/appimage.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 

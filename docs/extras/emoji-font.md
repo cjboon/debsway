@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-debsway install emoji-font                     install it
-debsway remove emoji-font                      remove it
-debsway manual emoji-font                      print the manual steps below
+wrenctl install emoji-font                     install it
+wrenctl remove emoji-font                      remove it
+wrenctl manual emoji-font                      print the manual steps below
 
 (nothing to run: restart Firefox and foot, and emoji show in color)
 ```

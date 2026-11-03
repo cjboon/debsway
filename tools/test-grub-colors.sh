@@ -2,7 +2,7 @@
 # Checks parts/grub-colors.sh: it writes its script into grub.d (runnable,
 # printing GRUB's four colour settings, valid GRUB script) and runs
 # update-grub; if update-grub fails, the script is taken out again; --remove
-# takes it out; without GRUB nothing is written. Runs on a copy of debsway
+# takes it out; without GRUB nothing is written. Runs on a copy of Wren Linux
 # with a pretend sudo and update-grub, in a temp grub.d, so nothing on this
 # computer changes. Run by test.sh, or:  bash tools/test-grub-colors.sh
 # shellcheck disable=SC2016  # the pretend programs expand their own variables
@@ -17,7 +17,7 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 }
 not() { ! "$@"; }
 
-# A copy of debsway whose lib.sh keeps the test's PATH
+# A copy of Wren Linux whose lib.sh keeps the test's PATH
 R=$T/r
 mkdir -p "$R/parts" "$T/bin" "$T/nogrub" "$T/grub.d" "$T/home"
 sed 's|^export PATH=.*|export PATH="$GRUB_TEST_PATH"|' "$HERE/lib.sh" >"$R/lib.sh"
@@ -30,11 +30,11 @@ printf '#!/bin/sh\nwhile [ "${1#-}" != "$1" ]; do shift; done\n[ $# -eq 0 ] || e
 printf '#!/bin/sh\necho ran >>"%s/update-grub.calls"\n[ ! -e "%s/fail" ]\n' "$T" "$T" >"$T/bin/update-grub"
 cp "$T/bin/sudo" "$T/nogrub/sudo"
 chmod +x "$T/bin/"* "$T/nogrub/"*
-export DEBSWAY_GRUB_D=$T/grub.d
+export WREN_GRUB_D=$T/grub.d
 [ "$(GRUB_TEST_PATH="$T/bin:$PATH" bash -c '. "$1/lib.sh"; command -v sudo' _ "$R")" = "$T/bin/sudo" ] ||
     { echo "  FAIL  the real sudo would run; stopping"; exit 1; }
 part() { HOME=$T/home GRUB_TEST_PATH=$1 bash "$R/parts/grub-colors.sh" "${@:2}" >"$T/out" 2>&1; }
-S=$T/grub.d/06_debsway_colors
+S=$T/grub.d/06_wren_colors
 
 part "$T/bin:$PATH"
 check "it writes its script after Debian's colours (05_debian_theme), runnable" test -x "$S"

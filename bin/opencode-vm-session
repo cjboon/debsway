@@ -1,5 +1,5 @@
 #!/bin/bash
-# opencode-vm-session SUBCOMMAND: written by debsway extras/opencode-vm.sh
+# opencode-vm-session SUBCOMMAND: written by Wren Linux extras/opencode-vm.sh
 # Installed as /usr/local/libexec/opencode-vm-session. Your user may run exactly
 # this, as the opencode-vm user, and nothing else (a rule in /etc/sudoers.d).
 # The opencode-vm command calls it. It drives the disposable VM (one
@@ -13,10 +13,10 @@ set -euo pipefail
 
 # Run again without a way to reach XWayland's abstract socket, which any user
 # can connect to (qemu and ssh below inherit this)
-noabs=/usr/local/libexec/debsway-no-abstract-sockets
-if [ -z "${DEBSWAY_NOABS:-}" ]; then
+noabs=/usr/local/libexec/wren-no-abstract-sockets
+if [ -z "${WREN_NOABS:-}" ]; then
     [ -x "$noabs" ] || { echo "opencode-vm-session: $noabs is missing. Run: bash extras/opencode-vm.sh" >&2; exit 1; }
-    export DEBSWAY_NOABS=1
+    export WREN_NOABS=1
     exec "$noabs" "$0" "$@"
 fi
 
@@ -51,7 +51,7 @@ guest_ssh() {
 }
 
 ensure_up() {
-    is_installed || die "no VM yet. Set it up first: debsway install opencode-vm"
+    is_installed || die "no VM yet. Set it up first: wrenctl install opencode-vm"
     if ! mockvps --status 2>/dev/null | grep -q Running; then
         # Say why the window is quiet: mockvps's own steps ("==> Waiting for
         # SSH"...) and errors, but not the summary it ends with

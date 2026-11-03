@@ -1,29 +1,29 @@
 #!/bin/bash
-# secure-dns [status|on|off|toggle|login-check]: written by debsway parts/secure-dns.sh
+# secure-dns [status|on|off|toggle|login-check]: written by Wren Linux parts/secure-dns.sh
 # Encrypted DNS (Unbound, DNSSEC, DNS over TLS) on or off. Off is for Wi-Fi
 # with a sign-in page (cafés, hotels, trains): sign in, then switch it on
-# again. While it is off, debsway's Firefox encrypts its own lookups. The
-# debsway menu's Secure DNS line does the same.
+# again. While it is off, Wren Linux's Firefox encrypts its own lookups. The
+# Wren menu's Secure DNS line does the same.
 # login-check (at login, from sway and from ~/.bashrc on a text console): if
 # the Wi-Fi sign-in window switched it off and it is still off (you logged
 # out while that window was open, say), it says so. Switched off by you, it
 # says nothing.
 set -euo pipefail
 
-SWITCH=/usr/local/libexec/debsway-secure-dns
-RESOLV=${DEBSWAY_RESOLV_CONF:-/etc/resolv.conf}
+SWITCH=/usr/local/libexec/wren-secure-dns
+RESOLV=${WREN_RESOLV_CONF:-/etc/resolv.conf}
 # Left by bin/wifi-signin while it has secure DNS off; gone once it is on again
-LEFT_OFF=${XDG_STATE_HOME:-$HOME/.local/state}/debsway/secure-dns-left-off
+LEFT_OFF=${XDG_STATE_HOME:-$HOME/.local/state}/wren/secure-dns-left-off
 die() { printf 'secure-dns: %s\n' "$*" >&2; exit 1; }
 
-state() { if grep -qsE '^# Written by debsway (parts|extras)/secure-dns\.sh' "$RESOLV"; then echo on; else echo off; fi; }
+state() { if grep -qsE '^# Written by Wren Linux (parts|extras)/secure-dns\.sh' "$RESOLV"; then echo on; else echo off; fi; }
 
 cmd=${1:-status}
 [ "$cmd" != toggle ] || { if [ "$(state)" = on ]; then cmd=off; else cmd=on; fi; }
 case $cmd in
     status) state ;;
     on | off)
-        [ -x "$SWITCH" ] || die "it isn't set up. Run: debsway part secure-dns"
+        [ -x "$SWITCH" ] || die "it isn't set up. Run: wrenctl part secure-dns"
         rc=0
         sudo -n "$SWITCH" "$cmd" || rc=$?
         if [ "$cmd" = on ] && [ "$rc" = 0 ]; then rm -f "$LEFT_OFF"; fi
@@ -34,9 +34,9 @@ case $cmd in
             rm -f "$LEFT_OFF"
             exit 0
         fi
-        msg="Secure DNS is still off: the Wi-Fi sign-in window switched it off and didn't get to switch it on again. Switch it on: the debsway menu's Secure DNS line, or secure-dns on."
+        msg="Secure DNS is still off: the Wi-Fi sign-in window switched it off and didn't get to switch it on again. Switch it on: the Wren menu's Secure DNS line, or secure-dns on."
         if [ -n "${WAYLAND_DISPLAY:-}" ] && command -v notify-send >/dev/null; then
-            notify-send -a debsway -u critical "Secure DNS is off" "$msg" 2>/dev/null || printf '%s\n' "$msg" >&2
+            notify-send -a wren -u critical "Secure DNS is off" "$msg" 2>/dev/null || printf '%s\n' "$msg" >&2
         else
             printf '\n%s\n\n' "$msg" >&2
         fi ;;

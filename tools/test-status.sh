@@ -17,7 +17,7 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 }
 not() { ! "$@"; }
 
-# A copy of debsway whose lib.sh keeps the test's PATH
+# A copy of Wren Linux whose lib.sh keeps the test's PATH
 R=$T/r
 mkdir -p "$R" "$T/home/.config/sway/config.d" "$T/home/.local/bin" "$T/bin" "$T/nolock"
 for f in "$HERE"/*; do [ "${f##*/}" = lib.sh ] || ln -s "$f" "$R/${f##*/}"; done
@@ -25,9 +25,9 @@ sed 's|^export PATH=.*|export PATH="$STATUS_TEST_PATH"|' "$HERE/lib.sh" >"$R/lib
 grep -q STATUS_TEST_PATH "$R/lib.sh" || { echo "  FAIL  lib.sh's PATH line wasn't found"; exit 1; }
 # The idle lock is set up, for 30 minutes
 : >"$T/home/.config/sway/config.d/idle.conf"
-printf '#!/bin/sh\necho 30\n' >"$T/home/.local/bin/debsway-idle"
+printf '#!/bin/sh\necho 30\n' >"$T/home/.local/bin/wren-idle"
 printf '#!/bin/sh\nexit 0\n' >"$T/bin/swaylock"
-chmod +x "$T/home/.local/bin/debsway-idle" "$T/bin/swaylock"
+chmod +x "$T/home/.local/bin/wren-idle" "$T/bin/swaylock"
 # Every program of /usr/bin and /usr/sbin but swaylock
 for d in /usr/bin /usr/sbin; do
     for f in "$d"/*; do [ "${f##*/}" = swaylock ] || [ -e "$T/nolock/${f##*/}" ] || ln -s "$f" "$T/nolock/${f##*/}"; done
@@ -48,17 +48,17 @@ printf '#!/bin/sh\necho "install ok installed"\n' >"$G/bin/dpkg-query"
 printf '#!/bin/sh\n' >"$G/firefox"
 chmod +x "$G/bin/"* "$G/firefox"
 printf 'APT::Periodic::Unattended-Upgrade "1";\n' >"$G/etc/apt/apt.conf.d/20auto-upgrades"
-printf '[Default Applications]\nx-scheme-handler/https=debsway-firefox.desktop\n' >"$T/home/.config/mimeapps.list"
-: >"$G/etc/unbound/unbound.conf.d/debsway-secure-dns.conf"
-printf '%s\n' '# Written by debsway parts/secure-dns.sh. Every name goes to Unbound on this' 'nameserver 127.0.0.1' >"$G/etc/resolv.conf"
-glance() { HOME=$T/home DEBSWAY_ETC=$G/etc DEBSWAY_FX_CLIENT=$1 DEBSWAY_FIREFOX_DIST=$G/dist STATUS_TEST_PATH="$G/bin:$T/bin:$T/nolock" bash "$R/status.sh" 2>/dev/null | sed -n '/^Security at a glance:/,/^$/p'; }
+printf '[Default Applications]\nx-scheme-handler/https=wren-firefox.desktop\n' >"$T/home/.config/mimeapps.list"
+: >"$G/etc/unbound/unbound.conf.d/wren-secure-dns.conf"
+printf '%s\n' '# Written by Wren Linux parts/secure-dns.sh. Every name goes to Unbound on this' 'nameserver 127.0.0.1' >"$G/etc/resolv.conf"
+glance() { HOME=$T/home WREN_ETC=$G/etc WREN_FX_CLIENT=$1 WREN_FIREFOX_DIST=$G/dist STATUS_TEST_PATH="$G/bin:$T/bin:$T/nolock" bash "$R/status.sh" 2>/dev/null | sed -n '/^Security at a glance:/,/^$/p'; }
 out=$(glance "$G/firefox")
 check "at a glance, all done: six [x] lines, first in the screen" bash -c '[ "$(grep -c "^  \[x\]" <<<"$1")" = 6 ] && [ "$(head -1 <<<"$1")" = "Security at a glance:" ]' _ "$out"
-first=$(HOME=$T/home DEBSWAY_ETC=$G/etc DEBSWAY_FX_CLIENT=$G/firefox DEBSWAY_FIREFOX_DIST=$G/dist STATUS_TEST_PATH="$G/bin:$T/bin:$T/nolock" bash "$R/status.sh" 2>/dev/null | head -1)
+first=$(HOME=$T/home WREN_ETC=$G/etc WREN_FX_CLIENT=$G/firefox WREN_FIREFOX_DIST=$G/dist STATUS_TEST_PATH="$G/bin:$T/bin:$T/nolock" bash "$R/status.sh" 2>/dev/null | head -1)
 check "...and it is the first thing Status shows" test "$first" = "Security at a glance:"
 # nothing done: a plain disk, no firewall, no automatic updates, no sandboxed Firefox, plain DNS
 : >"$G/plain"; : >"$G/fw-off"
-rm -f "$G/etc/apt/apt.conf.d/20auto-upgrades" "$G/etc/unbound/unbound.conf.d/debsway-secure-dns.conf" "$G/etc/resolv.conf" "$T/home/.config/sway/config.d/idle.conf"
+rm -f "$G/etc/apt/apt.conf.d/20auto-upgrades" "$G/etc/unbound/unbound.conf.d/wren-secure-dns.conf" "$G/etc/resolv.conf" "$T/home/.config/sway/config.d/idle.conf"
 out=$(glance "$G/none")
 check "...none done: each says so, with what to run" bash -c '
     grep -q "\[ \] Disk NOT encrypted" <<<"$1" && grep -q "\[~\] Screen locks only when you lock it" <<<"$1" &&
@@ -68,7 +68,7 @@ check "...none done: each says so, with what to run" bash -c '
 out=$(glance "$G/firefox")
 check "...Firefox's own encrypted DNS without secure DNS: partly ([~])" grep -q '\[~\] DNS encrypted for Firefox only' <<<"$out"
 
-: >"$G/etc/unbound/unbound.conf.d/debsway-secure-dns.conf"
+: >"$G/etc/unbound/unbound.conf.d/wren-secure-dns.conf"
 out=$(glance "$G/firefox")
 check "...secure DNS set up but switched off: partly ([~]), and it says so" grep -q '\[~\] Secure DNS switched off' <<<"$out"
 

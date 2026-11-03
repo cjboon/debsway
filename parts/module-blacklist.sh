@@ -6,11 +6,11 @@
 # data/module-blacklist.conf; HFS+ (Mac sticks), UDF, exFAT and NTFS are
 # deliberately not on it.
 # Usage: bash module-blacklist.sh [--remove]
-# status: file:/etc/modprobe.d/60-debsway-blacklist.conf
+# status: file:/etc/modprobe.d/60-wren-blacklist.conf
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
-CONF=/etc/modprobe.d/60-debsway-blacklist.conf
+CONF=/etc/modprobe.d/60-wren-blacklist.conf
 
 if [ "${1:-}" = --remove ]; then
     sudo rm -f "$CONF"
@@ -21,8 +21,8 @@ fi
 say "Blocking unused kernel modules"
 tmp=$(mktemp)
 {
-    echo "# Written by debsway parts/module-blacklist.sh (data/module-blacklist.conf)"
-    grep -vE '^[[:space:]]*(#|$)' "$DEBSWAY_DIR/data/module-blacklist.conf" | while read -r mod; do
+    echo "# Written by Wren Linux parts/module-blacklist.sh (data/module-blacklist.conf)"
+    grep -vE '^[[:space:]]*(#|$)' "$WREN_DIR/data/module-blacklist.conf" | while read -r mod; do
         echo "blacklist $mod"
         echo "install $mod /bin/false"
     done
@@ -33,5 +33,5 @@ rm -f "$tmp"
 loaded=$(awk '{ print $1 }' /proc/modules)
 while read -r mod; do
     if grep -qx "${mod//-/_}" <<<"$loaded"; then warn "$mod is loaded now; it is blocked from the next boot."; fi
-done < <(grep -vE '^[[:space:]]*(#|$)' "$DEBSWAY_DIR/data/module-blacklist.conf")
+done < <(grep -vE '^[[:space:]]*(#|$)' "$WREN_DIR/data/module-blacklist.conf")
 note "Wrote $CONF ($(grep -c '^install' "$CONF") modules)."

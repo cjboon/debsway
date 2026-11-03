@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-debsway install onionshare                     install it (asks about a bridge, and the graphical app)
-debsway remove onionshare                      remove it (settings and received files stay)
-debsway manual onionshare                      print the manual steps below
+wrenctl install onionshare                     install it (asks about a bridge, and the graphical app)
+wrenctl remove onionshare                      remove it (settings and received files stay)
+wrenctl manual onionshare                      print the manual steps below
 
 onionshare-cli report.pdf photos/      share files; stops after the first download
 onionshare-cli --no-autostop-sharing report.pdf    keep sharing after downloads

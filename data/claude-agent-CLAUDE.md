@@ -1,4 +1,4 @@
-<!-- Written by debsway extras/claude-code.sh. Delete this line to keep your own edits. -->
+<!-- Written by Wren Linux extras/claude-code.sh. Delete this line to keep your own edits. -->
 # How this machine is set up
 
 You run as the user `claude-agent`, not as the person you are working for.

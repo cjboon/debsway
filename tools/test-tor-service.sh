@@ -21,29 +21,29 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 }
 yes_() { if "$@"; then echo yes; else echo no; fi; }
 
-export DEBSWAY_ETC=$T/etc
+export WREN_ETC=$T/etc
 mkdir -p "$T/etc/tor"
 check "nothing set up: nobody wants the tor service" test "$(yes_ system_tor_wanted)" = no
-touch "$T/etc/tor/.debsway-remote-access"
+touch "$T/etc/tor/.wren-remote-access"
 check "remote access set up: it is wanted (so OnionShare must not mask it)" test "$(yes_ system_tor_wanted)" = yes
 check "...but not by anyone else, when remote access removes itself" \
-    test "$(yes_ system_tor_wanted .debsway-remote-access)" = no
+    test "$(yes_ system_tor_wanted .wren-remote-access)" = no
 check "apt over Tor, removing itself, still sees remote access" \
-    test "$(yes_ system_tor_wanted .debsway-apt-tor)" = yes
-touch "$T/etc/tor/.debsway-apt-tor"
+    test "$(yes_ system_tor_wanted .wren-apt-tor)" = yes
+touch "$T/etc/tor/.wren-apt-tor"
 check "both set up: remote access removing itself leaves it wanted" \
-    test "$(yes_ system_tor_wanted .debsway-remote-access)" = yes
+    test "$(yes_ system_tor_wanted .wren-remote-access)" = yes
 
 # Every script that marks itself as a user of the tor service is on the list,
 # and the scripts that stop or mask it ask the list, not one mark of their own
 for f in "$HERE"/parts/*.sh "$HERE"/extras/*.sh; do
-    mark=$(sed -n 's|^MARK=/etc/tor/\(\.debsway-[a-z-]*\)$|\1|p' "$f")
+    mark=$(sed -n 's|^MARK=/etc/tor/\(\.wren-[a-z-]*\)$|\1|p' "$f")
     [ -n "$mark" ] || continue
     check "${f#"$HERE"/}: its mark $mark is on the list" grep -qw -- "$mark" <<<" $TOR_SERVICE_MARKS "
 done
 for f in extras/onionshare.sh parts/apt-tor.sh extras/remote-access.sh; do
     check "$f doesn't decide about the tor service from one mark alone" \
-        bash -c '! grep -nE "(if|&&|\|\|) \[ !? ?-[ef] (\"\\\$APT_TOR_MARK\"|/etc/tor/\.debsway-)" "$1"' _ "$HERE/$f"
+        bash -c '! grep -nE "(if|&&|\|\|) \[ !? ?-[ef] (\"\\\$APT_TOR_MARK\"|/etc/tor/\.wren-)" "$1"' _ "$HERE/$f"
 done
 # At boot Debian starts tor@default only through tor.service: a script that
 # enables tor@default alone leaves Tor off after the next reboot

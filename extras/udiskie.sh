@@ -12,9 +12,9 @@ need_user
 
 ASKPASS="$BIN/luks-askpass"
 UCONF="$HOME/.config/udiskie/config.yml"
-UMARK="# Written by debsway extras/udiskie.sh"
-# what earlier versions wrote, still recognised as debsway's
-OLD_UMARK="# Written by debsway parts/udiskie.sh"
+UMARK="# Written by Wren Linux extras/udiskie.sh"
+# what earlier versions wrote, still recognised as Wren Linux's
+OLD_UMARK="# Written by Wren Linux parts/udiskie.sh"
 # udiskie runs the prompt without a shell, so the path must be absolute
 UDISKIE_CMD="udiskie --no-tray --no-file-manager --password-prompt '$ASKPASS {device_presentation}'"
 
@@ -38,7 +38,7 @@ install_bin luks-askpass
 
 # A stranger's USB stick is mounted the moment it's plugged in, so nothing
 # on it may run: no setuid files, no device files, no executables. The
-# stick with debsway on it still works, since scripts run as "bash x.sh".
+# stick with Wren Linux on it still works, since scripts run as "bash x.sh".
 if [ -f "$UCONF" ]; then
     note "Keeping existing $UCONF"
 else
@@ -53,7 +53,7 @@ EOF2
 fi
 
 put_snippet automount <<EOF
-# USB automount (debsway extras/udiskie.sh)
+# USB automount (Wren Linux extras/udiskie.sh)
 exec $UDISKIE_CMD
 for_window [app_id="luks-askpass"] floating enable
 EOF

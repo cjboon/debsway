@@ -3,16 +3,16 @@
 ## SYNOPSIS
 
 ```
-debsway install autologin                     log in on tty1 without the password, from the next boot
-debsway remove autologin                      tty1 asks for the password again
-debsway manual autologin                      print the manual steps below
+wrenctl install autologin                     log in on tty1 without the password, from the next boot
+wrenctl remove autologin                      tty1 asks for the password again
+wrenctl manual autologin                      print the manual steps below
 
-bash ~/debsway/prep/make-install-iso.sh --autologin   an install stick that sets this up
+bash ~/wren/prep/make-install-iso.sh --autologin   an install stick that sets this up
 ```
 
 The computer starts straight into sway without asking for your password: tty1's
 login prompt (its getty) is started with `--autologin` for your user, through a
-systemd drop-in (`data/autologin-getty.conf`), and the login loop debsway put
+systemd drop-in (`data/autologin-getty.conf`), and the login loop Wren Linux put
 in `~/.profile` starts sway on tty1. The other text consoles still ask. The
 disk passphrase at boot (on an encrypted disk), the screen lock and sudo all
 still ask for theirs, so with an encrypted disk someone holding the laptop
@@ -30,8 +30,8 @@ warns that switching the computer on is then enough to be you, and asks first.
 ```
 # The drop-in for tty1's getty, with your user name in it
 sudo mkdir -p /etc/systemd/system/getty@tty1.service.d
-sed "s|[@]USER@|$(id -un)|g" @DEBSWAY_DIR@/data/autologin-getty.conf |
-    sudo tee /etc/systemd/system/getty@tty1.service.d/50-debsway-autologin.conf
+sed "s|[@]USER@|$(id -un)|g" @WREN_DIR@/data/autologin-getty.conf |
+    sudo tee /etc/systemd/system/getty@tty1.service.d/50-wren-autologin.conf
 # systemd reads it; it applies from the next boot
 sudo systemctl daemon-reload
 ```
@@ -40,7 +40,7 @@ To undo:
 
 ```
 # tty1 asks for the password again, from the next boot
-sudo rm /etc/systemd/system/getty@tty1.service.d/50-debsway-autologin.conf
+sudo rm /etc/systemd/system/getty@tty1.service.d/50-wren-autologin.conf
 sudo rmdir /etc/systemd/system/getty@tty1.service.d
 sudo systemctl daemon-reload
 ```

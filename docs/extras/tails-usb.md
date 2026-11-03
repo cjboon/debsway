@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-debsway install tails-usb                     set up the tails-usb command, and say how to use it
-debsway remove tails-usb                      remove it (offers to delete the saved image)
-debsway manual tails-usb                      print the manual steps below
+wrenctl install tails-usb                     set up the tails-usb command, and say how to use it
+wrenctl remove tails-usb                      remove it (offers to delete the saved image)
+wrenctl manual tails-usb                      print the manual steps below
 
 tails-usb          download (or reuse) the newest Tails, check it, write it to a stick you pick
 ```

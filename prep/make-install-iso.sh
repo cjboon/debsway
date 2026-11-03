@@ -1,9 +1,9 @@
 #!/bin/bash
-# Builds a Debian 13 install image that installs Debian the way debsway's
+# Builds a Debian 13 install image that installs Debian the way Wren Linux's
 # README says (encrypted LVM over the whole disk, no root password, no
-# desktop) and puts debsway in ~/debsway. At the first
+# desktop) and puts Wren Linux in ~/wren. At the first
 # login on the console it asks once "Set it up now?": yes runs
-# bash ~/debsway/start.sh, as you, on the running system (not inside the
+# bash ~/wren/start.sh, as you, on the running system (not inside the
 # installer, where nothing runs yet and nobody can be asked).
 #
 # It asks you, at install time, for the three things that must be yours:
@@ -24,10 +24,10 @@
 # downloaded image is kept in offline/install-iso and checked again next time.
 # It is Debian's text-only live "standard" image: the installer copies the live
 # system onto the disk rather than choosing packages, so what you get is what
-# that image contains (parts/no-live-extras.sh later takes out what debsway
+# that image contains (parts/no-live-extras.sh later takes out what Wren Linux
 # doesn't use: avahi, printing, hw-probe...).
 #
-# On the image: the last commit of debsway (as tools/pack-usb.sh copies it, so
+# On the image: the last commit of Wren Linux (as tools/pack-usb.sh copies it, so
 # nothing from ignore/) and offline/ (Wi-Fi packages, saved Tor Browser and
 # Whonix downloads; not offline/install-iso or offline/tails). The Wi-Fi
 # packages are refreshed first when wifi.sh would soon refuse them as too old
@@ -55,10 +55,10 @@
 # end, whether the build worked or not (one you had before stays).
 # Test it in a VM first if you can (the end of this script says how).
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/lib/appimage.sh"
-. "$DEBSWAY_DIR/lib/install-iso.sh"
-. "$DEBSWAY_DIR/lib/offline.sh"
-. "$DEBSWAY_DIR/lib/tails.sh"
+. "$WREN_DIR/lib/appimage.sh"
+. "$WREN_DIR/lib/install-iso.sh"
+. "$WREN_DIR/lib/offline.sh"
+. "$WREN_DIR/lib/tails.sh"
 not_root
 
 user=$(id -un) keymap=us locale=en_US.UTF-8 timezone=$(this_timezone) erase=true encrypt=true autologin=false simplesway=false scripts='' out='' choice=''
@@ -101,8 +101,8 @@ cleanup() {
     [ -z "$work" ] || rm -rf "$work"
     if $installed_here; then
         note "Removing xorriso again (it was only needed to build the image)."
-        DEBSWAY_OWNER=$XORRISO_OWNER apt_purge >/dev/null 2>&1 ||
-            warn "Couldn't remove it; do it yourself with: sudo apt purge debsway-$XORRISO_OWNER"
+        WREN_OWNER=$XORRISO_OWNER apt_purge >/dev/null 2>&1 ||
+            warn "Couldn't remove it; do it yourself with: sudo apt purge wren-$XORRISO_OWNER"
     fi
 }
 trap cleanup EXIT
@@ -111,7 +111,7 @@ trap cleanup EXIT
 if ! command -v xorriso >/dev/null; then
     note "Installing xorriso, which builds the image, for this run only."
     installed_here=true
-    DEBSWAY_OWNER=$XORRISO_OWNER apt_install xorriso
+    WREN_OWNER=$XORRISO_OWNER apt_install xorriso
 fi
 
 SAVED=$OFFLINE_DIR/install-iso
@@ -151,35 +151,35 @@ else
     done
     note "Checked: $iso"
 fi
-[ -n "$out" ] || out=$SAVED/${name%.iso}-debsway.iso
+[ -n "$out" ] || out=$SAVED/${name%.iso}-wren.iso
 
 say "The offline Wi-Fi packages"
 offline_debs_refresh
 
 say "What goes on it"
 stage=$work/stage
-mkdir -p "$stage/debsway-install" "$stage/debsway" "$stage/isolinux" "$stage/boot/grub"
-fill_preseed "$DEBSWAY_DIR/data/install-iso-preseed.cfg" "$user" "$locale" "$keymap" "$erase" "$timezone" \
-    "$($encrypt && echo crypto || echo regular)" >"$stage/debsway-install/preseed.cfg"
+mkdir -p "$stage/wren-install" "$stage/wren" "$stage/isolinux" "$stage/boot/grub"
+fill_preseed "$WREN_DIR/data/install-iso-preseed.cfg" "$user" "$locale" "$keymap" "$erase" "$timezone" \
+    "$($encrypt && echo crypto || echo regular)" >"$stage/wren-install/preseed.cfg"
 # late.sh installs it if it is there
-if $autologin; then autologin_conf "$user" >"$stage/debsway-install/autologin.conf"; fi
-# the first install list starts with these ticked (late.sh puts it in ~/.config/debsway)
-if $simplesway; then echo one-workspace >"$stage/debsway-install/preselect"; fi
-cp "$DEBSWAY_DIR/data/install-iso-disk.sh" "$stage/debsway-install/disk.sh"
-cp "$DEBSWAY_DIR/data/install-iso-net.sh" "$stage/debsway-install/net.sh"
-cp "$DEBSWAY_DIR/data/install-iso-late.sh" "$stage/debsway-install/late.sh"
-cp "$DEBSWAY_DIR/data/install-iso-first-login.sh" "$stage/debsway-install/first-login.sh"
-if [ -n "$scripts" ]; then cp -R "$scripts" "$stage/debsway-install/scripts"; note "Your scripts: $scripts -> ~/scripts"; fi
-# debsway: the last commit, then offline/ but the installers themselves
-git -C "$DEBSWAY_DIR" archive --format=tar HEAD | tar -x -C "$stage/debsway" ||
-    die "Couldn't take debsway's last commit (is $DEBSWAY_DIR a git checkout?)."
+if $autologin; then autologin_conf "$user" >"$stage/wren-install/autologin.conf"; fi
+# the first install list starts with these ticked (late.sh puts it in ~/.config/wren)
+if $simplesway; then echo one-workspace >"$stage/wren-install/preselect"; fi
+cp "$WREN_DIR/data/install-iso-disk.sh" "$stage/wren-install/disk.sh"
+cp "$WREN_DIR/data/install-iso-net.sh" "$stage/wren-install/net.sh"
+cp "$WREN_DIR/data/install-iso-late.sh" "$stage/wren-install/late.sh"
+cp "$WREN_DIR/data/install-iso-first-login.sh" "$stage/wren-install/first-login.sh"
+if [ -n "$scripts" ]; then cp -R "$scripts" "$stage/wren-install/scripts"; note "Your scripts: $scripts -> ~/scripts"; fi
+# Wren Linux: the last commit, then offline/ but the installers themselves
+git -C "$WREN_DIR" archive --format=tar HEAD | tar -x -C "$stage/wren" ||
+    die "Couldn't take Wren Linux's last commit (is $WREN_DIR a git checkout?)."
 if [ -d "$OFFLINE_DIR" ]; then
-    mkdir -p "$stage/debsway/offline"
-    (cd "$OFFLINE_DIR" && find . -mindepth 1 -maxdepth 1 ! -name install-iso ! -name tails -exec cp -R {} "$stage/debsway/offline/" \;)
+    mkdir -p "$stage/wren/offline"
+    (cd "$OFFLINE_DIR" && find . -mindepth 1 -maxdepth 1 ! -name install-iso ! -name tails -exec cp -R {} "$stage/wren/offline/" \;)
 fi
-note "debsway $(git -C "$DEBSWAY_DIR" describe --always --dirty 2>/dev/null), user $user, keyboard $keymap, $locale, time zone $timezone, $($encrypt || echo "NOT encrypted, ")$($encrypt && [ "$erase" = true ] && echo "the disk filled with random data first" || echo "no random fill")$($autologin && echo ", logged in on tty1 without a password")$($simplesway && echo ", one workspace")"
-[ -z "$(git -C "$DEBSWAY_DIR" status --porcelain 2>/dev/null)" ] ||
-    warn "debsway has changes that aren't committed; only the last commit goes on the image."
+note "Wren Linux $(git -C "$WREN_DIR" describe --always --dirty 2>/dev/null), user $user, keyboard $keymap, $locale, time zone $timezone, $($encrypt || echo "NOT encrypted, ")$($encrypt && [ "$erase" = true ] && echo "the disk filled with random data first" || echo "no random fill")$($autologin && echo ", logged in on tty1 without a password")$($simplesway && echo ", one workspace")"
+[ -z "$(git -C "$WREN_DIR" status --porcelain 2>/dev/null)" ] ||
+    warn "Wren Linux has changes that aren't committed; only the last commit goes on the image."
 
 say "The boot menus"
 # the BIOS menu's second file, with the live system's entries
@@ -192,21 +192,21 @@ xorriso -osirrox on -indev "$iso" \
 chmod u+w "$stage/boot/grub/grub.cfg" "$stage/isolinux/menu.cfg" "$stage/isolinux/$second" "$stage/md5sum.txt"
 grub_add_entry "$stage/boot/grub/grub.cfg" || die "The image's GRUB menu isn't as expected (a new Debian release?); nothing was built."
 isolinux_edit "$stage/isolinux/menu.cfg" "$stage/isolinux/$second" || die "The image's BIOS menu isn't as expected; nothing was built."
-isolinux_entry >"$stage/isolinux/debsway.cfg"
-(cd "$stage" && find debsway-install debsway -type f | sed 's|^|./|') >"$work/added"
+isolinux_entry >"$stage/isolinux/wren.cfg"
+(cd "$stage" && find wren-install Wren Linux -type f | sed 's|^|./|') >"$work/added"
 mapfile -t added <"$work/added"
-md5_update "$stage/md5sum.txt" "$stage" ./boot/grub/grub.cfg ./isolinux/menu.cfg "./isolinux/$second" ./isolinux/debsway.cfg "${added[@]}"
-note "\"Automatic install with debsway\" is the first entry, and the default, in both menus."
+md5_update "$stage/md5sum.txt" "$stage" ./boot/grub/grub.cfg ./isolinux/menu.cfg "./isolinux/$second" ./isolinux/wren.cfg "${added[@]}"
+note "\"Automatic install with Wren Linux\" is the first entry, and the default, in both menus."
 
 say "Building $out"
 rm -f "$out"
 xorriso -indev "$iso" -outdev "$out" \
-    -map "$stage/debsway-install" /debsway-install \
-    -map "$stage/debsway" /debsway \
+    -map "$stage/wren-install" /wren-install \
+    -map "$stage/wren" /wren \
     -map "$stage/boot/grub/grub.cfg" /boot/grub/grub.cfg \
     -map "$stage/isolinux/menu.cfg" /isolinux/menu.cfg \
     -map "$stage/isolinux/$second" "/isolinux/$second" \
-    -map "$stage/isolinux/debsway.cfg" /isolinux/debsway.cfg \
+    -map "$stage/isolinux/wren.cfg" /isolinux/wren.cfg \
     -map "$stage/md5sum.txt" /md5sum.txt \
     -boot_image any replay -end >"$work/xorriso.log" 2>&1 || { tail -5 "$work/xorriso.log" >&2; die "xorriso couldn't build the image."; }
 note "Built: $out ($(du -h "$out" | cut -f1)), SHA-256 $(sha256sum "$out" | cut -c1-16)..."
@@ -238,5 +238,5 @@ if ask "Write it to a USB stick now?" n; then
         sudo umount "$part" || die "Couldn't unmount $part ($mnt)."
     done < <(lsblk -lnpo NAME,MOUNTPOINTS "/dev/$dname" | awk 'NF > 1')
     write_and_check "$out" "/dev/$dname" || die "Writing didn't work. Try again, or another stick."
-    note "Written and read back. Boot the laptop from it and choose \"Automatic install with debsway\"."
+    note "Written and read back. Boot the laptop from it and choose \"Automatic install with Wren Linux\"."
 fi

@@ -15,16 +15,16 @@
 #
 # Passwords are never put on a command line, where any user on the machine
 # could read them. If your nmcli doesn't take one on its standard input,
-# DEBSWAY_PASSWORD_ON_COMMAND_LINE=1 bash wifi.sh uses the old way.
+# WREN_PASSWORD_ON_COMMAND_LINE=1 bash wifi.sh uses the old way.
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
-. "$DEBSWAY_DIR/lib/offline.sh"
-. "$DEBSWAY_DIR/lib/live-extras.sh"
+. "$WREN_DIR/lib/offline.sh"
+. "$WREN_DIR/lib/live-extras.sh"
 
 if [ "$(id -u)" -ne 0 ]; then
     if command -v sudo >/dev/null; then
-        exec sudo bash "$DEBSWAY_DIR/wifi.sh" "$@"
+        exec sudo bash "$WREN_DIR/wifi.sh" "$@"
     fi
-    die "Needs root. Run: su -   then: bash $DEBSWAY_DIR/wifi.sh"
+    die "Needs root. Run: su -   then: bash $WREN_DIR/wifi.sh"
 fi
 
 # ------------------------------------------------------------------ --remove
@@ -35,12 +35,12 @@ if [ "${1:-}" = --remove ]; then
     # NetworkManager and the random address are parts, run as your own user
     pieces=()
     is_installed network-manager && pieces+=(network-manager)
-    [ -e /etc/NetworkManager/conf.d/90-debsway-random-mac.conf ] && pieces+=(random-mac)
+    [ -e /etc/NetworkManager/conf.d/90-wren-random-mac.conf ] && pieces+=(random-mac)
     if [ ${#pieces[@]} -gt 0 ]; then
-        note "Also set up by debsway for Wi-Fi: ${pieces[*]}"
+        note "Also set up by Wren Linux for Wi-Fi: ${pieces[*]}"
         if [ -n "${SUDO_USER:-}" ] && ask "Remove those too? (This computer will then have only its wired connection.)" n; then
             for p in random-mac network-manager; do
-                case " ${pieces[*]} " in *" $p "*) sudo -u "$SUDO_USER" bash "$DEBSWAY_DIR/parts/$p.sh" --remove ;; esac
+                case " ${pieces[*]} " in *" $p "*) sudo -u "$SUDO_USER" bash "$WREN_DIR/parts/$p.sh" --remove ;; esac
             done
         else
             note "To remove them later, as your own user: bash parts/random-mac.sh --remove, then bash parts/network-manager.sh --remove"
@@ -169,10 +169,10 @@ set_dns() {
     # A symlinked resolv.conf belongs to resolved or similar; leave it
     [ -L /etc/resolv.conf ] && return 0
     if command -v resolvconf >/dev/null; then
-        printf 'nameserver %s\n' "$@" | resolvconf -a "$IF.debsway"
+        printf 'nameserver %s\n' "$@" | resolvconf -a "$IF.wren"
         return 0
     fi
-    [ -e /etc/resolv.conf.debsway.bak ] || cp -a /etc/resolv.conf /etc/resolv.conf.debsway.bak 2>/dev/null || true
+    [ -e /etc/resolv.conf.wren.bak ] || cp -a /etc/resolv.conf /etc/resolv.conf.wren.bak 2>/dev/null || true
     printf 'nameserver %s\n' "$@" >/etc/resolv.conf
 }
 
@@ -182,7 +182,7 @@ networkd_dhcp() {
     local ifc=$1 dir=/run/systemd/network lease dns i
     [ "${2:-}" = persist ] && dir=/etc/systemd/network
     mkdir -p "$dir"
-    printf '[Match]\nName=%s\n\n[Network]\nDHCP=yes\n' "$ifc" >"$dir/50-debsway-$ifc.network"
+    printf '[Match]\nName=%s\n\n[Network]\nDHCP=yes\n' "$ifc" >"$dir/50-wren-$ifc.network"
     if [ "${2:-}" = persist ]; then
         systemctl enable systemd-networkd >/dev/null 2>&1 || true
         systemctl disable systemd-networkd-wait-online.service >/dev/null 2>&1 || true
@@ -200,7 +200,7 @@ networkd_dhcp() {
 }
 
 busybox_dhcp() {
-    local ifc=$1 script=/run/debsway-udhcpc.sh
+    local ifc=$1 script=/run/wren-udhcpc.sh
     command -v busybox >/dev/null || return 1
     cat >"$script" <<'EOF'
 #!/bin/sh
@@ -215,7 +215,7 @@ case "$1" in
         fi
         # (not while secure DNS, parts/secure-dns.sh, points it at Unbound)
         if [ -n "$dns" ] && [ ! -L /etc/resolv.conf ] &&
-            ! grep -qE '^# Written by debsway (parts|extras)/secure-dns\.sh' /etc/resolv.conf 2>/dev/null; then
+            ! grep -qE '^# Written by Wren Linux (parts|extras)/secure-dns\.sh' /etc/resolv.conf 2>/dev/null; then
             : >/etc/resolv.conf
             for d in $dns; do echo "nameserver $d" >>/etc/resolv.conf; done
         fi ;;
@@ -302,8 +302,8 @@ pick_backend() {
 
 # Every scan has a time limit: right after a boot (the install stick's first
 # login) a driver can start a scan and never report it finished, and "iw scan"
-# then waits for ever at "Scanning for networks". (DEBSWAY_SCAN_TIMEOUT: tests)
-SCAN_TIMEOUT=${DEBSWAY_SCAN_TIMEOUT:-20}
+# then waits for ever at "Scanning for networks". (WREN_SCAN_TIMEOUT: tests)
+SCAN_TIMEOUT=${WREN_SCAN_TIMEOUT:-20}
 scan_ssids() {
     case $BACKEND in
         nm)
@@ -376,7 +376,7 @@ connect_nm() {
     nmcli connection delete id "$SSID" >/dev/null 2>&1 || true
     if [ -z "$PASS" ]; then
         nmcli --wait 45 "${args[@]}"
-    elif [ -n "${DEBSWAY_PASSWORD_ON_COMMAND_LINE:-}" ]; then
+    elif [ -n "${WREN_PASSWORD_ON_COMMAND_LINE:-}" ]; then
         nmcli --wait 45 "${args[@]}" password "$PASS"
     else
         # --ask takes the password from standard input
@@ -454,7 +454,7 @@ write_wpa_conf() {
     (
         umask 077
         {
-            echo "# Written by debsway wifi.sh"
+            echo "# Written by Wren Linux wifi.sh"
             echo "ctrl_interface=DIR=/run/wpa_supplicant$group"
             echo "update_config=1"
             echo "network={"
@@ -528,13 +528,13 @@ connect_wpa() {
             /etc/network/interfaces ||
             printf '\nsource /etc/network/interfaces.d/*\n' >>/etc/network/interfaces
         mkdir -p /etc/network/interfaces.d
-        cat >"/etc/network/interfaces.d/debsway-wifi-$IF" <<EOF
-# Written by debsway wifi.sh
+        cat >"/etc/network/interfaces.d/wren-wifi-$IF" <<EOF
+# Written by Wren Linux wifi.sh
 allow-hotplug $IF
 iface $IF inet dhcp
     wpa-conf $WPA_CONF
 EOF
-        note "Saved for boot in /etc/network/interfaces.d/debsway-wifi-$IF"
+        note "Saved for boot in /etc/network/interfaces.d/wren-wifi-$IF"
         ifup "$IF"
     else
         # No ifupdown DHCP client: systemd units instead

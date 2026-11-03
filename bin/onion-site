@@ -1,6 +1,6 @@
 #!/bin/bash
 # onion-site [start|stop|status|shell|upload|update|address|rebuild]
-# written by debsway extras/onion-site.sh
+# written by Wren Linux extras/onion-site.sh
 # Your onion site, which runs in its own VM with no network: only Tor on this
 # computer reaches it, so nothing the site does can give away your address.
 #   onion-site start                  start the site's VM (the site is up while it runs)
@@ -17,7 +17,7 @@ set -euo pipefail
 
 AGENT=onion-site
 SESSION=/usr/local/libexec/onion-site-session
-ADDRESS=${XDG_STATE_HOME:-$HOME/.local/state}/debsway/onion-site-address
+ADDRESS=${XDG_STATE_HOME:-$HOME/.local/state}/wren/onion-site-address
 
 die() { printf 'onion-site: %s\n' "$*" >&2; exit 1; }
 
@@ -31,7 +31,7 @@ case "$cmd" in
         [ -d "${3:-}" ] || die "no folder '${3:-}'. onion-site upload ${2} FOLDER"
         ;;
     address)
-        [ -s "$ADDRESS" ] || die "no address saved here. Run: debsway install onion-site"
+        [ -s "$ADDRESS" ] || die "no address saved here. Run: wrenctl install onion-site"
         cat "$ADDRESS"
         exit 0 ;;
     -h | --help | "")
@@ -42,7 +42,7 @@ case "$cmd" in
 esac
 
 sudo -n -u "$AGENT" -l "$SESSION" >/dev/null 2>&1 ||
-    die "the onion site isn't set up. Run: debsway install onion-site"
+    die "the onion site isn't set up. Run: wrenctl install onion-site"
 
 # The site needs both its VM and this computer's tor service; say so when tor
 # isn't running, which is the usual reason the address can't be reached

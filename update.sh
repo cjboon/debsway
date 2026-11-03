@@ -1,5 +1,5 @@
 #!/bin/bash
-# Brings debsway up to date: fetches what is new, shows it, and (only if you
+# Brings Wren Linux up to date: fetches what is new, shows it, and (only if you
 # say yes) merges it; then lists the parts and extras you have set up whose
 # files changed and offers to run them again, one at a time. Running a script
 # again is how a change gets installed (/usr/local, the firewall, Firefox's
@@ -8,36 +8,36 @@
 # It never runs --remove, never merges anything but a plain fast-forward
 # (so it can't overwrite your own changes), and asks before each step.
 #
-# It remembers the commit it last brought you to (~/.local/state/debsway/
+# It remembers the commit it last brought you to (~/.local/state/wren/
 # updated-to); a script is offered when a file it uses changed since then.
 # The first time, it takes what you have now as already applied: for what you
 # pulled earlier by hand, use --since COMMIT, or --all for everything set up.
 #
-# Once pins.sh names debsway's signing key (DEBSWAY_SIGNING_FPR), it brings
+# Once pins.sh names Wren Linux's signing key (WREN_SIGNING_FPR), it brings
 # in only a newest commit with a good signature from that key.
 #
-# Each time, it also checks the signing keys of the apt repositories debsway
+# Each time, it also checks the signing keys of the apt repositories Wren Linux
 # added (lib/apt-keys.sh), and fetches a pinned key again when it has expired
 # or will soon.
 #
-# In the debsway package's copy (/usr/share/debsway: root's, no git) apt brings
+# In the Wren Linux package's copy (/usr/share/wren: root's, no git) apt brings
 # what is new; update.sh then finds what changed against a record of every
 # file it keeps after each run, and offers those scripts in the same way.
 #
 # Usage: bash update.sh [--since COMMIT | --all]
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
-. "$DEBSWAY_DIR/lib/update.sh"
-# (its signature helpers check debsway's own commits too: update_signed)
-. "$DEBSWAY_DIR/lib/appimage.sh"
-. "$DEBSWAY_DIR/lib/apt-keys.sh"
+. "$WREN_DIR/lib/update.sh"
+# (its signature helpers check Wren Linux's own commits too: update_signed)
+. "$WREN_DIR/lib/appimage.sh"
+. "$WREN_DIR/lib/apt-keys.sh"
 not_root
 
-STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/debsway"
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/wren"
 STATE="$STATE_DIR/updated-to"
 # (a test replaces bash with something that only writes down what it was asked to run)
-RUNNER=${DEBSWAY_UPDATE_RUNNER:-bash}
+RUNNER=${WREN_UPDATE_RUNNER:-bash}
 
-g() { git -C "$DEBSWAY_DIR" "$@"; }
+g() { git -C "$WREN_DIR" "$@"; }
 
 main() {
     local since='' everything=false
@@ -49,22 +49,22 @@ main() {
     esac
 
     if ! g rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        [ ! -w "$DEBSWAY_DIR" ] ||
-            die "$DEBSWAY_DIR isn't a git checkout, so there is nothing to update from. Get debsway again with: git clone <its address>"
-        # The debsway package's copy: root's, no git. apt brings what is new;
+        [ ! -w "$WREN_DIR" ] ||
+            die "$WREN_DIR isn't a git checkout, so there is nothing to update from. Get Wren Linux again with: git clone <its address>"
+        # The Wren Linux package's copy: root's, no git. apt brings what is new;
         # this reruns what it changed
-        [ -z "$since" ] || die "--since is for a git copy of debsway; the package's has no commits."
+        [ -z "$since" ] || die "--since is for a git copy of Wren Linux; the package's has no commits."
         package_offers "$everything"
         run_offered
         return
     fi
     # A hooks folder that came in with the update would run as you
     [ -z "$(g config core.hooksPath)" ] ||
-        die "core.hooksPath is set in $DEBSWAY_DIR; remove it first: git -C $DEBSWAY_DIR config --unset core.hooksPath"
+        die "core.hooksPath is set in $WREN_DIR; remove it first: git -C $WREN_DIR config --unset core.hooksPath"
     g rev-parse '@{upstream}' >/dev/null 2>&1 ||
-        die "This copy of debsway doesn't follow a branch on a server. Set one with: git -C $DEBSWAY_DIR branch --set-upstream-to=origin/main"
+        die "This copy of Wren Linux doesn't follow a branch on a server. Set one with: git -C $WREN_DIR branch --set-upstream-to=origin/main"
 
-    say "Looking for a newer debsway"
+    say "Looking for a newer Wren Linux"
     g fetch --quiet || die "Couldn't reach the server (is the network up?)."
 
     local before upstream
@@ -74,25 +74,25 @@ main() {
         if g merge-base --is-ancestor "$upstream" "$before"; then
             note "You are ahead of the server; nothing to bring in."
         elif ! g merge-base --is-ancestor "$before" "$upstream"; then
-            die "Your copy and the server's have both changed, so it can't be brought in as a plain update. Look at: git -C $DEBSWAY_DIR status"
+            die "Your copy and the server's have both changed, so it can't be brought in as a plain update. Look at: git -C $WREN_DIR status"
         else
             g --no-pager log --stat --format='%n%C(yellow)%h%Creset %s%n%b' 'HEAD..@{upstream}'
             echo
-            note "Every changed line: git -C $DEBSWAY_DIR diff HEAD..@{upstream}"
-            # Only what debsway's own key signed (pins.sh), checked before the merge
-            if [ -n "${DEBSWAY_SIGNING_FPR:-}" ]; then
+            note "Every changed line: git -C $WREN_DIR diff HEAD..@{upstream}"
+            # Only what Wren Linux's own key signed (pins.sh), checked before the merge
+            if [ -n "${WREN_SIGNING_FPR:-}" ]; then
                 update_signed "$upstream" ||
-                    die "The newest commit on the server isn't signed by debsway's key ($DEBSWAY_SIGNING_FPR), so nothing was brought in. Someone may have changed what the server gives you: don't bring it in by hand either."
-                note "The newest commit is signed by debsway's key ($DEBSWAY_SIGNING_FPR); it vouches for everything above."
+                    die "The newest commit on the server isn't signed by Wren Linux's key ($WREN_SIGNING_FPR), so nothing was brought in. Someone may have changed what the server gives you: don't bring it in by hand either."
+                note "The newest commit is signed by Wren Linux's key ($WREN_SIGNING_FPR); it vouches for everything above."
             else
                 note "(Its signature is not checked: no signing key is pinned in pins.sh yet, so this is as the server gives it.)"
             fi
             ask "Bring these in?" n || { note "Nothing changed."; return 0; }
             g merge --ff-only --quiet '@{upstream}' ||
-                die "Couldn't bring it in (your files in $DEBSWAY_DIR conflict with it?). Look at: git -C $DEBSWAY_DIR status"
+                die "Couldn't bring it in (your files in $WREN_DIR conflict with it?). Look at: git -C $WREN_DIR status"
         fi
     else
-        note "debsway is up to date with the server."
+        note "Wren Linux is up to date with the server."
     fi
     now=$(g rev-parse HEAD)
 
@@ -167,7 +167,7 @@ run_offered() {
     local failed=()
     for script in "${offered[@]}"; do
         say "Running $script"
-        if ! "$RUNNER" "$DEBSWAY_DIR/$script"; then
+        if ! "$RUNNER" "$WREN_DIR/$script"; then
             failed+=("$script")
             warn "$script did not finish."
         fi
@@ -188,12 +188,12 @@ save_state() {
     update_manifest_save "$STATE_DIR"
 }
 
-# package_offers ALL: for the debsway package's copy, which has no git: the
+# package_offers ALL: for the Wren Linux package's copy, which has no git: the
 # scripts set up here whose files changed since the last run (the record
 # save_state keeps), or all set up with ALL=true; into offered
 package_offers() {
     local script
-    note "debsway is installed here as the debsway package ($DEBSWAY_DIR): apt brings what is new"
+    note "Wren Linux is installed here as the Wren Linux package ($WREN_DIR): apt brings what is new"
     note "(unattended-upgrades every day, or: sudo apt update && sudo apt upgrade). This runs again what it changed."
     apt_keys_refresh || true
     if $1; then

@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-debsway install udiskie                     install it
-debsway remove udiskie                      remove it (cryptsetup stays: the system disk needs it)
-debsway manual udiskie                      print the manual steps below
+wrenctl install udiskie                     install it
+wrenctl remove udiskie                      remove it (cryptsetup stays: the system disk needs it)
+wrenctl manual udiskie                      print the manual steps below
 
 plug in a stick          it appears in /media/$USER/NAME (an encrypted one asks for its passphrase)
 udiskie-umount -a        unmount every drive before you pull it out
@@ -14,10 +14,10 @@ udiskie-umount -a        unmount every drive before you pull it out
 USB drives mount by themselves when you plug them in, under
 `/media/$USER/`, and LUKS-encrypted ones ask for their passphrase: udiskie
 and udisks2 from Debian, with polkitd so your user may mount without sudo.
-udiskie's own prompt needs GTK, so debsway gives it a small one,
+udiskie's own prompt needs GTK, so Wren Linux gives it a small one,
 `bin/luks-askpass` (wmenu in password mode, or a floating foot window).
 A stranger's stick is mounted the moment it is plugged in, so every drive is
-mounted `nosuid,nodev,noexec`: nothing on it can run as a program (the debsway
+mounted `nosuid,nodev,noexec`: nothing on it can run as a program (the Wren Linux
 stick still works, since its scripts run as `bash x.sh`).
 
 ## LIMITS
@@ -33,7 +33,7 @@ stick still works, since its scripts run as `bash x.sh`).
 # without sudo, and notifications for it
 sudo apt install --no-install-recommends udiskie udisks2 cryptsetup polkitd gir1.2-notify-0.7
 # The passphrase prompt
-install -D -m 0755 @DEBSWAY_DIR@/bin/luks-askpass ~/.local/bin/luks-askpass
+install -D -m 0755 @WREN_DIR@/bin/luks-askpass ~/.local/bin/luks-askpass
 # Every drive mounts so that nothing on it can run
 mkdir -p ~/.config/udiskie
 printf '%s\n' 'mount_options:' '  - options: [nosuid, nodev, noexec]' >~/.config/udiskie/config.yml

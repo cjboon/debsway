@@ -1,8 +1,8 @@
 #!/bin/bash
-# Light or dark: debsway's colors from one place (bin/theme). Dark is the
-# default and looks as debsway always has; "theme light" (or the debsway
+# Light or dark: Wren Linux's colors from one place (bin/theme). Dark is the
+# default and looks as Wren Linux always has; "theme light" (or the Wren Linux
 # menu's Theme line) switches to warm light backgrounds and dark text: the
-# bar, the plain background with no wallpaper, foot, the debsway menu and its
+# bar, the plain background with no wallpaper, foot, the Wren menu and its
 # lists, nmtui, the launcher, the power menu, notifications, the lock
 # screen, GTK apps (Mousepad, Thunar...), and the sandboxed Firefox and
 # incognito at their next start: their own look, and websites that offer a
@@ -14,7 +14,7 @@
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
-THEMES="$HOME/.local/share/debsway/themes"
+THEMES="$HOME/.local/share/wren/themes"
 
 if [ "${1:-}" = --remove ]; then
     # back to dark first, so nothing stays light without a way to switch it
@@ -23,7 +23,7 @@ if [ "${1:-}" = --remove ]; then
     remove_bin theme
     rm -rf "$THEMES"
     apt_purge
-    note "debsway's colors are dark again; your choice in ~/.config/debsway/theme stays."
+    note "Wren Linux's colors are dark again; your choice in ~/.config/wren/theme stays."
     exit
 fi
 
@@ -32,7 +32,7 @@ say "Light or dark (theme)"
 apt_install libglib2.0-bin
 install_bin theme
 mkdir -p "$THEMES"
-install -m 0644 "$DEBSWAY_DIR/data/themes/dark" "$DEBSWAY_DIR/data/themes/light" "$THEMES/"
+install -m 0644 "$WREN_DIR/data/themes/dark" "$WREN_DIR/data/themes/light" "$THEMES/"
 ensure_sway_config
 # the colors of the theme chosen (dark if none), written again, and checked
 "$BIN/theme" apply
@@ -40,4 +40,4 @@ check_sway_config || {
     remove_snippet theme
     die "sway rejected the theme's colors, so they were taken out."
 }
-note "$("$BIN/theme"). Switch: theme light, theme dark, or the debsway menu's Theme line."
+note "$("$BIN/theme"). Switch: theme light, theme dark, or the Wren menu's Theme line."

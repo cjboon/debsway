@@ -19,7 +19,7 @@ apt_install wmenu
 install_bin powermenu
 
 put_snippet power <<'EOF'
-# Power menu (debsway parts/power-menu.sh)
+# Power menu (Wren Linux parts/power-menu.sh)
 bindsym $mod+Shift+Escape exec ~/.local/bin/powermenu
 EOF
 note "Super+Shift+Escape opens it (lock, suspend, log out, reboot, power off)."

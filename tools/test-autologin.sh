@@ -40,10 +40,10 @@ export AUTOLOGIN_TEST_PATH="$T/bin:$PATH"
 run() { # ROOT-DEVICE-TYPES ANSWER [ARGS]: the extra, with lsblk's answer and a typed answer
     : >"$T/calls"; rm -f "$T/written"
     printf '%s\n' "$2" >"$T/answers"
-    DEBSWAY_LSBLK_ROOT=$1 DEBSWAY_TEST_ANSWERS=$T/answers bash "$R/extras/autologin.sh" "${@:3}" >"$T/out" 2>&1
+    WREN_LSBLK_ROOT=$1 WREN_TEST_ANSWERS=$T/answers bash "$R/extras/autologin.sh" "${@:3}" >"$T/out" 2>&1
 }
 me=$(id -un)
-CONF=/etc/systemd/system/getty@tty1.service.d/50-debsway-autologin.conf
+CONF=/etc/systemd/system/getty@tty1.service.d/50-wren-autologin.conf
 
 run "$(printf 'lvm\ncrypt\npart\ndisk')" ''
 check "an encrypted disk: the rule is written without asking" grep -q "install -D -o root -g root -m 0644 /dev/stdin $CONF" "$T/calls"

@@ -2,14 +2,14 @@
 
 Operations security, "opsec", is the habit of thinking about what you want to
 keep private, who might want it, and how it could leak, and then closing the
-gaps that matter. Software helps, and debsway does what it can, but most
+gaps that matter. Software helps, and Wren Linux does what it can, but most
 leaks come from habits: a reused password, a photo with a location in it, a
 laptop left open in a café, a name typed in the wrong window.
 
 This guide is general. It applies whatever computer you use, and it points to
-the debsway pieces that help where there are some. It doesn't make anyone
+the Wren Linux pieces that help where there are some. It doesn't make anyone
 safe on its own, and nothing here is legal advice. `THREAT-MODEL.md` says
-plainly what debsway itself does and doesn't protect against.
+plainly what Wren Linux itself does and doesn't protect against.
 
 **Contents**
 
@@ -80,7 +80,7 @@ Three rough levels, to place yourself:
   browser profiles, email addresses, devices, even separate habits. When one
   compartment is broken into, the others stay closed.
 - **Least privilege.** Give each program, person and account only what it
-  needs. debsway runs risky programs as separate users for this reason.
+  needs. Wren Linux runs risky programs as separate users for this reason.
 - **Defence in depth.** Assume each protection will fail sometimes, and layer
   them: disk encryption, a screen lock, a firewall, a sandbox, a backup.
 - **Assume compromise, plan recovery.** Ask "what if this is already
@@ -111,9 +111,9 @@ Three rough levels, to place yourself:
   that is **off**. While it is on, asleep or just locked, the key is in memory,
   and a skilled attacker with the machine can sometimes get it out. Shut down
   before you leave it in a hotel room, a car, a checked bag or at a border.
-  debsway's power menu is Super+Shift+Escape.
+  Wren Linux's power menu is Super+Shift+Escape.
 - **Lock the screen whenever you step away,** even briefly (Super+Escape).
-  debsway also locks by itself after 30 minutes idle; `timer lock 5` makes
+  Wren Linux also locks by itself after 30 minutes idle; `timer lock 5` makes
   that shorter.
 
 ### Firmware and boot
@@ -124,23 +124,23 @@ Three rough levels, to place yourself:
 - **Boot only from the internal disk** by default, so a stranger's USB stick
   can't start another system on your machine.
 - **Secure Boot** checks that the boot loader is signed. It's worth leaving
-  on, but debsway doesn't measure or verify the boot chain beyond that, so it
+  on, but Wren Linux doesn't measure or verify the boot chain beyond that, so it
   doesn't detect tampering with the unencrypted boot partition. If someone
   might tamper with your laptop while you're away, see "physical tampering"
   below.
 - **Ports that read memory.** Old FireWire ports could read memory directly;
-  debsway blocks those modules. Thunderbolt docks can carry similar risks;
+  Wren Linux blocks those modules. Thunderbolt docks can carry similar risks;
   don't plug unknown docks into a laptop that matters.
 
 ### What runs on it
 
 - **Keep it updated.** Most real attacks use known bugs that already have a
-  fix. debsway installs Debian's security fixes every day; restart programs
+  fix. Wren Linux installs Debian's security fixes every day; restart programs
   (and the computer, after a kernel update) when you're told to.
 - **Install less.** Every program is more code that can have a hole. Remove
-  what you don't use (`debsway remove NAME`).
+  what you don't use (`wrenctl remove NAME`).
 - **Run risky things apart from you.** Open untrusted websites in `incognito`
-  or the sandboxed `firefox`, images and videos with debsway's sandboxed `imv`
+  or the sandboxed `firefox`, images and videos with Wren Linux's sandboxed `imv`
   and `mpv`, and AI coding agents in `claude-vm`. Anything running *as you* can
   read all your files.
 - **Never run commands you don't understand,** especially ones copied from a
@@ -149,11 +149,11 @@ Three rough levels, to place yourself:
 ### Radios, camera and microphone
 
 - **Switch off what you aren't using.** Wi-Fi and Bluetooth can be turned off
-  at the radio from the debsway menu; Bluetooth starts off with debsway's
+  at the radio from the Wren menu; Bluetooth starts off with Wren Linux's
   Bluetooth extra. Radios you leave on can be used to track or attack you.
 - **Cover the camera** with a sliding cover or a small sticker. The light is
   not a guarantee on every model.
-- **The microphone** is muted at every login with debsway's sound extra, but
+- **The microphone** is muted at every login with Wren Linux's sound extra, but
   that is a software mute: a program running as you can unmute it. Headsets
   can be unplugged; built-in microphones can't, so keep sensitive talks away
   from devices you don't trust.
@@ -193,11 +193,11 @@ If someone could have the laptop alone for a while (a hotel room, a seized bag):
 - **Treat unknown USB devices as hostile.** A stick found in a car park, a
   "free" promotional stick or a cable from a stranger can attack a computer:
   some pretend to be a keyboard and type commands (BadUSB), some carry files
-  meant to exploit the code that reads them. debsway mounts drives so nothing
+  meant to exploit the code that reads them. Wren Linux mounts drives so nothing
   on them can run (`noexec`), but the kernel still reads whatever a stick
   contains. Don't plug in sticks you don't trust.
 - **Encrypt sticks and external disks** that hold anything private (LUKS on
-  Linux; debsway's USB automount asks for the passphrase). A lost stick is then
+  Linux; Wren Linux's USB automount asks for the passphrase). A lost stick is then
   just a lost stick.
 - **"Deleted" isn't gone** on USB sticks and SSDs: wear levelling keeps old
   copies the computer can't reach but a lab can. Encrypt first instead of
@@ -220,7 +220,7 @@ even when the content is encrypted. Without extra steps they see:
 - the **names** of the sites you visit (through DNS lookups, and in the first
   message of most HTTPS connections);
 - your **IP address**, which can be linked to your account with the provider;
-- **unencrypted traffic** in full (rare now: HTTPS-Only Mode in debsway's
+- **unencrypted traffic** in full (rare now: HTTPS-Only Mode in Wren Linux's
   Firefox refuses it unless you agree).
 
 ### Your home network
@@ -233,12 +233,12 @@ even when the content is encrypted. Without extra steps they see:
 ### Public Wi-Fi
 
 - Assume the operator and other users can watch and tamper. HTTPS protects the
-  content of web pages; debsway's firewall blocks all incoming connections.
-- debsway gives your laptop a new made-up hardware (MAC) address on every Wi-Fi
+  content of web pages; Wren Linux's firewall blocks all incoming connections.
+- Wren Linux gives your laptop a new made-up hardware (MAC) address on every Wi-Fi
   connection and doesn't send its name, so networks can't easily recognise it
   from place to place.
 - Wi-Fi sign-in pages are on the network itself; they don't work while
-  secure DNS is on: switch it off in the debsway menu (Secure DNS), sign in,
+  secure DNS is on: switch it off in the Wren menu (Secure DNS), sign in,
   and switch it on again.
 - A phone's hotspot or USB tethering is often safer than unknown Wi-Fi.
 
@@ -268,12 +268,12 @@ yours.
 
 Tor sends your traffic through three volunteer relays, each knowing only the
 one before and after it. No single relay knows both who you are and where you
-go. Tor Browser (debsway's `extras/tor-browser.sh`) is built so that all its
+go. Tor Browser (Wren Linux's `extras/tor-browser.sh`) is built so that all its
 users look alike.
 
 - It is **slower** than a VPN, and some sites block it.
 - The **exit relay** can see unencrypted traffic: stick to HTTPS.
-- Your network can see that you use Tor, unless you use a **bridge**; debsway's
+- Your network can see that you use Tor, unless you use a **bridge**; Wren Linux's
   Tor tools ask about bridges before the first connection.
 - **Don't log into your personal accounts** in Tor Browser if the point is
   that the activity isn't linked to you, and don't install extra add-ons
@@ -291,7 +291,7 @@ with the phone's identity attached. See section 13.
 
 ## 6. Passwords and accounts
 
-- **Use a password manager** (debsway's `extras/keepassxc.sh`). It remembers a
+- **Use a password manager** (Wren Linux's `extras/keepassxc.sh`). It remembers a
   different, random password for every site, and you remember one.
 - **Never reuse passwords.** Sites get breached all the time, and a password
   that leaks from one is tried everywhere else within days.
@@ -354,7 +354,7 @@ Keys and passphrases:
   safe outside the computer.
 - **Verify keys.** Messengers show "safety numbers" or fingerprints; compare
   them with the other person in person or by a second channel, once, for each
-  contact that matters. debsway does the same for its downloads: every outside
+  contact that matters. Wren Linux does the same for its downloads: every outside
   program is checked against a signing key pinned by fingerprint in `pins.sh`.
 - **A signature proves who made something, not that it's harmless.** It tells
   you the download is what its publisher released.
@@ -393,7 +393,7 @@ Keys and passphrases:
   in the sandboxed `firefox`, unknown sites in `incognito`, anonymous browsing
   in Tor Browser. Profiles don't share cookies or logins.
 - **Block third-party scripts:** most malicious ads and much tracking come from
-  other sites' scripts. debsway's Firefox blocks them with uBlock Origin;
+  other sites' scripts. Wren Linux's Firefox blocks them with uBlock Origin;
   `ublock-allow site.com` lets a site that breaks have them.
 - **Fewer add-ons.** Each add-on can read every page. Install only what you
   need, from sources you trust.
@@ -401,12 +401,12 @@ Keys and passphrases:
   settings and more, without cookies. Tor Browser and Mullvad Browser make
   everyone look alike; other browsers can only reduce it.
 - **Downloads are untrusted** until you know otherwise. Open them in a sandbox
-  (debsway's sandboxed browser keeps them in `~/Downloads`).
+  (Wren Linux's sandboxed browser keeps them in `~/Downloads`).
 - **Links carry tracking.** Strip the part after `?` when you share a link, if
   you don't need it. Shortened links hide where they go.
 - **Check the address bar** before typing anything sensitive. Lookalike domains
   are the heart of phishing.
-- **Search engines** record what you search; debsway's Firefox uses DuckDuckGo
+- **Search engines** record what you search; Wren Linux's Firefox uses DuckDuckGo
   by default.
 
 ## 10. Files, photos and metadata
@@ -537,9 +537,9 @@ Most break-ins start with a person being talked into something:
 ## 16. Software you install
 
 - **Install from trusted sources.** Debian's own packages are signed and
-  reviewed; debsway checks every outside download against a pinned key
+  reviewed; Wren Linux checks every outside download against a pinned key
   (`pins.sh`) and refuses anything that doesn't match.
-- **Read before running,** or at least know what a script does. debsway's
+- **Read before running,** or at least know what a script does. Wren Linux's
   scripts are written to be read.
 - **Be wary of "just paste this":** commands from forums, chats or videos can do
   anything your user (or `sudo`) can.
@@ -547,7 +547,7 @@ Most break-ins start with a person being talked into something:
 - **AI coding agents** run commands and write files. Run them where they can't
   reach your keys and documents: `claude-vm` (a separate VM) or `claude` (a
   separate user), and read what they leave before you run it.
-- **Updates:** turn on automatic security updates (debsway does) and restart
+- **Updates:** turn on automatic security updates (Wren Linux does) and restart
   updated programs; "later" is when attacks happen.
 
 ## 17. Backups
@@ -609,7 +609,7 @@ hands, you ran something suspicious):
 1. Stop typing passphrases into it.
 2. From a different, clean device, change the passwords that matter.
 3. Back up only your **data** (documents, not programs or settings), then
-   reinstall the system from scratch. debsway is built for that: reinstall
+   reinstall the system from scratch. Wren Linux is built for that: reinstall
    Debian, run `start.sh` from your stick.
 
 **If you think you are being targeted** by someone capable, get help from
@@ -647,6 +647,6 @@ often run help lines.
 
 ---
 
-debsway pieces mentioned here, and what each does in detail: [extras.md](extras.md),
+Wren Linux pieces mentioned here, and what each does in detail: [extras.md](extras.md),
 the articles in [extras/](extras/README.md), [install-base.md](install-base.md)
 and `THREAT-MODEL.md`.

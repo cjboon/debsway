@@ -1,5 +1,5 @@
 #!/bin/sh
-# lid close|open: written by debsway extras/lid-awake.sh
+# lid close|open: written by Wren Linux extras/lid-awake.sh
 # What closing the lid does when it doesn't suspend: the screen locks (if
 # swaylock is installed) and the laptop's own panel turns off; an external
 # screen stays on. Opening the lid turns the panel back on. sway runs it on the

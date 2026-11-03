@@ -1,9 +1,9 @@
 #!/bin/bash
-# nmtui: written by debsway parts/network-manager.sh
-# NetworkManager's text interface in debsway's colors: white on black, the
+# nmtui: written by Wren Linux parts/network-manager.sh
+# NetworkManager's text interface in Wren Linux's colors: white on black, the
 # chosen line reversed. The same colors as the install list (install-extras.sh).
 # Colors you set yourself in NEWT_COLORS win. The real program is
-# /usr/bin/nmtui (DEBSWAY_NMTUI points somewhere else, for tests).
+# /usr/bin/nmtui (WREN_NMTUI points somewhere else, for tests).
 # A button is drawn in compactbutton colors until Tab reaches it, then in button colors:
 # button is the reversed pair so the chosen one shows.
 # newt (whiptail, nmtui) reads #rrggbb colors only when the terminal says it
@@ -38,4 +38,4 @@ if [ -z "${NEWT_COLORS:-}" ]; then
     unset _w _b _g _bg
 fi
 export NEWT_COLORS
-exec "${DEBSWAY_NMTUI:-/usr/bin/nmtui}" "$@"
+exec "${WREN_NMTUI:-/usr/bin/nmtui}" "$@"

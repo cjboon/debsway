@@ -18,7 +18,7 @@ problems() { printf '%s' "$1" | sshd_problems alice; }
 has() { problems "$1" | grep -q "$2"; }
 not() { ! "$@"; }
 
-check "the settings debsway writes pass" test -z "$(problems "$good")"
+check "the settings Wren Linux writes pass" test -z "$(problems "$good")"
 check "password login still on is caught" has "${good/passwordauthentication no/passwordauthentication yes}" 'PasswordAuthentication is yes'
 check "keyboard-interactive login still on is caught" has "${good/kbdinteractiveauthentication no/kbdinteractiveauthentication yes}" 'KbdInteractiveAuthentication is yes'
 check "root login allowed is caught" has "${good/permitrootlogin no/permitrootlogin prohibit-password}" 'PermitRootLogin is prohibit-password'
@@ -32,13 +32,13 @@ for s in allowtcpforwarding:AllowTcpForwarding:yes allowstreamlocalforwarding:Al
     gatewayports:GatewayPorts:clientspecified allowagentforwarding:AllowAgentForwarding:yes x11forwarding:X11Forwarding:yes \
     permittunnel:PermitTunnel:point-to-point permituserenvironment:PermitUserEnvironment:yes; do
     IFS=: read -r key name val <<<"$s"
-    check "$name $val (another file overriding debsway's) is caught" has "${good/$key no/$key $val}" "$name is $val"
+    check "$name $val (another file overriding Wren Linux's) is caught" has "${good/$key no/$key $val}" "$name is $val"
     check "...and $name missing is caught" has "${good/$key no$'\n'/}" "$name is not set"
 done
 check "MaxAuthTries 6 (Debian's default) is caught" has "${good/maxauthtries 3/maxauthtries 6}" 'MaxAuthTries is 6'
 check "MaxAuthTries 2 is fine" test -z "$(problems "${good/maxauthtries 3/maxauthtries 2}")"
 # What extras/remote-access.sh writes is what this check wants
-conf=$(sed -n '/^sudo tee "$SSHD_CONF" >\/dev\/null <<EOF$/,/^EOF$/p' "$DEBSWAY_DIR/extras/remote-access.sh" | grep -vE '^(sudo|EOF|#)' |
+conf=$(sed -n '/^sudo tee "$SSHD_CONF" >\/dev\/null <<EOF$/,/^EOF$/p' "$WREN_DIR/extras/remote-access.sh" | grep -vE '^(sudo|EOF|#)' |
     sed -e 's/\$USER/alice/' -e 's/^ListenAddress 127.0.0.1$/ListenAddress 127.0.0.1:22/' | awk '{ print tolower($1), $2 }')
 check "the settings remote-access.sh writes pass the check" test -z "$(problems "port 22"$'\n'"$conf"$'\n')"
 check "...and include every new one" bash -c 'for k in allowtcpforwarding allowstreamlocalforwarding gatewayports allowagentforwarding x11forwarding permittunnel permituserenvironment maxauthtries logingracetime; do grep -q "^$k " <<<"$1" || exit 1; done' _ "$conf"
@@ -59,6 +59,6 @@ if command -v ssh-keygen >/dev/null; then
     rm -rf "$K"
 fi
 check "remote-access.sh checks the key with ssh_pubkey_ok, and offers a way on without one" \
-    bash -c 'grep -q "ssh_pubkey_ok \"\$pubkey\"" "$1" && grep -q "go on without a key" "$1" && grep -q "NO KEY YET" "$1"' _ "$DEBSWAY_DIR/extras/remote-access.sh"
+    bash -c 'grep -q "ssh_pubkey_ok \"\$pubkey\"" "$1" && grep -q "go on without a key" "$1" && grep -q "NO KEY YET" "$1"' _ "$WREN_DIR/extras/remote-access.sh"
 
 [ "$fails" -eq 0 ]

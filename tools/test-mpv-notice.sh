@@ -24,7 +24,7 @@ mpv() { env HOME="$T/home" XDG_RUNTIME_DIR="$T/run" XDG_STATE_HOME="$T/state" PA
 : >"$T/ran"; : >"$T/notified"
 out=$(mpv video.mp4 2>&1)
 check "without a sound server the first start says so" grep -q 'No sound package is installed' <<<"$out"
-check "...tells how to add it, without offering to install it" grep -q 'debsway --apps' <<<"$out"
+check "...tells how to add it, without offering to install it" grep -q 'wrenctl --apps' <<<"$out"
 check "...with a desktop notification too" grep -q 'mpv has no sound' "$T/notified"
 check "...and mpv still starts" grep -q 'sandbox /usr/bin/mpv video.mp4' "$T/ran"
 : >"$T/notified"
@@ -37,7 +37,7 @@ python3 -I -c 'import socket,sys; s=socket.socket(socket.AF_UNIX); s.bind(sys.ar
 sleep 0.3
 out=$(mpv third.mp4 2>&1)
 check "with a sound server running it says nothing" not grep -q 'No sound' <<<"$out"
-check "...and does not use up the one notice" test ! -e "$T/state/debsway/mpv-no-sound"
+check "...and does not use up the one notice" test ! -e "$T/state/wren/mpv-no-sound"
 kill $! 2>/dev/null
 
 [ "$fails" -eq 0 ]

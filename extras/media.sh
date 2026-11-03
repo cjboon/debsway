@@ -3,7 +3,7 @@
 # run natively on Wayland. Images and videos are what attackers hide things
 # in, so imv and mpv start inside bubblewrap (bin/media-sandbox): they see
 # only the files you open, read-only, have no network (except mpv for a
-# URL) and an empty home. DEBSWAY_NO_SANDBOX=1 runs one without it.
+# URL) and an empty home. WREN_NO_SANDBOX=1 runs one without it.
 # Usage: bash media.sh [--remove | --manual]
 # summary: imv and mpv, each in a sandbox
 # security: most
@@ -36,7 +36,7 @@ cat <<'EOF'
     name when you start them, read-only. A subtitle file next to a video is
     not seen unless you name it: mpv --sub-file=subs.srt movie.mp4
     Starting one by its full path (/usr/bin/mpv), or from a launcher that
-    does, skips the sandbox; so does DEBSWAY_NO_SANDBOX=1.
+    does, skips the sandbox; so does WREN_NO_SANDBOX=1.
 
     How to use imv (images):
       imv photo.jpg                  open one image

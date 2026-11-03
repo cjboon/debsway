@@ -3,7 +3,7 @@
 # lib/firefox-sandbox.sh.
 
 # Files written by the scripts here
-OURS='debsway (extras/)?firefox-profiles/[a-z-]+\.sh'
+OURS='Wren Linux (extras/)?firefox-profiles/[a-z-]+\.sh'
 
 # make_profile NAME URL FAST [TOOLBARS [SOUND]]: a Firefox profile with a locked-down
 # user of its own (fx-NAME), its settings, and the firefox-NAME command.
@@ -19,22 +19,22 @@ make_profile() {
     fx_profile_name_ok "$name" || die "\"$name\" can't be a profile name: lowercase letters, digits and dashes, starting with a letter, at most 28 long (and not esr, restart-check or session)."
     # A firefox-NAME command that isn't ours: stop before any user or rule is made
     if [ -e "$cmd" ] && ! grep -qsE "$OURS" "$cmd"; then
-        die "$cmd already exists and isn't debsway's; pick another name. Nothing was changed."
+        die "$cmd already exists and isn't Wren Linux's; pick another name. Nothing was changed."
     fi
     # The sandbox itself (the group, the firewall, the session script) comes first
     if [ ! -x "$FX_CLIENT" ] || [ ! -x "$FX_SESSION" ]; then
         note "A profile with its own user needs the sandboxed Firefox (extras/firefox-sandbox.sh)."
         ask "Set that up now?" y || die "Nothing was changed."
-        bash "$DEBSWAY_DIR/extras/firefox-sandbox.sh" || die "The sandboxed Firefox didn't finish; the profile was not made."
+        bash "$WREN_DIR/extras/firefox-sandbox.sh" || die "The sandboxed Firefox didn't finish; the profile was not made."
     fi
     say "Firefox profile: $name (user $user)"
-    fx_create_user "$user" "$FX_HOME_ROOT/$name" "debsway Firefox profile $name"
+    fx_create_user "$user" "$FX_HOME_ROOT/$name" "Wren Linux Firefox profile $name"
     # Its address and its choices, in a file only root can write: the session
     # reads it as the profile's user, who has no way to change it (and the
     # firefox command, for sound)
     conf="$FX_PROFILE_DIR/$name.conf"
     sudo install -d -o root -g root -m 0755 "$FX_PROFILE_DIR"
-    printf '# Written by debsway extras/firefox-profiles/new-profile.sh\nurl=%s\nfast_js=%s\ntoolbars=%s\nsound=%s\n' "$url" "$fast" "$toolbars" "$sound" |
+    printf '# Written by Wren Linux extras/firefox-profiles/new-profile.sh\nurl=%s\nfast_js=%s\ntoolbars=%s\nsound=%s\n' "$url" "$fast" "$toolbars" "$sound" |
         sudo tee "$conf" >/dev/null
     fx_allow_session "$user"
     note "$name: opens $url$([ "$fast" = yes ] && echo ', fast JavaScript')$([ "$sound" = no ] && echo ', no sound'); runs as $user"
@@ -47,7 +47,7 @@ make_profile() {
     cat >"$cmd" <<EOF
 #!/bin/sh
 # firefox-$name: $url in its own Firefox profile, as its own locked-down user.
-# Written by debsway extras/firefox-profiles/new-profile.sh
+# Written by Wren Linux extras/firefox-profiles/new-profile.sh
 exec $FX_CLIENT --profile $name "\$@"
 EOF
     chmod +x "$cmd"

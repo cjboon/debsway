@@ -40,7 +40,7 @@ esac
 EOF
 chmod +x "$T/bin/"*
 
-# lib.sh sets PATH itself; a copy of debsway whose lib.sh keeps the test's, so
+# lib.sh sets PATH itself; a copy of Wren Linux whose lib.sh keeps the test's, so
 # the pretend programs are the ones found
 R=$T/r
 mkdir -p "$R/parts"
@@ -57,7 +57,7 @@ run() {
     shift
     printf '%s\n' "$@" >"$T/answers"
     : >"$T/calls"
-    DEBSWAY_TEST_ANSWERS="$T/answers" bash "$R/parts/clock.sh" >"$T/out" 2>&1
+    WREN_TEST_ANSWERS="$T/answers" bash "$R/parts/clock.sh" >"$T/out" 2>&1
 }
 
 run Etc/UTC Europe/Berlin
@@ -71,7 +71,7 @@ check "...and never passed on" not grep -qE 'Mars|id' "$T/calls"
 run Europe/Berlin y
 check "another zone is kept when you say so" not grep -q 'set-timezone' "$T/calls"
 echo Etc/UTC >"$T/zone"; : >"$T/calls"
-DEBSWAY_NONINTERACTIVE=1 bash "$R/parts/clock.sh" >/dev/null 2>&1
+WREN_NONINTERACTIVE=1 bash "$R/parts/clock.sh" >/dev/null 2>&1
 check "an unattended run sets up NTP but asks nothing" \
     bash -c 'grep -qx "timedatectl set-ntp true" "$1" && ! grep -q set-timezone "$1"' _ "$T/calls"
 check "it is a base part (update.sh offers a new base part to computers set up before)" \

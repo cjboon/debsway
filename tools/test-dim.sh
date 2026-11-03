@@ -28,7 +28,7 @@ FAKE
 # shellcheck disable=SC2016
 printf '#!/bin/sh\necho "$*" >>"%s/notified"\n' "$T" >"$T/fake/notify-send"
 chmod +x "$T/fake/"*
-export PATH="$T/fake:$PATH" XDG_RUNTIME_DIR="$T/run" DEBSWAY_DIM_TICK=0.02 DEBSWAY_DIM_SECONDS=10 DEBSWAY_DIM_TO=10
+export PATH="$T/fake:$PATH" XDG_RUNTIME_DIR="$T/run" WREN_DIM_TICK=0.02 WREN_DIM_SECONDS=10 WREN_DIM_TO=10
 
 level() { cat "$T/level"; }
 dim() { bash "$DIM" "$@"; }
@@ -82,20 +82,20 @@ dim stop
 
 check "an unknown word is refused" not dim nonsense
 
-# the idle setup: bin/debsway-idle starts swayidle with the fade 30 seconds before
+# the idle setup: bin/wren-idle starts swayidle with the fade 30 seconds before
 # the lock (30 minutes when nothing is set), here with a pretend swayidle
 mkdir -p "$T/idlebin" "$T/idleconf"
 printf '#!/bin/sh\nprintf "%%s\\n" "$@" >"%s/swayidle-args"\n' "$T" >"$T/idlebin/swayidle"
 chmod +x "$T/idlebin/swayidle"
-PATH="$T/idlebin:$PATH" XDG_CONFIG_HOME="$T/idleconf" sh "$HERE/bin/debsway-idle"
+PATH="$T/idlebin:$PATH" XDG_CONFIG_HOME="$T/idleconf" sh "$HERE/bin/wren-idle"
 args=$(paste -sd' ' "$T/swayidle-args")
 check "swayidle starts the fade 30 seconds before the lock (1770 s, lock at 1800 s)" \
     grep -q 'timeout 1770 .*/dim-warning start resume .*/dim-warning stop timeout 1800 .*swaylock' <<<"$args"
 # The on-lock programs run just before the lock, and before sleep, each at most 10 s
-mkdir -p "$T/idleconf/debsway/on-lock.d"
-printf '#!/bin/sh\necho ran >>"%s/hook-ran"\n' "$T" >"$T/idleconf/debsway/on-lock.d/a"
-printf 'not run\n' >"$T/idleconf/debsway/on-lock.d/b"
-chmod +x "$T/idleconf/debsway/on-lock.d/a"
+mkdir -p "$T/idleconf/wren/on-lock.d"
+printf '#!/bin/sh\necho ran >>"%s/hook-ran"\n' "$T" >"$T/idleconf/wren/on-lock.d/a"
+printf 'not run\n' >"$T/idleconf/wren/on-lock.d/b"
+chmod +x "$T/idleconf/wren/on-lock.d/a"
 lockcmd=$(sed -n '/^timeout$/{n;/^1800$/{n;p}}' "$T/swayidle-args")
 sleepcmd=$(sed -n '/^before-sleep$/{n;p}' "$T/swayidle-args")
 # shellcheck disable=SC2016  # the inner shell expands its own variables

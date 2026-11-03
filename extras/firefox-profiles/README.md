@@ -47,7 +47,7 @@ or work account, social media. Sites you don't log into don't need one.
 
 - **Your files are out of reach.** The profile's user can read none of your
   files, ssh keys or passwords, and a program running as *you* cannot read the
-  profile's logins either (its home is `/var/lib/debsway-fx/NAME`, mode 700).
+  profile's logins either (its home is `/var/lib/wren-fx/NAME`, mode 700).
 - **Profiles can't read each other.** Each has its own user, its own sound pipe,
   its own folder in memory, and its own downloads folder, `~/Downloads/NAME`,
   which is shared with you and with no other profile.
@@ -56,13 +56,13 @@ or work account, social media. Sites you don't log into don't need one.
 - **No screen reading or typing for you**, and no audio server or microphone:
   the same restricted screen access and sound pipe as the sandboxed Firefox.
 - **Blocked from your local network:** one firewall rule covers every profile
-  (they all share the group `debsway-fx`). `sudo systemctl stop
-  debsway-firefox-firewall` lifts it for a while.
+  (they all share the group `wren-fx`). `sudo systemctl stop
+  wren-firefox-firewall` lifts it for a while.
 - **Still shared:** the kernel (a kernel bug could still get out), and your IP
   address. Disk encryption, few extensions and Tor Browser (for anonymity)
   cover the rest; see `THREAT-MODEL.md` in the main folder.
 - **Settings:** the address and the JavaScript choice are in
-  `/etc/debsway/firefox-profiles/NAME.conf`, writable only by root, so a hacked
+  `/etc/wren/firefox-profiles/NAME.conf`, writable only by root, so a hacked
   profile can't change them.
 
 Profiles made by an earlier version of this script (in your own Firefox, as
@@ -70,7 +70,7 @@ you) keep working; `--remove NAME` still removes them as before.
 
 ## Fast JavaScript
 
-debsway turns Firefox's JavaScript JIT off in every profile (see
+Wren Linux turns Firefox's JavaScript JIT off in every profile (see
 `parts/firefox-hardening.sh`): JavaScript runs slower, but most serious
 browser exploits target the JIT. Heavy web apps such as webmail, online
 office suites or chat may feel sluggish without it. Answer yes to "Fast
@@ -92,5 +92,5 @@ stay in `~/Downloads/bank`.
   (sourced, not run): the profile, the user, the sudo rule.
 
 Each profile's settings are in its `user.js`, written at every start from
-`/etc/debsway/firefox-profiles/NAME.conf`. Profiles live in
-`/var/lib/debsway-fx/NAME/profile`.
+`/etc/wren/firefox-profiles/NAME.conf`. Profiles live in
+`/var/lib/wren-fx/NAME/profile`.

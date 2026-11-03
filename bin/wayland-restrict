@@ -1,5 +1,5 @@
 #!/bin/bash
-# wayland-restrict SOCKET APP_ID: written by debsway (parts/incognito.sh and
+# wayland-restrict SOCKET APP_ID: written by Wren Linux (parts/incognito.sh and
 # extras/media.sh).
 # Makes a second Wayland socket at SOCKET that sway marks as "sandboxed"
 # (the wp_security_context_v1 protocol). A program connected to it can open
@@ -115,7 +115,7 @@ def main():
     conn.send(message(REGISTRY, 0, struct.pack("I", name) + string(MANAGER) +
                       struct.pack("II", 1, MGR)))
     conn.send(message(MGR, 1, struct.pack("I", CTX)), [listener.fileno(), close_r])
-    conn.send(message(CTX, 1, string("debsway")) +
+    conn.send(message(CTX, 1, string("wren")) +
               message(CTX, 2, string(app_id)) +
               message(CTX, 3, string("%s-%d" % (app_id, os.getpid()))) +
               message(CTX, 4))

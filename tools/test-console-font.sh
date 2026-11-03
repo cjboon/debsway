@@ -34,7 +34,7 @@ check "...not the console's" not grep -q terminus <<<"$out"
 cf dejavu-18 >/dev/null
 check "a name: foot.ini's font= line changes" grep -qx 'font=DejaVu Sans Mono:size=18' "$INI"
 check "...and nothing else in it" bash -c 'diff <(grep -v "^font=" "$1") <(grep -v "^font=" "$2")' _ "$HERE/data/foot.ini" "$INI"
-check "...remembered" grep -qx 'DejaVu Sans Mono:size=18' "$T/home/.config/debsway/foot-font"
+check "...remembered" grep -qx 'DejaVu Sans Mono:size=18' "$T/home/.config/wren/foot-font"
 check "...and marked in the list" grep -qE '^ \* +[0-9]+  dejavu-18$' <(cf list)
 n=$(cf list | awk '$NF == "dejavu-bold-20" { print $1 }')
 cf "$n" >/dev/null
@@ -46,7 +46,7 @@ cp "$HERE/bin/console-font" "$T/cf-bad"
 sed -i 's/files+=("DejaVu Sans Mono:size=$s")/files+=("Nope:size=$s")/' "$T/cf-bad"
 env -u TMUX HOME="$T/home" XDG_CONFIG_HOME="$T/home/.config" PATH="$T/bin:$PATH" WAYLAND_DISPLAY=wayland-1 TERM=foot bash "$T/cf-bad" dejavu-12 >/dev/null 2>&1 </dev/null
 check "a font foot rejects: foot.ini and the choice stay as they were" \
-    bash -c 'grep -qx "font=DejaVu Sans Mono:style=Bold:size=20" "$1" && grep -qx "DejaVu Sans Mono:style=Bold:size=20" "$2"' _ "$INI" "$T/home/.config/debsway/foot-font"
+    bash -c 'grep -qx "font=DejaVu Sans Mono:style=Bold:size=20" "$1" && grep -qx "DejaVu Sans Mono:style=Bold:size=20" "$2"' _ "$INI" "$T/home/.config/wren/foot-font"
 out=$(env -u TMUX -u WAYLAND_DISPLAY HOME="$T/home" TERM=linux PATH="$T/bin:$PATH" bash "$HERE/bin/console-font" --console list </dev/null)
 check "--console (or a text console): the console's fonts" bash -c '! grep -q "dejavu-bold-20$" <<<"$1" && grep -q "Console fonts" <<<"$1"' _ "$out"
 
@@ -63,8 +63,8 @@ echo 'font=Old' >"$INI"
 HOME=$T/home bash "$R/parts/foot-config.sh" >"$T/out" 2>&1
 check "foot-config.sh writes foot.ini again, with the size chosen" \
     bash -c 'grep -qx "font=DejaVu Sans Mono:style=Bold:size=20" "$1" && grep -q "^\[colors\]" "$1"' _ "$INI"
-rm "$T/home/.config/debsway/foot-font"
+rm "$T/home/.config/wren/foot-font"
 HOME=$T/home bash "$R/parts/foot-config.sh" >"$T/out" 2>&1
-check "...and debsway's own size without a choice" grep -qx 'font=DejaVu Sans Mono:size=14' "$INI"
+check "...and Wren Linux's own size without a choice" grep -qx 'font=DejaVu Sans Mono:size=14' "$INI"
 
 [ "$fails" -eq 0 ]

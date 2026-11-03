@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-debsway install backup                     set it up (asks where backups go, and the password)
-debsway remove backup                      remove it (the backups themselves stay)
-debsway manual backup                      print the manual steps below
+wrenctl install backup                     set it up (asks where backups go, and the password)
+wrenctl remove backup                      remove it (the backups themselves stay)
+wrenctl manual backup                      print the manual steps below
 
 backup                         back up your home folder now
 backup snapshots               list your backups
@@ -22,7 +22,7 @@ you choose, best on a USB drive. Everything in a backup is encrypted with a
 password restic asks for each time, which is never written down (for
 unattended backups, the settings can hold a command that prints it), and each
 backup stores only what changed since the last. Caches, the Trash, VM disks
-and debsway's offline downloads are left out (`~/.config/debsway/backup-excludes`,
+and Wren Linux's offline downloads are left out (`~/.config/wren/backup-excludes`,
 yours to edit). The `backup` command (`bin/backup`) runs restic on your
 backup; restored files keep their full path, e.g. `~/restored/home/you/.electrum`.
 
@@ -40,7 +40,7 @@ backup; restored files keep their full path, e.g. `~/restored/home/you/.electrum
 sudo apt install --no-install-recommends restic
 
 # Where backups go: a folder on a USB drive (plug it in first)
-REPO=/media/$USER/NAME/debsway-backup
+REPO=/media/$USER/NAME/wren-backup
 mkdir -p "$REPO"
 # A new, encrypted backup there: choose a strong password, and keep it
 # somewhere safe outside this laptop (on paper, too)
@@ -49,14 +49,14 @@ restic -r "$REPO" init
 # The settings the backup command reads (add a line
 # PASSWORD_COMMAND=... with a command that prints the password, for backups
 # that run without you)
-mkdir -p ~/.config/debsway
-printf 'BACKUP_REPO=%s\n' "$REPO" >~/.config/debsway/backup.conf
+mkdir -p ~/.config/wren
+printf 'BACKUP_REPO=%s\n' "$REPO" >~/.config/wren/backup.conf
 # What is left out, one pattern per line
 printf '%s\n' "$HOME/.cache" "$HOME/.local/share/Trash" "$HOME/.local/share/libvirt/images" \
-    "$HOME/vpskvm" "@DEBSWAY_DIR@/offline" >~/.config/debsway/backup-excludes
+    "$HOME/vpskvm" "@WREN_DIR@/offline" >~/.config/wren/backup-excludes
 
 # The backup command
-install -D -m 0755 @DEBSWAY_DIR@/bin/backup ~/.local/bin/backup
+install -D -m 0755 @WREN_DIR@/bin/backup ~/.local/bin/backup
 backup
 ```
 
@@ -64,7 +64,7 @@ To undo (your backups themselves stay where they are):
 
 ```
 # The command and its settings
-rm ~/.local/bin/backup ~/.config/debsway/backup.conf ~/.config/debsway/backup-excludes
+rm ~/.local/bin/backup ~/.config/wren/backup.conf ~/.config/wren/backup-excludes
 # restic
 sudo apt purge restic
 ```

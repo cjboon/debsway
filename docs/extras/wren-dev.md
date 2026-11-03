@@ -1,11 +1,11 @@
-# Tools for working on debsway (`extras/debsway-dev.sh`)
+# Tools for working on Wren Linux (`extras/wren-dev.sh`)
 
 ## SYNOPSIS
 
 ```
-debsway install debsway-dev                     install them
-debsway remove debsway-dev                      remove them (shellcheck stays while the Claude Code sandbox uses it)
-debsway manual debsway-dev                      print the manual steps below
+wrenctl install wren-dev                     install them
+wrenctl remove wren-dev                      remove them (shellcheck stays while the Claude Code sandbox uses it)
+wrenctl manual wren-dev                      print the manual steps below
 
 bash test.sh                   every check, shellcheck on every script included
 bash tools/build-deb.sh        build the package; lintian checks it
@@ -13,11 +13,11 @@ lintian FILE.deb               check any package
 shellcheck SCRIPT              check one script
 ```
 
-For the computer where you work on debsway and build its package: `lintian`,
+For the computer where you work on Wren Linux and build its package: `lintian`,
 Debian's own checker for packages, which `tools/build-deb.sh` runs on every
 package it builds, and `shellcheck`, which `test.sh` runs on every script.
 Both come from Debian. They aren't in the base install: lintian brings over a
-hundred packages (mostly Perl), and every other debsway computer is better
+hundred packages (mostly Perl), and every other Wren Linux computer is better
 off without code it never uses.
 
 ## LIMITS

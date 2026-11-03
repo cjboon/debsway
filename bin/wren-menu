@@ -1,6 +1,6 @@
 #!/bin/bash
-# debsway-menu: written by debsway parts/debsway-menu.sh
-# The menu behind the "debsway" item in the bar. A click opens a black-and-gray
+# wren-menu: written by Wren Linux parts/wren-menu.sh
+# The menu behind the "wren" item in the bar. A click opens a black-and-gray
 # terminal in a floating, centered window, with the choices Help, Terminal (Font size on a
 # text console), Web browser, Text editor, File manager, Password manager, Mail,
 # Signal, SimpleX, Claude and opencode (each when installed), Back up now (with the backup extra), Install apps,
@@ -9,22 +9,22 @@
 # click. Esc closes every screen of it, the install list and the pager
 # included. What you choose runs in that same window, and the window closes
 # when it ends (the install and update screens wait for a key first, if they
-# did something you may want to read). The last three need the debsway folder
-# (~/debsway, or DEBSWAY_DIR); without it only Help shows.
-#   debsway-menu              open the window
-#   debsway-menu --tui        the menu itself, in the terminal you are in
-#   debsway-menu --pager FILE show FILE: arrows, Space and b scroll, Esc closes
-# Where debsway is: DEBSWAY_DIR if you set it; else the root-owned copy the
-# debsway package installs, which no program running as you can change; else
-# your own copy, ~/debsway
-if [ -n "${DEBSWAY_DIR:-}" ]; then
-    DIR=$DEBSWAY_DIR
-elif [ -f "${DEBSWAY_SYSTEM_DIR:-/usr/share/debsway}/lib.sh" ]; then
-    DIR=${DEBSWAY_SYSTEM_DIR:-/usr/share/debsway}
+# did something you may want to read). The last three need the Wren Linux folder
+# (~/wren, or WREN_DIR); without it only Help shows.
+#   wren-menu              open the window
+#   wren-menu --tui        the menu itself, in the terminal you are in
+#   wren-menu --pager FILE show FILE: arrows, Space and b scroll, Esc closes
+# Where Wren Linux is: WREN_DIR if you set it; else the root-owned copy the
+# Wren Linux package installs, which no program running as you can change; else
+# your own copy, ~/wren
+if [ -n "${WREN_DIR:-}" ]; then
+    DIR=$WREN_DIR
+elif [ -f "${WREN_SYSTEM_DIR:-/usr/share/wren}/lib.sh" ]; then
+    DIR=${WREN_SYSTEM_DIR:-/usr/share/wren}
 else
-    DIR=$HOME/debsway
+    DIR=$HOME/wren
 fi
-KEYS_FILE=$HOME/.local/share/debsway/keys.txt
+KEYS_FILE=$HOME/.local/share/wren/keys.txt
 [ -f "$KEYS_FILE" ] || KEYS_FILE=$DIR/data/keys.txt
 
 # The terminal's colors, all gray: black screen, light gray text (in the light
@@ -55,7 +55,7 @@ if [ -z "$1" ]; then
     # --log-level=error: foot warns about a protocol sway lacks (the window icon), harmlessly
     # scrollback.multiplier=1: one step of the mouse wheel is one arrow key in
     # full-screen lists (the install checklist), not three
-    exec foot --log-level=error --app-id=debsway-run -o scrollback.multiplier=1.0 "${gray[@]}" "$(readlink -f -- "$0")" --tui
+    exec foot --log-level=error --app-id=wren-run -o scrollback.multiplier=1.0 "${gray[@]}" "$(readlink -f -- "$0")" --tui
 fi
 
 # ---- inside the terminal ----
@@ -63,7 +63,7 @@ export LC_ALL=C.UTF-8   # so that cutting a line to the window's width counts ch
 saved=$(stty -g 2>/dev/null)
 # How long to wait for the rest of an arrow key or mouse report after an Esc
 # byte. Nothing follows a plain Esc, so this is also how long Esc takes to close.
-ESC_WAIT=${DEBSWAY_ESC_WAIT:-0.1}
+ESC_WAIT=${WREN_ESC_WAIT:-0.1}
 size=
 REDRAW=
 KEY=
@@ -104,10 +104,10 @@ on_idle() {
 }
 
 # waiting: the menu is about to wait for a key. Only when
-# tools/test-debsway-menu.sh asks (DEBSWAY_MENU_TEST_READY=1) it says so, with
+# tools/test-wren-menu.sh asks (WREN_MENU_TEST_READY=1) it says so, with
 # a terminal code that terminals ignore: the test then knows each key has been
 # handled, instead of guessing how long that takes on a busy machine.
-waiting() { [ -z "${DEBSWAY_MENU_TEST_READY:-}" ] || printf '\e]9999;debsway-ready\a'; }
+waiting() { [ -z "${WREN_MENU_TEST_READY:-}" ] || printf '\e]9999;wren-ready\a'; }
 
 # wait_enter: for "Press Enter to go back" and the like
 wait_enter() {
@@ -220,13 +220,13 @@ pager() {
 }
 
 if [ "$1" = --pager ]; then
-    [ -r "${2:-}" ] || { echo "debsway-menu: can't read ${2:-a file}" >&2; exit 1; }
+    [ -r "${2:-}" ] || { echo "wren-menu: can't read ${2:-a file}" >&2; exit 1; }
     mapfile -t lines <"$2"
     screen_on
     settle
     pager
 fi
-[ "$1" = --tui ] || { echo "usage: debsway-menu [--tui | --pager FILE]" >&2; exit 2; }
+[ "$1" = --tui ] || { echo "usage: wrenctl-menu [--tui | --pager FILE]" >&2; exit 2; }
 
 # ---- the menu ----
 # ids say what an entry does; items are what it shows. Wi-Fi, Bluetooth and
@@ -239,16 +239,16 @@ items=(Help)
 # arrive (sway in a VM's window: the computer's own sway takes Super first)
 # web_browser: the browser links open in (mimeapps.list), or the first one
 # installed; text_editor: Mousepad, if installed. Each prints its command, or nothing.
-# (DEBSWAY_MENU_BROWSERS and DEBSWAY_MENU_EDITORS: a test's own lists)
-BROWSERS=${DEBSWAY_MENU_BROWSERS-/usr/local/bin/firefox /usr/bin/firefox-esr /usr/bin/mullvad-browser}
-EDITORS=${DEBSWAY_MENU_EDITORS-$HOME/.local/bin/mousepad /usr/bin/mousepad}
+# (WREN_MENU_BROWSERS and WREN_MENU_EDITORS: a test's own lists)
+BROWSERS=${WREN_MENU_BROWSERS-/usr/local/bin/firefox /usr/bin/firefox-esr /usr/bin/mullvad-browser}
+EDITORS=${WREN_MENU_EDITORS-$HOME/.local/bin/mousepad /usr/bin/mousepad}
 web_browser() {
     local app c
     app=$({ sed -n 's|^x-scheme-handler/https=||p' "$HOME/.config/mimeapps.list" 2>/dev/null || true; } | head -1)
     for c in $BROWSERS; do
         [ -x "$c" ] || continue
         case $app:${c##*/} in
-            debsway-firefox.desktop:firefox) echo "$c"; return ;;
+            wren-firefox.desktop:firefox) echo "$c"; return ;;
         esac
     done
     for c in $BROWSERS; do [ -x "$c" ] && { echo "$c"; return; }; done
@@ -260,8 +260,8 @@ text_editor() {
     return 0
 }
 # app NAME...: the first of these commands that is installed, from APPS (where
-# debsway and Debian put them; DEBSWAY_MENU_APPS: a test's own list)
-APPS=${DEBSWAY_MENU_APPS-/usr/bin/thunar /usr/bin/keepassxc $HOME/.local/bin/tuta /usr/bin/signal-desktop $HOME/.local/bin/simplex $HOME/.local/bin/claude-vm $HOME/.local/bin/claude $HOME/.local/bin/claude-regular $HOME/.local/bin/opencode-vm $HOME/.local/bin/vault $HOME/.local/bin/backup $HOME/.local/bin/theme $HOME/.local/bin/secure-dns /usr/local/bin/wifi-signin}
+# Wren Linux and Debian put them; WREN_MENU_APPS: a test's own list)
+APPS=${WREN_MENU_APPS-/usr/bin/thunar /usr/bin/keepassxc $HOME/.local/bin/tuta /usr/bin/signal-desktop $HOME/.local/bin/simplex $HOME/.local/bin/claude-vm $HOME/.local/bin/claude $HOME/.local/bin/claude-regular $HOME/.local/bin/opencode-vm $HOME/.local/bin/vault $HOME/.local/bin/backup $HOME/.local/bin/theme $HOME/.local/bin/secure-dns /usr/local/bin/wifi-signin}
 app() {
     local want c
     for want; do
@@ -375,7 +375,7 @@ draw() {
     [ "$left" -ge 1 ] || left=1
     first_row=$((top + 2))
     first_col=$left
-    printf '\e[2J\e[%d;%dH\e[1mdebsway\e[0m' "$top" "$left"
+    printf '\e[2J\e[%d;%dH\e[1mWren Linux\e[0m' "$top" "$left"
     for i in "${!items[@]}"; do
         y=$((first_row + i))
         if [ "$i" -eq "$sel" ]; then
@@ -479,20 +479,20 @@ run_choice() {
             trap - EXIT
             screen_off
             cd "$DIR" || exit 1
-            export DEBSWAY_PAUSE=1
+            export WREN_PAUSE=1
             # The scripts wait for a key at their end (pause_if_asked), which
             # marks this file; one that stops on an error before that would
             # close the window at once, so this waits instead
-            DEBSWAY_PAUSED_FILE=$(mktemp -u "${TMPDIR:-/tmp}/debsway-paused.XXXXXX")
-            export DEBSWAY_PAUSED_FILE
+            WREN_PAUSED_FILE=$(mktemp -u "${TMPDIR:-/tmp}/wren-paused.XXXXXX")
+            export WREN_PAUSED_FILE
             local rc log=
-            # Busy: a click on debsway in the bar now brings this window to the
+            # Busy: a click on Wren Linux in the bar now brings this window to the
             # front instead of closing it (bin/sway-status), so nothing is cut off
-            local busy=${XDG_RUNTIME_DIR:-/tmp}/debsway-menu-busy
+            local busy=${XDG_RUNTIME_DIR:-/tmp}/wren-menu-busy
             echo $$ >"$busy"
             if [ "${ids[sel]}" = update ]; then
                 # What Update prints is also kept, for a look afterwards
-                log=${XDG_STATE_HOME:-$HOME/.local/state}/debsway/menu-update.log
+                log=${XDG_STATE_HOME:-$HOME/.local/state}/wren/menu-update.log
                 mkdir -p "${log%/*}"
                 bash update.sh 2>&1 | tee "$log"
                 rc=${PIPESTATUS[0]}
@@ -500,12 +500,12 @@ run_choice() {
                 if [ "${ids[sel]}" = remove ]; then bash install-extras.sh --remove; else bash install-extras.sh; fi
                 rc=$?
             fi
-            if [ "$rc" -ne 0 ] && [ ! -e "$DEBSWAY_PAUSED_FILE" ]; then
+            if [ "$rc" -ne 0 ] && [ ! -e "$WREN_PAUSED_FILE" ]; then
                 printf '\nIt stopped with an error (status %s).%s\nPress Enter to close. ' \
                     "$rc" "${log:+ What it printed is in $log}" >&2
                 wait_enter
             fi
-            rm -f "$DEBSWAY_PAUSED_FILE" "$busy"
+            rm -f "$WREN_PAUSED_FILE" "$busy"
             exit "$rc" ;;
     esac
 }

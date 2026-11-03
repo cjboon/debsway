@@ -8,7 +8,7 @@
 need_user
 
 if [ "${1:-}" = --remove ]; then
-    warn "Removing NetworkManager disconnects you. Run 'bash $DEBSWAY_DIR/wifi.sh' afterwards."
+    warn "Removing NetworkManager disconnects you. Run 'bash $WREN_DIR/wifi.sh' afterwards."
     ask "Continue?" n || exit 0
     # wifi.sh needs these to get you back online
     sudo apt-mark manual wpasupplicant wireless-regdb >/dev/null
@@ -21,7 +21,7 @@ skip_unless has_wifi "no Wi-Fi adapter found, so NetworkManager is not needed (t
 # polkitd lets your user (not just root) control connections
 say "Installing network-manager"
 apt_install network-manager wpasupplicant wireless-regdb polkitd
-# nmtui in debsway's colors (the Wi-Fi name in the bar opens it)
+# nmtui in Wren Linux's colors (the Wi-Fi name in the bar opens it)
 install_bin nmtui
 
 hex_to_text() { printf '%b' "$(sed 's/../\\x&/g' <<<"$1")"; }
@@ -76,8 +76,8 @@ for ifc in $(wifi_ifaces); do
     # Stop the old setup, then remove its config
     sudo ifdown "$ifc" >/dev/null 2>&1 || true
     sudo systemctl disable --now "wpa_supplicant@$ifc.service" >/dev/null 2>&1 || true
-    sudo rm -f "/etc/network/interfaces.d/debsway-wifi-$ifc" \
-        "/etc/systemd/network/50-debsway-$ifc.network"
+    sudo rm -f "/etc/network/interfaces.d/wren-wifi-$ifc" \
+        "/etc/systemd/network/50-wren-$ifc.network"
     drop_ifupdown_iface "$ifc"
     moved+=("$ssid")
     if [ -n "$psk" ]; then moved_psk+=(yes); else moved_psk+=(no); fi

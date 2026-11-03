@@ -110,7 +110,7 @@ run() {
     : >"$T/fetched"
     HOME=$T/home bash "$R/extras/tutamail.sh" "$@" >"$T/out" 2>&1
 }
-ver() { cat "$T/home/.local/opt/tuta/.debsway-version" 2>/dev/null; }
+ver() { cat "$T/home/.local/opt/tuta/.wren-version" 2>/dev/null; }
 L=$T/home/.local/bin/tuta
 
 serve 362.1 362.1
@@ -151,6 +151,6 @@ check "a newer signed version is installed" test "$(ver)" = 363.1
 run --remove
 check "--remove deletes the app" test ! -e "$T/home/.local/opt/tuta"
 check "...and its launcher" test ! -e "$L"
-check "...through its marker package" grep -q 'apt-get purge -y debsway-tutamail' "$T/sudo-calls"
+check "...through its marker package" grep -q 'apt-get purge -y wren-tutamail' "$T/sudo-calls"
 
 [ "$fails" -eq 0 ]

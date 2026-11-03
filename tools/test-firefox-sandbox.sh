@@ -94,12 +94,12 @@ check "it refuses to run as root" grep -q 'run it as your normal user' "$HERE/bi
 # cannot be tricked into thinking it is the firefox user from here; instead its own
 # 2c. the theme and your New Tab picture
 wait 2>/dev/null
-mkdir -p "$T/home/.config/debsway" "$T/home/Pictures/debsway/firefox"
-echo light >"$T/home/.config/debsway/theme"
-printf '\x89PNG\r\n\x1a\n' >"$T/home/Pictures/debsway/firefox/old.png"
-touch -d '2026-01-01' "$T/home/Pictures/debsway/firefox/old.png"
-printf '\xff\xd8\xff\xe0 newest' >"$T/home/Pictures/debsway/firefox/new.jpg"
-printf 'not a picture' >"$T/home/Pictures/debsway/firefox/newest.png"
+mkdir -p "$T/home/.config/wren" "$T/home/Pictures/wren/firefox"
+echo light >"$T/home/.config/wren/theme"
+printf '\x89PNG\r\n\x1a\n' >"$T/home/Pictures/wren/firefox/old.png"
+touch -d '2026-01-01' "$T/home/Pictures/wren/firefox/old.png"
+printf '\xff\xd8\xff\xe0 newest' >"$T/home/Pictures/wren/firefox/new.jpg"
+printf 'not a picture' >"$T/home/Pictures/wren/firefox/newest.png"
 # (the pretend sudo keeps a copy of the picture while "Firefox" runs)
 cat >"$T/fake/sudo" <<FAKE
 #!/bin/bash
@@ -119,7 +119,7 @@ check "...and gone again when Firefox closes" test ! -e "$T/run/firefox-newtab.j
 : >"$T/calls"
 fx --no-audio --profile bank
 check "...a profile gets the theme, never the picture" grep -qF "firefox-bank-wayland - $T/home/Downloads/bank light -" "$T/calls"
-rm -rf "$T/home/.config/debsway" "$T/home/Pictures"
+rm -rf "$T/home/.config/wren" "$T/home/Pictures"
 # validation lines are run against good and bad values.
 bad_arg() { # LINE-PATTERN VALUE VAR: does the script's check for VAR refuse VALUE?
     local line
@@ -153,9 +153,9 @@ check "the session accepts the users firefox and fx-NAME only" python3 -I -c '
 s = open(__import__("sys").argv[1]).read()
 assert "    firefox) tag= ;;" in s and "    fx-*)" in s and "this runs as the user firefox (or fx-NAME)" in s
 ' "$HERE/bin/firefox-session"
-# the choices made at install (/etc/debsway/firefox.conf), run with a copy of it
+# the choices made at install (/etc/wren/firefox.conf), run with a copy of it
 conf_lines() { # FILE PATTERN: the lines of FILE from PATTERN up to the profiles' part, reading $T/fx.conf instead
-    sed -n "/$2/,/^# A profile with its own user/p" "$1" | sed '$d' | sed "s|/etc/debsway/firefox.conf|$T/fx.conf|g"
+    sed -n "/$2/,/^# A profile with its own user/p" "$1" | sed '$d' | sed "s|/etc/wren/firefox.conf|$T/fx.conf|g"
 }
 # The theme follows on a profile that has run: Firefox's add-on list says
 # which theme is active, and the session marks the one asked for
@@ -200,7 +200,7 @@ check "...and the main Firefox's choices aren't a profile's (it keeps its cookie
 sound_of() { # NAME (empty: the main Firefox): what the firefox command decides
     local name=$1 audio=true
     eval "$(sed -n '/^# sound off when that was the choice/,/|| audio=false$/p' "$HERE/bin/firefox" |
-        sed "s|/etc/debsway/firefox.conf|$T/fx.conf|; s|/etc/debsway/firefox-profiles/|$T/prof-|")"
+        sed "s|/etc/wren/firefox.conf|$T/fx.conf|; s|/etc/wren/firefox-profiles/|$T/prof-|")"
     echo "$audio"
 }
 printf 'sound=no\n' >"$T/fx.conf"
@@ -229,9 +229,9 @@ check "...writes the answers where only root can change them" grep -q 'sudo tee 
 check "...links not wanted: it stops being the default browser" python3 -I -c '
 import sys; s = open(sys.argv[1]).read(); d = s.index("say \"Default browser\"")
 b = s[d:s.index("say \"incognito\"", d)]
-assert "if [ \"$links\" = yes ]; then" in b and "unset_default_app debsway-firefox.desktop" in b
+assert "if [ \"$links\" = yes ]; then" in b and "unset_default_app wren-firefox.desktop" in b
 ' "$HERE/extras/firefox-sandbox.sh"
-check "...and --remove takes the answers away" grep -q 'sudo rm -f /etc/debsway/firefox.conf' "$HERE/extras/firefox-sandbox.sh"
+check "...and --remove takes the answers away" grep -q 'sudo rm -f /etc/wren/firefox.conf' "$HERE/extras/firefox-sandbox.sh"
 # what the session writes for the theme and the picture, run on a temp profile
 session_theme() { # THEME PICTURE: the session's lines, with $T/rt as the runtime folder
     mkdir -p "$T/tp" "$T/rt"
@@ -260,7 +260,7 @@ check "...a link instead of a file isn't followed" test ! -e "$T/tp/chrome/userC
 printf '/* mine */\n' >"$T/tp/chrome/userContent.css"
 session_theme dark -
 check "...a userContent.css of your own is left alone" grep -qx '/\* mine \*/' "$T/tp/chrome/userContent.css"
-check "a profile's settings come from the file only root can write" grep -q '/etc/debsway/firefox-profiles/\$tag.conf' "$HERE/bin/firefox-session"
+check "a profile's settings come from the file only root can write" grep -q '/etc/wren/firefox-profiles/\$tag.conf' "$HERE/bin/firefox-session"
 check "the address in it is checked before it is used" grep -q "isn't a plain web address" "$HERE/bin/firefox-session"
 check "the session's own checks come before it looks for the Landlock wrapper" python3 -I -c '
 import sys
@@ -272,11 +272,11 @@ check "links go to the running Firefox through a private bus, also under the wra
 check "no 'open' without a running Firefox" grep -q 'Firefox is not running' "$HERE/bin/firefox-session"
 
 # 5. the firewall mirrors incognito's, for the other user
-check "the firewall rule covers the whole sandbox group (firefox and every profile user)" grep -q 'meta skgid "debsway-fx" jump firefox' "$HERE/data/firefox-firewall.nft"
+check "the firewall rule covers the whole sandbox group (firefox and every profile user)" grep -q 'meta skgid "wren-fx" jump firefox' "$HERE/data/firefox-firewall.nft"
 check "it rejects anything addressed to this computer (lo), like incognito's" grep -q 'oifname "lo" reject' "$HERE/data/firefox-firewall.nft"
 check "...and the same private ranges as incognito's" test "$(grep -E '^[[:space:]]+(ip|ip6) daddr|^ +[0-9]' "$HERE/data/firefox-firewall.nft" | tr -s ' ' | md5sum)" = "$(grep -E '^[[:space:]]+(ip|ip6) daddr|^ +[0-9]' "$HERE/data/incognito-firewall.nft" | tr -s ' ' | md5sum)"
 check "DNS stays open" grep -q 'udp dport 53 accept' "$HERE/data/firefox-firewall.nft"
-check "it says how to allow the local network for a while" grep -q 'systemctl stop debsway-firefox-firewall' "$HERE/data/firefox-firewall.nft"
+check "it says how to allow the local network for a while" grep -q 'systemctl stop wren-firefox-firewall' "$HERE/data/firefox-firewall.nft"
 
 # 6. the extra
 e=$HERE/extras/firefox-sandbox.sh
@@ -292,10 +292,10 @@ s = open(sys.argv[1]).read()
 assert s.index("visudo -cf") < s.index("install -o root -g root -m 0440")
 ' "$l"
 check "the rule allows the one session script only" grep -q 'NOPASSWD: %s' "$l"
-check "the Firefox it installs becomes the default browser for links" grep -q 'set_default_app debsway-firefox.desktop x-scheme-handler/http x-scheme-handler/https' "$e"
-check "...and that is undone on --remove" grep -q 'unset_default_app debsway-firefox.desktop' "$e"
-check "the desktop entry runs the sandboxed command with the link" grep -q '^Exec=/usr/local/bin/firefox %u$' "$HERE/data/debsway-firefox.desktop"
-check "...and handles web links only" grep -q '^MimeType=x-scheme-handler/http;x-scheme-handler/https;$' "$HERE/data/debsway-firefox.desktop"
+check "the Firefox it installs becomes the default browser for links" grep -q 'set_default_app wren-firefox.desktop x-scheme-handler/http x-scheme-handler/https' "$e"
+check "...and that is undone on --remove" grep -q 'unset_default_app wren-firefox.desktop' "$e"
+check "the desktop entry runs the sandboxed command with the link" grep -q '^Exec=/usr/local/bin/firefox %u$' "$HERE/data/wren-firefox.desktop"
+check "...and handles web links only" grep -q '^MimeType=x-scheme-handler/http;x-scheme-handler/https;$' "$HERE/data/wren-firefox.desktop"
 check "it can be removed" grep -q -e '--remove' "$e"
 check "the Firefox profile is offered for deletion, never deleted silently" grep -q 'Delete that profile too?' "$e"
 
@@ -332,17 +332,17 @@ check "the session shares at its start, every 2 seconds while Firefox runs, and 
 X=$HERE/extras/firefox-sandbox.sh
 order() { python3 -I -c 'import sys; s = open(sys.argv[1]).read(); assert s.index(sys.argv[2]) < s.index(sys.argv[3])' "$X" "$1" "$2"; }
 check "the plain Firefox extra is gone; this is the only one" bash -c '[ ! -e "$1/extras/firefox.sh" ]' _ "$HERE"
-check "it sets up Firefox's hardening for every profile" grep -qx 'bash "$DEBSWAY_DIR/parts/firefox-hardening.sh"' "$X"
+check "it sets up Firefox's hardening for every profile" grep -qx 'bash "$WREN_DIR/parts/firefox-hardening.sh"' "$X"
 check "it sets up incognito too, without asking" \
-    bash -c 'grep -qx "bash \"\$DEBSWAY_DIR/parts/incognito.sh\" ||" "$1" && ! grep -q "Set it up too" "$1"' _ "$X"
+    bash -c 'grep -qx "bash \"\$WREN_DIR/parts/incognito.sh\" ||" "$1" && ! grep -q "Set it up too" "$1"' _ "$X"
 check "it takes over the old Firefox extra's marker after installing its own (Firefox stays)" \
-    order 'apt_install firefox-esr' 'DEBSWAY_OWNER=firefox apt_purge'
+    order 'apt_install firefox-esr' 'WREN_OWNER=firefox apt_purge'
 remove=$(sed -n '/^if \[ "${1:-}" = --remove \]/,/^fi$/p' "$X")
 rorder() { python3 -I -c 'import sys; s = sys.argv[1]; assert s.index(sys.argv[2]) < s.index(sys.argv[3])' "$remove" "$1" "$2"; }
 check "--remove asks about incognito first (its firewall and wayland-restrict decisions depend on it)" \
     rorder 'ask "Remove incognito (the throwaway Firefox) too?" y' 'remove_bin wayland-restrict'
 check "--remove takes out the hardening, unless incognito stays" \
-    grep -qF 'bash "$DEBSWAY_DIR/parts/firefox-hardening.sh" --remove' <<<"$remove"
+    grep -qF 'bash "$WREN_DIR/parts/firefox-hardening.sh" --remove' <<<"$remove"
 check "--remove takes out the packages it installed" grep -qx '    apt_purge' <<<"$remove"
 check "the status screen names this extra for Firefox" grep -qF 'echo "Firefox (extras/firefox-sandbox.sh):"' "$HERE/status.sh"
 for f in firefox-user.js incognito-user.js; do

@@ -1,5 +1,5 @@
 #!/bin/bash
-# incognito-session: written by debsway parts/incognito.sh
+# incognito-session: written by Wren Linux parts/incognito.sh
 # Runs as the user "incognito", or "wifi-signin" for the Wi-Fi sign-in window
 # (the incognito command starts it through sudo; it is the only thing your
 # user may run as either). Each user runs only its own kind of window: the
@@ -17,8 +17,8 @@ export PATH=/usr/local/bin:/usr/bin:/bin
 die() { printf 'incognito: %s\n' "$*" >&2; exit 1; }
 
 # Keeps it off XWayland's abstract socket, which any user can connect to
-noabs=/usr/local/libexec/debsway-no-abstract-sockets
-[ -x "$noabs" ] || die "$noabs is missing. Run: debsway part incognito"
+noabs=/usr/local/libexec/wren-no-abstract-sockets
+[ -x "$noabs" ] || die "$noabs is missing. Run: wrenctl part incognito"
 
 me=$(id -un)
 [ "$me" = incognito ] || [ "$me" = wifi-signin ] || die "this runs as the user incognito or wifi-signin; use the incognito command."
@@ -66,7 +66,7 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM HUP
 
-cp /usr/local/share/debsway/incognito-user.js "$base/profile/user.js"
+cp /usr/local/share/wren/incognito-user.js "$base/profile/user.js"
 # Downloads go to memory too, and are gone when the window closes
 {
     echo 'user_pref("browser.download.folderList", 2);'
@@ -92,9 +92,9 @@ cp /usr/local/share/debsway/incognito-user.js "$base/profile/user.js"
 doh_prefs() {
     local mode=3
     if [ "$1" = signin ] ||
-        { [ ! -L /etc/resolv.conf ] && grep -qsE '^# Written by debsway (parts|extras)/secure-dns\.sh' /etc/resolv.conf; }; then
+        { [ ! -L /etc/resolv.conf ] && grep -qsE '^# Written by Wren Linux (parts|extras)/secure-dns\.sh' /etc/resolv.conf; }; then
         mode=5
-    elif [ "$(sed -n 's/^dns=//p' /etc/debsway/firefox.conf 2>/dev/null | head -1)" = fallback ]; then
+    elif [ "$(sed -n 's/^dns=//p' /etc/wren/firefox.conf 2>/dev/null | head -1)" = fallback ]; then
         mode=2
     fi
     echo "user_pref(\"network.trr.mode\", $mode);"

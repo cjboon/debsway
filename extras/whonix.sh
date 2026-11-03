@@ -25,7 +25,7 @@
 # security: most
 # status: bin:whonix
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/lib/appimage.sh"
+. "$WREN_DIR/lib/appimage.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
@@ -150,7 +150,7 @@ gateway_config() {
     local work=$1
     if [ "$BRIDGE_TYPE" != none ]; then
         {
-            echo "# Written by debsway extras/whonix.sh before the first boot."
+            echo "# Written by Wren Linux extras/whonix.sh before the first boot."
             tor_bridge_config
         } >"$work/50_user.conf"
         echo "$work/50_user.conf /usr/local/etc/torrc.d/50_user.conf"
@@ -158,7 +158,7 @@ gateway_config() {
         # They need a bridge but have none yet. Whonix's own off switch:
         # Tor Control Panel turns it to 0
         {
-            echo "# Written by debsway extras/whonix.sh: Tor stays off until you"
+            echo "# Written by Wren Linux extras/whonix.sh: Tor stays off until you"
             echo "# turn it on in Tor Control Panel (Anon Connection Wizard)."
             echo "DisableNetwork 1"
         } >"$work/40_tor_control_panel.conf"
@@ -277,7 +277,7 @@ else
 fi
 
 say "Workstation Tor Browser"
-image_put "$work/ws.qcow2" "$DEBSWAY_DIR/data/tor-browser-safest.js" /usr/local/etc/torbrowser.d/user.js
+image_put "$work/ws.qcow2" "$WREN_DIR/data/tor-browser-safest.js" /usr/local/etc/torbrowser.d/user.js
 note "Its Tor Browser starts at the Safest level with JavaScript off, every time."
 
 say "Setting up the VMs"

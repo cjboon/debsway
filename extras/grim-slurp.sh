@@ -26,7 +26,7 @@ install_bin screenshot
 
 # Keyboards without a Print key (Apple, many laptops) get the Super+Shift ones
 put_snippet screenshots <<'EOF'
-# Screenshots (debsway extras/grim-slurp.sh)
+# Screenshots (Wren Linux extras/grim-slurp.sh)
 bindsym Print exec ~/.local/bin/screenshot full
 bindsym Shift+Print exec ~/.local/bin/screenshot region
 bindsym Ctrl+Print exec ~/.local/bin/screenshot clip

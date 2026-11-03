@@ -38,7 +38,7 @@ dns_unbound_conf() {
     pin=$(dns_pin "$name") || return 1
     tls=${pin%% *}
     cat <<EOF
-# Written by debsway parts/secure-dns.sh. Run it again to change the resolver.
+# Written by Wren Linux parts/secure-dns.sh. Run it again to change the resolver.
 # provider: $name
 # Unbound answers this computer only, checks every answer with DNSSEC, and asks
 # $tls, encrypted (DNS over TLS on port 853); its certificate has to be
@@ -67,14 +67,14 @@ EOF
 # succeeds: on a first run there is no file, and under pipefail sed's error
 # would end the script that asked (current=$(dns_current)) without a word.
 dns_current() {
-    { sed -n 's/^# provider: //p' "${DEBSWAY_ETC:-/etc}/unbound/unbound.conf.d/debsway-secure-dns.conf" 2>/dev/null || true; } | head -1
+    { sed -n 's/^# provider: //p' "${WREN_ETC:-/etc}/unbound/unbound.conf.d/wren-secure-dns.conf" 2>/dev/null || true; } | head -1
 }
 
 # dns_status: one line for status.sh
 dns_status() {
     local name tls
     if secure_dns_on && name=$(dns_current) && tls=$(dns_tls_name "$name"); then
-        echo "DNS: encrypted to $tls, checked with DNSSEC (secure DNS on; the debsway menu switches it)"
+        echo "DNS: encrypted to $tls, checked with DNSSEC (secure DNS on; the Wren menu switches it)"
     elif secure_dns_installed; then
         echo "DNS: unencrypted for now, to the network's DNS server: secure DNS is switched off (secure-dns on)"
     else

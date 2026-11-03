@@ -10,18 +10,18 @@
 # Usage: bash autologin.sh [--remove | --manual]
 # summary: Log in on tty1 without the password
 # security: least
-# status: file:/etc/systemd/system/getty@tty1.service.d/50-debsway-autologin.conf
+# status: file:/etc/systemd/system/getty@tty1.service.d/50-wren-autologin.conf
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/lib/install-iso.sh"
+. "$WREN_DIR/lib/install-iso.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
-CONF=/etc/systemd/system/getty@tty1.service.d/50-debsway-autologin.conf
+CONF=/etc/systemd/system/getty@tty1.service.d/50-wren-autologin.conf
 # The root file system's disk is encrypted: some device below / is a LUKS one
-# (DEBSWAY_LSBLK_ROOT: a test's answer instead of lsblk's)
+# (WREN_LSBLK_ROOT: a test's answer instead of lsblk's)
 root_encrypted() {
     local types
-    types=${DEBSWAY_LSBLK_ROOT:-$(lsblk -nso TYPE "$(findmnt -nvo SOURCE /)" 2>/dev/null)}
+    types=${WREN_LSBLK_ROOT:-$(lsblk -nso TYPE "$(findmnt -nvo SOURCE /)" 2>/dev/null)}
     grep -qx crypt <<<"$types"
 }
 
@@ -48,4 +48,4 @@ autologin_conf "$user" | sudo install -D -o root -g root -m 0644 /dev/stdin "$CO
 sudo systemctl daemon-reload
 note "From the next boot, tty1 logs $user in by itself and sway starts."
 note "The screen lock (Super+Escape, and after you're idle) still asks for your password, and so does sudo."
-note "Undo it with: bash $DEBSWAY_DIR/extras/autologin.sh --remove"
+note "Undo it with: bash $WREN_DIR/extras/autologin.sh --remove"

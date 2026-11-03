@@ -1,15 +1,15 @@
 #!/bin/sh
-# Status line for swaybar: debsway (click: its menu) | wifi (click: nmtui) | volume (scroll: louder/quieter,
+# Status line for swaybar: Wren Linux (click: its menu) | wifi (click: nmtui) | volume (scroll: louder/quieter,
 # click: mute) | brightness (scroll) | battery (click: time left) | next timer | date
 # (click on the time or a timer: the timer menu; the format is set by `timer clock`)
-# Written by debsway install-base.sh. Each part only shows when this
+# Written by Wren Linux install-base.sh. Each part only shows when this
 # system has what it needs, so it copes with anything missing or removed.
 # Redraws every 5 seconds, or right away on SIGUSR1 (the brightness keys
 # send it; the PID is in $XDG_RUNTIME_DIR/sway-status.pid).
-# Speaks swaybar's JSON protocol so that a click on debsway can be heard.
+# Speaks swaybar's JSON protocol so that a click on Wren Linux can be heard.
 
 PIDFILE=${XDG_RUNTIME_DIR:-/tmp}/sway-status.pid
-POWER=${DEBSWAY_POWER_DIR:-/sys/class/power_supply}   # (a test can point it elsewhere)
+POWER=${WREN_POWER_DIR:-/sys/class/power_supply}   # (a test can point it elsewhere)
 wifi() {
     if command -v nmcli >/dev/null; then
         name=$(nmcli -t -f NAME,TYPE connection show --active 2>/dev/null |
@@ -88,7 +88,7 @@ json() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
 
 # clock_format: the date(1) format for the time, as chosen with `timer clock`
 clock_format() {
-    conf=${XDG_CONFIG_HOME:-$HOME/.config}/debsway/clock
+    conf=${XDG_CONFIG_HOME:-$HOME/.config}/wren/clock
     case $(sed -n 's/^date=//p' "$conf" 2>/dev/null) in no) echo '%a %-I:%M %p' ;; *) echo '%a %Y-%m-%d %-I:%M %p' ;; esac
 }
 
@@ -117,33 +117,33 @@ fi
 # each part a click range named like the bar's; then exit
 if [ "${1:-}" = --tmux ]; then
     TMUX_BAR=1
-    printf '#[range=user|menu]debsway#[norange]%s%s%s%s%s%s' \
+    printf '#[range=user|menu]wren#[norange]%s%s%s%s%s%s' \
         "$(block wifi "$(wifi)")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
         "$(block bat "$(battery)")" "$(block timer "$(timer_text)")" "$(block date "$(date +"$(clock_format)")")"
     exit 0
 fi
 # open_or_close APP-ID COMMAND...: a click on the bar opens that window, and a
 # click while it is open closes it (sway's kill fails when no window has that
-# app id). The debsway menu's window is left open while it runs Update or
+# app id). The Wren menu's window is left open while it runs Update or
 # Install apps (it marks itself busy, by its PID): that click brings it to
 # the front instead, so an update is never cut off. One of these windows at a
 # time: opening one closes the others (but not a busy menu).
 menu_busy() {
-    mb_pid=$(cat "${XDG_RUNTIME_DIR:-/tmp}/debsway-menu-busy" 2>/dev/null)
+    mb_pid=$(cat "${XDG_RUNTIME_DIR:-/tmp}/wren-menu-busy" 2>/dev/null)
     case $mb_pid in '' | *[!0-9]*) return 1 ;; esac
     kill -0 "$mb_pid" 2>/dev/null
 }
 open_or_close() {
     oc_id=$1
     shift
-    if [ "$oc_id" = debsway-run ] && menu_busy; then
+    if [ "$oc_id" = wren-run ] && menu_busy; then
         swaymsg -q "[app_id=\"$oc_id\"] focus" >/dev/null 2>&1
         return 0
     fi
     swaymsg -q "[app_id=\"$oc_id\"] kill" >/dev/null 2>&1 && return 0
-    for oc_other in debsway-run debsway-keys debsway-nmtui debsway-timer; do
+    for oc_other in wren-run wren-keys wren-nmtui wren-timer; do
         [ "$oc_other" != "$oc_id" ] || continue
-        [ "$oc_other" != debsway-run ] || ! menu_busy || continue
+        [ "$oc_other" != wren-run ] || ! menu_busy || continue
         swaymsg -q "[app_id=\"$oc_other\"] kill" >/dev/null 2>&1 || true
     done
     # In a session of its own: sway restarts swaybar on every reload, and
@@ -151,11 +151,11 @@ open_or_close() {
     # it (the menu removing an extra that reloads sway) would be killed too.
     setsid -f "$@" >/dev/null 2>&1
 }
-# Super+m (install-base.sh): the same as a click on "debsway", from a key;
+# Super+m (install-base.sh): the same as a click on "wren", from a key;
 # it ends here, before anything the running bar owns (its PID file)
 if [ "${1:-}" = --menu ]; then
-    if [ -x "$HOME/.local/bin/debsway-menu" ]; then
-        open_or_close debsway-run "$HOME/.local/bin/debsway-menu"
+    if [ -x "$HOME/.local/bin/wren-menu" ]; then
+        open_or_close wren-run "$HOME/.local/bin/wren-menu"
     fi
     exit 0
 fi
@@ -173,19 +173,19 @@ while read -r event <&3; do
         *'"name":"menu"'*'"button":1,'*)
             # the menu (Help, Install apps, Update, Status); the key cheat sheet
             # directly if the menu isn't installed
-            if [ -x "$HOME/.local/bin/debsway-menu" ]; then
-                open_or_close debsway-run "$HOME/.local/bin/debsway-menu"
+            if [ -x "$HOME/.local/bin/wren-menu" ]; then
+                open_or_close wren-run "$HOME/.local/bin/wren-menu"
             else
-                open_or_close debsway-keys foot -o colors.alpha=0.85 --app-id=debsway-keys "$HOME/.local/bin/keys"
+                open_or_close wren-keys foot -o colors.alpha=0.85 --app-id=wren-keys "$HOME/.local/bin/keys"
             fi ;;
         *'"name":"wifi"'*'"button":1,'*)
             # nmtui measures its window once at the start, so wait for sway to size it
-            # (the debsway wrapper if there is one: nmtui in the debsway colors)
+            # (the Wren Linux wrapper if there is one: nmtui in the Wren Linux colors)
             # shellcheck disable=SC2016  # expanded by the inner sh, on purpose
             if [ -x "$HOME/.local/bin/nmtui" ]; then
-                open_or_close debsway-nmtui foot -o colors.alpha=0.85 --app-id=debsway-nmtui sh -c 'sleep 0.5; exec "$HOME/.local/bin/nmtui"'
+                open_or_close wren-nmtui foot -o colors.alpha=0.85 --app-id=wren-nmtui sh -c 'sleep 0.5; exec "$HOME/.local/bin/nmtui"'
             elif command -v nmtui >/dev/null; then
-                open_or_close debsway-nmtui foot -o colors.alpha=0.85 --app-id=debsway-nmtui sh -c 'sleep 0.5; exec nmtui'
+                open_or_close wren-nmtui foot -o colors.alpha=0.85 --app-id=wren-nmtui sh -c 'sleep 0.5; exec nmtui'
             fi ;;
         # the scroll wheel is button 4 (up) and 5 (down); the volume and brightness
         # commands also tell this script to redraw
@@ -195,10 +195,10 @@ while read -r event <&3; do
         *'"name":"bright"'*'"button":4,'*) "$HOME/.local/bin/brightness" up ;;
         *'"name":"bright"'*'"button":5,'*) "$HOME/.local/bin/brightness" down ;;
         *'"name":"date"'*'"button":1,'* | *'"name":"timer"'*'"button":1,'*)
-            open_or_close debsway-timer foot -o colors.alpha=0.85 --app-id=debsway-timer "$HOME/.local/bin/timer" ;;
+            open_or_close wren-timer foot -o colors.alpha=0.85 --app-id=wren-timer "$HOME/.local/bin/timer" ;;
         *'"name":"bat"'*'"button":1,'*)
             command -v notify-send >/dev/null &&
-                notify-send -a debsway -t 8000 "Battery $(battery | sed 's/^bat //; s/+$//')" "$(battery_time)" ;;
+                notify-send -a wren -t 8000 "Battery $(battery | sed 's/^bat //; s/+$//')" "$(battery_time)" ;;
     esac
 done &
 reader=$!
@@ -207,7 +207,7 @@ trap 'kill $reader 2>/dev/null; rm -f "$PIDFILE"' EXIT
 echo '{"version":1,"click_events":true}'
 echo '['
 while :; do
-    printf '[{"name":"menu","full_text":"debsway","separator":false,"separator_block_width":0}%s%s%s%s%s%s],\n' \
+    printf '[{"name":"menu","full_text":"wren","separator":false,"separator_block_width":0}%s%s%s%s%s%s],\n' \
         "$(block wifi "$(wifi)")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
         "$(block bat "$(battery)")" "$(block timer "$(timer_text)")" "$(block date "$(date +"$(clock_format)")")"
     # wait returns early when SIGUSR1 arrives; the sleep ends by itself

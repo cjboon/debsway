@@ -3,15 +3,15 @@
 ## SYNOPSIS
 
 ```
-debsway install wallpapers                     pick sources, or none ("I'll find my own"); pictures go in ~/Pictures/Wallpapers
-debsway remove wallpapers                      take out what it downloaded (your own pictures stay)
-debsway manual wallpapers                      print the manual steps below
+wrenctl install wallpapers                     pick sources, or none ("I'll find my own"); pictures go in ~/Pictures/Wallpapers
+wrenctl remove wallpapers                      take out what it downloaded (your own pictures stay)
+wrenctl manual wallpapers                      print the manual steps below
 
 Super+] / Super+[                              step through them as your wallpaper
 wallpaper pick                                 choose one by name
 ```
 
-Pictures to choose your wallpaper from (the base's `~/Pictures/debsway/desktop`,
+Pictures to choose your wallpaper from (the base's `~/Pictures/wren/desktop`,
 `parts/wallpaper.sh`), all in `~/Pictures/Wallpapers`, each named after its
 source: `nasa_` from NASA's image library (astronauts' photos and Hubble's
 archive), `webb_` from ESA's Webb site in ESA's own 1920×1200 wallpaper cut,
@@ -26,7 +26,7 @@ least 1920×1080 and landscape (read from the file itself), a real JPEG or PNG
 of at most 40 MB, and none whose credit names another copyright holder, with
 its title, credit and page in `CREDITS.txt`. Ticking "No wallpapers downloaded, I'll find my own" downloads nothing and only sets up the folder and its README. Pictures of your own (an image
 search, saved through Firefox into `~/Downloads`) can go in the same folder:
-debsway never changes or removes them. Super+] and Super+[ step through the
+Wren Linux never changes or removes them. Super+] and Super+[ step through the
 folder as your wallpaper, and `wallpaper pick` lists it by name
 (`parts/wallpaper.sh`). `README.txt` there says the same.
 
@@ -54,7 +54,7 @@ cd && rm -rf /tmp/wp
 # The others, from their sites (or pick by hand: images.nasa.gov,
 # esawebb.org/images, earthobservatory.nasa.gov)
 for s in nasa webb earth; do
-    python3 -I @DEBSWAY_DIR@/lib/wallpaper-sources.py ~/Pictures/Wallpapers "$s" 12
+    python3 -I @WREN_DIR@/lib/wallpaper-sources.py ~/Pictures/Wallpapers "$s" 12
 done
 ```
 

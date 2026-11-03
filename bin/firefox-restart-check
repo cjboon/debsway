@@ -1,5 +1,5 @@
 #!/bin/sh
-# firefox-restart-check: written by debsway parts/firefox-hardening.sh.
+# firefox-restart-check: written by Wren Linux parts/firefox-hardening.sh.
 # Says so when Firefox was updated while running. The running browser
 # keeps the old, unfixed version until it's restarted.
 notified=${XDG_RUNTIME_DIR:-/tmp}/firefox-restart-notified

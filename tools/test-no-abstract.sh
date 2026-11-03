@@ -25,7 +25,7 @@ out=$(python3 -I - "$WRAP" <<'PY'
 import socket, subprocess, sys
 wrap = sys.argv[1]
 srv = socket.socket(socket.AF_UNIX)
-srv.bind("\0debsway-test-no-abstract")
+srv.bind("\0wren-test-no-abstract")
 srv.listen(1)
 child = r'''
 import socket, sys, tempfile
@@ -36,9 +36,9 @@ def connects(addr):
         return True
     except OSError:
         return False
-outside = connects("\0debsway-test-no-abstract")
-own = socket.socket(socket.AF_UNIX); own.bind("\0debsway-own"); own.listen(1)
-own_ok = connects("\0debsway-own")
+outside = connects("\0wren-test-no-abstract")
+own = socket.socket(socket.AF_UNIX); own.bind("\0wren-own"); own.listen(1)
+own_ok = connects("\0wren-own")
 path = tempfile.mkdtemp() + "/s"
 ps = socket.socket(socket.AF_UNIX); ps.bind(path); ps.listen(1)
 print("outside=%s own=%s path=%s" % (outside, own_ok, connects(path)))

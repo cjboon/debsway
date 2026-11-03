@@ -1,5 +1,5 @@
 #!/bin/bash
-# test.sh: checks that debsway still works. Its own scripts, and the
+# test.sh: checks that Wren Linux still works. Its own scripts, and the
 # outside things they depend on: Debian packages, download pages,
 # signing keys, release signatures, and the Firefox and Debian features
 # the hardening relies on. It installs and changes nothing; downloads
@@ -9,11 +9,15 @@
 #   bash test.sh            everything (needs internet)
 #   bash test.sh --offline  only what needs no internet
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
-. "$DEBSWAY_DIR/lib/appimage.sh"
-. "$DEBSWAY_DIR/lib/offline.sh"
-. "$DEBSWAY_DIR/packages.sh"
+. "$WREN_DIR/lib/appimage.sh"
+. "$WREN_DIR/lib/offline.sh"
+. "$WREN_DIR/packages.sh"
 # Keep going after a failure; every check reports for itself
 set +e +o pipefail
+# The tests run scripts with a pretend sudo; on a computer still set up as
+# debsway (before the name), need_user would stop them (tools/test-location.sh
+# checks that it does)
+export WREN_ALLOW_OLD_INSTALL=1
 
 OFFLINE=false
 [ "${1:-}" = --offline ] && OFFLINE=true
@@ -26,7 +30,7 @@ bad() { printf '  \033[31mFAIL\033[0m  %s\n' "$*"; n_fail=$((n_fail + 1)); }
 section() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 online() { ! $OFFLINE; }
 
-cd "$DEBSWAY_DIR" || exit 1
+cd "$WREN_DIR" || exit 1
 mapfile -t SCRIPTS < <(find . -path ./.git -prune -o -path ./ignore -prune -o -path ./offline -prune -o \
     \( -name '*.sh' -o -path './bin/*' \) -type f -print | sort)
 
@@ -50,13 +54,13 @@ for f in parts/*.sh extras/*.sh; do
     grep -q -- '--remove' "$f" || meh "$f has no --remove"
     grep -q '^# status: ' "$f" || meh "$f has no '# status:' line (status.sh can't show it)"
 done
-# "Written by debsway parts/X.sh" (a header, a marker in a file it writes) names
+# "Written by Wren Linux parts/X.sh" (a header, a marker in a file it writes) names
 # a script that is there
 while IFS=: read -r f m; do
-    s=$(sed -E 's/.*[Ww]ritten by debsway //' <<<"$m")
+    s=$(sed -E 's/.*[Ww]ritten by Wren Linux //' <<<"$m")
     [ -f "$s" ] || bad "$f says it was written by $s, which doesn't exist"
-done < <(grep -rHiE 'written by debsway (parts|extras)/[a-z-]+\.sh' bin data extras parts lib | grep -v OLD_UMARK |
-    sed -E 's/^([^:]*):.*([Ww]ritten by debsway (parts|extras)\/[a-z-]+\.sh).*/\1:\2/')
+done < <(grep -rHiE 'written by Wren Linux (parts|extras)/[a-z-]+\.sh' bin data extras parts lib | grep -v OLD_UMARK |
+    sed -E 's/^([^:]*):.*([Ww]ritten by Wren Linux (parts|extras)\/[a-z-]+\.sh).*/\1:\2/')
 # Every extra has its article in docs/extras/, which explains it from the ground up
 for f in extras/*.sh extras/firefox-profiles/new-profile.sh; do
     case $f in extras/firefox-profiles/*) name=firefox-profiles ;; *) name=$(basename "$f" .sh) ;; esac
@@ -95,7 +99,7 @@ done
 for f in lib/install-iso.sh data/install-iso-preseed.cfg data/install-iso-disk.sh data/install-iso-late.sh data/install-iso-first-login.sh; do
     [ -f "$f" ] || bad "prep/make-install-iso.sh needs $f"
 done
-for f in bin/debsway-camera data/webcam-off.rules; do
+for f in bin/wren-camera data/webcam-off.rules; do
     [ -f "$f" ] || bad "extras/webcam.sh needs $f"
 done
 for f in lib/tails.sh bin/tails-usb; do
@@ -111,16 +115,16 @@ done
 for f in data/sysctl-hardening.conf data/module-blacklist.conf data/foot.ini data/mousepad.settings data/snowflake-bridges.txt; do
     [ -f "$f" ] || bad "a part needs $f"
 done
-# bin/powermenu, bin/debsway-idle and bin/lid can't source lib/sway.sh, so their lock command is a copy
-for f in bin/powermenu bin/debsway-idle bin/lid; do
+# bin/powermenu, bin/wren-idle and bin/lid can't source lib/sway.sh, so their lock command is a copy
+for f in bin/powermenu bin/wren-idle bin/lid; do
     grep -qF "$LOCK_CMD" "$f" || bad "$f's lock command differs from LOCK_CMD in lib/sway.sh"
 done
-# The pop-up windows (key sheet, Wi-Fi, timer, the debsway menu) are all as
+# The pop-up windows (key sheet, Wi-Fi, timer, the Wren menu) are all as
 # see-through as the bar: every foot that opens one has the same alpha
-for line in $(grep -rhoE 'foot [^"]*--app-id=debsway-(keys|nmtui|timer)' bin install-base.sh | tr ' ' '#'); do
+for line in $(grep -rhoE 'foot [^"]*--app-id=wren-(keys|nmtui|timer)' bin install-base.sh | tr ' ' '#'); do
     [[ $line == *colors.alpha=0.85* ]] || bad "a pop-up window isn't see-through like the others: ${line//#/ }"
 done
-grep -q 'colors.alpha=0.85' bin/debsway-menu || bad "the debsway menu's window isn't see-through like the others"
+grep -q 'colors.alpha=0.85' bin/wren-menu || bad "the Wren menu's window isn't see-through like the others"
 # Every sysctl key in the hardening file exists on this kernel
 while read -r key _; do
     [ -e "/proc/sys/${key//.//}" ] || meh "sysctl $key doesn't exist on this kernel (data/sysctl-hardening.conf)"
@@ -248,7 +252,7 @@ else
 fi
 
 # --------------------------------------------------------------------
-section "The webcam switch (bin/debsway-camera, extras/webcam.sh), on a pretend /sys"
+section "The webcam switch (bin/wren-camera, extras/webcam.sh), on a pretend /sys"
 if out=$(bash tools/test-webcam.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") webcam checks"
 else
@@ -513,7 +517,7 @@ else
 fi
 
 # --------------------------------------------------------------------
-section "The debsway package (tools/build-deb.sh), unpacked in a temp folder"
+section "The Wren Linux package (tools/build-deb.sh), unpacked in a temp folder"
 if out=$(bash tools/test-build-deb.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") package checks"
 else
@@ -529,15 +533,15 @@ else
 fi
 
 # --------------------------------------------------------------------
-section "debsway's repository on a computer (parts/debsway-repo.sh), with a pretend sudo"
-if out=$(bash tools/test-debsway-repo.sh 2>&1); then
+section "Wren Linux's repository on a computer (parts/wren-repo.sh), with a pretend sudo"
+if out=$(bash tools/test-wren-repo.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") repository part checks"
 else
     bad "repository part checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
 fi
 
 # --------------------------------------------------------------------
-section "debsway from wherever it is (not only ~/debsway)"
+section "Wren Linux from wherever it is (not only ~/wren)"
 if out=$(bash tools/test-location.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") location checks"
 else
@@ -545,7 +549,7 @@ else
 fi
 
 # --------------------------------------------------------------------
-section "update.sh in the debsway package's copy (no git), with a pretend upgrade"
+section "update.sh in the Wren Linux package's copy (no git), with a pretend upgrade"
 if out=$(bash tools/test-update-package.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") package update checks"
 else
@@ -553,7 +557,7 @@ else
 fi
 
 # --------------------------------------------------------------------
-section "The signing key (extras/signing-key.sh, debsway-key), with a pretend sudo"
+section "The signing key (extras/signing-key.sh, wren-key), with a pretend sudo"
 if out=$(bash tools/test-signing-key.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") signing key checks"
 else
@@ -561,26 +565,26 @@ else
 fi
 
 # --------------------------------------------------------------------
-section "update.sh: only what debsway's own key signed, with throwaway keys"
+section "update.sh: only what Wren Linux's own key signed, with throwaway keys"
 if out=$(bash tools/test-update-signed.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") signed update checks"
 else
     bad "signed update checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
 fi
-if [ -n "${DEBSWAY_SIGNING_FPR:-}" ]; then
-    if key_ok data/debsway-signing-key.asc "$DEBSWAY_SIGNING_FPR"; then
-        ok "data/debsway-signing-key.asc is exactly the pinned key, and can sign"
+if [ -n "${WREN_SIGNING_FPR:-}" ]; then
+    if key_ok data/wren-signing-key.asc "$WREN_SIGNING_FPR"; then
+        ok "data/wren-signing-key.asc is exactly the pinned key, and can sign"
     else
-        bad "data/debsway-signing-key.asc isn't exactly the key DEBSWAY_SIGNING_FPR in pins.sh, or it has expired"
+        bad "data/wren-signing-key.asc isn't exactly the key WREN_SIGNING_FPR in pins.sh, or it has expired"
     fi
 fi
 
 # --------------------------------------------------------------------
-section "The debsway menu in the bar (bin/debsway-menu), with a pretend wmenu and foot"
-if out=$(bash tools/test-debsway-menu.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") debsway menu checks"
+section "The Wren menu in the bar (bin/wren-menu), with a pretend wmenu and foot"
+if out=$(bash tools/test-wren-menu.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") Wren menu checks"
 else
-    bad "debsway menu checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+    bad "Wren menu checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
 fi
 
 # --------------------------------------------------------------------
@@ -592,11 +596,11 @@ else
 fi
 
 # --------------------------------------------------------------------
-section "The debsway command and its man page (bin/debsway, data/debsway.1)"
-if out=$(bash tools/test-debsway-cmd.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") debsway command checks"
+section "The Wren Linux command and its man page (bin/wrenctl, data/wrenctl.1)"
+if out=$(bash tools/test-wren-cmd.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") Wren Linux command checks"
 else
-    bad "debsway command checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+    bad "Wren Linux command checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
 fi
 
 # --------------------------------------------------------------------
@@ -725,10 +729,10 @@ while read -r day what; do
 done < <(awk '/^# checked: / { day = $3 } /^[A-Z][A-Z0-9_]*=/ && day { sub(/=.*/, ""); print day, $0; day = "" }' pins.sh)
 
 # --------------------------------------------------------------------
-section "Debian and Firefox features debsway relies on"
+section "Debian and Firefox features Wren Linux relies on"
 . /etc/os-release
 [ "${VERSION_CODENAME:-}" = "$DEBIAN_RELEASE" ] && ok "this is Debian $DEBIAN_RELEASE" ||
-    meh "this is ${PRETTY_NAME:-unknown}, debsway is written for $DEBIAN_RELEASE"
+    meh "this is ${PRETTY_NAME:-unknown}, Wren Linux is written for $DEBIAN_RELEASE"
 if is_installed firefox-esr; then
     [ "$(readlink /usr/share/firefox-esr/browser/defaults/syspref)" = /etc/firefox-esr ] &&
         ok "Firefox reads default prefs from /etc/firefox-esr (firefox-hardening)" ||
@@ -741,9 +745,9 @@ if [ -f "$UBO/managed_storage.json" ]; then
         bad "uBlock Origin no longer has adminSettings; ublock-allow needs updating"
 fi
 if [ -f /etc/apparmor.d/torbrowser.Tor.tor ]; then
-    grep -qs 'debsway' /etc/apparmor.d/local/torbrowser.Tor.tor &&
+    grep -qs 'Wren Linux' /etc/apparmor.d/local/torbrowser.Tor.tor &&
         ok "Tor Browser's AppArmor profile has the DNS fix" ||
-        meh "Tor Browser's AppArmor profile lacks the DNS fix: debsway install tor-browser"
+        meh "Tor Browser's AppArmor profile lacks the DNS fix: wrenctl install tor-browser"
 fi
 if [ -f "$SWAY_CONFIG" ] && command -v sway >/dev/null; then
     check_sway_config 2>"$TMP/sway" && ok "your sway config has no errors" ||
@@ -879,7 +883,7 @@ if online; then
         ok "Tuta Mail $v: release file, AppImage and signature (extras/tutamail.sh)"
         have=$(installed_version tuta)
         if [ -n "$have" ] && [ "$have" != "$v" ]; then
-            meh "tuta $have is installed, $v is out: debsway install tutamail"
+            meh "tuta $have is installed, $v is out: wrenctl install tutamail"
         fi
     else
         bad "Tuta Mail ${v:-?}: release file, AppImage or signature not as expected at $TUTA_DESKTOP_URL"
@@ -915,13 +919,13 @@ LIST
         have=${have%-*}
         v=$(latest_github_tag sparrowwallet/sparrow)
         if [ -n "$v" ] && [ "$v" != "$have" ]; then
-            meh "sparrow $have is installed, $v is out: debsway install sparrow-wallet"
+            meh "sparrow $have is installed, $v is out: wrenctl install sparrow-wallet"
         fi
     fi
     # Apps from other apt repositories only update by themselves if allowed
     while read -r pkg conf; do
         is_installed "$pkg" || continue
-        [ -f "/etc/apt/apt.conf.d/52debsway-$conf" ] ||
+        [ -f "/etc/apt/apt.conf.d/52wren-$conf" ] ||
             meh "$pkg gets no automatic updates; run its script in extras/ again"
     done <<'LIST'
 mullvad-vpn mullvad

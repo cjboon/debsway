@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-debsway install one-workspace                     switch to one workspace
-debsway remove one-workspace                      workspaces back
-debsway manual one-workspace                      print the manual steps below
+wrenctl install one-workspace                     switch to one workspace
+wrenctl remove one-workspace                      workspaces back
+wrenctl manual one-workspace                      print the manual steps below
 ```
 
 A simpler sway: Super+1 … 0 and Super+Shift+1 … 0 do nothing and the bar

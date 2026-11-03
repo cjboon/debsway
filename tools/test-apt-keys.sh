@@ -66,7 +66,7 @@ keys() {
     rm -rf "$T/root"; mkdir -p "$T/root${F%/*}"; : >"$T/calls"
     cp "$T/$1.asc" "$T/root$F"
     cp "$T/$2.asc" "$T/served.asc"
-    PATH="$T/bin:$PATH" DEBSWAY_KEYS_ROOT=$T/root bash -c '
+    PATH="$T/bin:$PATH" WREN_KEYS_ROOT=$T/root bash -c '
         . "$1/lib.sh"; . "$1/lib/apt-keys.sh"
         export PATH="$2:$PATH" SIGNAL_FPR=$3 SIGNAL_KEY_URL=https://keys.example/signal.asc
         "$4"' _ "$HERE" "$T/bin" "$3" "$4" >"$T/out" 2>&1
@@ -101,8 +101,8 @@ check "APT_KEYS names each key file where its script puts it" bash -c '
     grep -q "|/etc/apt/keyrings/claude-code.asc|ANTHROPIC_FPR|" "$1/lib/apt-keys.sh" && grep -qx "CLAUDE_KEY=/etc/apt/keyrings/claude-code.asc" "$1/lib/claude-repo.sh" &&
     grep -q "|/usr/share/keyrings/signal-desktop-keyring.asc|SIGNAL_FPR|" "$1/lib/apt-keys.sh" && grep -qx "KEY=/usr/share/keyrings/signal-desktop-keyring.asc" "$1/extras/signal.sh" &&
     grep -q "|/usr/share/keyrings/mullvad-keyring.asc|MULLVAD_FPR|" "$1/lib/apt-keys.sh" && grep -qx "MULLVAD_KEY=/usr/share/keyrings/mullvad-keyring.asc" "$1/lib/mullvad-repo.sh" &&
-    grep -q "|/usr/share/keyrings/debsway-torproject.asc|TORPROJECT_FPR|" "$1/lib/apt-keys.sh" && grep -qx "TORPROJECT_KEY=/usr/share/keyrings/debsway-torproject.asc" "$1/lib/tor.sh"' _ "$HERE"
-check "every install_apt_key in debsway has its key in APT_KEYS" bash -c '
+    grep -q "|/usr/share/keyrings/wren-torproject.asc|TORPROJECT_FPR|" "$1/lib/apt-keys.sh" && grep -qx "TORPROJECT_KEY=/usr/share/keyrings/wren-torproject.asc" "$1/lib/tor.sh"' _ "$HERE"
+check "every install_apt_key in Wren Linux has its key in APT_KEYS" bash -c '
     n=$(grep -rh "^ *install_apt_key \"\\$" "$1/lib" "$1/extras" "$1/parts" | wc -l)
     [ "$n" = "$(grep -c "^    \"[^\"]*|/[^|]*|[A-Z]*_FPR|[A-Z_]*_KEY_URL\"$" "$1/lib/apt-keys.sh")" ]' _ "$HERE"
 check "update.sh checks the keys every time" grep -q '^    apt_keys_refresh' "$HERE/update.sh"

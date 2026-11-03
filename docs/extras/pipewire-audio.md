@@ -3,13 +3,13 @@
 ## SYNOPSIS
 
 ```
-debsway install pipewire-audio                     install it
-debsway remove pipewire-audio                      remove it
-debsway manual pipewire-audio                      print the manual steps below
+wrenctl install pipewire-audio                     install it
+wrenctl remove pipewire-audio                      remove it
+wrenctl manual pipewire-audio                      print the manual steps below
 
 volume up|down|mute|micmute [STEP]    5% steps, never above 100%
   the volume and mute keys, or Super+F10 (mute), Super+F11 (down), Super+F12 (up)
-debsway --mic on|off                  the microphone (or the debsway menu > Microphone)
+wrenctl --mic on|off                  the microphone (or the Wren menu > Microphone)
 ```
 
 Sound through PipeWire, from Debian, started as your user's services. The
@@ -33,8 +33,8 @@ sudo apt install --no-install-recommends pipewire-audio
 systemctl --user enable --now pipewire.socket pipewire-pulse.socket wireplumber.service
 
 # The volume command, and the microphone switch
-install -D -m 0755 @DEBSWAY_DIR@/bin/volume ~/.local/bin/volume
-install -D -m 0755 @DEBSWAY_DIR@/bin/radios ~/.local/bin/radios
+install -D -m 0755 @WREN_DIR@/bin/volume ~/.local/bin/volume
+install -D -m 0755 @WREN_DIR@/bin/radios ~/.local/bin/radios
 # The keys, and the microphone muted at every login
 mkdir -p ~/.config/sway/config.d
 cat >~/.config/sway/config.d/audio.conf <<'EOF'
@@ -57,7 +57,7 @@ swaymsg reload
 To undo:
 
 ```
-# The keys and the volume command (keep radios if the debsway menu or Bluetooth uses it)
+# The keys and the volume command (keep radios if the Wren menu or Bluetooth uses it)
 rm ~/.config/sway/config.d/audio.conf ~/.local/bin/volume
 swaymsg reload
 # PipeWire

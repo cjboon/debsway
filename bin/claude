@@ -1,5 +1,5 @@
 #!/bin/bash
-# claude [ARGS...]: written by debsway extras/claude-code.sh
+# claude [ARGS...]: written by Wren Linux extras/claude-code.sh
 # Runs Claude Code as its own user (claude-agent), not as you. It can work in
 # ~/projects and nowhere else of yours: no ssh keys, no passwords, no browser
 # profiles. Run it from a folder inside ~/projects. To run it as yourself,
@@ -27,10 +27,10 @@ if [ -n "$account" ]; then
     AGENT=claude-agent-$account
     PROJECTS=$HOME/projects-$account
     sudo -n -u "$AGENT" -l "$SESSION" >/dev/null 2>&1 ||
-        die "the account $account isn't set up. Run: debsway install claude-code --account $account"
+        die "the account $account isn't set up. Run: wrenctl install claude-code --account $account"
 fi
 sudo -n -u "$AGENT" -l "$SESSION" >/dev/null 2>&1 ||
-    die "the sandbox isn't set up. Run: debsway install claude-code   (claude-unsandboxed runs it as you.)"
+    die "the sandbox isn't set up. Run: wrenctl install claude-code   (claude-unsandboxed runs it as you.)"
 where=${PROJECTS/#$HOME/\~}
 
 here=$(pwd -P)

@@ -23,29 +23,29 @@
 # status: file:/usr/local/bin/yt-dlp
 # files: bin/yt-dlp bin/yt-dlp-session data/yt-dlp-firewall.nft
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/lib/appimage.sh"
+. "$WREN_DIR/lib/appimage.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 NAME=ytdlp
-HOME_DIR=/var/lib/debsway-ytdlp
-OUT=/var/lib/debsway-ytdlp-out
-LIBDIR=/usr/local/lib/debsway/yt-dlp
+HOME_DIR=/var/lib/wren-ytdlp
+OUT=/var/lib/wren-ytdlp-out
+LIBDIR=/usr/local/lib/wren/yt-dlp
 CMD=/usr/local/bin/yt-dlp
 SESSION=/usr/local/libexec/yt-dlp-session
-SUDOERS=/etc/sudoers.d/debsway-$NAME
-LIMITS=/etc/security/limits.d/50-debsway-ytdlp.conf
-FIREWALL=/etc/debsway/yt-dlp.nft
-UNIT=/etc/systemd/system/debsway-ytdlp-firewall.service
+SUDOERS=/etc/sudoers.d/wren-$NAME
+LIMITS=/etc/security/limits.d/50-wren-ytdlp.conf
+FIREWALL=/etc/wren/yt-dlp.nft
+UNIT=/etc/systemd/system/wren-ytdlp-firewall.service
 REPO=yt-dlp/yt-dlp
 
 if [ "${1:-}" = --remove ]; then
-    sudo systemctl disable --now debsway-ytdlp-firewall.service >/dev/null 2>&1 || true
-    sudo nft delete table inet debsway_ytdlp 2>/dev/null || true
+    sudo systemctl disable --now wren-ytdlp-firewall.service >/dev/null 2>&1 || true
+    sudo nft delete table inet wren_ytdlp 2>/dev/null || true
     sudo rm -f "$SUDOERS" "$LIMITS" "$CMD" "$SESSION" "$FIREWALL" "$UNIT"
     sudo rm -rf "$LIBDIR" "$OUT"
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
-    sudo rmdir /usr/local/lib/debsway /usr/local/libexec /etc/debsway 2>/dev/null || true
+    sudo rmdir /usr/local/lib/wren /usr/local/libexec /etc/wren 2>/dev/null || true
     if id "$NAME" >/dev/null 2>&1; then
         sudo pkill -KILL -u "$NAME" 2>/dev/null || true
         sudo userdel "$NAME"
@@ -66,7 +66,7 @@ say "What yt-dlp needs"
 apt_install python3 quickjs ffmpeg nftables
 if is_installed yt-dlp; then
     note "Debian's own yt-dlp package is installed too (/usr/bin/yt-dlp, run as you, and"
-    note "too old to keep working). The yt-dlp command finds debsway's first."
+    note "too old to keep working). The yt-dlp command finds Wren Linux's first."
 fi
 
 say "The newest yt-dlp, checked"
@@ -104,7 +104,7 @@ if id "$NAME" >/dev/null 2>&1; then
 else
     sudo mkdir -p "${HOME_DIR%/*}"
     sudo useradd --system --user-group --create-home --home-dir "$HOME_DIR" \
-        --shell /usr/sbin/nologin --comment "debsway sandboxed yt-dlp" "$NAME"
+        --shell /usr/sbin/nologin --comment "Wren Linux sandboxed yt-dlp" "$NAME"
 fi
 sudo usermod --lock --shell /usr/sbin/nologin "$NAME"
 sudo chmod 0700 "$HOME_DIR"
@@ -116,12 +116,12 @@ note "$NAME: no password, no login; home $HOME_DIR; downloads pass through $OUT.
 
 say "The yt-dlp command"
 sudo install -d -o root -g root -m 0755 /usr/local/libexec
-sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/yt-dlp-session" "$SESSION"
-sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/yt-dlp" "$CMD"
+sudo install -o root -g root -m 0755 "$WREN_DIR/bin/yt-dlp-session" "$SESSION"
+sudo install -o root -g root -m 0755 "$WREN_DIR/bin/yt-dlp" "$CMD"
 
 say "What your user may run as $NAME"
 rule=$(mktemp)
-printf '# Written by debsway extras/yt-dlp.sh. %s may run the yt-dlp session script,\n# and nothing else, as the user %s.\n%s ALL=(%s) NOPASSWD: %s\n' \
+printf '# Written by Wren Linux extras/yt-dlp.sh. %s may run the yt-dlp session script,\n# and nothing else, as the user %s.\n%s ALL=(%s) NOPASSWD: %s\n' \
     "$(id -un)" "$NAME" "$(id -un)" "$NAME" "$SESSION" >"$rule"
 if ! sudo visudo -cf "$rule" >/dev/null; then
     rm -f "$rule"
@@ -131,26 +131,26 @@ sudo install -o root -g root -m 0440 "$rule" "$SUDOERS"
 rm -f "$rule"
 note "Wrote $SUDOERS"
 # A runaway run can't fill the machine with processes, or leave memory dumps
-printf '# Written by debsway extras/yt-dlp.sh\n%s hard nproc 512\n%s hard core 0\n' "$NAME" "$NAME" |
+printf '# Written by Wren Linux extras/yt-dlp.sh\n%s hard nproc 512\n%s hard core 0\n' "$NAME" "$NAME" |
     sudo tee "$LIMITS" >/dev/null
 
 say "Keeping $NAME off your network"
 sudo install -d -o root -g root -m 0755 "${FIREWALL%/*}"
-sudo install -o root -g root -m 0644 "$DEBSWAY_DIR/data/yt-dlp-firewall.nft" "$FIREWALL"
+sudo install -o root -g root -m 0644 "$WREN_DIR/data/yt-dlp-firewall.nft" "$FIREWALL"
 # Loaded before the network comes up, at every boot
-printf '%s\n' '# Written by debsway extras/yt-dlp.sh' '[Unit]' \
-    'Description=Keep the ytdlp user off the local network (debsway)' \
+printf '%s\n' '# Written by Wren Linux extras/yt-dlp.sh' '[Unit]' \
+    'Description=Keep the ytdlp user off the local network (Wren Linux)' \
     'Before=network-pre.target' 'Wants=network-pre.target' '' '[Service]' \
     'Type=oneshot' 'RemainAfterExit=yes' \
     "ExecStart=/usr/sbin/nft -f $FIREWALL" \
-    'ExecStop=/usr/sbin/nft delete table inet debsway_ytdlp' '' '[Install]' \
+    'ExecStop=/usr/sbin/nft delete table inet wren_ytdlp' '' '[Install]' \
     'WantedBy=multi-user.target' | sudo tee "$UNIT" >/dev/null
 sudo systemctl daemon-reload
 # Restart, not just enable --now: a changed rule file is only loaded by a restart
-sudo systemctl enable debsway-ytdlp-firewall.service >/dev/null &&
-    sudo systemctl restart debsway-ytdlp-firewall.service ||
-    warn "Couldn't load the firewall rule; check: systemctl status debsway-ytdlp-firewall"
+sudo systemctl enable wren-ytdlp-firewall.service >/dev/null &&
+    sudo systemctl restart wren-ytdlp-firewall.service ||
+    warn "Couldn't load the firewall rule; check: systemctl status wren-ytdlp-firewall"
 
 note "Use it like yt-dlp:  yt-dlp URL   (yt-dlp -x URL: the sound only). Files land in ~/Downloads."
-note "When a site stops working, update it: bash $DEBSWAY_DIR/extras/yt-dlp.sh"
+note "When a site stops working, update it: bash $WREN_DIR/extras/yt-dlp.sh"
 note "Treat what it downloads as untrusted; mpv from the media extra plays it in a sandbox."

@@ -3,11 +3,11 @@
 ## SYNOPSIS
 
 ```
-debsway install signal                     install it
-debsway remove signal                      remove it (your messages stay in ~/.config/Signal)
-debsway manual signal                      print the manual steps below
+wrenctl install signal                     install it
+wrenctl remove signal                      remove it (your messages stay in ~/.config/Signal)
+wrenctl manual signal                      print the manual steps below
 
-signal-desktop     start it (or Super+d, or the debsway menu > Signal)
+signal-desktop     start it (or Super+d, or the Wren menu > Signal)
                    the first time: scan its QR code with Signal on your phone
                    (Settings > Linked devices)
 ```
@@ -27,7 +27,7 @@ taken off, for good: a `dpkg-statoverride` keeps it off through updates.
 - It runs as you: anything that can read your files can read `~/.config/Signal`, your messages.
 - Signal's servers see your phone number and when you are online, not what you write.
 - The people you write to can keep, copy or forward what you send.
-- Signal's repository is Signal's: debsway checks its key, not its packages' contents.
+- Signal's repository is Signal's: Wren Linux checks its key, not its packages' contents.
 
 ## MANUAL INSTALL
 
@@ -43,7 +43,7 @@ rm /tmp/signal.asc
 echo "deb [arch=amd64 signed-by=/usr/share/keyrings/signal-desktop-keyring.asc] https://updates.signal.org/desktop/apt xenial main" |
     sudo tee /etc/apt/sources.list.d/signal-desktop.list
 echo 'Unattended-Upgrade::Origins-Pattern:: "site=updates.signal.org";' |
-    sudo tee /etc/apt/apt.conf.d/52debsway-signal
+    sudo tee /etc/apt/apt.conf.d/52wren-signal
 
 # Its sandbox helper not setuid root, now and through every update
 sudo dpkg-statoverride --add root root 0755 /opt/Signal/chrome-sandbox
@@ -63,6 +63,6 @@ To undo (your messages stay in `~/.config/Signal`; delete it to unlink this comp
 sudo apt purge signal-desktop
 sudo dpkg-statoverride --remove /opt/Signal/chrome-sandbox
 sudo rm /etc/apt/sources.list.d/signal-desktop.list /usr/share/keyrings/signal-desktop-keyring.asc
-sudo rm /etc/apt/apt.conf.d/52debsway-signal
+sudo rm /etc/apt/apt.conf.d/52wren-signal
 sudo apt update
 ```

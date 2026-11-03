@@ -3,10 +3,10 @@
 ## SYNOPSIS
 
 ```
-debsway install whonix                     download (if needed), check and install both VMs (asks about a bridge)
-debsway install whonix --fetch             only download and check it, for later
-debsway remove whonix                      remove the VMs (asks before deleting their disks)
-debsway manual whonix                      print the manual steps below
+wrenctl install whonix                     download (if needed), check and install both VMs (asks about a bridge)
+wrenctl install whonix --fetch             only download and check it, for later
+wrenctl remove whonix                      remove the VMs (asks before deleting their disks)
+wrenctl manual whonix                      print the manual steps below
 
 whonix             start both VMs and open the Workstation (or Super+d)
 whonix gateway     start the Gateway and open it (Tor settings, bridges)
@@ -19,7 +19,7 @@ browser in the Workstation can't learn your real address. Everything runs as
 your user under KVM (libvirt's `qemu:///session`), with no root daemon or host
 network setup. The download (about 1.9 GB) is checked against Whonix's signing
 key, pinned in `pins.sh` (`WHONIX_FPR`), and kept in `offline/whonix`. Before
-the first boot, debsway writes into the images, without mounting them (with
+the first boot, Wren Linux writes into the images, without mounting them (with
 qemu-img and debugfs): a bridge for the Gateway if you need one (obfs4 lines
 you paste, or Snowflake), so its very first connection uses it, or Tor kept
 off until you turn it on; and Tor Browser at Safest with JavaScript off in the
@@ -73,7 +73,7 @@ mv Whonix-Gateway-*.qcow2 gw.qcow2 && mv Whonix-Workstation-*.qcow2 ws.qcow2
 
 # Files to put into the images before their first boot:
 # the Workstation's Tor Browser at Safest, JavaScript off
-cp @DEBSWAY_DIR@/data/tor-browser-safest.js user.js
+cp @WREN_DIR@/data/tor-browser-safest.js user.js
 # A bridge for the Gateway, if you need one, in 50_user.conf: obfs4 lines
 # from bridges.torproject.org (for Snowflake, put "ClientTransportPlugin
 # snowflake exec /usr/bin/snowflake-client" and the Snowflake "Bridge" lines
@@ -125,7 +125,7 @@ virsh -c qemu:///session define Whonix-Gateway.xml
 virsh -c qemu:///session define Whonix-Workstation.xml
 
 # The whonix command
-install -D -m 0755 @DEBSWAY_DIR@/bin/whonix ~/.local/bin/whonix
+install -D -m 0755 @WREN_DIR@/bin/whonix ~/.local/bin/whonix
 cd ~ && rm -rf ~/whonix-download
 whonix
 ```

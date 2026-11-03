@@ -20,11 +20,11 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 fn() { sed -n '/^doh_prefs() {/,/^}/p' "$1"; }
 check "the same DNS function in firefox-session and incognito-session" \
     bash -c '[ -n "$1" ] && [ "$1" = "$2" ]' _ "$(fn "$HERE/bin/firefox-session")" "$(fn "$HERE/bin/incognito-session")"
-mkdir -p "$T/etc/debsway"
+mkdir -p "$T/etc/wren"
 fn "$HERE/bin/firefox-session" | sed "s|/etc/|$T/etc/|g" >"$T/fn"
 prefs() { bash -c '. "$1"; doh_prefs "$2"' _ "$T/fn" "$1"; }
 mode() { prefs "$1" | sed -n 's/^user_pref("network.trr.mode", \([0-9]\));$/\1/p'; }
-on() { printf '%s\n' '# Written by debsway parts/secure-dns.sh. Every name goes to Unbound on this' 'nameserver 127.0.0.1' >"$T/etc/resolv.conf"; }
+on() { printf '%s\n' '# Written by Wren Linux parts/secure-dns.sh. Every name goes to Unbound on this' 'nameserver 127.0.0.1' >"$T/etc/resolv.conf"; }
 off() { echo "nameserver 192.168.1.1" >"$T/etc/resolv.conf"; }
 
 on
@@ -32,9 +32,9 @@ check "secure DNS on: Firefox uses the system's DNS (mode 5)" test "$(mode norma
 off
 check "secure DNS off: its own encrypted DNS, strict (mode 3, never plain DNS)" test "$(mode normal)" = 3
 check "...to Quad9" bash -c 'grep -qx "user_pref(\"network.trr.uri\", \"https://dns.quad9.net/dns-query\");" <<<"$1"' _ "$(prefs normal)"
-echo dns=fallback >"$T/etc/debsway/firefox.conf"
+echo dns=fallback >"$T/etc/wren/firefox.conf"
 check "...with fallback when that was chosen (mode 2)" test "$(mode normal)" = 2
-rm "$T/etc/debsway/firefox.conf"
+rm "$T/etc/wren/firefox.conf"
 check "the Wi-Fi sign-in window: the network's own DNS (mode 5), whatever else" test "$(mode signin)" = 5
 check "firefox-session sets it at every start, never the sign-in kind" bash -c '
     grep -qx "doh_prefs normal >>\"\$profile/user.js\"" "$1" && ! grep -q "doh_prefs signin" "$1"' _ "$HERE/bin/firefox-session"
@@ -61,7 +61,7 @@ chmod +x "$T/fake/notify-send"
 ws() { : >"$T/said"; HOME=$T/home XDG_STATE_HOME=$T/xstate PATH=$T/fake:/usr/bin:/bin bash "$T/wifi-signin" 2>>"$T/said"; }
 echo on >"$T/state"; : >"$T/calls"
 ws
-check "...the mark for the next login is left while it is off" test -e "$T/xstate/debsway/secure-dns-left-off"
+check "...the mark for the next login is left while it is off" test -e "$T/xstate/wren/secure-dns-left-off"
 check "secure DNS on: off while the sign-in window is open" grep -qx "incognito --no-audio --signin http://detectportal.firefox.com/canonical.html (secure DNS off)" "$T/calls"
 check "...on again when it closes" bash -c '[ "$(tail -1 "$1")" = "secure-dns on" ] && [ "$(cat "$2")" = on ]' _ "$T/calls" "$T/state"
 echo off >"$T/state"; : >"$T/calls"
@@ -72,9 +72,9 @@ echo on >"$T/state"; : >"$T/calls"; : >"$T/no-dns"
 ws
 check "it can't switch on again (not signed in yet): it says how to, later" grep -q "secure-dns on" "$T/said"
 rm -f "$T/no-dns"
-check "the menu's Wi-Fi sign-in line runs it" grep -q '/usr/local/bin/wifi-signin}' "$HERE/bin/debsway-menu"
+check "the menu's Wi-Fi sign-in line runs it" grep -q '/usr/local/bin/wifi-signin}' "$HERE/bin/wren-menu"
 check "parts/incognito.sh installs it, root-owned, next to incognito (and removes it)" bash -c '
-    grep -q "install -o root -g root -m 0755 \"\$DEBSWAY_DIR/bin/wifi-signin\" /usr/local/bin/wifi-signin" "$1" &&
+    grep -q "install -o root -g root -m 0755 \"\$WREN_DIR/bin/wifi-signin\" /usr/local/bin/wifi-signin" "$1" &&
     grep -q "sudo rm -f .*/usr/local/bin/wifi-signin" "$1"' _ "$HERE/parts/incognito.sh"
 
 # ---- the sign-in window's own user: the local network, not this computer
@@ -95,11 +95,11 @@ check "...incognito signin, wifi-signin normal: no" bash -c "$(declare -f runs);
 check "...and any other user: no" grep -qx '\[ "\$me" = incognito \] || \[ "\$me" = wifi-signin \] || die .*' "$HERE/bin/incognito-session"
 P=$HERE/parts/incognito.sh
 check "parts/incognito.sh makes the wifi-signin user like incognito, and --remove deletes it" bash -c '
-    grep -qx "sandbox_user \"\$SIGNIN\" \"debsway Wi-Fi sign-in window\"" "$1" && grep -q "for u in \"\$NAME\" \"\$SIGNIN\"; do" "$1"' _ "$P"
+    grep -qx "sandbox_user \"\$SIGNIN\" \"Wren Linux Wi-Fi sign-in window\"" "$1" && grep -q "for u in \"\$NAME\" \"\$SIGNIN\"; do" "$1"' _ "$P"
 check "...your user may run the wrapper as either, and nothing else" grep -q 'ALL=(%s, %s) NOPASSWD: %s' "$P"
 check "...its firewall rule is loaded at boot with incognito's, and taken out by --remove" bash -c '
-    grep -q "\"ExecStart=/usr/sbin/nft -f \$SIGNIN_FIREWALL\"" "$1" && grep -q "nft delete table inet debsway_wifi_signin" "$1" &&
-    grep -q "\"\$DEBSWAY_DIR/data/wifi-signin-firewall.nft\" \"\$SIGNIN_FIREWALL\"" "$1"' _ "$P"
+    grep -q "\"ExecStart=/usr/sbin/nft -f \$SIGNIN_FIREWALL\"" "$1" && grep -q "nft delete table inet wren_wifi_signin" "$1" &&
+    grep -q "\"\$WREN_DIR/data/wifi-signin-firewall.nft\" \"\$SIGNIN_FIREWALL\"" "$1"' _ "$P"
 
 # The rules themselves, in a network namespace of their own (nothing on this
 # computer is touched): a dummy network 192.168.5.0/24 and 10.9.0.0/16, with

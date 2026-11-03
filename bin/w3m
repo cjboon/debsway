@@ -1,5 +1,5 @@
 #!/bin/bash
-# w3m: written by debsway extras/w3m.sh
+# w3m: written by Wren Linux extras/w3m.sh
 # w3m with cookies only while it is open: the cookies w3m keeps between runs
 # (~/.w3m/cookie) are deleted when it starts and when it ends, also when its
 # terminal is closed, so no site recognises you the next time. Logins work
@@ -18,7 +18,7 @@ for d in "${dirs[@]}"; do
     real=$d/w3m
     break
 done
-[ -n "$real" ] || { echo "w3m isn't installed: debsway install w3m" >&2; exit 127; }
+[ -n "$real" ] || { echo "w3m isn't installed: wrenctl install w3m" >&2; exit 127; }
 
 forget
 trap forget EXIT

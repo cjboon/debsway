@@ -3,16 +3,16 @@
 ## SYNOPSIS
 
 ```
-debsway install sparrow-wallet                     install it, or update to the newest release
-debsway remove sparrow-wallet                      remove it (wallets in ~/.sparrow stay)
-debsway manual sparrow-wallet                      print the manual steps below
+wrenctl install sparrow-wallet                     install it, or update to the newest release
+wrenctl remove sparrow-wallet                      remove it (wallets in ~/.sparrow stay)
+wrenctl manual sparrow-wallet                      print the manual steps below
 
 sparrow                                            start it (or Super+d, then sparrow)
-bash ~/debsway/test.sh                             says when a newer release is out
+bash ~/wren/test.sh                             says when a newer release is out
 ```
 
 Sparrow is a Bitcoin wallet with better privacy tools than Electrum (coin
-control, built-in Tor) and good hardware wallet support. debsway installs the
+control, built-in Tor) and good hardware wallet support. Wren Linux installs the
 official .deb from its GitHub releases only if it matches the release's list
 of SHA-256 checksums (its manifest), signed by Craig Raw's key, pinned in
 `pins.sh` (`SPARROW_FPR`). The package puts Sparrow in `/opt`, so a `sparrow`
@@ -62,7 +62,7 @@ chmod 755 . && chmod 644 sparrowwallet_$VER-1_amd64.deb
 sudo apt install ./sparrowwallet_$VER-1_amd64.deb
 
 # A sparrow command, since the package puts it in /opt
-install -D -m 0755 @DEBSWAY_DIR@/bin/sparrow ~/.local/bin/sparrow
+install -D -m 0755 @WREN_DIR@/bin/sparrow ~/.local/bin/sparrow
 
 # The download isn't needed any more
 cd ~ && rm -rf ~/sparrow-download

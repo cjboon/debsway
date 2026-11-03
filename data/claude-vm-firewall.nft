@@ -1,5 +1,5 @@
 # Keeps the claude-vm user off your computer and your local network
-# (debsway extras/claude-vm.sh). Only that user's traffic is touched.
+# (Wren Linux extras/claude-vm.sh). Only that user's traffic is touched.
 #
 # claude-vm runs the disposable VM (one qemu-system-x86_64 process). QEMU's
 # user-mode networking turns the guest's traffic into ordinary host sockets
@@ -13,14 +13,14 @@
 # host has to reach it to log in, install Claude Code and bring work out.
 # Nothing else on 127.0.0.1 is reachable. If you change SSH_HOST_PORT in
 # extras/claude-vm.sh, change 2242 here too, then:
-#     sudo systemctl restart debsway-claude-vm-firewall
+#     sudo systemctl restart wren-claude-vm-firewall
 #
 # DNS stays open (your resolver is usually the router).
 
-table inet debsway_claude_vm
-delete table inet debsway_claude_vm
+table inet wren_claude_vm
+delete table inet wren_claude_vm
 
-table inet debsway_claude_vm {
+table inet wren_claude_vm {
     chain output {
         type filter hook output priority 0; policy accept;
         meta skuid "claude-vm" jump claude_vm

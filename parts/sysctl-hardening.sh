@@ -5,13 +5,13 @@
 # stricter file and network defaults. They apply now and at every boot.
 # Side effects: gdb and strace can't attach to a running program without
 # sudo; the SysRq REISUB rescue sequence needs kernel.sysrq = 438 again.
-# Edit /etc/sysctl.d/60-debsway-hardening.conf to change one.
+# Edit /etc/sysctl.d/60-wren-hardening.conf to change one.
 # Usage: bash sysctl-hardening.sh [--remove]
-# status: file:/etc/sysctl.d/60-debsway-hardening.conf
+# status: file:/etc/sysctl.d/60-wren-hardening.conf
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
-CONF=/etc/sysctl.d/60-debsway-hardening.conf
+CONF=/etc/sysctl.d/60-wren-hardening.conf
 
 if [ "${1:-}" = --remove ]; then
     sudo rm -f "$CONF"
@@ -20,7 +20,7 @@ if [ "${1:-}" = --remove ]; then
 fi
 
 say "Kernel and network hardening"
-sudo install -o root -g root -m 0644 "$DEBSWAY_DIR/data/sysctl-hardening.conf" "$CONF"
+sudo install -o root -g root -m 0644 "$WREN_DIR/data/sysctl-hardening.conf" "$CONF"
 # Applies the file now; a setting this kernel lacks is reported, not fatal
 if sudo sysctl -p "$CONF" >/dev/null; then
     note "Applied $CONF (and at every boot)."

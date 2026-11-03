@@ -1,18 +1,18 @@
 #!/bin/bash
 # Start here on a fresh Debian install. From the USB stick (labelled
-# DEBSWAY; tools/pack-usb.sh does that), one line:
+# WREN; tools/pack-usb.sh does that), one line:
 #
-#   sudo mount -L DEBSWAY /mnt && bash /mnt/debsway/start.sh
+#   sudo mount -L WREN /mnt && bash /mnt/wren/start.sh
 #
-# It copies debsway to ~/debsway, unmounts the stick, gets you online with
+# It copies Wren Linux to ~/wren, unmounts the stick, gets you online with
 # wifi.sh if you aren't, then runs install-base.sh, which explains what it
 # will do and asks before changing anything.
 # From the copy in your home folder it skips the copying:
-#   bash ~/debsway/start.sh
+#   bash ~/wren/start.sh
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
 not_root
 
-dest="$HOME/debsway"
+dest="$HOME/wren"
 
 # Run from the copy, to unmount the stick the first run came from: a drive
 # can't be unmounted while a script is still running from it
@@ -31,18 +31,18 @@ if [ "${1:-}" = --unmount ]; then
         warn "Couldn't unmount $mnt. Leave your shell's current folder if it is inside it (cd ~),"
         warn "then run: ${umount_cmd[*]}   before you unplug the stick."
     fi
-elif [ "$DEBSWAY_DIR" != "$dest" ]; then
-    say "Copying debsway to $dest"
+elif [ "$WREN_DIR" != "$dest" ]; then
+    say "Copying Wren Linux to $dest"
     if [ -e "$dest" ]; then
-        ask "$dest already exists. Replace it? (the old one is kept as ~/debsway.old)" n ||
+        ask "$dest already exists. Replace it? (the old one is kept as ~/wren.old)" n ||
             die "Nothing was changed. To use the copy you have: bash $dest/start.sh"
         rm -rf "$dest.old"
         mv "$dest" "$dest.old"
     fi
     # Not -a: ownership and modes from the stick (often FAT) mean nothing here
-    cp -r "$DEBSWAY_DIR" "$dest" || die "Copying failed (is there room in your home folder?)."
+    cp -r "$WREN_DIR" "$dest" || die "Copying failed (is there room in your home folder?)."
     note "Copied."
-    mnt=$(findmnt -n -o TARGET -T "$DEBSWAY_DIR" 2>/dev/null || true)
+    mnt=$(findmnt -n -o TARGET -T "$WREN_DIR" 2>/dev/null || true)
     # Only a mount that is not the root file system, i.e. the stick itself
     if [ -n "$mnt" ] && [ "$mnt" != / ]; then
         exec bash "$dest/start.sh" --unmount "$mnt"

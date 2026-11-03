@@ -32,7 +32,7 @@ printf '#!/bin/sh\nexit 0\n' >"$T/fake/systemctl"
 chmod +x "$T/fake/sudo" "$T/fake/systemctl"
 os() { PATH="$T/fake:$PATH" HOME="$T/home" XDG_STATE_HOME="$T/state" bash "$HERE/bin/onion-site" "$@"; }
 out=$(os start 2>&1) && unset_ok=false || unset_ok=true
-check "it says how to set it up when it isn't" bash -c '$1 && grep -q "debsway install onion-site" <<<"$2"' _ "$unset_ok" "$out"
+check "it says how to set it up when it isn't" bash -c '$1 && grep -q "wrenctl install onion-site" <<<"$2"' _ "$unset_ok" "$out"
 touch "$T/rule"
 check "an unknown command is refused" not os bogus
 check "upload needs static or app" not os upload elsewhere "$T"
@@ -51,8 +51,8 @@ check "upload hands the session a tar of the folder" \
 check "...with the folder's files in it" bash -c 'tar -tf "$1" | grep -qx "./css/a.css"' _ "$T/stdin"
 check "...owned by nobody of yours" bash -c '! tar -tvf "$1" | grep -v " root/root "' _ "$T/stdin"
 check "address says so when there is none" not os address
-mkdir -p "$T/state/debsway"
-echo "abcdefghijklmnopqrstuvwxyz234567abcdefghijklmnopqrstuv.onion" >"$T/state/debsway/onion-site-address"
+mkdir -p "$T/state/wren"
+echo "abcdefghijklmnopqrstuvwxyz234567abcdefghijklmnopqrstuv.onion" >"$T/state/wren/onion-site-address"
 check "address prints the saved address" grep -q '\.onion$' <<<"$(os address)"
 
 # ---- the session, as the onion-site user ----
@@ -78,7 +78,7 @@ EOF
 printf '#!/bin/sh\necho "ssh $*" >>"%s/calls"\ncat >"%s/ssh-stdin"\n' "$S" "$S" >"$S/bin/ssh"
 chmod +x "$S/bin/id" "$S/bin/mockvps" "$S/bin/ssh"
 touch "$S/home/.config/onion-site/provision.sh"
-session() { PATH="$S/bin:$PATH" DEBSWAY_NOABS=1 bash "$S/onion-site-session" "$@"; }
+session() { PATH="$S/bin:$PATH" WREN_NOABS=1 bash "$S/onion-site-session" "$@"; }
 starts() { grep '^mockvps --start' "$S/calls"; }
 
 check "the session refuses anyone but the onion-site user" not bash "$HERE/bin/onion-site-session" start
@@ -146,7 +146,7 @@ check "Tor: port 80 of the onion address leads to the VM's forwarded port" \
 check "Tor: a v3 onion service, with its defences against floods" \
     bash -c 'grep -qx "HiddenServiceVersion 3" <<<"$1" && grep -qx "HiddenServiceEnableIntroDoSDefense 1" <<<"$1" && grep -qx "HiddenServicePoWDefensesEnabled 1" <<<"$1"' _ "$torrc"
 check "Tor: without proof of work where tor lacks it" not grep -q PoW <<<"$(onion_site_torrc no)"
-check "Tor: the onion site is on the list of the tor service's users" grep -qw .debsway-onion-site <<<"$TOR_SERVICE_MARKS"
+check "Tor: the onion site is on the list of the tor service's users" grep -qw .wren-onion-site <<<"$TOR_SERVICE_MARKS"
 check "the ports agree: Tor, the session and the firewall (18080, 2243)" \
     bash -c 'grep -q "^WEB=127.0.0.1:$2:80$" "$1/bin/onion-site-session" && grep -q "^export SSH_HOST_PORT=$3$" "$1/bin/onion-site-session" &&
         grep -q "tcp dport { $3, 9050 } accept" "$1/data/onion-site-firewall.nft"' _ "$HERE" "$ONION_SITE_WEB_PORT" "$ONION_SITE_SSH_PORT"
@@ -175,10 +175,10 @@ check "VM: later, apt goes only through the host's Tor" grep -q 'Acquire::https:
 X=$HERE/extras/onion-site.sh
 check "the VM is built without asking" bash -c '! grep -q "Build the VM now" "$1" && grep -q "\"\$SESSION\" install" "$1"' _ "$X"
 check "a boot service starts the VM, as onion-site, after its firewall rule" \
-    bash -c 'grep -q "\"User=\$AGENT\"" "$1" && grep -q "Requires=debsway-onion-site-firewall.service" "$1" && grep -q "\"ExecStart=\$SESSION start\"" "$1" && grep -q "\"ExecStop=\$SESSION stop\"" "$1"' _ "$X"
-check "...enabled for every boot" grep -q 'systemctl enable debsway-onion-site.service' "$X"
+    bash -c 'grep -q "\"User=\$AGENT\"" "$1" && grep -q "Requires=wren-onion-site-firewall.service" "$1" && grep -q "\"ExecStart=\$SESSION start\"" "$1" && grep -q "\"ExecStop=\$SESSION stop\"" "$1"' _ "$X"
+check "...enabled for every boot" grep -q 'systemctl enable wren-onion-site.service' "$X"
 check "...and taken out by --remove" \
-    bash -c 'sed -n "/--remove ]; then/,/^fi/p" "$1" | grep -q "disable debsway-onion-site.service" && sed -n "/--remove ]; then/,/^fi/p" "$1" | grep -q "\"\$VM_UNIT\""' _ "$X"
+    bash -c 'sed -n "/--remove ]; then/,/^fi/p" "$1" | grep -q "disable wren-onion-site.service" && sed -n "/--remove ]; then/,/^fi/p" "$1" | grep -q "\"\$VM_UNIT\""' _ "$X"
 # onion-site start says when Tor isn't running (a pretend systemctl says it isn't)
 printf '#!/bin/sh\nexit 3\n' >"$T/fake/systemctl"
 chmod +x "$T/fake/systemctl"
@@ -188,12 +188,12 @@ check "onion-site start says when Tor is off, and how to turn it on" \
 printf '#!/bin/sh\nexit 0\n' >"$T/fake/systemctl"
 check "...and nothing when it runs" bash -c '! grep -q "Tor is not running" <<<"$1"' _ "$(os start 2>&1 </dev/null)"
 
-# remove_bin takes out only a command that says "written by debsway" (on one
+# remove_bin takes out only a command that says "written by Wren Linux" (on one
 # line): one that said it over two was left behind by --remove
-check "every command debsway installs (install_bin's) says it is debsway's, on one line (remove_bin needs it)" bash -c '
+check "every command Wren Linux installs (install_bin's) says it is Wren Linux's, on one line (remove_bin needs it)" bash -c '
     for n in $(grep -rhoE "install_bin [a-z0-9-]+" "$1"/parts "$1"/extras "$1"/lib "$1"/install-base.sh | cut -d" " -f2 | sort -u); do
         [ -f "$1/bin/$n" ] || continue
-        grep -qi "written by debsway" "$1/bin/$n" || { echo "$n"; exit 1; }
+        grep -qi "written by Wren Linux" "$1/bin/$n" || { echo "$n"; exit 1; }
     done' _ "$HERE"
 
 [ "$fails" -eq 0 ]

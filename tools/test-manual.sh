@@ -19,7 +19,7 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 }
 not() { ! "$@"; }
 
-# A copy of debsway whose lib.sh keeps the test's PATH (lib.sh sets its own),
+# A copy of Wren Linux whose lib.sh keeps the test's PATH (lib.sh sets its own),
 # so the pretend programs are the ones found
 R=$T/r
 mkdir -p "$R" "$T/bin" "$T/home"
@@ -43,7 +43,7 @@ for p in sudo apt-get apt-mark systemctl nft gsettings wget; do
     printf '#!/bin/sh\necho "%s $*" >>"%s/calls"\n' "$p" "$T" >"$T/bin/$p"
 done
 chmod +x "$T/bin/"*
-export MANUAL_TEST_PATH="$T/bin:$PATH" DEBSWAY_SUDO=$T/bin/sudo
+export MANUAL_TEST_PATH="$T/bin:$PATH" WREN_SUDO=$T/bin/sudo
 # Stop here unless the scripts would really get the pretend sudo
 for l in extras/../lib.sh extras/firefox-profiles/../../lib.sh; do
     [ "$(bash -c '. "$1/$2"; command -v sudo' _ "$R" "$l")" = "$T/bin/sudo" ] ||
@@ -68,7 +68,7 @@ EOF
 pm() { (
     . "$HERE/lib.sh"
     set +e
-    DEBSWAY_DIR=$T/p PKGS=(a b c) ONE=1
+    WREN_DIR=$T/p PKGS=(a b c) ONE=1
     # print_manual finds the page from $0, the script's name
     BASH_ARGV0=$T/p/extras/demo.sh
     # shellcheck disable=SC2119  # no page: the script's own, from $0
@@ -88,9 +88,9 @@ for doc in "$HERE"/docs/extras/*.md; do
     grep -qx '## MANUAL INSTALL' "$doc" || continue
     name=$(basename "$doc" .md)
     # The script whose --manual prints this page, from the SYNOPSIS
-    # (debsway manual NAME is extras/NAME.sh --manual)
-    rel=$(sed -n -e '/^## SYNOPSIS/,/^## LIMITS/s|.*bash ~/debsway/\([^ ]*\.sh\) --manual.*|\1|p' \
-        -e '/^## SYNOPSIS/,/^## LIMITS/s|^debsway manual \([a-z0-9-]*\) .*|extras/\1.sh|p' "$doc" | head -1)
+    # (wrenctl manual NAME is extras/NAME.sh --manual)
+    rel=$(sed -n -e '/^## SYNOPSIS/,/^## LIMITS/s|.*bash ~/wren/\([^ ]*\.sh\) --manual.*|\1|p' \
+        -e '/^## SYNOPSIS/,/^## LIMITS/s|^wrenctl manual \([a-z0-9-]*\) .*|extras/\1.sh|p' "$doc" | head -1)
     script=$HERE/$rel
     pages=$((pages + 1))
     order=$(grep -nx '## SYNOPSIS\|## LIMITS\|## MANUAL INSTALL' "$doc" | cut -d: -f2 | paste -sd,)
@@ -124,7 +124,7 @@ check "every extra has a page with MANUAL INSTALL${missing:+ (not: ${missing[*]}
 
 # ---- remote-access: the manual sshd settings are the script's, line for line ----
 script=$(sed -n '/^sudo tee "\$SSHD_CONF" >\/dev\/null <<EOF$/,/^EOF$/p' "$HERE/extras/remote-access.sh" | sed '1d;$d' | grep -v '^#')
-manual=$(HOME=$T/home bash "$R/extras/remote-access.sh" --manual | sed -n '/^sudo tee \/etc\/ssh\/sshd_config.d\/00-debsway-remote-access.conf <<EOF$/,/^EOF$/p' | sed '1d;$d' | grep -v '^#')
+manual=$(HOME=$T/home bash "$R/extras/remote-access.sh" --manual | sed -n '/^sudo tee \/etc\/ssh\/sshd_config.d\/00-wren-remote-access.conf <<EOF$/,/^EOF$/p' | sed '1d;$d' | grep -v '^#')
 check "remote-access: the manual sshd settings are the script's" bash -c '[ "$(wc -l <<<"$1")" -gt 10 ] && [ "$1" = "$2" ]' _ "$script" "$manual"
 
 # ---- claude-vm: the manual sed fills the provisioning script as the script does ----

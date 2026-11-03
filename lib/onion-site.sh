@@ -6,10 +6,10 @@
 ONION_SITE_USER=onion-site
 ONION_SITE_SSH_PORT=2243
 ONION_SITE_WEB_PORT=18080
-ONION_SITE_SVC_DIR=/var/lib/tor/debsway-onion-site
-ONION_SITE_MARK=/etc/tor/.debsway-onion-site
-ONION_SITE_BEGIN='# >>> debsway onion-site >>>'
-ONION_SITE_END='# <<< debsway onion-site <<<'
+ONION_SITE_SVC_DIR=/var/lib/tor/wren-onion-site
+ONION_SITE_MARK=/etc/tor/.wren-onion-site
+ONION_SITE_BEGIN='# >>> Wren Linux onion-site >>>'
+ONION_SITE_END='# <<< Wren Linux onion-site <<<'
 
 # onion_site_torrc POW(yes|no): the block for /etc/tor/torrc. Port 80 of the
 # onion address leads to the VM's nginx, through the host-loopback port QEMU

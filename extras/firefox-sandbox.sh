@@ -5,7 +5,7 @@
 # hacked page reaches only that user's own profile, not your documents, ssh keys
 # or passwords.
 #  - Your logins, history and bookmarks are kept, in that user's own home
-#    (/var/lib/debsway-firefox).
+#    (/var/lib/wren-firefox).
 #  - The clipboard is shared while its window has focus; ~/Downloads is shared
 #    both ways (treat what lands there as untrusted).
 #  - Links from other programs open in the Firefox that is already running.
@@ -15,7 +15,7 @@
 #    computer's own services (data/firefox-firewall.nft); how to lift it for a
 #    while is in that file. DNS stays open.
 #  - Your user may run exactly one thing as firefox (a rule in /etc/sudoers.d).
-#  - It asks six things (remembered, in /etc/debsway/firefox.conf, which only
+#  - It asks six things (remembered, in /etc/wren/firefox.conf, which only
 #    root can write; asked again when you run this again in a terminal):
 #    fast JavaScript (the JIT; default no: it is where many browser attacks
 #    happen), sound (default yes), whether it is your default browser, so
@@ -30,33 +30,33 @@
 #    installed. No video calls: it has no microphone or camera, so WebRTC is off.
 #  - Firefox profiles made with firefox-profiles/new-profile.sh each get a user
 #    of their own like this one (fx-NAME).
-#  - It sets up Firefox ESR the debsway way for every profile (video codecs,
+#  - It sets up Firefox ESR the Wren Linux way for every profile (video codecs,
 #    uBlock Origin, HTTPS-Only Mode, the JavaScript JIT off, a restart notice:
 #    parts/firefox-hardening.sh), and sets up incognito too, a throwaway Firefox
 #    in a locked-down user of its own with nothing kept (parts/incognito.sh).
-# There is no KeePassXC browser add-on (debsway's KeePassXC is the minimal
+# There is no KeePassXC browser add-on (Wren Linux's KeePassXC is the minimal
 # build without it): copy and paste a password; the clipboard is shared.
 # Usage: bash firefox-sandbox.sh [--remove | --manual]
 # summary: Firefox as its own locked-down user
 # security: most
 # status: file:/usr/local/bin/firefox
-# files: bin/no-abstract-sockets bin/wayland-restrict data/firefox-firewall.nft data/firefox-user.js data/debsway-firefox.desktop lib/firefox-sandbox.sh
+# files: bin/no-abstract-sockets bin/wayland-restrict data/firefox-firewall.nft data/firefox-user.js data/wren-firefox.desktop lib/firefox-sandbox.sh
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/lib/firefox-sandbox.sh"
+. "$WREN_DIR/lib/firefox-sandbox.sh"
 # The hardening and incognito it sets up first, then the sandbox itself
 if [ "${1:-}" = --manual ]; then print_manual firefox; print_manual; exit; fi
 need_user
 
 NAME=firefox
-HOME_DIR=/var/lib/debsway-firefox
+HOME_DIR=/var/lib/wren-firefox
 CMD=/usr/local/bin/firefox
 SESSION=/usr/local/libexec/firefox-session
-SHARE=/usr/local/share/debsway
+SHARE=/usr/local/share/wren
 PREFS=$SHARE/firefox-user.js
-LIMITS=/etc/security/limits.d/50-debsway-firefox.conf
-FIREWALL=/etc/debsway/firefox.nft
-UNIT=/etc/systemd/system/debsway-firefox-firewall.service
-DESKTOP="$HOME/.local/share/applications/debsway-firefox.desktop"
+LIMITS=/etc/security/limits.d/50-wren-firefox.conf
+FIREWALL=/etc/wren/firefox.nft
+UNIT=/etc/systemd/system/wren-firefox-firewall.service
+DESKTOP="$HOME/.local/share/applications/wren-firefox.desktop"
 
 if [ "${1:-}" = --remove ]; then
     fx_sandbox_unused
@@ -64,23 +64,23 @@ if [ "${1:-}" = --remove ]; then
     keep_incognito=false
     if [ -x /usr/local/bin/incognito ]; then
         if ask "Remove incognito (the throwaway Firefox) too?" y; then
-            bash "$DEBSWAY_DIR/parts/incognito.sh" --remove
+            bash "$WREN_DIR/parts/incognito.sh" --remove
         else
             keep_incognito=true
         fi
     fi
-    sudo systemctl disable --now debsway-firefox-firewall.service >/dev/null 2>&1 || true
-    sudo nft delete table inet debsway_firefox 2>/dev/null || true
+    sudo systemctl disable --now wren-firefox-firewall.service >/dev/null 2>&1 || true
+    sudo nft delete table inet wren_firefox 2>/dev/null || true
     [ -f "$BIN/media-sandbox" ] || [ -x /usr/local/bin/incognito ] || remove_bin wayland-restrict
     fx_disallow_session "$NAME"
-    sudo rm -f /etc/debsway/firefox.conf
+    sudo rm -f /etc/wren/firefox.conf
     sudo rm -f "$LIMITS" "$CMD" "$SESSION" "$PREFS" "$FIREWALL" "$UNIT"
     remove_no_abstract
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
-    sudo rmdir "$SHARE" /usr/local/libexec /etc/debsway 2>/dev/null || true
+    sudo rmdir "$SHARE" /usr/local/libexec /etc/wren 2>/dev/null || true
     sudo rm -rf /dev/shm/firefox-run
     # links open in firefox-esr again
-    unset_default_app debsway-firefox.desktop
+    unset_default_app wren-firefox.desktop
     rm -f "$DESKTOP"
     if id "$NAME" >/dev/null 2>&1; then
         sudo pkill -KILL -u "$NAME" 2>/dev/null || true
@@ -97,7 +97,7 @@ if [ "${1:-}" = --remove ]; then
     if $keep_incognito; then
         note "incognito stays, and with it Firefox ESR and its hardening."
     else
-        bash "$DEBSWAY_DIR/parts/firefox-hardening.sh" --remove
+        bash "$WREN_DIR/parts/firefox-hardening.sh" --remove
     fi
     apt_purge
     note "Your own Firefox profiles (firefox-esr's bookmarks, logins) stay in ~/.mozilla."
@@ -111,17 +111,17 @@ say "Firefox and what it needs"
 # that carries links to the running Firefox. nftables: the firewall rule.
 apt_install firefox-esr libavcodec61 webext-ublock-origin-firefox acl nftables python3 dbus-daemon \
     pipewire-bin pipewire-pulse wireplumber
-bash "$DEBSWAY_DIR/parts/firefox-hardening.sh"
-# debsway once had a separate extra for Firefox run as you (extras/firefox.sh);
+bash "$WREN_DIR/parts/firefox-hardening.sh"
+# Wren Linux once had a separate extra for Firefox run as you (extras/firefox.sh);
 # this one installs it now. Its marker package goes: what it held, this
 # script's marker holds now, so nothing is removed.
-if is_installed debsway-firefox; then
-    DEBSWAY_OWNER=firefox apt_purge >/dev/null
-    note "Took over Firefox ESR from debsway's old Firefox extra."
+if is_installed wren-firefox; then
+    WREN_OWNER=firefox apt_purge >/dev/null
+    note "Took over Firefox ESR from Wren Linux's old Firefox extra."
 fi
 
 say "Your choices (asked again whenever you run this in a terminal)"
-CHOICES=/etc/debsway/firefox.conf
+CHOICES=/etc/wren/firefox.conf
 chosen() { sed -n "s/^$1=//p" "$CHOICES" 2>/dev/null | head -1; }
 # last time's answers are the defaults (with no terminal to ask on: kept)
 fast=n sound=y links=y ublock=medium dns=strict cookies=delete
@@ -141,17 +141,17 @@ note "  medium    blocks ads, trackers and known malware sites, and also the"
 note "            scripts and frames a site loads from other sites, which is where"
 note "            most malicious ads come from. Safer, but many sites break until"
 note "            you allow them, one by one: ublock-allow example.com (then"
-note "            restart Firefox). debsway's default."
+note "            restart Firefox). Wren Linux's default."
 note "  standard  blocks ads, trackers and known malware sites; the rest of a site"
 note "            runs, so sites work as you expect. Easier for people who'd"
 note "            rather not allow sites."
 choose ublock "Which way should uBlock Origin work?" "$ublock" medium standard
 note "While secure DNS is on, Firefox uses it (every program's lookups, encrypted)."
-note "While it is switched off (the debsway menu, for a Wi-Fi sign-in page), Firefox"
+note "While it is switched off (the Wren menu, for a Wi-Fi sign-in page), Firefox"
 note "encrypts its own, to Quad9, so your network can't see which sites you look up:"
 note "  strict    always; a Wi-Fi sign-in page (cafés, hotels) then won't load in"
 note "            Firefox even with secure DNS off, and on a network that blocks"
-note "            encrypted DNS nothing does. debsway's default."
+note "            encrypted DNS nothing does. Wren Linux's default."
 note "  fallback  if encrypted DNS fails, the network's own, unencrypted: with secure"
 note "            DNS switched off, sign-in pages work, but such a network can see"
 note "            those lookups."
@@ -162,13 +162,13 @@ note "  delete  cookies, site data and the cache go when Firefox closes. You are
 note "          logged out of every site then (saved passwords still fill in, on a"
 note "          click). To stay logged in to a few: Firefox's Settings > Privacy &"
 note "          Security > Cookies and Site Data > Manage Exceptions > Allow."
-note "          debsway's default."
+note "          Wren Linux's default."
 note "  keep    they stay, as in a normal Firefox: you stay logged in everywhere."
 note "History, bookmarks and saved passwords stay either way: they are yours, and no"
 note "website can read them."
 choose cookies "When Firefox closes, its cookies and site data:" "$cookies" delete keep
 sudo install -d -o root -g root -m 0755 "${CHOICES%/*}"
-printf '%s\n' '# Written by debsway extras/firefox-sandbox.sh: run it again to change these' \
+printf '%s\n' '# Written by Wren Linux extras/firefox-sandbox.sh: run it again to change these' \
     "fast_js=$fast" "sound=$sound" "default_browser=$links" "ublock=$ublock" "dns=$dns" "cookies=$cookies" | sudo tee "$CHOICES" >/dev/null
 sudo chmod 0644 "$CHOICES"
 note "Fast JavaScript: $fast. Sound: $sound. Default browser: $links. uBlock: $ublock mode."
@@ -179,63 +179,63 @@ sudo /usr/local/bin/ublock-allow --mode "$ublock" >/dev/null || warn "Couldn't s
 
 say "The $NAME user"
 # No password to guess, no login shell, a home only it can enter; in the group
-# debsway-fx that the firewall rule matches (profiles with a user of their own are too)
-fx_create_user "$NAME" "$HOME_DIR" "debsway sandboxed Firefox"
+# wren-fx that the firewall rule matches (profiles with a user of their own are too)
+fx_create_user "$NAME" "$HOME_DIR" "Wren Linux sandboxed Firefox"
 note "$NAME: no password, no login, group $FX_GROUP (and render); home $HOME_DIR."
 
 say "The firefox command"
 sudo install -d -o root -g root -m 0755 "$SHARE" /usr/local/libexec
 install_bin wayland-restrict
 install_no_abstract
-sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/firefox" "$CMD"
-sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/firefox-session" "$SESSION"
-sudo install -o root -g root -m 0644 "$DEBSWAY_DIR/data/firefox-user.js" "$PREFS"
+sudo install -o root -g root -m 0755 "$WREN_DIR/bin/firefox" "$CMD"
+sudo install -o root -g root -m 0755 "$WREN_DIR/bin/firefox-session" "$SESSION"
+sudo install -o root -g root -m 0644 "$WREN_DIR/data/firefox-user.js" "$PREFS"
 
 say "What your user may run as $NAME"
 fx_allow_session "$NAME"
-note "Wrote /etc/sudoers.d/debsway-$NAME"
+note "Wrote /etc/sudoers.d/wren-$NAME"
 
 # A limit on processes keeps a runaway page from filling the machine; for every
 # user in the group (a profile with a user of its own too)
-printf '# Written by debsway extras/firefox-sandbox.sh\n@%s hard nproc 4096\n@%s hard core 0\n' "$FX_GROUP" "$FX_GROUP" |
+printf '# Written by Wren Linux extras/firefox-sandbox.sh\n@%s hard nproc 4096\n@%s hard core 0\n' "$FX_GROUP" "$FX_GROUP" |
     sudo tee "$LIMITS" >/dev/null
 
 say "Keeping $NAME off your network"
 sudo install -d -o root -g root -m 0755 "${FIREWALL%/*}"
-sudo install -o root -g root -m 0644 "$DEBSWAY_DIR/data/firefox-firewall.nft" "$FIREWALL"
+sudo install -o root -g root -m 0644 "$WREN_DIR/data/firefox-firewall.nft" "$FIREWALL"
 # Loaded before the network comes up, at every boot
-printf '%s\n' '# Written by debsway extras/firefox-sandbox.sh' '[Unit]' \
-    'Description=Keep the firefox user off the local network (debsway)' \
+printf '%s\n' '# Written by Wren Linux extras/firefox-sandbox.sh' '[Unit]' \
+    'Description=Keep the firefox user off the local network (Wren Linux)' \
     'Before=network-pre.target' 'Wants=network-pre.target' '' '[Service]' \
     'Type=oneshot' 'RemainAfterExit=yes' \
     "ExecStart=/usr/sbin/nft -f $FIREWALL" \
-    'ExecStop=/usr/sbin/nft delete table inet debsway_firefox' '' '[Install]' \
+    'ExecStop=/usr/sbin/nft delete table inet wren_firefox' '' '[Install]' \
     'WantedBy=multi-user.target' | sudo tee "$UNIT" >/dev/null
 sudo systemctl daemon-reload
 # Restart, not just enable --now: a changed rule file is only loaded by a restart
-sudo systemctl enable debsway-firefox-firewall.service >/dev/null &&
-    sudo systemctl restart debsway-firefox-firewall.service ||
-    warn "Couldn't load the firewall rule; check: systemctl status debsway-firefox-firewall"
+sudo systemctl enable wren-firefox-firewall.service >/dev/null &&
+    sudo systemctl restart wren-firefox-firewall.service ||
+    warn "Couldn't load the firewall rule; check: systemctl status wren-firefox-firewall"
 
 say "Default browser"
 # Links from other programs go to xdg-open, which asks this list. Only your user's
 # settings change; firefox-esr stays installed and can still be started by name.
-install -D -m 0644 "$DEBSWAY_DIR/data/debsway-firefox.desktop" "$DESKTOP"
+install -D -m 0644 "$WREN_DIR/data/wren-firefox.desktop" "$DESKTOP"
 if [ "$links" = yes ]; then
-    set_default_app debsway-firefox.desktop x-scheme-handler/http x-scheme-handler/https
+    set_default_app wren-firefox.desktop x-scheme-handler/http x-scheme-handler/https
     note "Links from other programs now open in the sandboxed Firefox."
 else
-    unset_default_app debsway-firefox.desktop
+    unset_default_app wren-firefox.desktop
     note "Links from other programs open as before (not in the sandboxed Firefox)."
 fi
 
 say "incognito"
 note "incognito opens a throwaway Firefox as a separate, locked-down user, with"
 note "its own clipboard, no shared folders, sound and video, and nothing kept."
-bash "$DEBSWAY_DIR/parts/incognito.sh" ||
-    warn "incognito didn't finish setting up; run it again with: bash $DEBSWAY_DIR/parts/incognito.sh"
+bash "$WREN_DIR/parts/incognito.sh" ||
+    warn "incognito didn't finish setting up; run it again with: bash $WREN_DIR/parts/incognito.sh"
 
 note "Run it with: firefox   (or Super+d). firefox-esr runs Firefox as you instead."
 note "It cannot reach your router or local services; to allow that for a while:"
-note "  sudo systemctl stop debsway-firefox-firewall"
+note "  sudo systemctl stop wren-firefox-firewall"
 note "Downloads go to ~/Downloads, shared with you. Copy and paste works while its window has focus."

@@ -1,5 +1,5 @@
 #!/bin/bash
-# incognito [--no-audio] [--signin] [URL]: written by debsway parts/incognito.sh
+# incognito [--no-audio] [--signin] [URL]: written by Wren Linux parts/incognito.sh
 # Opens Firefox as a different, locked-down user (incognito), inside its own
 # small window system, so it shares no clipboard and no folder with you.
 # Everything it stores is kept in memory and deleted when you close it.
@@ -35,12 +35,12 @@ case $WAYLAND_DISPLAY in
 esac
 [ -S "$rt/$WAYLAND_DISPLAY" ] || die "can't find your Wayland socket ($rt/$WAYLAND_DISPLAY)."
 sock=$rt/$user-wayland
-restrict=$(command -v wayland-restrict) || die "wayland-restrict is missing. Run: debsway part incognito"
+restrict=$(command -v wayland-restrict) || die "wayland-restrict is missing. Run: wrenctl part incognito"
 command -v setfacl >/dev/null || die "setfacl is missing (package acl)."
 command -v flock >/dev/null || die "flock is missing (package util-linux)."
 # The one command your user may run as incognito or wifi-signin (see /etc/sudoers.d)
 sudo -n -u "$user" -l /usr/local/libexec/incognito-session >/dev/null 2>&1 ||
-    die "your user isn't set up to start it. Run: debsway part incognito"
+    die "your user isn't set up to start it. Run: wrenctl part incognito"
 
 # One of each kind at a time: the second would take back the access the first one needs
 exec 9>"$rt/$user.lock"
@@ -94,7 +94,7 @@ fi
 
 rc=0
 # the theme (bin/theme): just the word light or dark
-theme=$(head -c 16 "${XDG_CONFIG_HOME:-$HOME/.config}/debsway/theme" 2>/dev/null || true)
+theme=$(head -c 16 "${XDG_CONFIG_HOME:-$HOME/.config}/wren/theme" 2>/dev/null || true)
 case $theme in light | dark) ;; *) theme=dark ;; esac
 sudo -n -u "$user" /usr/local/libexec/incognito-session "$rt" "${sock##*/}" "$audio_arg" "$theme" "$kind" "$@" || rc=$?
 exit "$rc"

@@ -15,7 +15,7 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 }
 not() { ! "$@"; }
 
-HOME=$T/home DEBSWAY_DIR=$T/debsway OFFLINE_DIR=$T/debsway/offline
+HOME=$T/home WREN_DIR=$T/wren OFFLINE_DIR=$T/wren/offline
 eval "$(sed -n '/^write_excludes() {/,/^}/p' "$HERE/extras/backup.sh")"
 F=$T/excludes
 
@@ -25,7 +25,7 @@ for line in "$HOME/.cache" "$HOME/.local/share/Trash" "$HOME/.local/share/libvir
 done
 
 # A list from an earlier version, which you edited: .cache taken out, a line added
-printf '%s\n' "# Left out of backups (written by debsway extras/backup.sh)" "$HOME/.local/share/Trash" \
+printf '%s\n' "# Left out of backups (written by Wren Linux extras/backup.sh)" "$HOME/.local/share/Trash" \
     "$HOME/.local/share/libvirt/images" "$HOME/Videos" >"$F"
 write_excludes "$F"
 check "an existing list gains mockvps-kvm's VM disks (~/vpskvm)" grep -qxF "$HOME/vpskvm" "$F"

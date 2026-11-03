@@ -23,8 +23,8 @@
 # security: most
 # status: bin:tails-usb
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/lib/appimage.sh"
-. "$DEBSWAY_DIR/lib/tails.sh"
+. "$WREN_DIR/lib/appimage.sh"
+. "$WREN_DIR/lib/tails.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
@@ -162,13 +162,13 @@ make_stick() {
     or the stick fails, run tails-usb again to make a fresh one (that erases
     the stick, Persistent Storage included: back that up first).
     Tails' own guide: https://tails.net/doc/
-    More: docs/extras/tails-usb.md in the debsway folder.
+    More: docs/extras/tails-usb.md in the Wren Linux folder.
 EOF
 }
 
 case ${1:-} in
     --make)
-        for c in wget gpg python3 lsblk; do command -v "$c" >/dev/null || die "$c is missing. Run: bash $DEBSWAY_DIR/extras/tails-usb.sh"; done
+        for c in wget gpg python3 lsblk; do command -v "$c" >/dev/null || die "$c is missing. Run: bash $WREN_DIR/extras/tails-usb.sh"; done
         make_stick ;;
     "")
         setup
@@ -185,7 +185,7 @@ case ${1:-} in
        name to confirm. It writes Tails and reads it back to check.
     5. When it is done it says how to start the computer from the stick.
 
-    More: docs/extras/tails-usb.md in the debsway folder.
+    More: docs/extras/tails-usb.md in the Wren Linux folder.
 EOF
         pause_if_asked ;;
     *) die "Usage: bash extras/tails-usb.sh [--make | --remove]" ;;

@@ -1,5 +1,5 @@
 # Keeps the claude-agent user off your computer and your local network
-# (debsway extras/claude-code.sh). Only that user's traffic is touched.
+# (Wren Linux extras/claude-code.sh). Only that user's traffic is touched.
 # It can still reach the internet (Claude's servers, git hosts, package
 # sites), but not:
 #   - programs on this machine that listen on the network, including its
@@ -9,14 +9,14 @@
 #
 # To let it use servers on this machine (its own, and also yours: Tor's
 # proxy, a printing service...), add this line below the "established" one,
-# then run: sudo systemctl restart debsway-claude-firewall
+# then run: sudo systemctl restart wren-claude-firewall
 #     oifname "lo" accept
 # (that also opens this computer's own LAN and public addresses to it)
 
-table inet debsway_claude
-delete table inet debsway_claude
+table inet wren_claude
+delete table inet wren_claude
 
-table inet debsway_claude {
+table inet wren_claude {
     chain output {
         type filter hook output priority 0; policy accept;
         meta skuid "claude-agent" jump claude

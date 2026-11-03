@@ -3,11 +3,11 @@
 ## SYNOPSIS
 
 ```
-debsway install claude-regular                         install it, with its sandbox on
-debsway remove claude-regular                          remove it (your Claude login and settings stay)
-debsway manual claude-regular                          print the manual steps below
-debsway install claude-regular --account NAME          another account (its own login and memories)
-debsway install claude-regular --remove-account NAME   take it out (asks before deleting its login)
+wrenctl install claude-regular                         install it, with its sandbox on
+wrenctl remove claude-regular                          remove it (your Claude login and settings stay)
+wrenctl manual claude-regular                          print the manual steps below
+wrenctl install claude-regular --account NAME          another account (its own login and memories)
+wrenctl install claude-regular --remove-account NAME   take it out (asks before deleting its login)
 
 cd ~/code/project && claude-regular   Claude Code as you, in that folder
 claude                                the same, unless extras/claude-code.sh is set up (then claude is the sandboxed one)
@@ -55,18 +55,18 @@ rm /tmp/claude-code.asc
 echo "deb [signed-by=/etc/apt/keyrings/claude-code.asc] https://downloads.claude.ai/claude-code/apt/stable stable main" |
     sudo tee /etc/apt/sources.list.d/claude-code.list
 echo 'Unattended-Upgrade::Origins-Pattern:: "site=downloads.claude.ai";' |
-    sudo tee /etc/apt/apt.conf.d/52debsway-claude-code
+    sudo tee /etc/apt/apt.conf.d/52wren-claude-code
 
 # Claude Code; bubblewrap and socat for its sandbox; git and ripgrep; python3 for the merge
 sudo apt update
 sudo apt install --no-install-recommends claude-code bubblewrap socat git ripgrep python3
 # The claude-regular command
-install -D -m 0755 @DEBSWAY_DIR@/bin/claude-regular ~/.local/bin/claude-regular
+install -D -m 0755 @WREN_DIR@/bin/claude-regular ~/.local/bin/claude-regular
 
 # Its sandbox on, and the rules, merged into your own settings (and what was
 # added remembered, for the undo below)
-python3 -I @DEBSWAY_DIR@/lib/claude-settings.py add ~/.claude/settings.json \
-    @DEBSWAY_DIR@/data/claude-regular-settings.json ~/.local/state/debsway/claude-regular-settings.json
+python3 -I @WREN_DIR@/lib/claude-settings.py add ~/.claude/settings.json \
+    @WREN_DIR@/data/claude-regular-settings.json ~/.local/state/wren/claude-regular-settings.json
 # They are there: this shows "sandbox" and "permissions"
 cat ~/.claude/settings.json
 cd ~/code/project && claude-regular
@@ -78,20 +78,20 @@ Another account, NAME: `mkdir -m 700 ~/.claude-NAME`, the same `add` into
 `"~/.claude"` to its `sandbox.filesystem.denyRead`, and the same three for
 `~/.claude-NAME` to `~/.claude/settings.json`. Run it with
 `CLAUDE_CONFIG_DIR=~/.claude-NAME claude` (what `claude-regular --account NAME`
-does). This also works for a Claude Code installed without debsway.
+does). This also works for a Claude Code installed without Wren Linux.
 
 To undo (your Claude login and settings stay in `~/.claude`):
 
 ```
-# Take out only the settings debsway added
-python3 -I @DEBSWAY_DIR@/lib/claude-settings.py remove ~/.claude/settings.json \
-    @DEBSWAY_DIR@/data/claude-regular-settings.json ~/.local/state/debsway/claude-regular-settings.json
+# Take out only the settings Wren Linux added
+python3 -I @WREN_DIR@/lib/claude-settings.py remove ~/.claude/settings.json \
+    @WREN_DIR@/data/claude-regular-settings.json ~/.local/state/wren/claude-regular-settings.json
 # The command
 rm ~/.local/bin/claude-regular
 # Only if the sandboxed claude (extras/claude-code.sh) isn't set up: Claude
 # Code, its repository, key and update rule
 sudo apt purge claude-code
-sudo rm /etc/apt/sources.list.d/claude-code.list /etc/apt/keyrings/claude-code.asc /etc/apt/apt.conf.d/52debsway-claude-code
+sudo rm /etc/apt/sources.list.d/claude-code.list /etc/apt/keyrings/claude-code.asc /etc/apt/apt.conf.d/52wren-claude-code
 # The tools, marked "automatic": autoremove takes them out only if nothing needs them
 sudo apt-mark auto bubblewrap socat ripgrep
 sudo apt autoremove --purge

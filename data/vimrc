@@ -1,4 +1,4 @@
-" Written by debsway extras/vim.sh (data/vimrc). debsway rewrites this file
+" Written by Wren Linux extras/vim.sh (data/vimrc). Wren Linux rewrites this file
 " while this first line is here; change or delete the line and it is yours.
 
 " Colors for the language of each file (vim knows hundreds: shell, Python, C,
@@ -6,8 +6,8 @@
 syntax on
 filetype plugin indent on
 
-" Light or dark, as debsway's theme is (theme light, theme dark), at start
-let s:theme = expand('~/.config/debsway/theme')
+" Light or dark, as Wren Linux's theme is (theme light, theme dark), at start
+let s:theme = expand('~/.config/wren/theme')
 if filereadable(s:theme) && get(readfile(s:theme, '', 1), 0, '') ==# 'light'
   set background=light
 else

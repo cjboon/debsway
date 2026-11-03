@@ -47,7 +47,7 @@ esac
 FAKE
 chmod +x "$T/fake/"*
 echo "unblocked unblocked" >"$T/rf/wifi"; echo "unblocked unblocked" >"$T/rf/bluetooth"; echo open >"$T/mic"; echo yes >"$T/powered"
-r() { env PATH="$T/fake:/usr/bin:/bin" DEBSWAY_SYS="$T/sys" XDG_RUNTIME_DIR="$T/run" bash "$R" "$@"; }
+r() { env PATH="$T/fake:/usr/bin:/bin" WREN_SYS="$T/sys" XDG_RUNTIME_DIR="$T/run" bash "$R" "$@"; }
 
 check "list shows each radio that exists, with its state" test "$(r list | paste -sd,)" = "wifi on,bluetooth on,mic on"
 check "status says on" test "$(r wifi status)" = on
@@ -89,11 +89,11 @@ check "switching it on powers it up" test "$(r bluetooth status)" = on
 mkdir -p "$T/nobz"
 for c in rfkill wpctl; do ln -sf "$T/fake/$c" "$T/nobz/$c"; done
 for c in grep cat tr seq sleep; do ln -sf "$(command -v "$c")" "$T/nobz/$c"; done
-rnobz() { env PATH="$T/nobz" DEBSWAY_SYS="$T/sys" XDG_RUNTIME_DIR="$T/run" "$BASH" "$R" "$@"; }
+rnobz() { env PATH="$T/nobz" WREN_SYS="$T/sys" XDG_RUNTIME_DIR="$T/run" "$BASH" "$R" "$@"; }
 echo "unblocked unblocked" >"$T/rf/bluetooth"
 check "an adapter without bluez: Bluetooth isn't listed (the menu shows no switch)" bash -c '! grep -q bluetooth <<<"$1"' _ "$(rnobz list)"
 rnobz bluetooth on 2>"$T/err"; rc=$?
-check "...and switching it on fails, saying how to install it" bash -c '[ "$1" -eq 1 ] && grep -q "debsway install bluetooth" "$2"' _ "$rc" "$T/err"
+check "...and switching it on fails, saying how to install it" bash -c '[ "$1" -eq 1 ] && grep -q "wrenctl install bluetooth" "$2"' _ "$rc" "$T/err"
 check "the extra's --remove blocks the radio before bluez goes" python3 -I -c 'import sys; s = open(sys.argv[1]).read(); r = s.index("--remove ]"); b = s.index("rfkill block bluetooth", r); p = s.index("apt_purge bluez", r); assert b < p' "$HERE/extras/bluetooth.sh"
 
 # what a desktop does not have is not listed, and asking for it fails
@@ -115,12 +115,12 @@ wait
 
 # radios switches Wi-Fi and Bluetooth with rfkill, which Debian doesn't install by
 # itself: the scripts that put radios in place for those must install it
-for f in parts/debsway-menu.sh extras/bluetooth.sh; do
+for f in parts/wren-menu.sh extras/bluetooth.sh; do
     check "$f installs rfkill (without it the menu has no Wi-Fi or Bluetooth)" \
         grep -qE '^[[:space:]]*apt_install .*\<rfkill\>' "$HERE/$f"
 done
 
 check "a wrong word is refused with status 2" bash -c 'env PATH="$1/fake:/usr/bin:/bin" bash "$2" nonsense; [ $? -eq 2 ]' _ "$T" "$R"
-check "so is a wrong action" bash -c 'echo open >"$1/mic"; env PATH="$1/fake:/usr/bin:/bin" DEBSWAY_SYS="$1/sys" bash "$2" mic sideways; [ $? -eq 2 ]' _ "$T" "$R"
+check "so is a wrong action" bash -c 'echo open >"$1/mic"; env PATH="$1/fake:/usr/bin:/bin" WREN_SYS="$1/sys" bash "$2" mic sideways; [ $? -eq 2 ]' _ "$T" "$R"
 
 [ "$fails" -eq 0 ]

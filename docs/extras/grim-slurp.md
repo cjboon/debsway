@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-debsway install grim-slurp                     install it
-debsway remove grim-slurp                      remove it
-debsway manual grim-slurp                      print the manual steps below
+wrenctl install grim-slurp                     install it
+wrenctl remove grim-slurp                      remove it
+wrenctl manual grim-slurp                      print the manual steps below
 
 Print        or Super+Shift+p   the whole screen, to ~/Pictures
 Shift+Print  or Super+Shift+s   drag a region, to ~/Pictures
@@ -32,7 +32,7 @@ Print key.
 # grim takes the picture, slurp picks the region
 sudo apt install --no-install-recommends grim slurp
 # The screenshot command
-install -D -m 0755 @DEBSWAY_DIR@/bin/screenshot ~/.local/bin/screenshot
+install -D -m 0755 @WREN_DIR@/bin/screenshot ~/.local/bin/screenshot
 # The keys, in a file sway's config includes (~/.config/sway/config.d/*.conf)
 mkdir -p ~/.config/sway/config.d
 cat >~/.config/sway/config.d/screenshots.conf <<'EOF'

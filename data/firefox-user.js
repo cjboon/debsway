@@ -1,5 +1,5 @@
-// Firefox settings for the sandboxed Firefox (debsway extras/firefox-sandbox.sh).
-// Applied at every start on top of debsway's defaults for every profile
+// Firefox settings for the sandboxed Firefox (Wren Linux extras/firefox-sandbox.sh).
+// Applied at every start on top of Wren Linux's defaults for every profile
 // (HTTPS-Only Mode, JavaScript JIT off, uBlock Origin in medium mode). Unlike
 // incognito, this profile is kept: logins, history and bookmarks stay.
 

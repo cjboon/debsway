@@ -8,7 +8,7 @@
 # security: some
 # status: opt:simplex
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/lib/appimage.sh"
+. "$WREN_DIR/lib/appimage.sh"
 
 NAME=simplex
 FPR=$SIMPLEX_FPR

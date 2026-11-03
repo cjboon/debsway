@@ -10,11 +10,11 @@
 # in the file below.
 # Runs after parts/network-manager.sh.
 # Usage: bash random-mac.sh [--remove]
-# status: file:/etc/NetworkManager/conf.d/90-debsway-random-mac.conf
+# status: file:/etc/NetworkManager/conf.d/90-wren-random-mac.conf
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
-CONF=/etc/NetworkManager/conf.d/90-debsway-random-mac.conf
+CONF=/etc/NetworkManager/conf.d/90-wren-random-mac.conf
 
 reload_nm() {
     if systemctl is-active --quiet NetworkManager; then sudo nmcli general reload conf; fi
@@ -32,7 +32,7 @@ is_installed network-manager ||
     die "NetworkManager isn't installed. Run parts/network-manager.sh first."
 
 say "Random Wi-Fi MAC address"
-printf '%s\n' "# Written by debsway parts/random-mac.sh" \
+printf '%s\n' "# Written by Wren Linux parts/random-mac.sh" \
     '[device]' 'wifi.scan-rand-mac-address=yes' '' \
     '[connection]' 'wifi.cloned-mac-address=random' \
     'ipv4.dhcp-send-hostname=false' 'ipv6.dhcp-send-hostname=false' \

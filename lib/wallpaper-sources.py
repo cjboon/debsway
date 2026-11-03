@@ -78,7 +78,7 @@ def fetch(url, limit):
     # (a path with letters like ’ in it, as Earth Observatory's have)
     u = urllib.parse.urlsplit(url)
     url = urllib.parse.urlunsplit(u._replace(path=urllib.parse.quote(u.path, safe="/%:@")))
-    req = urllib.request.Request(url, headers={"User-Agent": "debsway-wallpapers"})
+    req = urllib.request.Request(url, headers={"User-Agent": "wren-wallpapers"})
     with OPENER.open(req, timeout=60) as r:
         data = r.read(limit + 1)
     if len(data) > limit:

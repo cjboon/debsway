@@ -1,9 +1,9 @@
   KEYS                                   Super = the Windows / Cmd key
   ──────────────────────────────────────────────────────────────────
   Press Esc to close this; arrows and Space scroll.
-  Open it again any time: Super+?, click debsway > Help in the bar, or type  keys.
-  (The debsway menu: arrows and Enter, or click; Space flips a switch. Esc closes every screen.)
-  Lines for things you have not installed are left out; add them with debsway --apps.
+  Open it again any time: Super+?, click Wren Linux > Help in the bar, or type  keys.
+  (The Wren menu: arrows and Enter, or click; Space flips a switch. Esc closes every screen.)
+  Lines for things you have not installed are left out; add them with wrenctl --apps.
   It is also the file ~/KEYS.txt.
   The key every sway shortcut starts with: keys --mod alt, or keys --mod super.
 
@@ -13,7 +13,7 @@
                            firefox, incognito, keepassxc, sparrow
     Super+Shift+q          close the window
     Super+?                this page
-    Super+m                the debsway menu (or click debsway in the bar)
+    Super+m                the Wren menu (or click Wren Linux in the bar)
     Super+] / Super+[      next / previous wallpaper; Super+Shift+w: pick one
     Super+\                no wallpaper (the theme's plain background)
 
@@ -43,7 +43,7 @@
 
   TEXT CONSOLE (tmux; the console-only extra starts it at login)
     Alt+1 … 0              workspace 1 … 10 (Alt+Shift+1 … sends the pane)
-    Alt+m / Alt+t / Alt+?  debsway menu / timers / this sheet
+    Alt+m / Alt+t / Alt+?  Wren menu / timers / this sheet
     Alt+w                  Wi-Fi screen        Alt+b: battery time left
     Alt+- / Alt+=          volume down / up; Alt+Backspace: mute
     Alt+, / Alt+.          brightness down / up
@@ -85,7 +85,7 @@
     timer list | cancel    what is running | stop one (timer cancel all)
     timer stop             end the sound of a ringing alarm (or click/dismiss its notice)
     timer clock            show or hide the date in the bar
-@if debsway-idle
+@if wren-idle
     timer lock 10          lock the screen after 10 minutes idle (1 to 120; it
                            fades for 30 seconds first). timer lock: how long now
 @end
@@ -106,8 +106,8 @@
 
   FROM A TERMINAL
     keys                   this page
-    bash ~/debsway/status.sh          what is installed
-    bash ~/debsway/install-extras.sh  add programs (or one: extras/NAME.sh)
+    bash ~/wren/status.sh          what is installed
+    bash ~/wren/install-extras.sh  add programs (or one: extras/NAME.sh)
     display-scale          text too small on a sharp screen? makes it bigger
 @if claude
     claude                 Claude Code as its own user, in ~/projects/NAME

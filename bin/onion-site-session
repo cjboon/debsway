@@ -1,5 +1,5 @@
 #!/bin/bash
-# onion-site-session SUBCOMMAND: written by debsway extras/onion-site.sh
+# onion-site-session SUBCOMMAND: written by Wren Linux extras/onion-site.sh
 # Installed as /usr/local/libexec/onion-site-session. Your user may run exactly
 # this, as the onion-site user, and nothing else (a rule in /etc/sudoers.d). The
 # onion-site command calls it. It drives the site's VM (one qemu-system-x86_64
@@ -15,10 +15,10 @@ set -euo pipefail
 
 # Run again without a way to reach XWayland's abstract socket, which any user
 # can connect to (qemu and ssh below inherit this)
-noabs=/usr/local/libexec/debsway-no-abstract-sockets
-if [ -z "${DEBSWAY_NOABS:-}" ]; then
+noabs=/usr/local/libexec/wren-no-abstract-sockets
+if [ -z "${WREN_NOABS:-}" ]; then
     [ -x "$noabs" ] || { echo "onion-site-session: $noabs is missing. Run: bash extras/onion-site.sh" >&2; exit 1; }
-    export DEBSWAY_NOABS=1
+    export WREN_NOABS=1
     exec "$noabs" "$0" "$@"
 fi
 
@@ -64,7 +64,7 @@ boot() {
 }
 
 ensure_up() {
-    is_installed || die "no VM yet. Set it up first: debsway install onion-site"
+    is_installed || die "no VM yet. Set it up first: wrenctl install onion-site"
     running || boot
 }
 
@@ -92,7 +92,7 @@ case "${1:-}" in
     update)
         # apt through the host's Tor: restart the VM with the relay, upgrade, and
         # restart it without the relay. PROVISION_FILES runs the upgrade as root.
-        is_installed || die "no VM yet. Set it up first: debsway install onion-site"
+        is_installed || die "no VM yet. Set it up first: wrenctl install onion-site"
         up=$(mktemp)
         trap 'rm -f "$up"' EXIT
         printf '%s\n' '#!/bin/bash' 'set -e' 'export DEBIAN_FRONTEND=noninteractive' \

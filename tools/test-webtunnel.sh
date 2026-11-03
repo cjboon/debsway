@@ -56,13 +56,13 @@ sed 's|^export PATH=.*|export PATH="$WT_TEST_PATH"|' "$HERE/lib.sh" >"$R/lib.sh"
 grep -q WT_TEST_PATH "$R/lib.sh" || { echo "  FAIL  lib.sh's PATH line wasn't found"; exit 1; }
 sed "s|^TORPROJECT_FPR=.*|TORPROJECT_FPR=$GOOD|" "$HERE/pins.sh" >"$R/pins.sh"
 for f in packages.sh lib data docs bin; do ln -s "$HERE/$f" "$R/$f"; done
-export WT_TEST_PATH="$T/bin:$PATH" HOME=$T/home DEBSWAY_ETC=$T/root/etc
+export WT_TEST_PATH="$T/bin:$PATH" HOME=$T/home WREN_ETC=$T/root/etc
 mkdir -p "$HOME"
 [ "$(bash -c '. "$1/lib.sh"; command -v sudo' _ "$R")" = "$T/bin/sudo" ] || { echo "  FAIL  the real sudo would run; stopping"; exit 1; }
 lib() { : >"$T/calls"; bash -c '. "$1/lib.sh"; shift; "$@"' _ "$R" "$@" >"$T/out" 2>&1; }
-LIST=$T/root/etc/apt/sources.list.d/debsway-torproject.list
-PREF=$T/root/etc/apt/preferences.d/debsway-torproject.pref
-KEY=$T/root/usr/share/keyrings/debsway-torproject.asc
+LIST=$T/root/etc/apt/sources.list.d/wren-torproject.list
+PREF=$T/root/etc/apt/preferences.d/wren-torproject.pref
+KEY=$T/root/usr/share/keyrings/wren-torproject.asc
 
 cp "$T/other.asc" "$T/served.asc"
 lib add_torproject_repo
@@ -75,27 +75,27 @@ lib add_torproject_repo
 check "the pinned key: it goes in" cmp "$T/good.asc" "$KEY"
 cn=$(. /etc/os-release && echo "$VERSION_CODENAME")
 check "...the repository, trusted with that key only, over https" \
-    grep -qx "deb \[signed-by=/usr/share/keyrings/debsway-torproject.asc arch=$(dpkg --print-architecture)\] https://deb.torproject.org/torproject.org $cn main" "$LIST"
-check "...updated by unattended-upgrades" grep -q 'site=deb.torproject.org' "$T/root/etc/apt/apt.conf.d/52debsway-torproject"
+    grep -qx "deb \[signed-by=/usr/share/keyrings/wren-torproject.asc arch=$(dpkg --print-architecture)\] https://deb.torproject.org/torproject.org $cn main" "$LIST"
+check "...updated by unattended-upgrades" grep -q 'site=deb.torproject.org' "$T/root/etc/apt/apt.conf.d/52wren-torproject"
 # the pin, as apt reads it: lyrebird at 500 and everything else from there at -1
 check "...an apt pin: lyrebird from it, at 500" \
     python3 -I -c 'import sys; r = [dict(l.split(": ", 1) for l in b.splitlines() if not l.startswith("#")) for b in open(sys.argv[1]).read().strip().split("\n\n")]; assert {"Package": "lyrebird", "Pin": "origin deb.torproject.org", "Pin-Priority": "500"} in r' "$PREF"
 check "...and every other package from it at -1 (never installed: Debian's tor stays)" \
     python3 -I -c 'import sys; r = [dict(l.split(": ", 1) for l in b.splitlines() if not l.startswith("#")) for b in open(sys.argv[1]).read().strip().split("\n\n")]; assert {"Package": "*", "Pin": "origin deb.torproject.org", "Pin-Priority": "-1"} in r and len(r) == 2' "$PREF"
-mkdir -p "$T/root/etc/tor"; : >"$T/root/etc/tor/.debsway-apt-tor"
+mkdir -p "$T/root/etc/tor"; : >"$T/root/etc/tor/.wren-apt-tor"
 lib add_torproject_repo
 check "apt over Tor, but lyrebird not here yet: still https (Tor can't connect without it)" grep -q ' https://deb.torproject.org' "$LIST"
 : >"$T/has-lyrebird"
 lib add_torproject_repo
 check "...with lyrebird: through Tor" grep -q ' tor+https://deb.torproject.org' "$LIST"
-rm "$T/root/etc/tor/.debsway-apt-tor"
+rm "$T/root/etc/tor/.wren-apt-tor"
 
 lib remove_torproject_repo_if_unused
 check "lyrebird still installed: the repository stays" test -e "$LIST"
 rm "$T/has-lyrebird"
 lib remove_torproject_repo_if_unused
 check "lyrebird gone: the repository, its key, its pin and its update rule go" \
-    bash -c '[ ! -e "$1" ] && [ ! -e "$2" ] && [ ! -e "$3" ] && [ ! -e "$4/etc/apt/apt.conf.d/52debsway-torproject" ]' _ "$LIST" "$PREF" "$KEY" "$T/root"
+    bash -c '[ ! -e "$1" ] && [ ! -e "$2" ] && [ ! -e "$3" ] && [ ! -e "$4/etc/apt/apt.conf.d/52wren-torproject" ]' _ "$LIST" "$PREF" "$KEY" "$T/root"
 
 check "key_ok: the pinned key passes" bash -c '. "$1/lib.sh"; key_ok "$2" "$3"' _ "$R" "$T/good.asc" "$GOOD"
 check "key_ok: a key that can no longer sign doesn't (its signing subkey expired)" \

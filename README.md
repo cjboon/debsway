@@ -1,4 +1,4 @@
-# debsway
+# Wren Linux
 
 A minimal, privacy-minded [sway](https://swaywm.org) desktop for Debian 13
 (trixie), installed by plain shell scripts you can read in one sitting.
@@ -10,6 +10,9 @@ automount are optional extras you pick right after you agree to the install
 (nothing is checked for you). No desktop environment, display manager, tray
 or settings app: one compositor and plain text configs.
 
+Wren Linux is based on Debian; it is not affiliated with or endorsed by the
+Debian project. (It was called debsway until November 2026.)
+
 What's different from a dotfiles repo:
 
 - **Hardened Firefox** (an extra you pick): uBlock Origin (standard or medium mode, your choice), HTTPS-Only,
@@ -17,7 +20,7 @@ What's different from a dotfiles repo:
   clipboard and `~/Downloads`, nothing else of yours). `incognito` opens a throwaway Firefox as a
   separate locked-down user, in memory, on a restricted Wayland socket,
   with its own firewall rule and audio, that plays video and sound. "Wi-Fi sign-in" in the
-  debsway menu opens one for a café's sign-in page, the only window that uses the network's DNS.
+  Wren menu opens one for a café's sign-in page, the only window that uses the network's DNS.
 - **Sandboxes for the risky things**: images and video open in bubblewrap;
   Claude Code can run as its own user or in a VM; Tor Browser, Whonix,
   wallets and more are one script each in `extras/`.
@@ -47,14 +50,14 @@ Good to know before you run anything:
 
 1. Install Debian 13 with disk encryption and no desktop (details in
    [Installing Debian](#installing-debian)).
-2. Log in on the text console, plug in the USB stick (labelled `DEBSWAY`,
+2. Log in on the text console, plug in the USB stick (labelled `WREN`,
    which `tools/pack-usb.sh` does for you) and type one line:
 
 ```bash
-sudo mount -L DEBSWAY /mnt && bash /mnt/debsway/start.sh
+sudo mount -L WREN /mnt && bash /mnt/wren/start.sh
 ```
 
-   `start.sh` copies debsway to `~/debsway`, unmounts the stick, runs
+   `start.sh` copies Wren Linux to `~/wren`, unmounts the stick, runs
    `wifi.sh` if you aren't online, and starts `install-base.sh`, which
    explains what it will do and asks before changing anything. (Without
    the stick, see [After the first boot](#after-the-first-boot).)
@@ -63,9 +66,9 @@ sudo mount -L DEBSWAY /mnt && bash /mnt/debsway/start.sh
    `keys` in a terminal, or the file `~/KEYS.txt`).
 4. `install-base.sh` ends with a list of optional programs: arrow keys and
    the space bar check the ones you want. Add more later with
-   `bash install-extras.sh`, or one directly: `debsway install keepassxc`.
+   `bash install-extras.sh`, or one directly: `wrenctl install keepassxc`.
 
-`bash status.sh` (Status in the debsway menu) shows what's set up. It starts
+`bash status.sh` (Status in the Wren menu) shows what's set up. It starts
 with "Security at a glance": disk encryption, screen lock, firewall, automatic
 updates, the sandboxed browser and encrypted DNS, each [x] done, [~] partly or
 [ ] not, with what to run. `bash test.sh` checks that it all still works.
@@ -73,17 +76,17 @@ updates, the sandboxed browser and encrypted DNS, each [x] done, [~] partly or
 ## Folder layout
 
 ```
-debsway/
+wren/
 ├── README.md, THREAT-MODEL.md, LICENSE (MIT)
-├── start.sh                 from the stick on a fresh install: copies debsway home, unmounts, wifi.sh if needed, install-base.sh
+├── start.sh                 from the stick on a fresh install: copies Wren Linux home, unmounts, wifi.sh if needed, install-base.sh
 ├── install-base.sh          the core desktop: explains and asks, packages, sway, bar, every part, then the extras list
 ├── install-extras.sh        pick optional programs from a list (install-base.sh ends with it)
 ├── wifi.sh                  get online over Wi-Fi, whatever is installed
 ├── status.sh                security at a glance first, then what's installed
-├── update.sh                bring debsway up to date and rerun the scripts whose files changed
+├── update.sh                bring Wren Linux up to date and rerun the scripts whose files changed
 ├── test.sh                  checks scripts, packages, downloads and keys still work
 ├── packages.sh              the core's package list and the order of the parts
-├── pins.sh                  every signing key debsway trusts, with the date it was checked
+├── pins.sh                  every signing key Wren Linux trusts, with the date it was checked
 ├── lib.sh, lib/             shared helpers (sourced, not run): apt, sway, network, ...
 ├── parts/                   one script per core piece; install-base.sh runs them all
 ├── extras/                  optional apps, one script each (and firefox-profiles/)
@@ -92,7 +95,7 @@ debsway/
 ├── prep/                    intro.sh (what the base install does, and the question);
 │                            before a reinstall: fetch-offline-debs.sh, fetch-tor-browser.sh;
 │                            setup-sudo.sh (run as root if the installer left sudo out)
-├── tools/                   for working on debsway: pack-usb.sh, tests
+├── tools/                   for working on Wren Linux: pack-usb.sh, tests
 ├── vendor/mockvps-kvm/      the mockvps-kvm project, with its own README and license
 ├── docs/                    the longer guides
 ├── .github/workflows/       shellcheck and test.sh --offline on every push
@@ -101,9 +104,9 @@ debsway/
 ```
 
 `offline/` holds the large downloads: `debs/` (Wi-Fi packages and their
-signed Debian lists), `torbrowser/` and `whonix/`. When debsway runs from a
-folder you can't write to (the package's root-owned `/usr/share/debsway`),
-they go in `~/.local/share/debsway/offline` instead. Run every script with
+signed Debian lists), `torbrowser/` and `whonix/`. When Wren Linux runs from a
+folder you can't write to (the package's root-owned `/usr/share/wren`),
+they go in `~/.local/share/wren/offline` instead. Run every script with
 `bash script.sh`; that works even when a USB stick's filesystem drops the
 executable bit.
 
@@ -122,27 +125,27 @@ executable bit.
    files and password databases: the encrypted install erases the whole
    disk. A plain USB stick isn't encrypted, so delete anything sensitive
    from it once it's restored.
-4. Copy debsway to a USB stick: `bash tools/pack-usb.sh /media/you/STICK`
+4. Copy Wren Linux to a USB stick: `bash tools/pack-usb.sh /media/you/STICK`
    copies the last commit and `offline/` (not your `ignore/` folder),
-   labels the stick `DEBSWAY` (it asks) and adds a `START-HERE.txt` you can
+   labels the stick `WREN` (it asks) and adds a `START-HERE.txt` you can
    read on another computer. The label is what lets one line find the stick
-   on the new system. Or copy the whole `debsway` folder yourself and label
-   the stick yourself (`fatlabel /dev/sdX1 DEBSWAY` for FAT,
-   `e2label /dev/sdX1 DEBSWAY` for ext4).
+   on the new system. Or copy the whole `wrenctl` folder yourself and label
+   the stick yourself (`fatlabel /dev/sdX1 WREN` for FAT,
+   `e2label /dev/sdX1 WREN` for ext4).
 
-Or, instead of installing Debian by hand and copying debsway over: build
+Or, instead of installing Debian by hand and copying Wren Linux over: build
 **an automatic install stick** with `bash prep/make-install-iso.sh`. It
 downloads Debian 13's live "standard" image, text only (checked against the
-Debian CD signing key pinned in `pins.sh`), adds debsway's answers and debsway
+Debian CD signing key pinned in `pins.sh`), adds Wren Linux's answers and Wren Linux
 itself, and can write it to a USB stick. Booted from it, "Automatic install
-with debsway" installs Debian as below (encrypted LVM over the whole disk, no
+with Wren Linux" installs Debian as below (encrypted LVM over the whole disk, no
 root password; the installer copies the live system, and the base install's
-`parts/no-live-extras.sh` takes out what that brings and debsway doesn't use,
-such as avahi and printing) and puts debsway in `~/debsway`; it asks only
+`parts/no-live-extras.sh` takes out what that brings and Wren Linux doesn't use,
+such as avahi and printing) and puts Wren Linux in `~/wren`; it asks only
 for the disk passphrase, your password, and the final "write the changes to
 disks?", which names the disk it erases (the stick itself is never offered).
 At the first login on the console it asks once "Set it up now?": Enter runs
-`bash ~/debsway/start.sh` (the usual introduction and questions), n leaves it
+`bash ~/wren/start.sh` (the usual introduction and questions), n leaves it
 for later. Options: `--user NAME`,
 `--keymap de`, `--locale de_DE.UTF-8`, `--timezone Europe/Berlin` (the clock's
 time zone; by default the one of the computer building the image), `--no-erase`
@@ -164,7 +167,7 @@ starts the installed system; `--two-disks` checks that it asks which disk,
 installed (QEMU stays if Whonix, claude-vm or mockvps-kvm use it). In the VM's
 window your own sway takes Super+Enter, Super+d and the rest first: press
 Ctrl+Alt+G there to give the VM the keyboard (again to take it back), or click
-debsway in the VM's bar and choose Terminal.
+Wren Linux in the VM's bar and choose Terminal.
 
 ## Installing Debian
 
@@ -200,9 +203,9 @@ The quick way is the one line in the [Quick start](#quick-start). By hand,
 or without the stick:
 
 ```bash
-# 1. Get the scripts. From the USB stick (labelled DEBSWAY):
-sudo mount -L DEBSWAY /mnt
-cp -r /mnt/debsway ~ && sudo umount /mnt
+# 1. Get the scripts. From the USB stick (labelled WREN):
+sudo mount -L WREN /mnt
+cp -r /mnt/wren ~ && sudo umount /mnt
 #    If it can't find the label, lsblk -f lists the drives and dmesg | tail
 #    shows the name the stick got (e.g. sdb1): sudo mount /dev/sdb1 /mnt
 #
@@ -210,16 +213,16 @@ cp -r /mnt/debsway ~ && sudo umount /mnt
 #    a phone, or Wi-Fi you set up in the installer; wifi.sh is one of the
 #    scripts you're downloading, so it can't help yet):
 #    wget -qO- https://github.com/cjboon/debsway/archive/refs/heads/main.tar.gz | tar xz
-#    mv debsway-main debsway
+#    mv debsway-main wren
 #    (git isn't part of "standard system utilities", wget is. Read the
 #    scripts before you run them: this comes over https from GitHub only.)
-cd ~/debsway
+cd ~/wren
 
 # 2. Get online (skip if you already are: a cable, or the installer's Wi-Fi)
 bash wifi.sh
 
 # 3. Only if you set a root password in the installer
-su -c "bash $HOME/debsway/prep/setup-sudo.sh $USER"    # then log out and back in
+su -c "bash $HOME/wren/prep/setup-sudo.sh $USER"    # then log out and back in
 
 # 4. The core desktop
 bash install-base.sh
@@ -228,18 +231,18 @@ bash install-base.sh
 Then log out (`exit`) and log in on tty1: sway starts by itself if you
 said yes to that, otherwise type `sway`. The key cheat sheet opens on
 your first login; Super+? brings it back, and so does typing `keys` or
-opening `~/KEYS.txt`. The status bar has a "debsway" at its left: click it for a black-and-gray menu in a floating window over what you were doing (arrow keys and Enter, or click; Esc closes every screen) with Help (the sheet), Install apps, Update and Status, and the Wi-Fi name next to it opens nmtui. Scrolling over "vol" or "bright" changes them; clicking "vol" mutes, and clicking "bat" says how long the battery will last.
+opening `~/KEYS.txt`. The status bar has a "wren" at its left: click it for a black-and-gray menu in a floating window over what you were doing (arrow keys and Enter, or click; Esc closes every screen) with Help (the sheet), Install apps, Update and Status, and the Wi-Fi name next to it opens nmtui. Scrolling over "vol" or "bright" changes them; clicking "vol" mutes, and clicking "bat" says how long the battery will last.
 
-Click the time (or press Super+t) for timers and alarms, with this month's calendar (`cal`, from `ncal`) and today's date: type `10m` or `7:30` and press Enter; Esc, or another click on the time, closes it. The same goes for the debsway menu and the Wi-Fi screen: click again to close. Only one of them is open at a time: clicking another closes it (except the menu while it runs Update or Install apps, which stays). From a terminal: `timer 10m tea`, `timer at 7:30 wake up`, `timer clock` (date in the bar or not). Timers last until you log out; a sleeping laptop does not wake for them.
+Click the time (or press Super+t) for timers and alarms, with this month's calendar (`cal`, from `ncal`) and today's date: type `10m` or `7:30` and press Enter; Esc, or another click on the time, closes it. The same goes for the Wren menu and the Wi-Fi screen: click again to close. Only one of them is open at a time: clicking another closes it (except the menu while it runs Update or Install apps, which stays). From a terminal: `timer 10m tea`, `timer at 7:30 wake up`, `timer clock` (date in the bar or not). Timers last until you log out; a sleeping laptop does not wake for them.
 
 ### Getting updates from GitHub
 
 The copy from the stick has the files but no git history. Once you're
-online, this makes it a git checkout of GitHub's debsway, without changing
+online, this makes it a git checkout of GitHub's Wren Linux, without changing
 a file (`git status` then shows anything that differs from GitHub):
 
 ```bash
-cd ~/debsway && git init -q -b main && git remote add origin https://github.com/cjboon/debsway.git && git fetch -q && git reset origin/main && git branch -u origin/main && git status
+cd ~/wren && git init -q -b main && git remote add origin https://github.com/cjboon/debsway.git && git fetch -q && git reset origin/main && git branch -u origin/main && git status
 ```
 
 After that, `claude-pull` shows what's new and asks before bringing it in;
@@ -248,34 +251,34 @@ sandboxes, `extras/claude-code.sh` and `extras/claude-vm.sh`.) If Claude Code
 pushes to the repository, add the ssh key its sandbox prints as a deploy key
 on GitHub (with write access), replacing the old install's.
 
-## The `debsway` command
+## The `wrenctl` command
 
-In a terminal, `debsway --help` lists what it does and `man debsway` has the
-details. `debsway --update` brings debsway up to date (see below),
-`debsway --apps` picks optional programs, `debsway --status` shows what is
-set up, `debsway --test` runs the checks, `debsway --welcome` shows the key
-cheat sheet again. On a sway screen, `debsway` alone (or a click on
-**debsway** in the bar) opens the menu.
+In a terminal, `wrenctl --help` lists what it does and `man wrenctl` has the
+details. `wrenctl --update` brings Wren Linux up to date (see below),
+`wrenctl --apps` picks optional programs, `wrenctl --status` shows what is
+set up, `wrenctl --test` runs the checks, `wrenctl --welcome` shows the key
+cheat sheet again. On a sway screen, `wrenctl` alone (or a click on
+**Wren Linux** in the bar) opens the menu.
 
-One extra at a time: `debsway install NAME` installs it (or repairs or
-updates it), `debsway remove NAME` takes it out, `debsway manual NAME` prints
-the steps to do it by hand, and `debsway list` lists them all. Tab completes
+One extra at a time: `wrenctl install NAME` installs it (or repairs or
+updates it), `wrenctl remove NAME` takes it out, `wrenctl manual NAME` prints
+the steps to do it by hand, and `wrenctl list` lists them all. Tab completes
 the name. Only the exact name of an extra is accepted, so nothing else is
-run; options after the name go to its script (`debsway install claude-vm
---account work`). `debsway part NAME` runs one part of the base again. Each
-option works with or without its dashes (`debsway update`, `debsway --update`).
+run; options after the name go to its script (`wrenctl install claude-vm
+--account work`). `wrenctl part NAME` runs one part of the base again. Each
+option works with or without its dashes (`wrenctl update`, `wrenctl --update`).
 
 ## Updating
 
 ```bash
-bash ~/debsway/update.sh
+bash ~/wren/update.sh
 ```
 
-or click **debsway** at the left of the status bar and choose Update. Install apps (`install-extras.sh`) opens in the same window; Esc on its list with nothing picked closes the window at once.
+or click **Wren Linux** at the left of the status bar and choose Update. Install apps (`install-extras.sh`) opens in the same window; Esc on its list with nothing picked closes the window at once.
 
 It fetches what's new, shows you every change, and asks before bringing it
 in (only a plain fast-forward, so your own edits are never overwritten).
-Once `pins.sh` names debsway's signing key (`DEBSWAY_SIGNING_FPR`), it brings
+Once `pins.sh` names Wren Linux's signing key (`WREN_SIGNING_FPR`), it brings
 a change in only if the newest commit carries a good signature from exactly
 that key, checked with the key in the copy you already have; until then it
 says that it didn't check.
@@ -286,7 +289,7 @@ never runs `--remove`. If a script fails it says so and offers it again
 next time. A part of the base desktop that is new in an update is offered
 too, even though it isn't set up yet.
 
-Each run also checks the signing keys of the apt repositories debsway added
+Each run also checks the signing keys of the apt repositories Wren Linux added
 (Claude Code, Signal, Mullvad, the Tor Project's for lyrebird). One that has
 expired, or will within 60 days, is fetched again, and the new one goes in
 only if it is exactly the pinned key (`pins.sh`) and lasts longer. Without
@@ -303,7 +306,7 @@ that is set up.
 - [docs/wifi.md](docs/wifi.md): `wifi.sh`, and how the packages on the stick are checked
 - [docs/install-base.md](docs/install-base.md): what `install-base.sh` sets up, and every part
 - [docs/extras.md](docs/extras.md): the optional apps, Firefox with its hardening and `incognito`, Firefox profiles
-- [docs/extras/](docs/extras/README.md): one page per extra: its commands, what it is, what it doesn't protect against, and every step to install it by hand (`debsway manual NAME` prints them)
+- [docs/extras/](docs/extras/README.md): one page per extra: its commands, what it is, what it doesn't protect against, and every step to install it by hand (`wrenctl manual NAME` prints them)
 - [docs/opsec.md](docs/opsec.md): operations security in general: laptops, USB drives, networks, passwords, encryption, private communication, physical security, and what to do when something goes wrong
 - [docs/maintaining.md](docs/maintaining.md): `test.sh`, `pins.sh`, shellcheck, the other scripts
 - [docs/distro-plan.md](docs/distro-plan.md): the plan from these scripts to a Debian-based distribution: a package, a signed apt repository, a website, an installer image
@@ -311,16 +314,16 @@ that is set up.
 
 ## Removing things
 
-`debsway remove NAME` (for an extra; `bash extras/NAME.sh --remove` does the
+`wrenctl remove NAME` (for an extra; `bash extras/NAME.sh --remove` does the
 same) and `bash parts/NAME.sh --remove` undo one piece. Several pieces need the same packages (QEMU for Whonix and
 mockvps-kvm, XWayland for every app that only speaks X11), so a script
 doesn't install its packages directly. It installs a tiny package of its
-own, `debsway-NAME`, that depends on them. `--remove` removes that package
+own, `wren-NAME`, that depends on them. `--remove` removes that package
 and lets apt autoremove what nothing else needs, so a shared package stays
 until the last script that uses it is removed.
 
 - `bash status.sh` lists every script's package list under "Packages
-  debsway installed".
+  Wren Linux installed".
 - To keep a package after its script is removed: `sudo apt-mark manual PACKAGE`.
 - Packages a script installed before this bookkeeping existed have no
   marker; `--remove` then purges the packages it names, but never one that
@@ -338,12 +341,12 @@ extras you use and add your own look, keys and configs, e.g.:
 #!/bin/bash
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
-for x in keepassxc git; do bash "$DEBSWAY_DIR/extras/$x.sh"; done
+for x in keepassxc git; do bash "$WREN_DIR/extras/$x.sh"; done
 put_snippet look <<'EOF'
 default_border none
 output eDP-1 scale 1.25
 EOF
-bash "$DEBSWAY_DIR/extras/firefox-profiles/new-profile.sh" mail https://mail.example --fast-js
+bash "$WREN_DIR/extras/firefox-profiles/new-profile.sh" mail https://mail.example --fast-js
 ```
 
 `put_snippet NAME` writes `~/.config/sway/config.d/NAME.conf`, checks it
@@ -387,9 +390,9 @@ main ones:
   in, and run `sway -d 2>~/sway.log` from tty1 to see why. Missing GPU
   drivers (`libgl1-mesa-dri`) is the usual cause.
 - **You want a plain shell on tty1**: use Ctrl+Alt+F2. To stop the
-  autostart, delete the `debsway autostart` block in `~/.profile`.
+  autostart, delete the `Wren Linux autostart` block in `~/.profile`.
 - **A part failed during install-base.sh**: re-run just that one, e.g.
-  `debsway part NAME` (or `debsway install NAME` for an extra).
+  `wrenctl part NAME` (or `wrenctl install NAME` for an extra).
 - **Wi-Fi gone after install-base.sh**: NetworkManager took it over. Run
   `nmtui` to pick the network, or `bash wifi.sh` to rescue it.
 - **A Wi-Fi login page keeps asking again**: that's the random MAC; see
@@ -403,20 +406,20 @@ main ones:
   `brightnessctl.sh` added you to the `video` group.
 - **`wifi.sh` can't connect with a password**: the password is given to
   NetworkManager on its standard input. If your `nmcli` doesn't take it
-  that way, run `DEBSWAY_PASSWORD_ON_COMMAND_LINE=1 bash wifi.sh`.
+  that way, run `WREN_PASSWORD_ON_COMMAND_LINE=1 bash wifi.sh`.
 - **`wifi.sh` says the packages can't be matched to Debian's lists**: the
-  stick's `offline/debs` is from an older version of debsway, a
+  stick's `offline/debs` is from an older version of Wren Linux, a
   package changed, or the saved lists are old (Debian's security and
   updates lists are good for a week, the stable list for about 4 months;
   the message names which). On a machine you trust:
   `bash prep/fetch-offline-debs.sh`. To accept old lists on purpose:
-  `DEBSWAY_OFFLINE_ALLOW_STALE=1 bash wifi.sh`.
+  `WREN_OFFLINE_ALLOW_STALE=1 bash wifi.sh`.
 - **A program on a USB stick won't run**: drives mount `noexec`. Run it
   with its interpreter, copy it off, or see [docs/install-base.md](docs/install-base.md).
 - **Something that used to work doesn't**: `bash test.sh` shows what
-  changed outside debsway.
+  changed outside Wren Linux.
 
 ## License
 
-[MIT](LICENSE), for all of debsway (`vendor/mockvps-kvm/` keeps its own
+[MIT](LICENSE), for all of Wren Linux (`vendor/mockvps-kvm/` keeps its own
 copy of the same license).

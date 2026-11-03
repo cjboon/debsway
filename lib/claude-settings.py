@@ -1,6 +1,6 @@
-"""claude-settings.py add|remove SETTINGS DEBSWAY_JSON STATE: puts debsway's
-Claude Code settings (DEBSWAY_JSON) into your SETTINGS (~/.claude/settings.json)
-or takes them out again, for extras/claude-regular.sh. Lists get debsway's
+"""claude-settings.py add|remove SETTINGS WREN_JSON STATE: puts Wren Linux's
+Claude Code settings (WREN_JSON) into your SETTINGS (~/.claude/settings.json)
+or takes them out again, for extras/claude-regular.sh. Lists get Wren Linux's
 items added to yours; a value (like sandbox.enabled) is set only if you haven't
 set it yourself. STATE remembers exactly what was added, so remove takes out
 that and nothing of yours. Run with python3 -I."""
@@ -19,7 +19,7 @@ def load(path, default):
 
 def save(path, data, mode=0o600):
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = path + ".debsway-tmp"
+    tmp = path + ".wren-tmp"
     with open(tmp, "w") as f:
         json.dump(data, f, indent=2)
         f.write("\n")
@@ -67,7 +67,7 @@ def remove(mine, added):
 
 
 def prune(node):
-    """Empty lists and objects debsway's removal left behind go too."""
+    """Empty lists and objects Wren Linux's removal left behind go too."""
     for key in list(node):
         if isinstance(node[key], dict):
             prune(node[key])
@@ -91,7 +91,7 @@ def main():
         if os.path.exists(state):
             os.remove(state)
     else:
-        sys.exit("usage: claude-settings.py add|remove SETTINGS DEBSWAY_JSON STATE")
+        sys.exit("usage: claude-settings.py add|remove SETTINGS WREN_JSON STATE")
 
 
 main()

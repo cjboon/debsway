@@ -1,3 +1,3 @@
 #!/bin/sh
-# sparrow: written by debsway extras/sparrow-wallet.sh
+# sparrow: written by Wren Linux extras/sparrow-wallet.sh
 exec /opt/sparrowwallet/bin/Sparrow "$@"

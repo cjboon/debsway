@@ -16,7 +16,7 @@ need_user
 # Debian's menu entry starts gimp-3.0 itself; this one, of the same name,
 # starts the sandboxed gimp (yours win over the system's)
 ENTRY="${XDG_DATA_HOME:-$HOME/.local/share}/applications/gimp.desktop"
-MARK='# Written by debsway extras/gimp.sh'
+MARK='# Written by Wren Linux extras/gimp.sh'
 
 if [ "${1:-}" = --remove ]; then
     remove_bin gimp
@@ -51,7 +51,7 @@ cat <<'EOF2'
     (open and save there), ~/Downloads (open from) and the files you name.
     Save your work into ~/Pictures: elsewhere, saving fails. Starting it by
     its full path (/usr/bin/gimp-3.0) skips the sandbox; so does
-    DEBSWAY_NO_SANDBOX=1.
+    WREN_NO_SANDBOX=1.
 
     Run it with: gimp   (or gimp photo.jpg, or Super+d).
 EOF2

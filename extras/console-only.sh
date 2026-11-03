@@ -10,13 +10,13 @@
 # Usage: bash console-only.sh [--remove | --manual]
 # summary: log in to tmux (same bar and keys), not sway
 # security: some
-# status: file:~/.config/debsway/console-only
+# status: file:~/.config/wren/console-only
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 # Set up: this file (the tmux config is the base's, so it can't say)
-MARK=$HOME/.config/debsway/console-only
+MARK=$HOME/.config/wren/console-only
 
 if [ "${1:-}" = --remove ]; then
     # sway first, the mark last: a removal cut off half way still shows as
@@ -24,7 +24,7 @@ if [ "${1:-}" = --remove ]; then
     profile_autostart sway
     rm -f "$MARK"
     note "Logging in on tty1 starts sway again."
-    if [ -n "${TMUX:-}" ] && [ -n "${DEBSWAY_LOGIN_LOOP:-}" ]; then
+    if [ -n "${TMUX:-}" ] && [ -n "${WREN_LOGIN_LOOP:-}" ]; then
         note "Leaving tmux for sway in 3 seconds (your tmux windows stay: tmux attach)..."
         sleep 3
         tmux detach-client -s "$(tmux display-message -p '#S')"
@@ -36,12 +36,12 @@ fi
 
 say "Console-only"
 # the tmux config comes with the base; make sure it is in place
-bash "$DEBSWAY_DIR/parts/console-tmux.sh"
+bash "$WREN_DIR/parts/console-tmux.sh"
 # Only a switch from sway to tmux leaves sway; a run again (update.sh) doesn't
 was=$(login_mode)
 profile_autostart console
 mkdir -p "${MARK%/*}"
-printf '%s\n' '# Written by debsway extras/console-only.sh: logging in starts tmux, not sway.' >"$MARK"
+printf '%s\n' '# Written by Wren Linux extras/console-only.sh: logging in starts tmux, not sway.' >"$MARK"
 cat <<'EOT'
 
     Logging in on any text console now starts tmux (log out: exit the last
@@ -49,7 +49,7 @@ cat <<'EOT'
       Alt+1 ... Alt+0         go to workspace 1 ... 10; Alt+Shift+1 ... sends the pane
       Alt+Enter / Alt+v       split beside / below      Alt+h j k l or arrows: move
       Alt+f                   fullscreen the pane       Alt+Shift+q: close it
-      Alt+m                   the debsway menu          Alt+t: timers   Alt+?: keys
+      Alt+m                   the Wren menu          Alt+t: timers   Alt+?: keys
       Alt+w Wi-Fi   Alt+- Alt+= volume (Alt+Backspace mutes)   Alt+, Alt+. brightness   Alt+b battery
     A text console has no mouse; used from a terminal (ssh), the bar's items also
     click and scroll as in sway. To start sway from the
@@ -57,7 +57,7 @@ cat <<'EOT'
 EOT
 
 if [ "$was" != console ] && [ -n "${WAYLAND_DISPLAY:-}" ] && command -v swaymsg >/dev/null; then
-    if [ -n "${DEBSWAY_LOGIN_LOOP:-}" ]; then
+    if [ -n "${WREN_LOGIN_LOOP:-}" ]; then
         note "Leaving sway for the console in 3 seconds (programs in sway close)..."
         sleep 3
         swaymsg exit

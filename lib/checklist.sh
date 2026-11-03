@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # lib/checklist.sh: a list of check boxes on the whole terminal, for
 # install-extras.sh (Install apps, Remove apps). Drawn by bash itself, as the
-# debsway menu is, so it needs no other program:
+# Wren menu is, so it needs no other program:
 #   arrows or j/k move, wrapping round at both ends; Page Up/Down and Home/End
 #   jump; Space checks a box; Enter (or a click on the first button) goes on;
 #   Esc or q (or a click on the second) cancels; the mouse wheel scrolls; a
@@ -14,7 +14,7 @@
 # the checked tags, in list order. Returns 1 if cancelled. CL_ALONE, if set,
 # is the tag of a box that is only ever checked on its own ("none of these"):
 # checking it unchecks the others, and checking another unchecks it.
-CL_ESC_WAIT=${DEBSWAY_ESC_WAIT:-0.05}
+CL_ESC_WAIT=${WREN_ESC_WAIT:-0.05}
 
 # cl_key: the next key on the terminal, into CL_KEY (up down pgup pgdn home end
 # space enter esc click wheelup wheeldown, or the character), with the click's

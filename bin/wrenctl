@@ -1,27 +1,27 @@
 #!/bin/bash
-# debsway: written by debsway parts/debsway-menu.sh
-# One command for debsway. Without an option it opens the menu on a sway
-# screen and prints the help anywhere else. man debsway has the details.
+# wrenctl: written by Wren Linux parts/wren-menu.sh
+# One command for Wren Linux. Without an option it opens the menu on a sway
+# screen and prints the help anywhere else. man wrenctl has the details.
 set -u
-# Where debsway is: DEBSWAY_DIR if you set it; else the root-owned copy the
-# debsway package installs, which no program running as you can change; else
-# your own copy, ~/debsway
-if [ -n "${DEBSWAY_DIR:-}" ]; then
-    DIR=$DEBSWAY_DIR
-elif [ -f "${DEBSWAY_SYSTEM_DIR:-/usr/share/debsway}/lib.sh" ]; then
-    DIR=${DEBSWAY_SYSTEM_DIR:-/usr/share/debsway}
+# Where Wren Linux is: WREN_DIR if you set it; else the root-owned copy the
+# Wren Linux package installs, which no program running as you can change; else
+# your own copy, ~/wren
+if [ -n "${WREN_DIR:-}" ]; then
+    DIR=$WREN_DIR
+elif [ -f "${WREN_SYSTEM_DIR:-/usr/share/wren}/lib.sh" ]; then
+    DIR=${WREN_SYSTEM_DIR:-/usr/share/wren}
 else
-    DIR=$HOME/debsway
+    DIR=$HOME/wren
 fi
 
 usage() {
     cat <<'TEXT'
-usage: debsway [OPTION]
+usage: wrenctl [OPTION]
 
   (no option)  open the menu: a window in sway, or in this terminal on a
                text console or over ssh; this help when there is no terminal
   --menu       open the menu: Help, Install apps, Update, Status
-  --update     bring debsway up to date, then rerun the scripts whose files
+  --update     bring Wren Linux up to date, then rerun the scripts whose files
                changed (more: --update --since COMMIT, --update --all)
   --apps       pick optional programs to install (--apps --list lists them)
   --install NAME        install the extra NAME, or repair or update it (Tab
@@ -30,35 +30,35 @@ usage: debsway [OPTION]
   --manual NAME         print the steps to set up the extra NAME by hand
   --list       the extras: what each is, and whether it is installed
   --part NAME           run one part of the base desktop again (repairs it)
-  --status     show what debsway has set up on this computer
+  --status     show what Wren Linux has set up on this computer
   --test       check that the scripts, packages, downloads and keys still work
   --wifi [on|off]       switch Wi-Fi on or off (no word: say whether it is on)
   --bluetooth [on|off]  the same for Bluetooth
   --mic [on|off]        the same for the microphone (muted at every login)
   --camera [on|off]     the same for the webcam (with the webcam extra; off at every boot)
   --welcome    show the key cheat sheet again (the first-login screen)
-  --version    which version of debsway this is
-  --dir        where the debsway folder is
+  --version    which version of Wren Linux this is
+  --dir        where the Wren Linux folder is
   --help       this help
 
-Each works without its dashes too: debsway update, debsway install vim.
-More: man debsway, and README.md in the debsway folder.
+Each works without its dashes too: wrenctl update, wrenctl install vim.
+More: man wrenctl, and README.md in the Wren Linux folder.
 TEXT
 }
 
-die() { printf 'debsway: %s\n' "$*" >&2; exit 1; }
+die() { printf 'wrenctl: %s\n' "$*" >&2; exit 1; }
 
-# need_dir: the commands that run a script of debsway's need its folder
+# need_dir: the commands that run a script of Wren Linux's need its folder
 need_dir() {
     [ -f "$DIR/lib.sh" ] ||
-        die "can't find the debsway folder ($DIR). Set DEBSWAY_DIR to where it is, or get it again: git clone <address> ~/debsway"
+        die "can't find the Wren Linux folder ($DIR). Set WREN_DIR to where it is, or get it again: git clone <address> ~/wren"
 }
 
 # script_for extras|parts NAME: the path of that script, only if NAME is
 # exactly the name of one (lowercase letters, digits and dashes): nothing
-# but a script of debsway's own is ever run
+# but a script of Wren Linux's own is ever run
 script_for() {
-    local kind=extra list="debsway --list shows the extras."
+    local kind=extra list="wrenctl --list shows the extras."
     [ "$1" = extras ] || kind=part list="The parts are in $DIR/parts."
     [ -n "${2:-}" ] || die "which $kind? $list"
     if [[ ! $2 =~ ^[a-z0-9][a-z0-9-]*$ ]] || [ ! -f "$DIR/$1/$2.sh" ]; then
@@ -67,7 +67,7 @@ script_for() {
     echo "$DIR/$1/$2.sh"
 }
 
-MENU=$HOME/.local/bin/debsway-menu
+MENU=$HOME/.local/bin/wren-menu
 # in_sway: there is a screen to open a window on
 in_sway() { [ -n "${WAYLAND_DISPLAY:-}" ] && [ -x "$MENU" ]; }
 # in_terminal: no sway, but a terminal to show the menu in (a text console, ssh)
@@ -83,7 +83,7 @@ case $cmd in
         usage ;;
     --menu | menu)
         if in_sway; then exec "$MENU"; fi
-        in_terminal || die "the menu needs your sway session or a terminal (and the debsway menu installed: bash $DIR/parts/debsway-menu.sh)."
+        in_terminal || die "the menu needs your sway session or a terminal (and the Wren menu installed: bash $DIR/parts/wren-menu.sh)."
         exec "$MENU" --tui ;;
     --update | update) need_dir; exec bash "$DIR/update.sh" "$@" ;;
     --apps | apps) need_dir; exec bash "$DIR/install-extras.sh" "$@" ;;
@@ -100,12 +100,12 @@ case $cmd in
     --list | list) need_dir; exec bash "$DIR/install-extras.sh" --list ;;
     --part | part)
         need_dir
-        [ $# -le 1 ] || die "one name at a time (debsway part NAME)."
+        [ $# -le 1 ] || die "one name at a time (wrenctl part NAME)."
         script=$(script_for parts "${1:-}") || exit 1
         exec bash "$script" ;;
     --test | test) need_dir; cd "$DIR" && exec bash test.sh "$@" ;;
     --wifi | --bluetooth | --mic | --camera)
-        [ -x "$HOME/.local/bin/radios" ] || die "the radio switch isn't installed (bash $DIR/parts/debsway-menu.sh)."
+        [ -x "$HOME/.local/bin/radios" ] || die "the radio switch isn't installed (bash $DIR/parts/wren-menu.sh)."
         exec "$HOME/.local/bin/radios" "${cmd#--}" "$@" ;;
     --welcome | welcome)
         # the same cheat sheet the first login opens, in this terminal
@@ -117,7 +117,7 @@ case $cmd in
     --dir) echo "$DIR" ;;
     --help | -h | help) usage ;;
     *)
-        printf 'debsway: unknown option "%s"\n\n' "$cmd" >&2
+        printf 'wrenctl: unknown option "%s"\n\n' "$cmd" >&2
         usage >&2
         exit 2 ;;
 esac

@@ -1,8 +1,8 @@
 #!/bin/bash
-# debsway-camera on|off|status: written by debsway extras/webcam.sh
-# Installed as /usr/local/libexec/debsway-camera, owned by root. Your user may run
-# "debsway-camera on" and "debsway-camera off" as root, and nothing else (a rule
-# in /etc/sudoers.d); status needs no root. The debsway menu and radios use it.
+# wren-camera on|off|status: written by Wren Linux extras/webcam.sh
+# Installed as /usr/local/libexec/wren-camera, owned by root. Your user may run
+# "wren-camera on" and "wren-camera off" as root, and nothing else (a rule
+# in /etc/sudoers.d); status needs no root. The Wren menu and radios use it.
 #
 # A USB camera is switched off by telling the kernel to disconnect its USB device
 # (/sys/bus/usb/devices/DEVICE/authorized = 0), as if it were unplugged: no
@@ -17,10 +17,10 @@
 set -euo pipefail
 
 # Where /sys is: always the real one for root; a test may point it elsewhere
-if [ "$(id -u)" -eq 0 ]; then SYS=/sys; else SYS=${DEBSWAY_SYS:-/sys}; fi
+if [ "$(id -u)" -eq 0 ]; then SYS=/sys; else SYS=${WREN_SYS:-/sys}; fi
 USB=$SYS/bus/usb/devices
 
-die() { printf 'debsway-camera: %s\n' "$*" >&2; exit 2; }
+die() { printf 'wren-camera: %s\n' "$*" >&2; exit 2; }
 
 # has_video DEVICE-DIR: its descriptors include an interface of class 0x0e (video).
 # Each descriptor is: length, type, ...; an interface descriptor is type 4 and
@@ -55,7 +55,7 @@ set_all() { # 0|1
         found=true
         [ "$(cat "$USB/$n/authorized")" = "$1" ] || echo "$1" >"$USB/$n/authorized"
     done
-    $found || { echo "debsway-camera: no USB camera found." >&2; exit 1; }
+    $found || { echo "wren-camera: no USB camera found." >&2; exit 1; }
 }
 
 case ${1:-} in
@@ -73,5 +73,5 @@ case ${1:-} in
         if [ -f "$USB/$n/authorized" ] && has_video "$USB/$n"; then echo 0 >"$USB/$n/authorized"; fi ;;
     on) set_all 1 ;;
     off) set_all 0 ;;
-    *) die "usage: debsway-camera on|off|status (added DEVICE: for udev)" ;;
+    *) die "usage: wrenctl-camera on|off|status (added DEVICE: for udev)" ;;
 esac

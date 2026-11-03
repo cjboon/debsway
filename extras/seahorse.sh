@@ -33,7 +33,7 @@ say "Installing seahorse and gnome-keyring"
 apt_install seahorse gnome-keyring libpam-gnome-keyring
 
 say "Unlock the keyring at login"
-[ -e "$PAM.debsway.bak" ] || sudo cp -a "$PAM" "$PAM.debsway.bak"
+[ -e "$PAM.wren.bak" ] || sudo cp -a "$PAM" "$PAM.wren.bak"
 if ! sudo grep -qxF "$AUTH" "$PAM"; then
     sudo sed -i "/^@include common-auth/a $AUTH" "$PAM"
 fi
@@ -43,10 +43,10 @@ fi
 # A broken login PAM file locks you out of console logins, so check that
 # both lines landed (they go after the @include lines) and undo it if not
 if ! sudo grep -qxF "$AUTH" "$PAM" || ! sudo grep -qxF "$SESSION" "$PAM"; then
-    sudo cp -a "$PAM.debsway.bak" "$PAM"
+    sudo cp -a "$PAM.wren.bak" "$PAM"
     die "Couldn't find where to add the keyring lines in $PAM, so it was put back as it was."
 fi
 sudo grep -n gnome_keyring "$PAM" | sed 's/^/    /'
 note "Takes effect at your next console login. Run it with: seahorse"
 warn "Before you log out, check the login still works: press Ctrl+Alt+F2 and log in there."
-warn "If it doesn't, undo it with: sudo cp $PAM.debsway.bak $PAM"
+warn "If it doesn't, undo it with: sudo cp $PAM.wren.bak $PAM"

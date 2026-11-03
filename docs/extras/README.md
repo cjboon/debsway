@@ -9,12 +9,12 @@ Every page has the same shape:
 - One paragraph on what it is.
 - **LIMITS**: what it does not protect against.
 - **MANUAL INSTALL**: every step to do by hand what the script does, each with
-  what it is for. `debsway manual NAME` prints this section
+  what it is for. `wrenctl manual NAME` prints this section
   and changes nothing. In the page, `@NAME@` stands for a value from `pins.sh`
   or the script (a key's fingerprint, an address, a package list) and
-  `@DEBSWAY_DIR@` for your debsway folder; `--manual` fills them in.
+  `@WREN_DIR@` for your Wren Linux folder; `--manual` fills them in.
 
-Installed by hand, an extra has no debsway marker package, so its `--remove`
+Installed by hand, an extra has no Wren Linux marker package, so its `--remove`
 doesn't know what to take out: undo it with the steps at the end of its page.
 `apt purge` also removes every package that depends on what you purge, so the
 undo steps purge only the extra's own programs and mark shared ones
@@ -90,8 +90,8 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 ## Everyday tools
 
 - [git, to track changes to files](git.md)
-- [Tools for working on debsway: lintian and shellcheck](debsway-dev.md)
-- [debsway's signing key, kept by a user of its own](signing-key.md)
+- [Tools for working on Wren Linux: lintian and shellcheck](wren-dev.md)
+- [Wren Linux's signing key, kept by a user of its own](signing-key.md)
 - [Thunar, a file manager](file-manager.md)
 - [Mousepad, a plain text editor](mousepad.md)
 - [Screenshots](grim-slurp.md)

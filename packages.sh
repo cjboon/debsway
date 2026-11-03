@@ -3,7 +3,7 @@
 
 # The core: sway and a terminal. Apps people may not want are in extras/
 # (Firefox, git and gh, KeePassXC, Claude Code, ...).
-# gpg: checks the signatures of everything debsway downloads
+# gpg: checks the signatures of everything Wren Linux downloads
 # age: encrypts a file to a password or a key (age -p file > file.age)
 # diceware: makes passphrases from random words (diceware -n 6)
 PKGS=(sway foot libgl1-mesa-dri gpg age diceware)
@@ -14,5 +14,5 @@ PKGS=(sway foot libgl1-mesa-dri gpg age diceware)
 # needs it.
 PARTS=(core-commands home-private clock no-live-extras unattended-upgrades wmenu swaylock swayidle brightnessctl
     wl-clipboard mako foot-config wallpaper theme ufw power-profiles-daemon
-    power-menu debsway-menu command-hints console-tmux needrestart sysctl-hardening module-blacklist boot-hardening grub-colors
+    power-menu wren-menu command-hints console-tmux needrestart sysctl-hardening module-blacklist boot-hardening grub-colors
     network-manager secure-dns random-mac usb)

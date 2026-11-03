@@ -3,11 +3,11 @@
 ## SYNOPSIS
 
 ```
-debsway install claude-code                         install it and the claude-agent user
-debsway remove claude-code                          remove it (asks before deleting the user)
-debsway manual claude-code                          print the manual steps below
-debsway install claude-code --account NAME          another account, apart from the first
-debsway install claude-code --remove-account NAME   remove it (asks before deleting its user)
+wrenctl install claude-code                         install it and the claude-agent user
+wrenctl remove claude-code                          remove it (asks before deleting the user)
+wrenctl manual claude-code                          print the manual steps below
+wrenctl install claude-code --account NAME          another account, apart from the first
+wrenctl install claude-code --remove-account NAME   remove it (asks before deleting its user)
 
 cd ~/projects/NAME && claude     Claude Code as claude-agent, in that folder
 cd ~/projects-NAME/X && claude --account NAME   the other account, in its own folder
@@ -57,19 +57,19 @@ rm /tmp/claude-code.asc
 echo "deb [signed-by=/etc/apt/keyrings/claude-code.asc] https://downloads.claude.ai/claude-code/apt/stable stable main" |
     sudo tee /etc/apt/sources.list.d/claude-code.list
 echo 'Unattended-Upgrade::Origins-Pattern:: "site=downloads.claude.ai";' |
-    sudo tee /etc/apt/apt.conf.d/52debsway-claude-code
+    sudo tee /etc/apt/apt.conf.d/52wren-claude-code
 
 # Claude Code; acl for sharing ~/projects; nftables for the firewall rule; its tools
 sudo apt update
 sudo apt install --no-install-recommends claude-code acl nftables git openssh-client ripgrep jq shellcheck python3-venv
 
 # The claude-agent user, locked (no password: nobody can log in as it)
-sudo useradd --create-home --home-dir /home/claude-agent --shell /bin/bash --user-group --comment "debsway Claude Code" claude-agent
+sudo useradd --create-home --home-dir /home/claude-agent --shell /bin/bash --user-group --comment "Wren Linux Claude Code" claude-agent
 sudo usermod --lock claude-agent
 sudo chmod 700 /home/claude-agent
 # Its notes on how it is set up, and its own git identity
 sudo install -d -o claude-agent -g claude-agent -m 0700 /home/claude-agent/.claude
-sudo install -o claude-agent -g claude-agent -m 0644 @DEBSWAY_DIR@/data/claude-agent-CLAUDE.md /home/claude-agent/.claude/CLAUDE.md
+sudo install -o claude-agent -g claude-agent -m 0644 @WREN_DIR@/data/claude-agent-CLAUDE.md /home/claude-agent/.claude/CLAUDE.md
 printf '[user]\n\tname = Claude\n\temail = noreply@anthropic.com\n[init]\n\tdefaultBranch = main\n[safe]\n\tdirectory = *\n' |
     sudo install -o claude-agent -g claude-agent -m 0644 /dev/stdin /home/claude-agent/.gitconfig
 # Its own ssh key (no passphrase: it uses it by itself), and GitHub's host keys
@@ -80,14 +80,14 @@ curl -fsS https://api.github.com/meta | python3 -c 'import json,sys; [print("git
 
 # The firewall rule: claude-agent reaches the internet only, not this
 # computer or your network. Loaded at every boot before the network comes up.
-sudo install -D -o root -g root -m 0644 @DEBSWAY_DIR@/data/claude-firewall.nft /etc/debsway/claude.nft
+sudo install -D -o root -g root -m 0644 @WREN_DIR@/data/claude-firewall.nft /etc/wren/claude.nft
 printf '%s\n' '[Unit]' 'Description=Keep the claude-agent user off the local network' \
     'Before=network-pre.target' 'Wants=network-pre.target' '' '[Service]' \
-    'Type=oneshot' 'RemainAfterExit=yes' 'ExecStart=/usr/sbin/nft -f /etc/debsway/claude.nft' \
-    'ExecStop=/usr/sbin/nft delete table inet debsway_claude' '' '[Install]' 'WantedBy=multi-user.target' |
-    sudo tee /etc/systemd/system/debsway-claude-firewall.service
+    'Type=oneshot' 'RemainAfterExit=yes' 'ExecStart=/usr/sbin/nft -f /etc/wren/claude.nft' \
+    'ExecStop=/usr/sbin/nft delete table inet wren_claude' '' '[Install]' 'WantedBy=multi-user.target' |
+    sudo tee /etc/systemd/system/wren-claude-firewall.service
 sudo systemctl daemon-reload
-sudo systemctl enable --now debsway-claude-firewall.service
+sudo systemctl enable --now wren-claude-firewall.service
 
 # ~/projects, shared: it may pass through your home (not list or read it),
 # and read and write in ~/projects; new files there are open to both of you
@@ -99,17 +99,17 @@ setfacl -R -d -m "u:claude-agent:rwX,u:$(id -un):rwX,m::rwX" ~/projects
 # The script that starts Claude Code as claude-agent, and the wrapper it
 # uses to keep it off X11's abstract socket
 sudo install -d -o root -g root -m 0755 /usr/local/libexec
-sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/claude-session /usr/local/libexec/claude-session
-sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/no-abstract-sockets /usr/local/libexec/debsway-no-abstract-sockets
+sudo install -o root -g root -m 0755 @WREN_DIR@/bin/claude-session /usr/local/libexec/claude-session
+sudo install -o root -g root -m 0755 @WREN_DIR@/bin/no-abstract-sockets /usr/local/libexec/wren-no-abstract-sockets
 # Your user may run that script, and nothing else, as claude-agent. visudo
 # checks the rule first: never put a rule in /etc/sudoers.d it hasn't passed.
-printf '%s ALL=(claude-agent) NOPASSWD: /usr/local/libexec/claude-session\n' "$(id -un)" >/tmp/debsway-claude
-sudo visudo -cf /tmp/debsway-claude
-sudo install -o root -g root -m 0440 /tmp/debsway-claude /etc/sudoers.d/debsway-claude
-rm /tmp/debsway-claude
+printf '%s ALL=(claude-agent) NOPASSWD: /usr/local/libexec/claude-session\n' "$(id -un)" >/tmp/wren-claude
+sudo visudo -cf /tmp/wren-claude
+sudo install -o root -g root -m 0440 /tmp/wren-claude /etc/sudoers.d/wren-claude
+rm /tmp/wren-claude
 
 # The commands, and the git guard for ~/projects
-for c in claude claude-unsandboxed claude-pull git; do install -D -m 0755 @DEBSWAY_DIR@/bin/$c ~/.local/bin/$c; done
+for c in claude claude-unsandboxed claude-pull git; do install -D -m 0755 @WREN_DIR@/bin/$c ~/.local/bin/$c; done
 
 # Its public key, to add on GitHub (a deploy key on one repository is the narrowest)
 sudo cat /home/claude-agent/.ssh/id_ed25519.pub
@@ -120,34 +120,34 @@ Another account, NAME (small letters and digits), after the steps above:
 
 ```
 # Its user, locked, with its own home, notes, git identity and ssh key
-sudo useradd --create-home --home-dir /home/claude-agent-NAME --shell /bin/bash --user-group --comment "debsway Claude Code" claude-agent-NAME
+sudo useradd --create-home --home-dir /home/claude-agent-NAME --shell /bin/bash --user-group --comment "Wren Linux Claude Code" claude-agent-NAME
 sudo usermod --lock claude-agent-NAME && sudo chmod 700 /home/claude-agent-NAME
 sudo install -d -o claude-agent-NAME -g claude-agent-NAME -m 0700 /home/claude-agent-NAME/.claude /home/claude-agent-NAME/.ssh
-sed "s|~/projects|~/projects-NAME|g" @DEBSWAY_DIR@/data/claude-agent-CLAUDE.md | sudo install -o claude-agent-NAME -g claude-agent-NAME -m 0644 /dev/stdin /home/claude-agent-NAME/.claude/CLAUDE.md
+sed "s|~/projects|~/projects-NAME|g" @WREN_DIR@/data/claude-agent-CLAUDE.md | sudo install -o claude-agent-NAME -g claude-agent-NAME -m 0644 /dev/stdin /home/claude-agent-NAME/.claude/CLAUDE.md
 sudo cp /home/claude-agent/.gitconfig /home/claude-agent-NAME/.gitconfig && sudo chown claude-agent-NAME: /home/claude-agent-NAME/.gitconfig
 sudo -u claude-agent-NAME -H bash -c 'cd && ssh-keygen -q -t ed25519 -N "" -C "$(id -un)@$(hostname)" -f .ssh/id_ed25519'
 # Its line in the firewall rule, by number (nft refuses the whole file over a
 # user name that doesn't exist): below the claude-agent line in
-# /etc/debsway/claude.nft add, with the number from: id -u claude-agent-NAME
+# /etc/wren/claude.nft add, with the number from: id -u claude-agent-NAME
 #         meta skuid NUMBER jump claude  # claude-agent-NAME
-sudo nft -c -f /etc/debsway/claude.nft && sudo systemctl restart debsway-claude-firewall
+sudo nft -c -f /etc/wren/claude.nft && sudo systemctl restart wren-claude-firewall
 # Its folder, shared with you only
 mkdir -p ~/projects-NAME
 setfacl -m u:claude-agent-NAME:--x ~
 setfacl -R -m "u:claude-agent-NAME:rwX,u:$(id -un):rwX" ~/projects-NAME
 setfacl -R -d -m "u:claude-agent-NAME:rwX,u:$(id -un):rwX,m::rwX" ~/projects-NAME
 # Your user may run the start script, and nothing else, as it (checked first)
-printf '%s ALL=(claude-agent-NAME) NOPASSWD: /usr/local/libexec/claude-session\n' "$(id -un)" >/tmp/debsway-claude-NAME
-sudo visudo -cf /tmp/debsway-claude-NAME && sudo install -o root -g root -m 0440 /tmp/debsway-claude-NAME /etc/sudoers.d/debsway-claude-NAME
-rm /tmp/debsway-claude-NAME
+printf '%s ALL=(claude-agent-NAME) NOPASSWD: /usr/local/libexec/claude-session\n' "$(id -un)" >/tmp/wren-claude-NAME
+sudo visudo -cf /tmp/wren-claude-NAME && sudo install -o root -g root -m 0440 /tmp/wren-claude-NAME /etc/sudoers.d/wren-claude-NAME
+rm /tmp/wren-claude-NAME
 cd ~/projects-NAME && mkdir -p X && cd X && claude --account NAME
 ```
 
-To undo an account: `sudo rm /etc/sudoers.d/debsway-claude-NAME`, its
+To undo an account: `sudo rm /etc/sudoers.d/wren-claude-NAME`, its
 `setfacl -x` on `~` and `~/projects-NAME` (as below, with its user name),
 `sudo pkill -KILL -u claude-agent-NAME`, `sudo userdel -r claude-agent-NAME`,
-then its line out of `/etc/debsway/claude.nft` and
-`sudo systemctl restart debsway-claude-firewall`. `~/projects-NAME` stays.
+then its line out of `/etc/wren/claude.nft` and
+`sudo systemctl restart wren-claude-firewall`. `~/projects-NAME` stays.
 
 To undo:
 
@@ -155,13 +155,13 @@ To undo:
 # The commands and the git guard (keep claude-pull if claude-vm is set up)
 rm ~/.local/bin/claude ~/.local/bin/claude-unsandboxed ~/.local/bin/claude-pull ~/.local/bin/git
 # The firewall rule
-sudo systemctl disable --now debsway-claude-firewall.service
-sudo rm /etc/systemd/system/debsway-claude-firewall.service /etc/debsway/claude.nft
+sudo systemctl disable --now wren-claude-firewall.service
+sudo rm /etc/systemd/system/wren-claude-firewall.service /etc/wren/claude.nft
 sudo systemctl daemon-reload
 # The sudo rule and the start script (the no-abstract-sockets wrapper only if
 # incognito, claude-vm and the Firefox sandbox don't use it)
-sudo rm /etc/sudoers.d/debsway-claude /usr/local/libexec/claude-session
-sudo rm /usr/local/libexec/debsway-no-abstract-sockets
+sudo rm /etc/sudoers.d/wren-claude /usr/local/libexec/claude-session
+sudo rm /usr/local/libexec/wren-no-abstract-sockets
 # Its access to your home and ~/projects
 setfacl -x u:claude-agent ~
 setfacl -R -x "u:claude-agent,d:u:claude-agent" ~/projects
@@ -172,7 +172,7 @@ sudo find ~/projects -user claude-agent -exec chown -h "$(id -un):$(id -gn)" {} 
 sudo userdel -r claude-agent
 # Claude Code, its repository, key and update rule
 sudo apt purge claude-code
-sudo rm /etc/apt/sources.list.d/claude-code.list /etc/apt/keyrings/claude-code.asc /etc/apt/apt.conf.d/52debsway-claude-code
+sudo rm /etc/apt/sources.list.d/claude-code.list /etc/apt/keyrings/claude-code.asc /etc/apt/apt.conf.d/52wren-claude-code
 # The tools, marked "automatic": autoremove takes them out only if nothing needs them
 sudo apt-mark auto acl nftables ripgrep jq shellcheck python3-venv
 sudo apt autoremove --purge

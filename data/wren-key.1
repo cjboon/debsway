@@ -1,17 +1,17 @@
-.TH DEBSWAY-KEY 1 "debsway" "debsway" "User Commands"
+.TH WREN-KEY 1 "wren" "wren" "User Commands"
 .SH NAME
-debsway-key \- make, keep and use debsway's signing key
+wren-key \- make, keep and use Wren Linux's signing key
 .SH SYNOPSIS
-.B debsway-key
+.B wren-key
 .RI [ COMMAND ]
 .SH DESCRIPTION
-Every debsway computer checks its updates against one key:
+Every Wren Linux computer checks its updates against one key:
 .B update.sh
 brings in only commits it signed, and apt only packages from a repository it
 signed.
 Whoever has the key could put anything on all of those computers, as root;
-whoever loses it can't publish debsway any more.
-.B debsway-key
+whoever loses it can't publish Wren Linux any more.
+.B wren-key
 makes that key and uses it, the careful way.
 .PP
 The key has two parts.
@@ -23,7 +23,7 @@ The
 .B signing subkey
 does the daily signing.
 It is held by
-.BR debsway-signer ,
+.BR wren-signer ,
 a system user with no password, no login and no network (a firewall rule drops
 everything it sends), whose files your own user can't read.
 Your user may run one program as that user, the signer, and only after typing
@@ -32,19 +32,19 @@ The signer signs, hands out the public key, and makes or renews the key; it
 never hands out a secret key.
 .SH COMMANDS
 .TP
-.B debsway-key
+.B wren-key
 The first time: explains, asks for the name and email on the key, the folder
 on a USB stick for the backup, and the backup's passphrase (at least 20
 characters; it suggests one of random words), then makes the key.
 In
-.I FOLDER/debsway-signing-key
+.I FOLDER/wren-signing-key
 it writes
-.I debsway-signing-key-backup.asc
+.I wren-signing-key-backup.asc
 (the whole key, encrypted with the passphrase),
-.I debsway-signing-key-revocation.asc
+.I wren-signing-key-revocation.asc
 (declares the key void, if it is ever stolen; it works without the
 passphrase) and
-.I debsway-signing-key-public.asc
+.I wren-signing-key-public.asc
 (the public key).
 Then it offers
 .B git-setup
@@ -63,24 +63,24 @@ It warns when the subkey stops signing within 90 days.
 .BR git-setup " [\fIDIR\fR]"
 git in
 .I DIR
-(by default the debsway folder) signs every commit and tag with the key, through
-.BR debsway-key-gpg ,
+(by default the Wren Linux folder) signs every commit and tag with the key, through
+.BR wren-key-gpg ,
 which hands signing to the signer and checks signatures with the public key.
 sudo asks for your password now and then.
 .TP
 .BR pin " [\fIDIR\fR]"
 Writes the public key to
-.I DIR/data/debsway-signing-key.asc
+.I DIR/data/wren-signing-key.asc
 and its fingerprint to
-.B DEBSWAY_SIGNING_FPR
+.B WREN_SIGNING_FPR
 in
 .IR DIR/pins.sh ,
 for you to look at, commit (signed) and push.
-From then on every debsway computer that updates past that commit takes only
+From then on every Wren Linux computer that updates past that commit takes only
 what this key signed.
 .TP
 .BI sign-repo " FOLDER DEB" ...
-Makes a signed apt repository of debsway's packages in
+Makes a signed apt repository of Wren Linux's packages in
 .I FOLDER
 .RB ( tools/make-apt-repo.sh ),
 signed by the signer.
@@ -118,40 +118,40 @@ your key.
 Keep the revocation certificate apart from the sticks too (printed, say):
 whoever has it can void your key, though not sign with it.
 .IP \(bu 2
-Renew the subkey before it stops signing: after that every debsway computer
+Renew the subkey before it stops signing: after that every Wren Linux computer
 refuses updates until a new key reaches it by hand.
 .IP \(bu 2
 If you think the signing subkey was taken (this computer was broken into),
 make a new one from the backup, publish it, and say so.
 .SH FILES
 .TP
-.I /usr/local/libexec/debsway-signer
-The signer, root's, run as debsway-signer.
+.I /usr/local/libexec/wren-signer
+The signer, root's, run as wren-signer.
 .TP
-.I /var/lib/debsway-signer
-debsway-signer's home: the signing subkey, readable by that user alone.
+.I /var/lib/wren-signer
+wren-signer's home: the signing subkey, readable by that user alone.
 .TP
-.I /etc/sudoers.d/debsway-signer
-What your user may run as debsway-signer: the signer, with your password.
+.I /etc/sudoers.d/wren-signer
+What your user may run as wren-signer: the signer, with your password.
 .TP
-.I /etc/debsway/signer.nft
-The firewall rule that drops everything debsway-signer sends.
+.I /etc/wren/signer.nft
+The firewall rule that drops everything wren-signer sends.
 .TP
-.I ~/.local/share/debsway/signing-key
+.I ~/.local/share/wren/signing-key
 What your user knows of the key: its fingerprint, until when it signs, and the
 public key.
 .SH ENVIRONMENT
 .TP
-.B DEBSWAY_DIR
-The debsway folder that
+.B WREN_DIR
+The Wren Linux folder that
 .BR git-setup ,
 .B pin
 and
 .B sign-repo
 use, if not the usual one.
 .SH SEE ALSO
-.BR debsway (1),
+.BR Wren Linux (1),
 .BR gpg (1),
 .IR docs/maintaining.md ,
 .I THREAT-MODEL.md
-in the debsway folder.
+in the Wren Linux folder.

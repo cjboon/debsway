@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  debsway's light scheme for Mousepad (GtkSourceView 4): dark text on warm
-  light, in the colors of debsway's light theme (data/themes/light); bin/theme
+  Wren Linux's light scheme for Mousepad (GtkSourceView 4): dark text on warm
+  light, in the colors of Wren Linux's light theme (data/themes/light); bin/theme
   switches to it. extras/mousepad.sh installs it as
-  ~/.local/share/gtksourceview-4/styles/debsway-light.xml. The style names are
+  ~/.local/share/gtksourceview-4/styles/wren-light.xml. The style names are
   data/mousepad-dark.xml's: "black" is the page, "white" the strongest text.
 -->
-<style-scheme id="debsway-light" name="debsway light" version="1.0">
-  <author>debsway</author>
-  <description>Dark text on warm light, in the colors of debsway's light theme</description>
+<style-scheme id="wren-light" name="Wren Linux light" version="1.0">
+  <author>Wren Linux</author>
+  <description>Dark text on warm light, in the colors of Wren Linux's light theme</description>
 
   <color name="black"   value="#f2efe9"/>
   <color name="text"    value="#2b2b2b"/>

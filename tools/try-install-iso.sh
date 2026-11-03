@@ -2,7 +2,7 @@
 # Tries an install image from prep/make-install-iso.sh in a throwaway VM, the
 # way a real laptop would start it: UEFI firmware, the image plugged in as a USB
 # stick, and an empty 20 GB disk. Nothing on this computer is touched; the VM's
-# files are in ~/.cache/debsway/iso-test (left out of backups).
+# files are in ~/.cache/wren/iso-test (left out of backups).
 #
 #   bash tools/try-install-iso.sh                 install from the newest built image
 #   bash tools/try-install-iso.sh --iso FILE      ...from FILE
@@ -17,7 +17,7 @@
 #                                                 (no software is removed)
 #   bash tools/try-install-iso.sh --remove        remove the packages this script
 #                                                 installed (not ones you had, or that
-#                                                 other debsway scripts need)
+#                                                 other Wren Linux scripts need)
 #   bash tools/try-install-iso.sh --print ...     only show the QEMU commands
 #
 # It needs QEMU (qemu-system-x86, qemu-utils, and qemu-system-gui for its
@@ -28,8 +28,8 @@
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 not_root
 
-DIR=${XDG_CACHE_HOME:-$HOME/.cache}/debsway/iso-test
-OVMF=${DEBSWAY_OVMF_DIR:-/usr/share/OVMF}   # (a test points this elsewhere)
+DIR=${XDG_CACHE_HOME:-$HOME/.cache}/wren/iso-test
+OVMF=${WREN_OVMF_DIR:-/usr/share/OVMF}   # (a test points this elsewhere)
 CODE=$OVMF/OVMF_CODE_4M.fd
 VARS_TEMPLATE=$OVMF/OVMF_VARS_4M.fd
 DISK=$DIR/disk.qcow2
@@ -70,7 +70,7 @@ if [ "$mode" = remove ]; then
 fi
 
 if [ -z "$iso" ]; then
-    iso=$(find "$OFFLINE_DIR/install-iso" -maxdepth 1 -name '*-debsway.iso' -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
+    iso=$(find "$OFFLINE_DIR/install-iso" -maxdepth 1 -name '*-wren.iso' -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
     [ -n "$iso" ] || $print || [ "$mode" = boot ] ||
         die "No built image in $OFFLINE_DIR/install-iso. Make one: bash prep/make-install-iso.sh"
 fi
@@ -108,7 +108,7 @@ need=()
 command -v qemu-system-x86_64 >/dev/null || need+=(qemu-system-x86)
 command -v qemu-img >/dev/null || need+=(qemu-utils)
 # the window: a package of its own, which QEMU only recommends (and other
-# debsway VMs, run without a window, don't install)
+# Wren Linux VMs, run without a window, don't install)
 is_installed qemu-system-gui || need+=(qemu-system-gui)
 [ -f "$CODE" ] && [ -f "$VARS_TEMPLATE" ] || need+=(ovmf)
 if [ ${#need[@]} -gt 0 ]; then
@@ -141,7 +141,7 @@ if [ "$mode" = install ]; then
     say "The installer, from $(basename -- "$iso") as a USB stick"
     cat <<EOF
     What to check in the window:
-      1. The menu's first entry, highlighted: "Automatic install with debsway".
+      1. The menu's first entry, highlighted: "Automatic install with Wren Linux".
          Press Enter.
       2. It asks only for the disk encryption passphrase (twice) and your
          user's password (twice). Use throwaway ones.
@@ -176,19 +176,19 @@ cat <<'EOF'
     What to check:
       - It asks for the disk passphrase at start, then shows a login.
       - You can log in with your user; sudo true works with your password.
-      - ls ~/debsway shows debsway (bash ~/debsway/start.sh sets the rest up).
+      - ls ~/wren shows Wren Linux (bash ~/wren/start.sh sets the rest up).
 EOF
 if $no_net; then
     cat <<'EOF'
-      - It was installed without a network, so also: bash ~/debsway/install-base.sh
+      - It was installed without a network, so also: bash ~/wren/install-base.sh
         puts deb.debian.org into /etc/apt/sources.list, and `sudo apt-get update`
-        works after the wifi is on (bash ~/debsway/wifi.sh).
+        works after the wifi is on (bash ~/wren/wifi.sh).
 EOF
 fi
 cat <<'EOF'
     Keys: your own sway takes Super (Super+Enter, Super+d...) before the VM
     sees it. Press Ctrl+Alt+G in the window to give the VM the keyboard, and
-    again to take it back; or click debsway in the VM's bar, then Terminal.
+    again to take it back; or click wren in the VM's bar, then Terminal.
     Close the window to stop it. Start over: bash tools/try-install-iso.sh --clean
 
 EOF

@@ -1,5 +1,5 @@
 #!/bin/bash
-# git [ARGS...]: written by debsway extras/claude-code.sh
+# git [ARGS...]: written by Wren Linux extras/claude-code.sh
 # Your git, with one guard. claude-agent can change any file in ~/projects,
 # including the .git folder of a repository: a hook, or a setting such as
 # core.fsmonitor, would run as YOU the next time you use git there. So inside
@@ -14,9 +14,9 @@
 # (A file could change between the check and the run; it is a guard against a
 # sloppy or confused assistant, not against one racing your keystrokes.)
 
-REAL=${DEBSWAY_REAL_GIT:-/usr/bin/git}
-AGENT=${DEBSWAY_AGENT_USER:-claude-agent}
-PROJECTS=${DEBSWAY_PROJECTS:-$HOME/projects}
+REAL=${WREN_REAL_GIT:-/usr/bin/git}
+AGENT=${WREN_AGENT_USER:-claude-agent}
+PROJECTS=${WREN_PROJECTS:-$HOME/projects}
 
 plain() { exec "$REAL" "$@"; }
 

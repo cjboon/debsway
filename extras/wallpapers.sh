@@ -1,6 +1,6 @@
 #!/bin/bash
 # Pictures to pick a wallpaper from, all in ~/Pictures/Wallpapers, each named
-# after where it came from (copy one into ~/Pictures/debsway/desktop:
+# after where it came from (copy one into ~/Pictures/wren/desktop:
 # parts/wallpaper.sh):
 #   budgie_*  Budgie's photos, from Debian. The package is only downloaded
 #             (apt-get download: checked against Debian's signed lists, through
@@ -16,7 +16,7 @@
 # Usage: bash wallpapers.sh [--remove | --manual]
 # summary: Wallpapers to pick from: NASA, Webb, Budgie
 # security: some
-# status: file:~/Pictures/Wallpapers/.debsway-wallpapers
+# status: file:~/Pictures/Wallpapers/.wren-wallpapers
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
@@ -24,7 +24,7 @@ need_user
 DEST="$HOME/Pictures/Wallpapers"
 # what this script put there, one file name a line; --remove takes out
 # exactly these, so pictures you add yourself stay
-LIST="$DEST/.debsway-wallpapers"
+LIST="$DEST/.wren-wallpapers"
 # SOURCE|WHAT|HOW MANY (for the downloaded ones)
 SOURCES=(
     "budgie|Budgie's photos, from Debian's budgie-backgrounds (11 MB)|"
@@ -51,16 +51,16 @@ if [ "${1:-}" = --remove ]; then
     exit
 fi
 
-# readme: what is in the folder (rewritten while it is debsway's own)
+# readme: what is in the folder (rewritten while it is Wren Linux's own)
 readme() {
     local f="$DEST/README.txt"
-    if [ -e "$f" ] && ! head -1 "$f" | grep -q 'written by debsway'; then return; fi
+    if [ -e "$f" ] && ! head -1 "$f" | grep -q 'written by Wren Linux'; then return; fi
     cat >"$f" <<'EOF'
-Wallpapers to choose from (written by debsway extras/wallpapers.sh)
+Wallpapers to choose from (written by Wren Linux extras/wallpapers.sh)
 
 To make one your wallpaper: Super+] and Super+[ step through them on the
 desktop itself, and "wallpaper pick" lists them by name. (Or copy one into
-~/Pictures/debsway/desktop and press Super+Shift+c.)
+~/Pictures/wren/desktop and press Super+Shift+c.)
 
 Each picture is named after where it came from:
   nasa_     NASA's image library. NASA's own pictures are public domain.
@@ -72,11 +72,11 @@ CREDITS.txt names each one's title, credit and page.
 
 Your own pictures (JPEG or PNG), e.g. from an image search, can go here too:
 save them through Firefox into ~/Downloads, then move them here, with a name
-you will recognise. debsway never changes or removes them. Pictures from the
+you will recognise. Wren Linux never changes or removes them. Pictures from the
 web are often copyrighted: fine on your own screen, but don't share them on.
 
-debsway install wallpapers fetches more (each source is topped up);
-debsway remove wallpapers takes out what it downloaded, nothing of yours.
+wrenctl install wallpapers fetches more (each source is topped up);
+wrenctl remove wallpapers takes out what it downloaded, nothing of yours.
 EOF
     listed README.txt
 }
@@ -85,7 +85,7 @@ EOF
 chosen=()
 declare -A used
 if [ -t 0 ] && [ -t 1 ]; then
-    . "$DEBSWAY_DIR/lib/checklist.sh"
+    . "$WREN_DIR/lib/checklist.sh"
     ITEMS=()
     for s in "${SOURCES[@]}"; do
         IFS='|' read -r name what _ <<<"$s"
@@ -121,7 +121,7 @@ for src in "${chosen[@]}"; do
         say "Wallpapers: $src (https only, from its own site)"
         need_tools python3:python3
         # the files it saved, one a line, go on the list
-        if ! python3 -I "$DEBSWAY_DIR/lib/wallpaper-sources.py" "$DEST" "$src" "$count" >"$tmp/saved"; then
+        if ! python3 -I "$WREN_DIR/lib/wallpaper-sources.py" "$DEST" "$src" "$count" >"$tmp/saved"; then
             failed+=("$src")
         fi
         while IFS= read -r f; do

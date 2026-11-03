@@ -1,5 +1,5 @@
 # Keeps the onion-site user off your computer and your local network
-# (debsway extras/onion-site.sh). Only that user's traffic is touched.
+# (Wren Linux extras/onion-site.sh). Only that user's traffic is touched.
 #
 # onion-site runs the site's VM (one qemu-system-x86_64 process). After its
 # first setup the VM runs with QEMU's restrict=on: the guest can't send a single
@@ -15,10 +15,10 @@
 # the answers are "established" connections and pass.
 # DNS stays open (it goes to your resolver, or Unbound while secure DNS is on).
 
-table inet debsway_onion_site
-delete table inet debsway_onion_site
+table inet wren_onion_site
+delete table inet wren_onion_site
 
-table inet debsway_onion_site {
+table inet wren_onion_site {
     chain output {
         type filter hook output priority 0; policy accept;
         meta skuid "onion-site" jump onion_site

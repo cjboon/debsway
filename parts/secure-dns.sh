@@ -11,13 +11,13 @@
 #    and the VMs included) is refused, and if the resolver can't be reached,
 #    names stop resolving: nothing falls back to unencrypted DNS. An answer
 #    DNSSEC proves false is refused too.
-#  - The switch (the debsway menu's Secure DNS line, or: secure-dns on|off):
+#  - The switch (the Wren menu's Secure DNS line, or: secure-dns on|off):
 #    off is for Wi-Fi with a sign-in page (cafés, hotels, trains), which needs
 #    the network's own DNS; on again once signed in. Switching on checks that
 #    names resolve first, and stays off if they don't. Your user may switch it
 #    without a password (bin/secure-dns-switch, through a sudo rule that allows
 #    exactly "on" and "off"), so a program running as you could switch it off.
-#  - While it is off, debsway's Firefox encrypts its own lookups (to Quad9; set
+#  - While it is off, Wren Linux's Firefox encrypts its own lookups (to Quad9; set
 #    at its start). Other programs use the network's DNS. The Wi-Fi sign-in
 #    window (wifi-signin, parts/incognito.sh) switches it off and on for you.
 #  - While it is on, NetworkManager, dhclient, dhcpcd and wifi.sh leave
@@ -26,21 +26,21 @@
 # asks the resolver again only if you want another.
 # Usage: bash secure-dns.sh [--remove]
 # files: bin/secure-dns-switch data/secure-dns-firewall.nft lib/secure-dns.sh
-# status: file:/etc/unbound/unbound.conf.d/debsway-secure-dns.conf bin:secure-dns
+# status: file:/etc/unbound/unbound.conf.d/wren-secure-dns.conf bin:secure-dns
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
-. "$DEBSWAY_DIR/lib/secure-dns.sh"
+. "$WREN_DIR/lib/secure-dns.sh"
 need_user
 
 CONF=$SECURE_DNS_CONF
 RESOLV=/etc/resolv.conf
-SWITCH=/usr/local/libexec/debsway-secure-dns
-SUDOERS=/etc/sudoers.d/debsway-secure-dns
-FIREWALL=/etc/debsway/secure-dns.nft
-UNIT=/etc/systemd/system/debsway-secure-dns-firewall.service
+SWITCH=/usr/local/libexec/wren-secure-dns
+SUDOERS=/etc/sudoers.d/wren-secure-dns
+FIREWALL=/etc/wren/secure-dns.nft
+UNIT=/etc/systemd/system/wren-secure-dns-firewall.service
 
 RC=$HOME/.bashrc
-RC_BEGIN='# >>> debsway secure-dns check >>>'
-RC_END='# <<< debsway secure-dns check <<<'
+RC_BEGIN='# >>> Wren Linux secure-dns check >>>'
+RC_END='# <<< Wren Linux secure-dns check <<<'
 rc_take_out() { [ -f "$RC" ] && sed -i "\\|^$RC_BEGIN\$|,\\|^$RC_END\$|d" "$RC"; return 0; }
 
 if [ "${1:-}" = --remove ]; then
@@ -48,19 +48,19 @@ if [ "${1:-}" = --remove ]; then
     rc_take_out
     # (the switch puts resolv.conf and the network's DNS back, and tells Firefox)
     if [ -x "$SWITCH" ]; then sudo "$SWITCH" off || true; fi
-    sudo systemctl disable --now debsway-secure-dns-firewall.service >/dev/null 2>&1 || true
-    sudo nft delete table inet debsway_secure_dns 2>/dev/null || true
+    sudo systemctl disable --now wren-secure-dns-firewall.service >/dev/null 2>&1 || true
+    sudo nft delete table inet wren_secure_dns 2>/dev/null || true
     sudo rm -f "$FIREWALL" "$UNIT" "$SUDOERS" "$SWITCH" "$CONF"
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
-    sudo rmdir /usr/local/libexec /etc/debsway 2>/dev/null || true
+    sudo rmdir /usr/local/libexec /etc/wren 2>/dev/null || true
     remove_bin secure-dns
     apt_purge unbound dns-root-data
-    note "DNS goes to the network's own DNS server again, unencrypted (debsway's Firefox encrypts its own)."
+    note "DNS goes to the network's own DNS server again, unencrypted (Wren Linux's Firefox encrypts its own)."
     exit
 fi
 
 # What doesn't fit here is said and skipped, so the rest of the install goes on
-if [ -L "$RESOLV" ] && ! grep -qsE '^# Written by debsway (parts|extras)/secure-dns\.sh' "$RESOLV"; then
+if [ -L "$RESOLV" ] && ! grep -qsE '^# Written by Wren Linux (parts|extras)/secure-dns\.sh' "$RESOLV"; then
     note "$RESOLV is a link ($(readlink "$RESOLV")): something else (resolvconf, systemd-resolved) runs DNS"
     note "here. Secure DNS works with a plain file only, so it was skipped; nothing was changed."
     exit 0
@@ -132,23 +132,23 @@ note "Unbound listens on 127.0.0.1 and asks $tls on port 853."
 
 say "Only Unbound may send DNS out (while it is on)"
 sudo install -d -o root -g root -m 0755 "${FIREWALL%/*}"
-sudo install -o root -g root -m 0644 "$DEBSWAY_DIR/data/secure-dns-firewall.nft" "$FIREWALL"
+sudo install -o root -g root -m 0644 "$WREN_DIR/data/secure-dns-firewall.nft" "$FIREWALL"
 # Loaded before the network comes up, at every boot, while the switch is on
 # (the switch enables and disables it)
-printf '%s\n' '# Written by debsway parts/secure-dns.sh' '[Unit]' \
-    'Description=Only Unbound sends DNS out of this computer (debsway)' \
+printf '%s\n' '# Written by Wren Linux parts/secure-dns.sh' '[Unit]' \
+    'Description=Only Unbound sends DNS out of this computer (Wren Linux)' \
     'Before=network-pre.target' 'Wants=network-pre.target' '' '[Service]' \
     'Type=oneshot' 'RemainAfterExit=yes' \
     "ExecStart=/usr/sbin/nft -f $FIREWALL" \
-    'ExecStop=/usr/sbin/nft delete table inet debsway_secure_dns' '' '[Install]' \
+    'ExecStop=/usr/sbin/nft delete table inet wren_secure_dns' '' '[Install]' \
     'WantedBy=multi-user.target' | sudo tee "$UNIT" >/dev/null
 sudo systemctl daemon-reload
 
 say "The switch"
 sudo install -d -o root -g root -m 0755 "${SWITCH%/*}"
-sudo install -o root -g root -m 0755 "$DEBSWAY_DIR/bin/secure-dns-switch" "$SWITCH"
+sudo install -o root -g root -m 0755 "$WREN_DIR/bin/secure-dns-switch" "$SWITCH"
 rule=$(mktemp)
-printf '# Written by debsway parts/secure-dns.sh. %s may switch secure DNS on and off,\n# and nothing else, without a password (the debsway menu does).\n%s ALL=(root) NOPASSWD: %s on, %s off\n' \
+printf '# Written by Wren Linux parts/secure-dns.sh. %s may switch secure DNS on and off,\n# and nothing else, without a password (the Wren menu does).\n%s ALL=(root) NOPASSWD: %s on, %s off\n' \
     "$(id -un)" "$(id -un)" "$SWITCH" "$SWITCH" >"$rule"
 # A broken sudoers file locks you out of sudo, so it is checked first
 if ! sudo visudo -cf "$rule" >/dev/null; then
@@ -161,7 +161,7 @@ install_bin secure-dns
 # At login: a word if the Wi-Fi sign-in window left secure DNS off (logged out
 # while it was open). In sway a notification; on a text console, the shell
 put_snippet secure-dns <<'EOF'
-# Says so at login if the Wi-Fi sign-in window left secure DNS off (debsway parts/secure-dns.sh)
+# Says so at login if the Wi-Fi sign-in window left secure DNS off (Wren Linux parts/secure-dns.sh)
 exec ~/.local/bin/secure-dns login-check
 EOF
 rc_take_out
@@ -172,23 +172,23 @@ printf '%s\n' "$RC_BEGIN" '[ -n "${WAYLAND_DISPLAY:-}" ] || [ ! -x ~/.local/bin/
 if $first || [ "$("$BIN/secure-dns" status)" = on ]; then
     if [ "$("$BIN/secure-dns" status)" = on ]; then
         # already on: the firewall rule and Firefox's policy again, as they may have changed
-        sudo systemctl restart debsway-secure-dns-firewall.service ||
-            warn "Couldn't load the firewall rule; check: systemctl status debsway-secure-dns-firewall"
+        sudo systemctl restart wren-secure-dns-firewall.service ||
+            warn "Couldn't load the firewall rule; check: systemctl status wren-secure-dns-firewall"
         if [ -x /usr/local/bin/ublock-allow ]; then sudo /usr/local/bin/ublock-allow --refresh >/dev/null || true; fi
         note "Secure DNS is on: every lookup goes, encrypted, to $tls and is checked with DNSSEC."
     elif sudo "$SWITCH" on; then
         note "Every lookup goes, encrypted, to $tls and is checked with DNSSEC."
     else
         warn "Secure DNS is installed but off (see above). Switch it on once names resolve:"
-        warn "the debsway menu's Secure DNS line, or: secure-dns on"
+        warn "the Wren menu's Secure DNS line, or: secure-dns on"
     fi
 else
-    note "Secure DNS stays off, as you left it: the debsway menu, or secure-dns on."
+    note "Secure DNS stays off, as you left it: the Wren menu, or secure-dns on."
 fi
 # A test domain whose signature is deliberately broken: DNSSEC must refuse it.
 # (Only a wrong result is reported: refused and "no such name" look the same here.)
 if [ "$("$BIN/secure-dns" status)" = on ] && getent hosts dnssec-failed.org >/dev/null 2>&1; then
     warn "dnssec-failed.org, whose DNSSEC signature is broken on purpose, resolved: DNSSEC checking doesn't seem to be on."
 fi
-note "Wi-Fi with a sign-in page: switch it off in the debsway menu (Secure DNS), sign in,"
+note "Wi-Fi with a sign-in page: switch it off in the Wren menu (Secure DNS), sign in,"
 note "and switch it on again. Change the resolver: run this again."

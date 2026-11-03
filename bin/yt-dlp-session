@@ -1,8 +1,8 @@
 #!/bin/bash
-# yt-dlp-session RUN-ID [YT-DLP OPTIONS AND URLS...]: written by debsway
+# yt-dlp-session RUN-ID [YT-DLP OPTIONS AND URLS...]: written by Wren Linux
 # extras/yt-dlp.sh, installed as /usr/local/libexec/yt-dlp-session, owned by
 # root. It runs as the user ytdlp (your user may run this, and nothing else, as
-# ytdlp: /etc/sudoers.d/debsway-ytdlp). The yt-dlp command (bin/yt-dlp) starts
+# ytdlp: /etc/sudoers.d/wren-ytdlp). The yt-dlp command (bin/yt-dlp) starts
 # it with a new RUN-ID each time.
 #
 # yt-dlp runs in a folder of its own for this run, $OUT/RUN-ID, which only
@@ -13,9 +13,9 @@
 # settings behind for the next one; give options on the command line.
 set -eu
 
-YTDLP=/usr/local/lib/debsway/yt-dlp/yt-dlp
-OUT=/var/lib/debsway-ytdlp-out
-HOME_DIR=/var/lib/debsway-ytdlp
+YTDLP=/usr/local/lib/wren/yt-dlp/yt-dlp
+OUT=/var/lib/wren-ytdlp-out
+HOME_DIR=/var/lib/wren-ytdlp
 
 id=${1:-}
 [[ $id =~ ^[0-9a-f]{24}$ ]] || { echo "yt-dlp-session: start it with the yt-dlp command" >&2; exit 2; }

@@ -1,6 +1,6 @@
 #!/bin/bash
-# Checks update.sh in the debsway package's copy: read-only and without git,
-# as /usr/share/debsway is. apt brings the new files; update.sh finds what
+# Checks update.sh in the Wren Linux package's copy: read-only and without git,
+# as /usr/share/wren is. apt brings the new files; update.sh finds what
 # changed against its record of the last run and offers to run those scripts
 # again. A pretend upgrade changes the copy in place; a runner only writes down
 # what it was asked to run, and sudo is a pretend one. Changes nothing outside
@@ -18,10 +18,10 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 not() { ! "$@"; }
 ran() { grep -qxF "$P/$1" "$T/ran"; }
 
-export HOME="$T/home" XDG_STATE_HOME="$T/state" DEBSWAY_KEYS_ROOT="$T/no-keys"
+export HOME="$T/home" XDG_STATE_HOME="$T/state" WREN_KEYS_ROOT="$T/no-keys"
 mkdir -p "$HOME"
 # The package's copy: this checkout's files, no git, read-only
-P=$T/usr/share/debsway
+P=$T/usr/share/wren
 mkdir -p "$P"
 (cd "$HERE" && git ls-files -co --exclude-standard | tar -cf - -T -) | tar -C "$P" -xf -
 chmod -R a-w "$P"
@@ -32,16 +32,16 @@ upgrade() { chmod -R u+w "$P"; (cd "$P" && "$@"); chmod -R a-w "$P"; }
 printf '#!/bin/bash\necho "$1" >>"%s/ran"\n[ "$1" != "$FAIL_ON" ]\n' "$T" >"$T/runner"
 printf '#!/bin/sh\nexit 0\n' >"$T/sudo"
 chmod +x "$T/runner" "$T/sudo"
-export DEBSWAY_UPDATE_RUNNER="$T/runner" DEBSWAY_SUDO="$T/sudo"
-export DEBSWAY_UPDATE_ASSUME_INSTALLED="parts/incognito.sh extras/claude-code.sh extras/media.sh extras/sparrow-wallet.sh"
+export WREN_UPDATE_RUNNER="$T/runner" WREN_SUDO="$T/sudo"
+export WREN_UPDATE_ASSUME_INSTALLED="parts/incognito.sh extras/claude-code.sh extras/media.sh extras/sparrow-wallet.sh"
 # shellcheck disable=SC2086  # ARGS: none, or an option and its word
-upd() { : >"$T/ran"; printf '%s\n' "$@" >"$T/answers"; DEBSWAY_TEST_ANSWERS="$T/answers" bash "$P/update.sh" $ARGS 2>&1; }
+upd() { : >"$T/ran"; printf '%s\n' "$@" >"$T/answers"; WREN_TEST_ANSWERS="$T/answers" bash "$P/update.sh" $ARGS 2>&1; }
 
 ARGS='' out=$(upd y)
-check "the package's copy: it says apt brings what is new" grep -q "installed here as the debsway package" <<<"$out"
+check "the package's copy: it says apt brings what is new" grep -q "installed here as the Wren Linux package" <<<"$out"
 check "...the first run takes what is set up as up to date, and runs nothing" bash -c 'grep -q "first run from the package" <<<"$1" && [ ! -s "$2" ]' _ "$out" "$T/ran"
-check "...and keeps a record of every file, and pins.sh" bash -c '[ -s "$1/applied-files" ] && cmp "$1/applied-pins.sh" "$2/pins.sh"' _ "$T/state/debsway" "$P"
-check "...without fetching or merging anything (no git here)" not grep -qi "Looking for a newer debsway\|fetch" <<<"$out"
+check "...and keeps a record of every file, and pins.sh" bash -c '[ -s "$1/applied-files" ] && cmp "$1/applied-pins.sh" "$2/pins.sh"' _ "$T/state/wren" "$P"
+check "...without fetching or merging anything (no git here)" not grep -qi "Looking for a newer Wren Linux\|fetch" <<<"$out"
 
 # An upgrade: a command incognito installs, a pinned key sparrow uses, a new base part
 upgrade sh -c 'echo "# changed" >>bin/incognito; sed -i "s/^\(SPARROW_FPR=.\)./\1X/" pins.sh

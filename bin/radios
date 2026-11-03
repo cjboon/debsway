@@ -1,7 +1,7 @@
 #!/bin/bash
-# radios: written by debsway parts/debsway-menu.sh
+# radios: written by Wren Linux parts/wren-menu.sh
 # Switch Wi-Fi, Bluetooth, the microphone and (with extras/webcam.sh) a USB
-# webcam on and off, for the debsway menu
+# webcam on and off, for the Wren menu
 # and the command line. Only what this computer has is listed.
 #   radios list                          what there is and whether it is on
 #   radios NAME [status|on|off|toggle]   NAME is wifi, bluetooth or mic
@@ -14,10 +14,10 @@
 # again; a hardware switch or a disabled device is the stronger kind.
 # Exit status: 0 done, 1 not available on this computer, 2 bad use.
 export PATH="$PATH:/usr/sbin:/sbin"
-SYS=${DEBSWAY_SYS:-/sys}
+SYS=${WREN_SYS:-/sys}
 SOURCE=@DEFAULT_AUDIO_SOURCE@
 # the webcam switch (extras/webcam.sh), run as root through sudo for on and off
-CAMERA=${DEBSWAY_CAMERA:-/usr/local/libexec/debsway-camera}
+CAMERA=${WREN_CAMERA:-/usr/local/libexec/wren-camera}
 
 usage() { echo "usage: radios list | radios wifi|bluetooth|mic|camera [status|on|off|toggle]" >&2; exit 2; }
 
@@ -91,7 +91,7 @@ case $cmd in
             [ "$action" != --wait ] || action=status
         fi
         if [ "$cmd" = bluetooth ] && ! command -v bluetoothctl >/dev/null && compgen -G "$SYS/class/bluetooth/*" >/dev/null; then
-            echo "radios: Bluetooth isn't installed. Install it: debsway install bluetooth" >&2
+            echo "radios: Bluetooth isn't installed. Install it: wrenctl install bluetooth" >&2
             exit 1
         fi
         exists "$cmd" || { echo "radios: no $cmd on this computer." >&2; exit 1; }

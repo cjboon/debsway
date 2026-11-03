@@ -1,18 +1,18 @@
 #!/bin/bash
 # The small commands the base desktop installs for itself: keys (the cheat
-# sheet), debsway-welcome (its first-login screen), timer, display-scale and
+# sheet), wren-welcome (its first-login screen), timer, display-scale and
 # sway-status (the bar). install-base.sh puts them in place while it sets sway
-# up; this part does the same again so that debsway --update, which only reruns
+# up; this part does the same again so that wrenctl --update, which only reruns
 # parts and extras, can bring them up to date when they change. It also
 # installs ncal, whose cal draws the month in timer's screen.
 # Usage: bash core-commands.sh [--remove]
 # status: bin:timer
-# files: data/keys.txt data/alarm.wav bin/keys bin/debsway-welcome bin/timer bin/display-scale bin/sway-status
+# files: data/keys.txt data/alarm.wav bin/keys bin/wren-welcome bin/timer bin/display-scale bin/sway-status
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
-KEYS="$HOME/.local/share/debsway/keys.txt"
-COMMANDS=(keys debsway-welcome timer display-scale sway-status)
+KEYS="$HOME/.local/share/wren/keys.txt"
+COMMANDS=(keys wren-welcome timer display-scale sway-status)
 
 if [ "${1:-}" = --remove ]; then
     warn "These are what the desktop's keys, bar and first-login screen run."
@@ -27,7 +27,7 @@ say "The base desktop's commands"
 apt_install ncal
 for c in "${COMMANDS[@]}"; do install_bin "$c"; done
 mkdir -p "${KEYS%/*}"
-install -m 0644 "$DEBSWAY_DIR/data/keys.txt" "$KEYS"
+install -m 0644 "$WREN_DIR/data/keys.txt" "$KEYS"
 note "Cheat sheet: $KEYS"
 # The sound timer and alarm clock ring with: three short beeps (tools/make-alarm-sound.py)
-install -m 0644 "$DEBSWAY_DIR/data/alarm.wav" "${KEYS%/*}/alarm.wav"
+install -m 0644 "$WREN_DIR/data/alarm.wav" "${KEYS%/*}/alarm.wav"

@@ -65,13 +65,13 @@ fetch_offline_lists() {
 # release (up to about two months), so that one is only refused when it is
 # older than OFFLINE_MAX_AGE_DAYS. A date in the future is let through: a
 # computer with no network often has a clock that is wrong. Returns 1, with
-# a reason on stderr, for an old list. DEBSWAY_OFFLINE_ALLOW_STALE=1 accepts
-# old lists on purpose; DEBSWAY_NOW (seconds) is for tests.
+# a reason on stderr, for an old list. WREN_OFFLINE_ALLOW_STALE=1 accepts
+# old lists on purpose; WREN_NOW (seconds) is for tests.
 OFFLINE_MAX_AGE_DAYS=120
 release_fresh() {
     local file=$1 name=$2 now date_s until_s date_t until_t
-    [ "${DEBSWAY_OFFLINE_ALLOW_STALE:-}" != 1 ] || return 0
-    now=${DEBSWAY_NOW:-$(date +%s)}
+    [ "${WREN_OFFLINE_ALLOW_STALE:-}" != 1 ] || return 0
+    now=${WREN_NOW:-$(date +%s)}
     date_s=$(sed -n 's/^Date: *//p' "$file" | head -1)
     until_s=$(sed -n 's/^Valid-Until: *//p' "$file" | head -1)
     # (date -d "" means today, so an empty Date is checked for first)
@@ -87,7 +87,7 @@ release_fresh() {
         return 0
     fi
     warn "Make the packages again on a machine you trust (bash prep/fetch-offline-debs.sh),"
-    warn "or set DEBSWAY_OFFLINE_ALLOW_STALE=1 to accept old lists on purpose."
+    warn "or set WREN_OFFLINE_ALLOW_STALE=1 to accept old lists on purpose."
     return 1
 }
 

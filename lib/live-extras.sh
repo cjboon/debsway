@@ -1,5 +1,5 @@
 # shellcheck shell=bash
-# lib/live-extras.sh: what Debian's live image installs that debsway doesn't
+# lib/live-extras.sh: what Debian's live image installs that Wren Linux doesn't
 # use (parts/no-live-extras.sh takes it out), and whether this computer needs
 # dkms or mdadm after all (wifi.sh says so for a Wi-Fi driver too).
 
@@ -12,10 +12,10 @@ LIVE_EXTRAS=(avahi-daemon libnss-mdns hw-probe extrepo inetutils-telnet)
 # printers on the network) goes either way.
 LIVE_PRINTING=(cups cups-daemon cups-core-drivers cups-browsed)
 # A removal that would take any of these with it is refused
-LIVE_KEEP='sudo|apt|dpkg|systemd|systemd-sysv|udev|cryptsetup|cryptsetup-initramfs|lvm2|initramfs-tools|grub-.*|shim-.*|linux-image-.*|firmware-.*|network-manager|wpasupplicant|iw|sway|foot|tor|nftables|ufw|debsway-.*'
+LIVE_KEEP='sudo|apt|dpkg|systemd|systemd-sysv|udev|cryptsetup|cryptsetup-initramfs|lvm2|initramfs-tools|grub-.*|shim-.*|linux-image-.*|firmware-.*|network-manager|wpasupplicant|iw|sway|foot|tor|nftables|ufw|wren-.*'
 
-DKMS_DIR=${DEBSWAY_DKMS_DIR:-/var/lib/dkms}
-MDSTAT=${DEBSWAY_MDSTAT:-/proc/mdstat}
+DKMS_DIR=${WREN_DKMS_DIR:-/var/lib/dkms}
+MDSTAT=${WREN_MDSTAT:-/proc/mdstat}
 
 # dkms_needed: why dkms must stay (a module it builds, or a package that
 # needs it), or nothing and false
@@ -46,8 +46,8 @@ mdadm_needed() {
         echo "a disk is part of a software RAID array"
         return 0
     fi
-    if grep -qs '^ARRAY' "${DEBSWAY_ETC:-/etc}/mdadm/mdadm.conf"; then
-        echo "${DEBSWAY_ETC:-/etc}/mdadm/mdadm.conf names a RAID array"
+    if grep -qs '^ARRAY' "${WREN_ETC:-/etc}/mdadm/mdadm.conf"; then
+        echo "${WREN_ETC:-/etc}/mdadm/mdadm.conf names a RAID array"
         return 0
     fi
     return 1

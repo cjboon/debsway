@@ -1,7 +1,7 @@
 #!/bin/bash
 # The clock: kept right over the network, and showing your local time.
 # A Debian installed with "standard system utilities" only can have no NTP
-# client at all (then nothing ever corrects the clock), and debsway's install
+# client at all (then nothing ever corrects the clock), and Wren Linux's install
 # stick used to set the time zone to UTC, so the bar showed UTC, not your time.
 #  - systemd-timesyncd sets the clock from Debian's time servers
 #    (debian.pool.ntp.org) and keeps it right. This is plain NTP: your network
@@ -30,8 +30,8 @@ note "The clock is set from debian.pool.ntp.org and kept right (check: timedatec
 say "Time zone"
 zone=$(timedatectl show -p Timezone --value 2>/dev/null || true)
 case $zone in '' | UTC | Etc/UTC | Etc/UCT | UCT | Etc/Universal | Universal | Etc/Zulu | Zulu) utc=true ;; *) utc=false ;; esac
-if [ -n "${DEBSWAY_NONINTERACTIVE:-}" ]; then
-    note "Time zone: ${zone:-UTC}. Change it with: bash $DEBSWAY_DIR/parts/clock.sh"
+if [ -n "${WREN_NONINTERACTIVE:-}" ]; then
+    note "Time zone: ${zone:-UTC}. Change it with: bash $WREN_DIR/parts/clock.sh"
 elif $utc || ! ask "The time zone is $zone. Keep it?" y; then
     $utc && note "The time zone is UTC, so the clock in the bar shows UTC, not your local time."
     note "Type yours as Area/City, like America/New_York, Europe/Berlin or Asia/Tokyo"
@@ -48,7 +48,7 @@ elif $utc || ! ask "The time zone is $zone. Keep it?" y; then
         sudo timedatectl set-timezone "$want"
         note "Time zone: $want. The bar shows the new time within a few seconds."
     else
-        note "Kept ${zone:-UTC}. Change it any time with: bash $DEBSWAY_DIR/parts/clock.sh"
+        note "Kept ${zone:-UTC}. Change it any time with: bash $WREN_DIR/parts/clock.sh"
     fi
 else
     note "Kept $zone."

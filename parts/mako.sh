@@ -7,7 +7,7 @@
 need_user
 
 CONF="$HOME/.config/mako/config"
-MARK="# Written by debsway parts/mako.sh"
+MARK="# Written by Wren Linux parts/mako.sh"
 
 if [ "${1:-}" = --remove ]; then
     remove_snippet notifications
@@ -38,7 +38,7 @@ fi
 if pgrep -x mako >/dev/null; then makoctl reload || true; fi
 
 put_snippet notifications <<'EOF'
-# Notifications (debsway parts/mako.sh)
+# Notifications (Wren Linux parts/mako.sh)
 bindsym $mod+n exec makoctl dismiss
 bindsym $mod+Shift+n exec makoctl dismiss --all
 EOF

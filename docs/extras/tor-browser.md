@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-debsway install tor-browser                     install it, or change its bridge (asks if you need one)
-debsway remove tor-browser                      remove it (asks before deleting the downloaded browser)
-debsway manual tor-browser                      print the manual steps below
+wrenctl install tor-browser                     install it, or change its bridge (asks if you need one)
+wrenctl remove tor-browser                      remove it (asks before deleting the downloaded browser)
+wrenctl manual tor-browser                      print the manual steps below
 
 torbrowser-launcher       start Tor Browser (or Super+d); the first start downloads it
 ```
@@ -16,7 +16,7 @@ through Debian's torbrowser-launcher, which downloads Tor Browser from
 torproject.org, checks its signature and keeps it updated; the launcher is in
 Debian's contrib section, so contrib is turned on. Tor Browser runs on X11 on
 purpose (it's less fingerprintable), so XWayland is installed. Before its
-first start, debsway writes a `user.js` into its profile: the Safest security
+first start, Wren Linux writes a `user.js` into its profile: the Safest security
 level with JavaScript off (`data/tor-browser-safest.js`), and a bridge if you
 need one (obfs4, webtunnel, Snowflake or meek), so its very first connection
 already goes through it; Firefox applies `user.js` at every start. Tor's
@@ -29,7 +29,7 @@ that is unpacked instead, and torproject.org is never contacted.
 - The first start downloads Tor Browser without Tor: your network sees that you fetched it (not what you do with it).
 - Logging in to a site tells it who you are, Tor or not.
 - Safest breaks many sites; lowering it gives attackers more to work with.
-- It runs as you, with no sandbox from debsway; for a stronger wall, use Whonix or Tails.
+- It runs as you, with no sandbox from Wren Linux; for a stronger wall, use Whonix or Tails.
 
 ## MANUAL INSTALL
 
@@ -47,16 +47,16 @@ sudo apt install --no-install-recommends xwayland torbrowser-launcher xz-utils
 
 # Let Tor's AppArmor profile read resolv.conf through its symlink, for
 # bridges given as host names (webtunnel), then reload the profile
-printf '%s\n' '# >>> debsway: DNS through the resolv.conf symlink >>>' \
+printf '%s\n' '# >>> Wren Linux: DNS through the resolv.conf symlink >>>' \
     '@{run}/resolvconf/resolv.conf r,' '@{run}/NetworkManager/{,no-stub-}resolv.conf r,' \
-    '@{run}/systemd/resolve/{,stub-}resolv.conf r,' '# <<< debsway <<<' | sudo tee -a /etc/apparmor.d/local/torbrowser.Tor.tor
+    '@{run}/systemd/resolve/{,stub-}resolv.conf r,' '# <<< Wren Linux <<<' | sudo tee -a /etc/apparmor.d/local/torbrowser.Tor.tor
 sudo apparmor_parser -r /etc/apparmor.d/torbrowser.Tor.tor
 
 # Safest, JavaScript off, before its first start: a user.js in the profile
 # torbrowser-launcher will unpack Tor Browser into
 P=~/.local/share/torbrowser/tbb/$(uname -m)/tor-browser/Browser/TorBrowser/Data/Browser/profile.default
 mkdir -p "$P" && chmod 700 "$P"
-cp @DEBSWAY_DIR@/data/tor-browser-safest.js "$P/user.js"
+cp @WREN_DIR@/data/tor-browser-safest.js "$P/user.js"
 # A bridge, if you need one: add ONE of these blocks to that user.js
 #  Tor Browser's built-in bridges (TYPE is obfs4, snowflake or meek):
 #    user_pref("torbrowser.settings.bridges.enabled", true);
@@ -77,8 +77,8 @@ To undo:
 ```
 # The launcher
 sudo apt purge torbrowser-launcher
-# The AppArmor lines added above (between the debsway marker lines)
-sudo sed -i '/^# >>> debsway: DNS through the resolv.conf symlink >>>$/,/^# <<< debsway <<<$/d' /etc/apparmor.d/local/torbrowser.Tor.tor
+# The AppArmor lines added above (between the Wren Linux marker lines)
+sudo sed -i '/^# >>> Wren Linux: DNS through the resolv.conf symlink >>>$/,/^# <<< Wren Linux <<<$/d' /etc/apparmor.d/local/torbrowser.Tor.tor
 # contrib off again, if nothing else needs it
 sudo sed -i -E 's/ main contrib([[:space:]]|$)/ main\1/' /etc/apt/sources.list
 sudo apt update

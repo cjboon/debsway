@@ -1,5 +1,5 @@
 #!/bin/sh
-# whonix: written by debsway extras/whonix.sh
+# whonix: written by Wren Linux extras/whonix.sh
 #   whonix          start both VMs and open the Workstation
 #   whonix gateway  start the Gateway and open it (Tor settings)
 #   whonix stop     shut both down. Each is asked to shut down first; Whonix's
@@ -23,7 +23,7 @@ up() {
     err=$($v start "$1" 2>&1 >/dev/null) || fail "couldn't start $1: $err"
 }
 console() {
-    command -v virt-manager >/dev/null || fail "virt-manager is missing. Run: debsway install whonix"
+    command -v virt-manager >/dev/null || fail "virt-manager is missing. Run: wrenctl install whonix"
     exec virt-manager -c qemu:///session --show-domain-console "$1"
 }
 stop() {

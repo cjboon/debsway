@@ -1,15 +1,15 @@
 #!/bin/bash
-# secure-dns-switch on|off|status: written by debsway parts/secure-dns.sh
-# Installed as /usr/local/libexec/debsway-secure-dns, run as root. Your user
+# secure-dns-switch on|off|status: written by Wren Linux parts/secure-dns.sh
+# Installed as /usr/local/libexec/wren-secure-dns, run as root. Your user
 # may run "on" and "off" without a password (a rule in /etc/sudoers.d): the
-# debsway menu's Secure DNS line and the secure-dns command use it.
+# Wren menu's Secure DNS line and the secure-dns command use it.
 #   on      every lookup goes to Unbound on this computer (encrypted, checked
 #           with DNSSEC), and a firewall rule lets only Unbound send DNS out.
 #           If names don't resolve that way (a Wi-Fi sign-in page, port 853
 #           blocked), it switches off again and says so.
 #   off     DNS goes to the network's own server again, unencrypted: for Wi-Fi
 #           with a sign-in page (or use the Wi-Fi sign-in window, which does
-#           this for you). debsway's Firefox then encrypts its own lookups
+#           this for you). Wren Linux's Firefox then encrypts its own lookups
 #           (it reads this at its start: bin/firefox-session).
 #   status  on or off
 set -euo pipefail
@@ -17,16 +17,16 @@ umask 022
 export PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
 RESOLV=/etc/resolv.conf
-BACKUP=/etc/resolv.conf.debsway-secure-dns.bak
-CONF=/etc/unbound/unbound.conf.d/debsway-secure-dns.conf
-NM_CONF=/etc/NetworkManager/conf.d/90-debsway-secure-dns.conf
-DHCLIENT_HOOK=/etc/dhcp/dhclient-enter-hooks.d/debsway-secure-dns
+BACKUP=/etc/resolv.conf.wren-secure-dns.bak
+CONF=/etc/unbound/unbound.conf.d/wren-secure-dns.conf
+NM_CONF=/etc/NetworkManager/conf.d/90-wren-secure-dns.conf
+DHCLIENT_HOOK=/etc/dhcp/dhclient-enter-hooks.d/wren-secure-dns
 DHCPCD_CONF=/etc/dhcpcd.conf
-DHCPCD_BEGIN='# >>> debsway secure-dns >>>'
-DHCPCD_END='# <<< debsway secure-dns <<<'
-UNIT=debsway-secure-dns-firewall.service
-# What /etc/resolv.conf says while it is on (an older debsway wrote "extras/")
-MARK='^# Written by debsway (parts|extras)/secure-dns\.sh'
+DHCPCD_BEGIN='# >>> Wren Linux secure-dns >>>'
+DHCPCD_END='# <<< Wren Linux secure-dns <<<'
+UNIT=wren-secure-dns-firewall.service
+# What /etc/resolv.conf says while it is on (an older Wren Linux wrote "extras/")
+MARK='^# Written by Wren Linux (parts|extras)/secure-dns\.sh'
 
 say() { printf 'secure-dns: %s\n' "$*"; }
 die() { printf 'secure-dns: %s\n' "$*" >&2; exit 1; }
@@ -39,13 +39,13 @@ reload_nm() {
 
 # The things that would rewrite /etc/resolv.conf with the network's DNS server
 keep_hands_off() {
-    printf '%s\n' '# Written by debsway parts/secure-dns.sh: NetworkManager leaves' \
+    printf '%s\n' '# Written by Wren Linux parts/secure-dns.sh: NetworkManager leaves' \
         '# /etc/resolv.conf alone; it points at Unbound on this computer.' \
         '[main]' 'dns=none' 'rc-manager=unmanaged' |
         install -D -m 0644 /dev/stdin "$NM_CONF"
     # dhclient (ifupdown's wired connections) calls make_resolv_conf; an enter
     # hook can replace it with nothing
-    printf '%s\n' '# Written by debsway parts/secure-dns.sh: leave /etc/resolv.conf alone;' \
+    printf '%s\n' '# Written by Wren Linux parts/secure-dns.sh: leave /etc/resolv.conf alone;' \
         '# it points at Unbound on this computer.' 'make_resolv_conf() { :; }' |
         install -D -m 0644 /dev/stdin "$DHCLIENT_HOOK"
     if [ -f "$DHCPCD_CONF" ] && ! grep -qxF "$DHCPCD_BEGIN" "$DHCPCD_CONF"; then
@@ -79,7 +79,7 @@ resolv_back() {
 firewall_on() { systemctl enable "$UNIT" >/dev/null 2>&1 && systemctl restart "$UNIT"; }
 firewall_off() {
     systemctl disable --now "$UNIT" >/dev/null 2>&1 || true
-    nft delete table inet debsway_secure_dns 2>/dev/null || true
+    nft delete table inet wren_secure_dns 2>/dev/null || true
 }
 
 # resolves: names work now (a few tries: Unbound may still be connecting)
@@ -112,7 +112,7 @@ case $1 in
         switch_off
         say "off: DNS goes to the network's own server, unencrypted. Firefox encrypts its own (restart it)." ;;
     on)
-        [ -f "$CONF" ] || die "Unbound isn't set up for it: debsway part secure-dns"
+        [ -f "$CONF" ] || die "Unbound isn't set up for it: wrenctl part secure-dns"
         [ ! -L "$RESOLV" ] || die "$RESOLV is a link ($(readlink "$RESOLV")): something else runs DNS here."
         if is_on; then
             say "already on."
@@ -123,11 +123,11 @@ case $1 in
         # A copy of what is there now, to put back when it is switched off
         if [ -e "$RESOLV" ]; then cp -a "$RESOLV" "$BACKUP"; fi
         keep_hands_off
-        printf '%s\n' '# Written by debsway parts/secure-dns.sh. Every name goes to Unbound on this' \
+        printf '%s\n' '# Written by Wren Linux parts/secure-dns.sh. Every name goes to Unbound on this' \
             '# computer, which asks your chosen resolver over an encrypted connection.' \
-            'nameserver 127.0.0.1' 'options edns0 trust-ad' >"$RESOLV.debsway-new"
-        chmod 0644 "$RESOLV.debsway-new"
-        mv "$RESOLV.debsway-new" "$RESOLV"
+            'nameserver 127.0.0.1' 'options edns0 trust-ad' >"$RESOLV.wren-new"
+        chmod 0644 "$RESOLV.wren-new"
+        mv "$RESOLV.wren-new" "$RESOLV"
         if ! resolves; then
             switch_off
             die "names don't resolve through the encrypted resolver (a Wi-Fi sign-in page, port 853 blocked, or the resolver is down), so it stays off. Try again once you are signed in."

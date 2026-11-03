@@ -1,5 +1,5 @@
 // Tor Browser at the Safest security level, with JavaScript off.
-// Used by debsway extras/tor-browser.sh and extras/whonix.sh.
+// Used by Wren Linux extras/tor-browser.sh and extras/whonix.sh.
 // Tor Browser checks at startup that the prefs bound to the security
 // slider match it, and asks for a restart if they don't, so all of them
 // are set (from SecurityLevel.sys.mjs in Tor Browser 15). Safest blocks

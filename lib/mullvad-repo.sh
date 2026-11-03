@@ -13,7 +13,7 @@ add_mullvad_repo() {
         sudo tee "$MULLVAD_LIST" >/dev/null
     allow_unattended_updates mullvad repository.mullvad.net
     # A fresh update, so apt sees Mullvad's packages
-    unset DEBSWAY_APT_UPDATED
+    unset WREN_APT_UPDATED
 }
 
 # Only once neither Mullvad package is left

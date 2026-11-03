@@ -3,7 +3,7 @@
 # JavaScript, HTML, Markdown...): Debian's full vim, instead of the vim-tiny
 # that comes with Debian, which has no colors at all. It writes ~/.vimrc
 # (data/vimrc) unless you have one of your own: colors and indenting by file
-# type, light or dark as debsway's theme is, search highlighting, line
+# type, light or dark as Wren Linux's theme is, search highlighting, line
 # numbers, and modelines off (settings hidden in a file you open, which
 # crafted files have used to run commands).
 # Usage: bash vim.sh [--remove | --manual]
@@ -15,8 +15,8 @@ if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 VIMRC=$HOME/.vimrc
-MARK='" Written by debsway extras/vim.sh'
-# ours: the vimrc's first line still says debsway wrote it
+MARK='" Written by Wren Linux extras/vim.sh'
+# ours: the vimrc's first line still says Wren Linux wrote it
 ours() { head -1 "$VIMRC" 2>/dev/null | grep -qF "$MARK"; }
 
 if [ "${1:-}" = --remove ]; then
@@ -29,10 +29,10 @@ fi
 say "Installing vim"
 apt_install vim
 if [ ! -e "$VIMRC" ] || ours; then
-    install -m 0644 "$DEBSWAY_DIR/data/vimrc" "$VIMRC"
+    install -m 0644 "$WREN_DIR/data/vimrc" "$VIMRC"
     note "Wrote $VIMRC: colors by language, light or dark with the theme, modelines off."
 else
     note "Keeping your own $VIMRC. For the colors, it needs: syntax on"
-    note "and: filetype plugin indent on  ($DEBSWAY_DIR/data/vimrc has debsway's whole set)."
+    note "and: filetype plugin indent on  ($WREN_DIR/data/vimrc has Wren Linux's whole set)."
 fi
 note "Run it with: vim FILE   (vi does the same). :q quits, :wq saves and quits."

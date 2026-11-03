@@ -70,7 +70,7 @@ grep -q LIVE_TEST_PATH "$R/lib.sh" || { echo "  FAIL  lib.sh's PATH line wasn't 
 cp "$HERE/pins.sh" "$HERE/packages.sh" "$R/"
 ln -s "$HERE/lib" "$R/lib"
 cp "$HERE/parts/no-live-extras.sh" "$R/parts/"
-export LIVE_TEST_PATH="$T/bin:$PATH" DEBSWAY_DKMS_DIR=$T/dkms DEBSWAY_MDSTAT=$T/mdstat DEBSWAY_ETC=$T/etc
+export LIVE_TEST_PATH="$T/bin:$PATH" WREN_DKMS_DIR=$T/dkms WREN_MDSTAT=$T/mdstat WREN_ETC=$T/etc
 
 LIVE="avahi-daemon libnss-mdns hw-probe extrepo inetutils-telnet"
 PRINT="cups cups-daemon cups-core-drivers cups-browsed"
@@ -86,7 +86,7 @@ setup() {
 run() {
     printf '%s\n' "$@" >"$T/answers"
     : >"$T/root-calls"
-    DEBSWAY_TEST_ANSWERS="$T/answers" bash "$R/parts/no-live-extras.sh" >"$T/out" 2>&1
+    WREN_TEST_ANSWERS="$T/answers" bash "$R/parts/no-live-extras.sh" >"$T/out" 2>&1
 }
 purged() { # PACKAGE: it was in the purge
     grep '^apt-get purge' "$T/root-calls" | tr ' ' '\n' | grep -qx "$1"
@@ -157,7 +157,7 @@ check "...and it says so" grep -q "None of the live image's extras" "$T/out"
 # shellcheck disable=SC2086
 setup $PRINT
 printf '%s\n' n >"$T/answers"; : >"$T/root-calls"
-DEBSWAY_NONINTERACTIVE=1 bash "$R/parts/no-live-extras.sh" >"$T/out" 2>&1
+WREN_NONINTERACTIVE=1 bash "$R/parts/no-live-extras.sh" >"$T/out" 2>&1
 check "unattended, it doesn't ask and printing goes (the default)" purged cups
 
 : >"$T/root-calls"; bash "$R/parts/no-live-extras.sh" --remove >"$T/out" 2>&1

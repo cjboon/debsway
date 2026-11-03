@@ -15,11 +15,11 @@
 #   bash install-extras.sh --install F   installs the names in file F (no list)
 #   bash install-extras.sh --remove      a list of what is installed; removes what
 #                                        you check (each extra's --remove), after asking
-# ~/.config/debsway/preselect (one name a line, left by the install stick, e.g.
+# ~/.config/wren/preselect (one name a line, left by the install stick, e.g.
 # make-install-iso.sh --simplesway) ticks those in the first list shown; it
 # is then deleted, so later lists start empty again.
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
-. "$DEBSWAY_DIR/lib/checklist.sh"
+. "$WREN_DIR/lib/checklist.sh"
 
 # The groups, most secure first: TIER<TAB>HEADING
 TIERS=$'most\tMOST SECURE: walled off, or it protects you
@@ -33,7 +33,7 @@ tier_heading() { awk -F'\t' -v t="$1" '$1 == t { print $2 }' <<<"$TIERS"; }
 # One line per extra: NAME<TAB>SUMMARY<TAB>installed(1|0)<TAB>TIER, in the
 # groups' order, by name within each
 mapfile -t EXTRAS < <(
-    for f in "$DEBSWAY_DIR"/extras/*.sh; do
+    for f in "$WREN_DIR"/extras/*.sh; do
         name=$(basename -- "$f" .sh)
         summary=$(sed -n 's/^# summary: //p' "$f" | head -1)
         tier=$(sed -n 's/^# security: //p' "$f" | head -1)
@@ -58,7 +58,7 @@ if [ "${1:-}" = --list ]; then
 fi
 
 mode=both file=
-PRESELECT=$HOME/.config/debsway/preselect
+PRESELECT=$HOME/.config/wren/preselect
 # What the list says, and its buttons (--remove changes them)
 TITLE="Optional extras" OK=Install CANCEL="No extras"
 TEXT="Arrow keys or the wheel move; Space or a click checks a box.\n* = already installed (checking it runs it again, to repair or update).\nInstall puts the checked ones in; No extras finishes without any."
@@ -147,7 +147,7 @@ if [ "$mode" = choose ]; then
     : >"$file"
     if [ ${#chosen[@]} -gt 0 ]; then printf '%s\n' "${chosen[@]}" >"$file"; fi
     if [ ${#chosen[@]} -eq 0 ]; then
-        note "No extras chosen. Add some later with: debsway --apps"
+        note "No extras chosen. Add some later with: wrenctl --apps"
     else
         note "To install after the base: ${chosen[*]}"
     fi
@@ -155,7 +155,7 @@ if [ "$mode" = choose ]; then
 fi
 
 if [ ${#chosen[@]} -eq 0 ]; then
-    note "No extras chosen. Add some later with: debsway --apps"
+    note "No extras chosen. Add some later with: wrenctl --apps"
     exit 0
 fi
 
@@ -174,7 +174,7 @@ if [ "$mode" = remove ]; then
     failed=()
     for name in "${chosen[@]}"; do
         say "Removing: $name"
-        bash "$DEBSWAY_DIR/extras/$name.sh" --remove || failed+=("$name")
+        bash "$WREN_DIR/extras/$name.sh" --remove || failed+=("$name")
     done
     say "Removing done"
     if [ ${#failed[@]} -gt 0 ]; then
@@ -188,9 +188,9 @@ fi
 
 failed=()
 for name in "${chosen[@]}"; do
-    [ -f "$DEBSWAY_DIR/extras/$name.sh" ] || continue
+    [ -f "$WREN_DIR/extras/$name.sh" ] || continue
     say "Extra: $name"
-    bash "$DEBSWAY_DIR/extras/$name.sh" || failed+=("$name")
+    bash "$WREN_DIR/extras/$name.sh" || failed+=("$name")
 done
 
 say "Extras done"

@@ -2,12 +2,13 @@
 
 ## In short
 
-1. Decide the name, and make an offline signing key.
-2. `debsway install NAME`, with Tab completion. (Done.)
-3. A `.deb` that installs debsway root-owned in `/usr/share/debsway`. (Done.)
+1. Decide the name (done: Wren Linux, command `wrenctl`), and make an
+   offline signing key (`wrenctl install signing-key`, then `wren-key`).
+2. `wrenctl install NAME`, with Tab completion. (Done.)
+3. A `.deb` that installs Wren Linux root-owned in `/usr/share/wren`. (Done.)
 4. A signed apt repository. Signing happens on your own computer, so a
    broken-into VPS can't forge updates. (The tools are done:
-   `tools/make-apt-repo.sh`, `parts/debsway-repo.sh`, and `update.sh` for the
+   `tools/make-apt-repo.sh`, `parts/wren-repo.sh`, and `update.sh` for the
    package. They wait for the key and an address.)
 5. A static website on a hardened VPS, with an onion mirror.
 6. An installer ISO, built on Debian's own installer and signed shim.
@@ -23,21 +24,21 @@ can make), the address for the repository, then the server (step 5).
 
 ---
 
-Where debsway is now, where it could go, and the order that gets there with
-the least rework, without loosening any security debsway already gives.
+Where Wren Linux is now, where it could go, and the order that gets there with
+the least rework, without loosening any security Wren Linux already gives.
 
-**Now:** a git checkout in `~/debsway`, run as you, with root steps through
+**Now:** a git checkout in `~/wren`, run as you, with root steps through
 sudo. 32 base parts, 47 extras, 62 test scripts, about 360 files, MIT licensed.
 `update.sh` pulls from GitHub and re-runs what changed.
 
 **The goal:**
-1. A Debian package (`.deb`) that installs debsway root-owned.
+1. A Debian package (`.deb`) that installs Wren Linux root-owned.
 2. A signed apt repository that delivers its updates.
-3. An installer image (ISO) that installs Debian and debsway in one go.
+3. An installer image (ISO) that installs Debian and Wren Linux in one go.
 4. A website that hosts all of that.
 5. A DistroWatch listing.
 
-Each phase below stands on its own: debsway gets safer at every step, even
+Each phase below stands on its own: Wren Linux gets safer at every step, even
 if the next one waits.
 
 ---
@@ -48,7 +49,7 @@ if the next one waits.
   repository serves it and the ISO installs it. It also closes the biggest
   gap in the current design: today `update.sh` runs, with sudo, whatever
   arrives from GitHub. Whoever takes over the GitHub account, or a machine
-  on the way, decides what runs as root on every debsway computer. A signed
+  on the way, decides what runs as root on every Wren Linux computer. A signed
   package checked by apt with your key moves that trust from GitHub to a key
   you hold.
 - **The website comes after the repository.** The website only hosts
@@ -61,10 +62,16 @@ if the next one waits.
 
 ## Phase 0: decisions to make first (an hour, no code)
 
-1. **Name.** Renaming later touches every file, every user's machine and
-   every link, so settle it now.
+1. **Name.** Decided: **Wren Linux** (it was debsway), with `wrenctl` as its
+   command; `wren-` and `wren_` in its internal names, `wren-linux` as its
+   package. Quiet on a boot screen, for people a border agent may look at.
+   There is a small programming language called Wren (its command is `wren`,
+   so the distribution's isn't); always say "Wren Linux", and give the key's
+   fingerprint wherever people find the download, so a look-alike site can't
+   pass. Still to do:
+   - Rename the GitHub repository (the README's addresses then follow).
    - Read Debian's trademark policy (debian.org/trademark). The word
-     "Debian" is what it protects; "debsway" doesn't use it.
+     "Debian" is what it protects; "Wren Linux" doesn't use it.
    - Write "based on Debian, not affiliated with or endorsed by the Debian
      project" in the README and on the website.
    - If unsure, ask trademark@debian.org.
@@ -73,7 +80,7 @@ if the next one waits.
    stable (`13` now). Every release is a signed git tag.
 3. **The signing key.** One OpenPGP key that signs the repository and the
    ISO checksums. It is the most valuable thing in the project.
-   - Make it on an offline machine, or at least a fresh debsway user. Keep
+   - Make it on an offline machine, or at least a fresh Wren Linux user. Keep
      the primary key offline (an encrypted USB stick and a paper backup).
    - Use only a signing subkey day to day, ideally on a hardware token
      (Nitrokey, YubiKey).
@@ -88,7 +95,7 @@ if the next one waits.
    git history names them), and that can't be undone. So the danger isn't
    being found, it is being made to sign: whoever holds the key can be
    pressured, threatened or legally compelled to publish a bad update, and for
-   people who use debsway against a government that is the cheapest attack.
+   people who use Wren Linux against a government that is the cheapest attack.
    Make the project its own thing, so that pressure has less to grip:
    - **A project address, not yours**, on the key, the website and the
      security contact: say "<name> signing key <security@project-domain>".
@@ -105,50 +112,50 @@ if the next one waits.
 
 ---
 
-## Phase 1: debsway as a Debian package
+## Phase 1: Wren Linux as a Debian package
 
-The repository stays your workshop in `~/debsway`: you edit and test there
+The repository stays your workshop in `~/wren`: you edit and test there
 as now. Installed systems get a built package instead.
 
-### 1a. One command, `debsway`, in front of everything (done)
+### 1a. One command, `wrenctl`, in front of everything (done)
 
-The `debsway` command already exists (the menu, `--apps`, `--update`).
+The `wrenctl` command already exists (the menu, `--apps`, `--update`).
 Extend it before anything moves, so the docs can switch to it early:
 
 ```
-debsway install NAME      runs extras/NAME.sh       (Tab lists the extras)
-debsway remove NAME       runs extras/NAME.sh --remove
-debsway manual NAME       runs extras/NAME.sh --manual
-debsway list              the extras: installed or not, with their summary
-debsway status            status.sh
-debsway update            update.sh (later: apt, see Phase 2)
-debsway part NAME         re-runs one base part
+wrenctl install NAME      runs extras/NAME.sh       (Tab lists the extras)
+wrenctl remove NAME       runs extras/NAME.sh --remove
+wrenctl manual NAME       runs extras/NAME.sh --manual
+wrenctl list              the extras: installed or not, with their summary
+wrenctl status            status.sh
+wrenctl update            update.sh (later: apt, see Phase 2)
+wrenctl part NAME         re-runs one base part
 ```
 
 - **Arguments:** checked against the list of extras by exact name only, so
   nothing else is ever run.
 - **Tab completion:** a bash-completion file that lists the extras.
 - **The hints:** the command hints (`parts/command-hints.sh`) then say
-  `debsway install claude-vm` instead of a path.
-- **Docs and tests:** change the docs from `bash ~/debsway/extras/X.sh` to
-  `debsway install X` (about 170 places, mechanical), and update the man
+  `wrenctl install claude-vm` instead of a path.
+- **Docs and tests:** change the docs from `bash ~/wren/extras/X.sh` to
+  `wrenctl install X` (about 170 places, mechanical), and update the man
   page and its test.
 
 *Cost:* one session. *Security:* none lost, and from here on the docs don't
-depend on where debsway lives.
+depend on where Wren Linux lives.
 
 ### 1b. Make every script work from wherever it is installed (done)
 
-Done: the commands look for `DEBSWAY_DIR`, then a root-owned
-`/usr/share/debsway`, then `~/debsway`; messages say `debsway install NAME`
+Done: the commands look for `WREN_DIR`, then a root-owned
+`/usr/share/wren`, then `~/wren`; messages say `wrenctl install NAME`
 or name the folder the script runs from; `tools/test-location.sh` checks it.
 
 
-- **The folder:** `DEBSWAY_DIR` is already worked out from where `lib.sh`
-  is. Check that nothing assumes `~/debsway`: grep for it in the scripts
-  (not the docs), and route it through `DEBSWAY_DIR`.
-- **What is yours stays in your home:** state in `~/.local/state/debsway`,
-  settings in `~/.config/debsway`, pictures in `~/Pictures`, unchanged.
+- **The folder:** `WREN_DIR` is already worked out from where `lib.sh`
+  is. Check that nothing assumes `~/wren`: grep for it in the scripts
+  (not the docs), and route it through `WREN_DIR`.
+- **What is yours stays in your home:** state in `~/.local/state/wren`,
+  settings in `~/.config/wren`, pictures in `~/Pictures`, unchanged.
 - **Tests:** they keep running from the checkout (`bash test.sh`); one new
   test runs a few of them from a copy in another folder.
 
@@ -160,34 +167,34 @@ Done, a little differently from below: `tools/build-deb.sh` builds it with
 `dpkg-deb` from a commit, without debhelper (the package is files only, and a
 short script is easier to read and to build the same way every time). It has
 no install scripts at all. `tools/test-build-deb.sh` checks it; lintian runs
-when it is installed. See docs/maintaining.md, "The debsway package".
+when it is installed. See docs/maintaining.md, "The Wren Linux package".
 
 
 Build with Debian's own tools: `debhelper` (`dh`), `dpkg-buildpackage`, and
 `lintian` to check the result. A `debian/` folder in the repository holds:
 
 - `control`:
-  - The package `debsway`, Architecture `all` (scripts only).
+  - The package `wrenctl`, Architecture `all` (scripts only).
   - Depends on what every part needs before it runs: bash, sudo, git (for
     now), python3, acl, nftables.
   - The rest stays installed by the parts as now, with apt markers.
 - `install`:
-  - `parts/ extras/ lib/ data/ bin/ vendor/ *.sh` to `/usr/share/debsway/`.
-  - The `debsway` command to `/usr/bin/debsway`.
+  - `parts/ extras/ lib/ data/ bin/ vendor/ *.sh` to `/usr/share/wren/`.
+  - The `wrenctl` command to `/usr/bin/wrenctl`.
   - The man page to `/usr/share/man/man1/`.
-  - The docs to `/usr/share/doc/debsway/`.
-  - The completion file to `/usr/share/bash-completion/completions/debsway`.
+  - The docs to `/usr/share/doc/wren-linux/`.
+  - The completion file to `/usr/share/bash-completion/completions/wrenctl`.
 - `changelog`: one entry per release (`dch` writes it).
 - `copyright`: MIT, and the vendored `mockvps-kvm` with its own license.
 - `rules`: the default `dh $@`. No build step: the files are copied.
 
-Everything in `/usr/share/debsway` is root-owned and read-only to you.
+Everything in `/usr/share/wren` is root-owned and read-only to you.
 Malware running as you can't change a script and wait for you to run it
 with sudo.
 
 **What stays the same:** parts still run as you and use sudo for root steps,
 and `~/.local/bin` commands are still installed per user by the parts, from
-`/usr/share/debsway/bin`.
+`/usr/share/wren/bin`.
 
 **One open choice:** user commands that are only a launcher (`firefox`,
 `incognito`, `wifi-signin`) can move to `/usr/bin` in the package, root-owned
@@ -195,10 +202,10 @@ like the sessions. Do that one at a time, each with its test, later.
 
 **Migrating your own machine:**
 1. Install the package.
-2. Run `debsway update`, which re-runs every part from
-   `/usr/share/debsway`. The new stale-command check in `update.sh` offers
+2. Run `wrenctl update`, which re-runs every part from
+   `/usr/share/wren`. The new stale-command check in `update.sh` offers
    whatever the new location changed.
-3. Keep `~/debsway` as your development copy.
+3. Keep `~/wren` as your development copy.
 
 *Cost:* one to two sessions, most of it the first lintian-clean build.
 
@@ -225,15 +232,15 @@ tag: `bash tools/build-deb.sh --commit TAG --version VERSION`.
 
 Started: `tools/make-apt-repo.sh` makes and signs the repository on your own
 computer (with `apt-ftparchive` and gpg, which Debian has, instead of
-reprepro), only for debsway's packages, good for 14 days; Debian's own apt
+reprepro), only for Wren Linux's packages, good for 14 days; Debian's own apt
 takes it, and refuses it signed with another key, past its Valid-Until or
-with a changed package list (`tools/test-apt-repo.sh`). `parts/debsway-repo.sh`
-adds it on a debsway computer: the pinned key only, and an apt pin so it can
-bring nothing but the debsway package (checked with real apt). It changes
+with a changed package list (`tools/test-apt-repo.sh`). `parts/wren-repo.sh`
+adds it on a Wren Linux computer: the pinned key only, and an apt pin so it can
+bring nothing but the Wren Linux package (checked with real apt). It changes
 nothing until pins.sh names the key and the address. After apt upgrades the
 package, `update.sh` runs again the parts whose files changed, from a record of
 every file it keeps (no git needed). Still to do: adding the part to the base
-list once the repository is live. A separate keyring package isn't needed: the key comes with debsway
+list once the repository is live. A separate keyring package isn't needed: the key comes with Wren Linux
 itself, checked against the pin.
 
 
@@ -243,15 +250,15 @@ itself, checked against the pin.
 - **Publishing:** the signed archive is copied to the website (`rsync` over
   ssh) and to GitHub Releases or Pages as a mirror. Both serve the same
   signed files, so neither has to be trusted.
-- **A `debsway-archive-keyring` package:** holds the public key, in
-  `/usr/share/keyrings/debsway-archive-keyring.gpg`.
+- **A `wren-archive-keyring` package:** holds the public key, in
+  `/usr/share/keyrings/wren-archive-keyring.gpg`.
   - The source line uses `Signed-By:` that file, so the key vouches for
-    debsway's repository only, never for Debian's packages.
-  - debsway already does this for Anthropic's and Mullvad's repositories,
+    Wren Linux's repository only, never for Debian's packages.
+  - Wren Linux already does this for Anthropic's and Mullvad's repositories,
     with the fingerprint pinned in `pins.sh`; do the same for your own key.
-- **Updates:** unattended-upgrades gets an origin line for debsway, so
+- **Updates:** unattended-upgrades gets an origin line for Wren Linux, so
   security fixes arrive like Debian's. `update.sh` becomes "apt update,
-  apt upgrade debsway, then re-run the parts whose files changed". The
+  apt upgrade Wren Linux, then re-run the parts whose files changed". The
   re-run logic stays and reads what changed between the installed versions
   instead of git commits.
 - **Fixes for a broken release:** a version number only goes up. To undo a
@@ -276,7 +283,7 @@ There's nothing to break into but ssh and the web server.
    - ssh with keys only, no root login, and a non-standard port if you like
      (that only cuts down log noise).
    - unattended-upgrades, the firewall open for 22, 80 and 443 only.
-   - debsway's sshd settings (`extras/remote-access.sh`) are a good start.
+   - Wren Linux's sshd settings (`extras/remote-access.sh`) are a good start.
 2. **The web server:** Caddy (automatic HTTPS) or nginx with Let's Encrypt.
    - HTTPS only, HSTS, and a strict Content-Security-Policy, since a static
      site needs no scripts from elsewhere.
@@ -284,13 +291,13 @@ There's nothing to break into but ssh and the web server.
    - CAA records naming your certificate authority only.
    - A domain that doesn't depend on any one free service.
 4. **Content:**
-   - What debsway is, the threat model in plain words, screenshots.
+   - What Wren Linux is, the threat model in plain words, screenshots.
    - Install steps, and verification steps: check the ISO's checksum, and
      the checksum file's signature with your key's fingerprint.
    - Release notes, and the security contact.
    - The apt repository under `/debian/`.
-5. **An onion mirror:** debsway already has `extras/onion-site.sh`. The
-   same signed files over Tor cost almost nothing and suit debsway's users.
+5. **An onion mirror:** Wren Linux already has `extras/onion-site.sh`. The
+   same signed files over Tor cost almost nothing and suit Wren Linux's users.
 6. **Backups and monitoring:** a copy of the site comes from the repository
    itself (it is rebuilt from files you keep). Set up an uptime check, and
    an alert when a certificate is about to expire.
@@ -302,22 +309,22 @@ There's nothing to break into but ssh and the web server.
 ## Phase 4: the installer image (ISO)
 
 The aim: boot the ISO, answer a few questions, and end with Debian 13 and
-debsway's base on an encrypted disk.
+Wren Linux's base on an encrypted disk.
 
 - **Build on Debian's own installer:** debian-installer with a preseed file
   (answers built in), packed with `simple-cdd` or by repacking Debian's
-  netinst ISO. debsway already has `prep/make-install-iso.sh` (a preseeded
+  netinst ISO. Wren Linux already has `prep/make-install-iso.sh` (a preseeded
   install from Debian's live image) and an offline install path to start from.
 - **The preseed:**
-  - Encrypted LVM as the default, and the debsway repository and its key.
-  - A late command that installs the `debsway` package and runs the base at
+  - Encrypted LVM as the default, and the Wren Linux repository and its key.
+  - A late command that installs the `wrenctl` package and runs the base at
     first login, as the user, since parts need a user session.
 - **Secure Boot:** keep Debian's own signed shim, GRUB and kernel; never
   build your own kernel. Secure Boot then works as on Debian.
 - **Releases:** publish the ISO with `SHA256SUMS` and `SHA256SUMS.sign`
   (signed with your key), checked by the steps on the website. Build it
   reproducibly from a tagged release.
-- **Testing:** install it in a VM for every release (debsway's QEMU tooling
+- **Testing:** install it in a VM for every release (Wren Linux's QEMU tooling
   from claude-vm can drive that), once with UEFI and once with Secure Boot.
 
 *Cost:* two to three sessions, and the most testing of any phase.
@@ -352,7 +359,7 @@ systemd, architecture amd64).
 
 - **Releases:** every release is a signed tag, a reproducible package, a
   re-signed repository, and an ISO when the installer changes.
-- **Debian:** follow Debian's security announcements. debsway's own
+- **Debian:** follow Debian's security announcements. Wren Linux's own
   packages are scripts, so Debian's fixes reach users through Debian's
   repository as today.
 - **The key:** rotate the signing subkey every year or two (the primary
@@ -367,7 +374,7 @@ systemd, architecture amd64).
 | Phase | What | Sessions |
 |---|---|---|
 | 0 | Name, versions, key, security contact | (yours, offline) |
-| 1a | `debsway install NAME`, completion, docs moved to it | 1 |
+| 1a | `wrenctl install NAME`, completion, docs moved to it | 1 |
 | 1b | Location-independent scripts | ½ |
 | 1c | The `.deb` package, lintian-clean | 1–2 |
 | 1d | Clean builds, CI | ½ |

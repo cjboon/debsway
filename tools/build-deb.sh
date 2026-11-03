@@ -1,10 +1,10 @@
 #!/bin/bash
-# build-deb.sh: builds the debsway package (.deb) from a git commit, never from
-# files that aren't committed. It installs debsway root-owned and read-only in
-# /usr/share/debsway, the debsway command in /usr/bin, its man page and Tab
+# build-deb.sh: builds the Wren Linux package (.deb) from a git commit, never from
+# files that aren't committed. It installs Wren Linux root-owned and read-only in
+# /usr/share/wren, the Wren Linux command in /usr/bin, its man page and Tab
 # completion; nothing else. It has no install scripts: installing it changes
 # no setting and runs nothing as root. The parts and extras still run as you,
-# from /usr/share/debsway, when you ask for them (debsway part NAME, debsway
+# from /usr/share/wren, when you ask for them (wrenctl part NAME, Wren Linux
 # install NAME). The same commit always gives the same file, byte for byte
 # (every date is the commit's), so anyone can check a published package
 # against the source: build it again and compare the SHA-256.
@@ -41,31 +41,31 @@ maint=$(g log -1 --format='%an <%ae>' "$commit")
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 R=$T/root
-SHARE=$R/usr/share/debsway
+SHARE=$R/usr/share/wren
 mkdir -p "$SHARE"
 # What is committed, nothing else; not the project's own CI and notes
 g archive --format=tar "$commit" | tar -C "$SHARE" -xf -
 rm -rf "$SHARE/.github" "$SHARE/.gitignore" "$SHARE/CLAUDE.md"
 
 # The command, its man page and its Tab completion where Debian looks for them
-install -D -m 0755 "$SHARE/bin/debsway" "$R/usr/bin/debsway"
+install -D -m 0755 "$SHARE/bin/wrenctl" "$R/usr/bin/wrenctl"
 mkdir -p "$R/usr/share/man/man1"
-gzip -9n <"$SHARE/data/debsway.1" >"$R/usr/share/man/man1/debsway.1.gz"
-install -D -m 0644 "$SHARE/data/debsway-completion.bash" "$R/usr/share/bash-completion/completions/debsway"
+gzip -9n <"$SHARE/data/wrenctl.1" >"$R/usr/share/man/man1/wrenctl.1.gz"
+install -D -m 0644 "$SHARE/data/wrenctl-completion.bash" "$R/usr/share/bash-completion/completions/wrenctl"
 
 # Debian's documentation files: the licenses, and a changelog
-DOC=$R/usr/share/doc/debsway
+DOC=$R/usr/share/doc/wren-linux
 mkdir -p "$DOC"
 {
     echo "Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/"
-    echo "Upstream-Name: debsway"
+    echo "Upstream-Name: Wren Linux"
     echo "Source: https://github.com/cjboon/debsway"
     echo
     echo "Files: *"
-    echo "Copyright: the debsway authors"
+    echo "Copyright: the Wren Linux authors"
     echo "License: MIT"
     echo
-    echo "Files: usr/share/debsway/vendor/mockvps-kvm/*"
+    echo "Files: usr/share/wren/vendor/mockvps-kvm/*"
     echo "Copyright: the mockvps-kvm authors"
     echo "License: MIT"
     echo
@@ -73,7 +73,7 @@ mkdir -p "$DOC"
     sed 's/^$/./; s/^/ /' "$SHARE/LICENSE"
 } >"$DOC/copyright"
 {
-    echo "debsway ($version) unstable; urgency=medium"
+    echo "Wren Linux ($version) unstable; urgency=medium"
     echo
     echo "  * Built from commit $commit."
     echo
@@ -85,7 +85,7 @@ mkdir -p "$DOC"
 # git can't). Nothing setuid, nothing writable by others.
 find "$R" -type d -exec chmod 0755 {} +
 find "$R" -type f -exec chmod 0644 {} +
-chmod 0755 "$R/usr/bin/debsway"
+chmod 0755 "$R/usr/bin/wrenctl"
 while IFS= read -r f; do
     chmod 0755 "$SHARE/$f"
 done < <(g ls-tree -r "$commit" | awk '$1 == "100755" { sub(/^[^\t]*\t/, ""); print }' | grep -vx -e '.github/.*' -e CLAUDE.md || true)
@@ -93,7 +93,7 @@ done < <(g ls-tree -r "$commit" | awk '$1 == "100755" { sub(/^[^\t]*\t/, ""); pr
 mkdir -p "$R/DEBIAN"
 installed_kb=$(du -sk --exclude=DEBIAN "$R" | cut -f1)
 cat >"$R/DEBIAN/control" <<EOF
-Package: debsway
+Package: wren-linux
 Version: $version
 Architecture: all
 Maintainer: $maint
@@ -104,12 +104,12 @@ Section: admin
 Priority: optional
 Homepage: https://github.com/cjboon/debsway
 Description: small, privacy-minded sway desktop for Debian, as plain scripts
- debsway turns a bare Debian 13 install into a small sway desktop with careful
+ Wren Linux turns a bare Debian 13 install into a small sway desktop with careful
  defaults: a firewall, kernel hardening, automatic security updates, encrypted
  DNS, and sandboxes for the browser, coding assistants and media. It is shell
  scripts you can read; this package puts them, root-owned, in
- /usr/share/debsway, with the debsway command. Installing it changes nothing
- else: run "debsway" to set up the desktop and its optional programs.
+ /usr/share/wren, with the wrenctl command. Installing it changes nothing
+ else: run "wren" to set up the desktop and its optional programs.
 EOF
 (cd "$R" && find . -path ./DEBIAN -prune -o -type f -print0 | sort -z | xargs -0 md5sum | sed 's|  \./|  |') >"$R/DEBIAN/md5sums"
 chmod 0755 "$R/DEBIAN"
@@ -118,12 +118,12 @@ chmod 0644 "$R/DEBIAN/control" "$R/DEBIAN/md5sums"
 find "$R" -exec touch -h -d "@$SOURCE_DATE_EPOCH" {} +
 
 mkdir -p "$out"
-deb=$out/debsway_${version}_all.deb
+deb=$out/wren-linux_${version}_all.deb
 dpkg-deb --root-owner-group -Zxz --build "$R" "$deb" >/dev/null
 echo "$deb"
 sha256sum "$deb" | cut -d' ' -f1 | sed 's/^/SHA-256: /'
 if command -v lintian >/dev/null; then
     lintian --no-tag-display-limit "$deb" || echo "(lintian has remarks: see above)"
 else
-    echo "(lintian isn't installed, so the package wasn't checked by it: debsway install debsway-dev)"
+    echo "(lintian isn't installed, so the package wasn't checked by it: wrenctl install wren-dev)"
 fi

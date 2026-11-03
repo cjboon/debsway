@@ -3,11 +3,11 @@
 ## SYNOPSIS
 
 ```
-debsway install claude-vm                         set it up and build the VM (keeps a VM already built)
-debsway remove claude-vm                          remove it (asks before deleting the user and its VM)
-debsway manual claude-vm                          print the manual steps below
-debsway install claude-vm --account NAME          another account, in a VM of its own
-debsway install claude-vm --remove-account NAME   remove it (asks before deleting its user and VM)
+wrenctl install claude-vm                         set it up and build the VM (keeps a VM already built)
+wrenctl remove claude-vm                          remove it (asks before deleting the user and its VM)
+wrenctl manual claude-vm                          print the manual steps below
+wrenctl install claude-vm --account NAME          another account, in a VM of its own
+wrenctl install claude-vm --remove-account NAME   remove it (asks before deleting its user and VM)
 
 claude-vm              Claude Code inside the VM (boots it; powers it off when you exit)
 claude-vm shell        a plain shell in the VM
@@ -36,7 +36,7 @@ own git identity and ssh key. Your user may run exactly one thing as
 `/etc/sudoers.d`. It needs KVM. Another account (a second Claude login)
 gets a VM of its own, run by its own locked user, `claude-vm-NAME`: its own
 disk, keys and login, its own console port (2250-2299, written by root in
-`/etc/debsway/claude-vm-ports`), a sudo rule, and firewall lines that let
+`/etc/wren/claude-vm-ports`), a sudo rule, and firewall lines that let
 that user reach its own port and nobody else's. Each VM takes its own disk
 space (several GB) and memory while it runs.
 
@@ -59,43 +59,43 @@ sudo apt install --no-install-recommends qemu-system-x86 qemu-utils socat nftabl
     cpio gzip wget gpgv debian-archive-keyring
 
 # The claude-vm user, locked, with /dev/kvm as its only extra group
-sudo useradd --create-home --home-dir /home/claude-vm --shell /bin/bash --user-group --comment "debsway Claude Code VM" claude-vm
+sudo useradd --create-home --home-dir /home/claude-vm --shell /bin/bash --user-group --comment "Wren Linux Claude Code VM" claude-vm
 sudo usermod --lock claude-vm
 sudo chmod 700 /home/claude-vm
 sudo usermod -aG kvm claude-vm
 
 # The firewall rule on that user (and so the guest), loaded at every boot
-sudo install -D -o root -g root -m 0644 @DEBSWAY_DIR@/data/claude-vm-firewall.nft /etc/debsway/claude-vm.nft
+sudo install -D -o root -g root -m 0644 @WREN_DIR@/data/claude-vm-firewall.nft /etc/wren/claude-vm.nft
 printf '%s\n' '[Unit]' 'Description=Keep the claude-vm user (and its guest) off the local network' \
     'Before=network-pre.target' 'Wants=network-pre.target' '' '[Service]' \
-    'Type=oneshot' 'RemainAfterExit=yes' 'ExecStart=/usr/sbin/nft -f /etc/debsway/claude-vm.nft' \
-    'ExecStop=/usr/sbin/nft delete table inet debsway_claude_vm' '' '[Install]' 'WantedBy=multi-user.target' |
-    sudo tee /etc/systemd/system/debsway-claude-vm-firewall.service
+    'Type=oneshot' 'RemainAfterExit=yes' 'ExecStart=/usr/sbin/nft -f /etc/wren/claude-vm.nft' \
+    'ExecStop=/usr/sbin/nft delete table inet wren_claude_vm' '' '[Install]' 'WantedBy=multi-user.target' |
+    sudo tee /etc/systemd/system/wren-claude-vm-firewall.service
 sudo systemctl daemon-reload
-sudo systemctl enable --now debsway-claude-vm-firewall.service
+sudo systemctl enable --now wren-claude-vm-firewall.service
 
 # The VM engine, the session script, and the no-abstract-sockets wrapper, as root's files
 sudo install -d -o root -g root -m 0755 /usr/local/libexec
-sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/vendor/mockvps-kvm/mockvps-kvm.sh /usr/local/libexec/claude-vm-mockvps-kvm
-sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/claude-vm-session /usr/local/libexec/claude-vm-session
-sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/no-abstract-sockets /usr/local/libexec/debsway-no-abstract-sockets
+sudo install -o root -g root -m 0755 @WREN_DIR@/vendor/mockvps-kvm/mockvps-kvm.sh /usr/local/libexec/claude-vm-mockvps-kvm
+sudo install -o root -g root -m 0755 @WREN_DIR@/bin/claude-vm-session /usr/local/libexec/claude-vm-session
+sudo install -o root -g root -m 0755 @WREN_DIR@/bin/no-abstract-sockets /usr/local/libexec/wren-no-abstract-sockets
 
 # The provisioning script, with Anthropic's pinned key filled in, readable only by claude-vm
 sudo install -d -o claude-vm -g claude-vm -m 0700 /home/claude-vm/.config /home/claude-vm/.config/claude-vm
 sed -e 's|[@]ANTHROPIC_FPR@|@ANTHROPIC_FPR@|g' -e 's|[@]ANTHROPIC_KEY_URL@|@ANTHROPIC_KEY_URL@|g' -e 's|[@]VM_USER@|agent|g' \
-    @DEBSWAY_DIR@/data/claude-vm-provision.sh |
+    @WREN_DIR@/data/claude-vm-provision.sh |
     sudo install -o claude-vm -g claude-vm -m 0600 /dev/stdin /home/claude-vm/.config/claude-vm/provision.sh
 
 # Your user may run the session script, and nothing else, as claude-vm. visudo
 # checks the rule first: never put a rule in /etc/sudoers.d it hasn't passed.
-printf '%s ALL=(claude-vm) NOPASSWD: /usr/local/libexec/claude-vm-session\n' "$(id -un)" >/tmp/debsway-claude-vm
-sudo visudo -cf /tmp/debsway-claude-vm
-sudo install -o root -g root -m 0440 /tmp/debsway-claude-vm /etc/sudoers.d/debsway-claude-vm
-rm /tmp/debsway-claude-vm
+printf '%s ALL=(claude-vm) NOPASSWD: /usr/local/libexec/claude-vm-session\n' "$(id -un)" >/tmp/wren-claude-vm
+sudo visudo -cf /tmp/wren-claude-vm
+sudo install -o root -g root -m 0440 /tmp/wren-claude-vm /etc/sudoers.d/wren-claude-vm
+rm /tmp/wren-claude-vm
 
 # The commands
-install -D -m 0755 @DEBSWAY_DIR@/bin/claude-vm ~/.local/bin/claude-vm
-install -D -m 0755 @DEBSWAY_DIR@/bin/claude-pull ~/.local/bin/claude-pull
+install -D -m 0755 @WREN_DIR@/bin/claude-vm ~/.local/bin/claude-vm
+install -D -m 0755 @WREN_DIR@/bin/claude-pull ~/.local/bin/claude-pull
 
 # Build the VM (unattended, 10-20 minutes), then show its ssh key for your git host
 sudo -u claude-vm /usr/local/libexec/claude-vm-session install
@@ -110,31 +110,31 @@ Another account, NAME (small letters and digits), after the steps above:
 
 ```
 # Its user, locked, in the kvm group only
-sudo useradd --create-home --home-dir /home/claude-vm-NAME --shell /bin/bash --user-group --comment "debsway Claude Code VM" claude-vm-NAME
+sudo useradd --create-home --home-dir /home/claude-vm-NAME --shell /bin/bash --user-group --comment "Wren Linux Claude Code VM" claude-vm-NAME
 sudo usermod --lock claude-vm-NAME && sudo chmod 700 /home/claude-vm-NAME && sudo usermod -aG kvm claude-vm-NAME
 # Its console port: one of 2250-2299 that nothing uses (ss -ltn shows those in use)
-echo "NAME 2250" | sudo tee -a /etc/debsway/claude-vm-ports
+echo "NAME 2250" | sudo tee -a /etc/wren/claude-vm-ports
 # Its firewall lines, by number (nft refuses the whole file over a user name
 # that doesn't exist), with the number from: id -u claude-vm-NAME
-# below the line  meta skuid "claude-vm" jump claude_vm  in /etc/debsway/claude-vm.nft:
+# below the line  meta skuid "claude-vm" jump claude_vm  in /etc/wren/claude-vm.nft:
 #         meta skuid NUMBER jump claude_vm  # claude-vm-NAME
 # and below the line  meta skuid "claude-vm" ip daddr 127.0.0.1 tcp dport 2242 accept:
 #         meta skuid NUMBER ip daddr 127.0.0.1 tcp dport 2250 accept  # claude-vm-NAME
-sudo nft -c -f /etc/debsway/claude-vm.nft && sudo systemctl restart debsway-claude-vm-firewall
+sudo nft -c -f /etc/wren/claude-vm.nft && sudo systemctl restart wren-claude-vm-firewall
 # Its provisioning script: as above, into /home/claude-vm-NAME/.config/claude-vm/provision.sh, owned by claude-vm-NAME
 # Your user may run the session script, and nothing else, as it (checked first)
-printf '%s ALL=(claude-vm-NAME) NOPASSWD: /usr/local/libexec/claude-vm-session\n' "$(id -un)" >/tmp/debsway-claude-vm-NAME
-sudo visudo -cf /tmp/debsway-claude-vm-NAME && sudo install -o root -g root -m 0440 /tmp/debsway-claude-vm-NAME /etc/sudoers.d/debsway-claude-vm-NAME
-rm /tmp/debsway-claude-vm-NAME
+printf '%s ALL=(claude-vm-NAME) NOPASSWD: /usr/local/libexec/claude-vm-session\n' "$(id -un)" >/tmp/wren-claude-vm-NAME
+sudo visudo -cf /tmp/wren-claude-vm-NAME && sudo install -o root -g root -m 0440 /tmp/wren-claude-vm-NAME /etc/sudoers.d/wren-claude-vm-NAME
+rm /tmp/wren-claude-vm-NAME
 sudo -u claude-vm-NAME /usr/local/libexec/claude-vm-session install
 claude-vm --account NAME
 ```
 
-To undo an account: `sudo rm /etc/sudoers.d/debsway-claude-vm-NAME`,
+To undo an account: `sudo rm /etc/sudoers.d/wren-claude-vm-NAME`,
 `sudo pkill -KILL -u claude-vm-NAME`, `sudo userdel -r claude-vm-NAME` (its
-VM goes with it), its line out of `/etc/debsway/claude-vm-ports` and its two
-lines out of `/etc/debsway/claude-vm.nft`, then
-`sudo systemctl restart debsway-claude-vm-firewall`.
+VM goes with it), its line out of `/etc/wren/claude-vm-ports` and its two
+lines out of `/etc/wren/claude-vm.nft`, then
+`sudo systemctl restart wren-claude-vm-firewall`.
 
 To undo:
 
@@ -142,13 +142,13 @@ To undo:
 # The commands (keep claude-pull if claude-code is set up)
 rm ~/.local/bin/claude-vm ~/.local/bin/claude-pull
 # The firewall rule
-sudo systemctl disable --now debsway-claude-vm-firewall.service
-sudo rm /etc/systemd/system/debsway-claude-vm-firewall.service /etc/debsway/claude-vm.nft
+sudo systemctl disable --now wren-claude-vm-firewall.service
+sudo rm /etc/systemd/system/wren-claude-vm-firewall.service /etc/wren/claude-vm.nft
 sudo systemctl daemon-reload
 # The sudo rule and root's scripts (the no-abstract-sockets wrapper only if
 # incognito, claude-code and the Firefox sandbox don't use it)
-sudo rm /etc/sudoers.d/debsway-claude-vm /usr/local/libexec/claude-vm-session /usr/local/libexec/claude-vm-mockvps-kvm
-sudo rm /usr/local/libexec/debsway-no-abstract-sockets
+sudo rm /etc/sudoers.d/wren-claude-vm /usr/local/libexec/claude-vm-session /usr/local/libexec/claude-vm-mockvps-kvm
+sudo rm /usr/local/libexec/wren-no-abstract-sockets
 # The user, its home and the VM in it
 sudo pkill -KILL -u claude-vm
 sudo userdel -r claude-vm

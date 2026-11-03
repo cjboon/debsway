@@ -15,7 +15,7 @@
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
-CONF_DIR="$HOME/.config/debsway"
+CONF_DIR="$HOME/.config/wren"
 CONF="$CONF_DIR/backup.conf"
 EXCLUDES="$CONF_DIR/backup-excludes"
 
@@ -39,7 +39,7 @@ fi
 if [ -z "$repo" ]; then
     default=
     for d in /media/"$USER"/*/; do
-        [ -d "$d" ] && { default="${d%/}/debsway-backup"; break; }
+        [ -d "$d" ] && { default="${d%/}/wren-backup"; break; }
     done
     note "Where should backups go? A folder on a USB drive is best (plug it in first)."
     [ -z "$default" ] || note "Press Enter for: $default"
@@ -70,20 +70,20 @@ else
     note "give a command that prints it (for example one that reads a secret store you unlock at login)."
     tty_read cmd "    password command (Enter to be asked each time)> "
 fi
-printf '# Written by debsway extras/backup.sh\nBACKUP_REPO=%s\n' "$repo" >"$CONF"
+printf '# Written by Wren Linux extras/backup.sh\nBACKUP_REPO=%s\n' "$repo" >"$CONF"
 if [ -n "$cmd" ]; then printf 'PASSWORD_COMMAND=%s\n' "$cmd" >>"$CONF"; fi
 
 # write_excludes FILE: what is left out of backups: caches, trash, and big
 # things that can be downloaded or built again (VM disks: libvirt's, which
 # Whonix uses, and ~/vpskvm, mockvps-kvm's). The file is yours to edit, one
-# pattern per line; a later run only adds the lines debsway's list gained.
+# pattern per line; a later run only adds the lines Wren Linux's list gained.
 write_excludes() {
     local f=$1 line
     if [ ! -f "$f" ]; then
-        printf '%s\n' "# Left out of backups (written by debsway extras/backup.sh)" \
+        printf '%s\n' "# Left out of backups (written by Wren Linux extras/backup.sh)" \
             "$HOME/.cache" "$HOME/.local/share/Trash" "$HOME/.local/share/libvirt/images" >"$f"
     fi
-    # Added to debsway's list later (a line you deleted from the first three stays deleted)
+    # Added to Wren Linux's list later (a line you deleted from the first three stays deleted)
     for line in "$HOME/vpskvm" "$OFFLINE_DIR"; do
         grep -qxF "$line" "$f" || echo "$line" >>"$f"
     done

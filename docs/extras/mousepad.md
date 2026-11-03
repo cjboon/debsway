@@ -3,22 +3,22 @@
 ## SYNOPSIS
 
 ```
-debsway install mousepad                     install it and set its look
-debsway remove mousepad                      remove it (your Mousepad settings stay)
-debsway manual mousepad                      print the manual steps below
+wrenctl install mousepad                     install it and set its look
+wrenctl remove mousepad                      remove it (your Mousepad settings stay)
+wrenctl manual mousepad                      print the manual steps below
 
 mousepad [FILE]       open it (or Super+d); text files open in it too
 ```
 
 Mousepad is a simple graphical text editor from Xfce, from Debian, made the
-default for plain text, Markdown, logs and shell scripts. debsway sets its
+default for plain text, Markdown, logs and shell scripts. Wren Linux sets its
 look: white text on black in the terminal's colors (the scheme
-`data/mousepad-dark.xml`; in debsway's light theme dark text on warm light,
+`data/mousepad-dark.xml`; in Wren Linux's light theme dark text on warm light,
 `data/mousepad-light.xml`, switched by `theme`), dark menus, or light ones in the light
 theme (the `mousepad` command, `bin/mousepad`, starts it with GTK's matching theme), DejaVu Sans Mono 14, line numbers, matching
 braces highlighted, a line at column 80, and tabs of 4 spaces
 (`data/mousepad.settings`, set with gsettings). Run again, the script sets
-them only if debsway's settings changed since, so your own changes stay.
+them only if Wren Linux's settings changed since, so your own changes stay.
 
 ## LIMITS
 
@@ -31,13 +31,13 @@ them only if debsway's settings changed since, so your own changes stay.
 # Mousepad, and gsettings to set its preferences
 sudo apt install --no-install-recommends mousepad libglib2.0-bin
 # The colour scheme, where Mousepad looks for schemes
-install -D -m 0644 @DEBSWAY_DIR@/data/mousepad-dark.xml ~/.local/share/gtksourceview-4/styles/debsway-dark.xml
-# its light twin, for debsway's light theme (theme light switches to it)
-install -D -m 0644 @DEBSWAY_DIR@/data/mousepad-light.xml ~/.local/share/gtksourceview-4/styles/debsway-light.xml
+install -D -m 0644 @WREN_DIR@/data/mousepad-dark.xml ~/.local/share/gtksourceview-4/styles/wren-dark.xml
+# its light twin, for Wren Linux's light theme (theme light switches to it)
+install -D -m 0644 @WREN_DIR@/data/mousepad-light.xml ~/.local/share/gtksourceview-4/styles/wren-light.xml
 # The mousepad command with dark menus
-install -D -m 0755 @DEBSWAY_DIR@/bin/mousepad ~/.local/bin/mousepad
+install -D -m 0755 @WREN_DIR@/bin/mousepad ~/.local/bin/mousepad
 # The settings: one "gsettings set" per line of data/mousepad.settings
-grep -v '^#' @DEBSWAY_DIR@/data/mousepad.settings | grep . | while read -r schema key value; do
+grep -v '^#' @WREN_DIR@/data/mousepad.settings | grep . | while read -r schema key value; do
     gsettings set "$schema" "$key" "$value"
 done
 # The default for text files (in ~/.config/mimeapps.list, under [Default Applications])
@@ -54,7 +54,7 @@ To undo:
 # Forget it as the default for text files
 sed -i '/=org\.xfce\.mousepad\.desktop$/d' ~/.config/mimeapps.list
 # The command and the colour scheme
-rm ~/.local/bin/mousepad ~/.local/share/gtksourceview-4/styles/debsway-dark.xml ~/.local/share/gtksourceview-4/styles/debsway-light.xml
+rm ~/.local/bin/mousepad ~/.local/share/gtksourceview-4/styles/wren-dark.xml ~/.local/share/gtksourceview-4/styles/wren-light.xml
 # Its settings back to Mousepad's own
 gsettings reset-recursively org.xfce.mousepad.preferences
 # Mousepad; gsettings (libglib2.0-bin) is marked "automatic" instead of purged,

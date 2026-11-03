@@ -7,11 +7,11 @@
 # desktop notification (libnotify-bin is installed for that).
 # Run it yourself any time: sudo needrestart
 # Usage: bash needrestart.sh [--remove]
-# status: file:/etc/needrestart/conf.d/50-debsway.conf
+# status: file:/etc/needrestart/conf.d/50-wren.conf
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
-CONF=/etc/needrestart/conf.d/50-debsway.conf
+CONF=/etc/needrestart/conf.d/50-wren.conf
 
 if [ "${1:-}" = --remove ]; then
     sudo rm -f "$CONF"
@@ -22,7 +22,7 @@ fi
 say "Installing needrestart"
 apt_install needrestart libnotify-bin
 sudo install -d -o root -g root -m 0755 "${CONF%/*}"
-printf '%s\n' '# Written by debsway parts/needrestart.sh' \
+printf '%s\n' '# Written by Wren Linux parts/needrestart.sh' \
     "# List what needs a restart; never restart anything automatically" \
     "\$nrconf{restart} = 'l';" | sudo tee "$CONF" >/dev/null
 note "It lists what needs a restart after each update. Check any time with: sudo needrestart"

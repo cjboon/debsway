@@ -22,7 +22,7 @@ mkdir -p "$R/parts" "$T/bin" "$T/etc" "$H/Documents" "$H/Downloads" "$T/elsewher
 sed 's|^export PATH=.*|export PATH="$HP_TEST_PATH"|' "$HERE/lib.sh" >"$R/lib.sh"
 grep -q HP_TEST_PATH "$R/lib.sh" || { echo "  FAIL  lib.sh's PATH line wasn't found"; exit 1; }
 for f in packages.sh pins.sh lib data bin docs; do ln -s "$HERE/$f" "$R/$f"; done
-sed "s|/etc/sudoers.d/debsway-umask|$T/etc/debsway-umask|" "$HERE/parts/home-private.sh" >"$R/parts/home-private.sh"
+sed "s|/etc/sudoers.d/wren-umask|$T/etc/wren-umask|" "$HERE/parts/home-private.sh" >"$R/parts/home-private.sh"
 cat >"$T/bin/sudo" <<'SUDO'
 #!/bin/bash
 # a pretend sudo: runs it as this user (install without -o/-g, which only root may give)
@@ -59,16 +59,16 @@ check "a folder shared through an ACL keeps that user" bash -c 'getfacl -p "$1/D
 check "...and is closed to everyone else" test "$(stat -c %a "$H/Downloads" | cut -c3)" = 0
 check "a link is left alone (and what it points to)" test "$(stat -c %a "$T/elsewhere")" = 755
 check "umask 077 at the very top of ~/.profile, above the block that starts sway" bash -c '
-    [ "$(sed -n 1p "$1")" = "# >>> debsway home-private >>>" ] && grep -qx "umask 077" "$1" &&
+    [ "$(sed -n 1p "$1")" = "# >>> Wren Linux home-private >>>" ] && grep -qx "umask 077" "$1" &&
     [ "$(grep -n "^umask 077$" "$1" | cut -d: -f1)" -lt "$(grep -n "^exec sway$" "$1" | cut -d: -f1)" ]' _ "$H/.profile"
 check "the sudo umask rule: Debian's usual 022 through sudo, and visudo accepts it" bash -c '
-    grep -qx "Defaults umask=0022" "$1" && grep -qx "Defaults umask_override" "$1" && /usr/sbin/visudo -cf "$1"' _ "$T/etc/debsway-umask"
+    grep -qx "Defaults umask=0022" "$1" && grep -qx "Defaults umask_override" "$1" && /usr/sbin/visudo -cf "$1"' _ "$T/etc/wren-umask"
 part
 check "a re-run: one block, ~/.profile otherwise as it was" bash -c '
-    [ "$(grep -c "^# >>> debsway home-private >>>$" "$1")" = 1 ] && [ "$(tail -2 "$1")" = "$(printf "# the autostart block\nexec sway")" ]' _ "$H/.profile"
+    [ "$(grep -c "^# >>> Wren Linux home-private >>>$" "$1")" = 1 ] && [ "$(tail -2 "$1")" = "$(printf "# the autostart block\nexec sway")" ]' _ "$H/.profile"
 part --remove
 check "--remove: the umask block and the sudo rule go" bash -c '
-    ! grep -q "home-private" "$1" && [ ! -e "$2" ] && [ "$(cat "$1")" = "$(printf "# the autostart block\nexec sway")" ]' _ "$H/.profile" "$T/etc/debsway-umask"
+    ! grep -q "home-private" "$1" && [ ! -e "$2" ] && [ "$(cat "$1")" = "$(printf "# the autostart block\nexec sway")" ]' _ "$H/.profile" "$T/etc/wren-umask"
 check "it is the second base part, before anything else writes files" bash -c '
     . "$1/packages.sh"; [ "${PARTS[1]}" = home-private ]' _ "$HERE"
 

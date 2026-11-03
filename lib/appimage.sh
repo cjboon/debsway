@@ -28,7 +28,7 @@ latest_github_tag() {
     fi
 }
 
-installed_version() { cat "$OPT/$1/.debsway-version" 2>/dev/null || true; }
+installed_version() { cat "$OPT/$1/.wren-version" 2>/dev/null || true; }
 
 # A throwaway keyring holding only the key FPR, taken from the key file at URL
 # (or a local file). Only that key goes in, even when the file holds others: a
@@ -139,7 +139,7 @@ install_appimage() {
         rm -rf "$work"
         die "Not installing $name."
     fi
-    echo "$version" >"$work/squashfs-root/.debsway-version"
+    echo "$version" >"$work/squashfs-root/.wren-version"
     rm -rf "$dest.old"
     if [ -d "$dest" ]; then mv "$dest" "$dest.old"; fi
     mv "$work/squashfs-root" "$dest"
@@ -156,7 +156,7 @@ write_launcher() {
     mkdir -p "$BIN"
     cat >"$BIN/$name" <<EOF
 #!/bin/sh
-# $name: written by debsway extras/$by
+# $name: written by Wren Linux extras/$by
 dir="\$HOME/.local/opt/$name"
 exec env APPDIR="\$dir" $* "\$dir/$target" "\$@"
 EOF
@@ -167,6 +167,6 @@ EOF
 remove_appimage() {
     local name=$1
     rm -rf "${OPT:?}/$name"
-    if grep -qs 'written by debsway extras/' "$BIN/$name"; then rm -f "$BIN/$name"; fi
+    if grep -qs 'written by Wren Linux extras/' "$BIN/$name"; then rm -f "$BIN/$name"; fi
     note "Removed $OPT/$name and $BIN/$name"
 }

@@ -2,10 +2,10 @@
 # If you set a root password in the installer, Debian leaves sudo out.
 # Run this once as root to install it and let your user use it:
 #   su -
-#   bash /path/to/debsway/prep/setup-sudo.sh USERNAME
+#   bash /path/to/wren/prep/setup-sudo.sh USERNAME
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 
-[ "$(id -u)" -eq 0 ] || die "Run as root: su -   then: bash $DEBSWAY_DIR/prep/setup-sudo.sh USERNAME"
+[ "$(id -u)" -eq 0 ] || die "Run as root: su -   then: bash $WREN_DIR/prep/setup-sudo.sh USERNAME"
 
 user=${1:-}
 if [ -z "$user" ]; then
@@ -17,12 +17,12 @@ if [ -z "$user" ]; then
         note "No regular user account found; create one first (adduser NAME)."
         tty_read user "Give sudo to which user? "
     fi
-    [ -n "$user" ] || die "No user given. Run: bash $DEBSWAY_DIR/prep/setup-sudo.sh USERNAME"
+    [ -n "$user" ] || die "No user given. Run: bash $WREN_DIR/prep/setup-sudo.sh USERNAME"
 fi
 id "$user" >/dev/null 2>&1 || die "No user called $user."
 
 if ! command -v sudo >/dev/null; then
-    have_internet || die "No internet. Run first: bash $DEBSWAY_DIR/wifi.sh"
+    have_internet || die "No internet. Run first: bash $WREN_DIR/wifi.sh"
     apt-get update
     apt-get install -y --no-install-recommends sudo
 fi

@@ -1,5 +1,5 @@
 #!/bin/bash
-# claude-vm-session SUBCOMMAND: written by debsway extras/claude-vm.sh
+# claude-vm-session SUBCOMMAND: written by Wren Linux extras/claude-vm.sh
 # Installed as /usr/local/libexec/claude-vm-session. Your user may run exactly
 # this, as the claude-vm user, and nothing else (a rule in /etc/sudoers.d).
 # The claude-vm command calls it. It drives the disposable VM (one
@@ -8,7 +8,7 @@
 # QEMU's sockets are claude-vm's, and a firewall rule on that user allows the
 # internet only (data/claude-vm-firewall.nft). Another account's user,
 # claude-vm-NAME (claude-vm --account NAME), runs its own VM the same way, with
-# the console port root gave it in /etc/debsway/claude-vm-ports.
+# the console port root gave it in /etc/wren/claude-vm-ports.
 set -euo pipefail
 
 me=$(id -un)
@@ -21,16 +21,16 @@ port=2242 setup_arg=
 if [ "$me" != claude-vm ]; then
     setup_arg=" --account ${me#claude-vm-}"
     port=$(awk -v n="${me#claude-vm-}" '$1 == n && $2 ~ /^[0-9]+$/ && $2 >= 2250 && $2 <= 2299 { print $2; exit }' \
-        /etc/debsway/claude-vm-ports 2>/dev/null) || true
-    [ -n "$port" ] || { echo "claude-vm-session: no console port for $me; run: debsway install claude-vm$setup_arg" >&2; exit 1; }
+        /etc/wren/claude-vm-ports 2>/dev/null) || true
+    [ -n "$port" ] || { echo "claude-vm-session: no console port for $me; run: wrenctl install claude-vm$setup_arg" >&2; exit 1; }
 fi
 
 # Run again without a way to reach XWayland's abstract socket, which any user
 # can connect to (qemu and ssh below inherit this)
-noabs=/usr/local/libexec/debsway-no-abstract-sockets
-if [ -z "${DEBSWAY_NOABS:-}" ]; then
+noabs=/usr/local/libexec/wren-no-abstract-sockets
+if [ -z "${WREN_NOABS:-}" ]; then
     [ -x "$noabs" ] || { echo "claude-vm-session: $noabs is missing. Run: bash extras/claude-vm.sh" >&2; exit 1; }
-    export DEBSWAY_NOABS=1
+    export WREN_NOABS=1
     exec "$noabs" "$0" "$@"
 fi
 
@@ -66,7 +66,7 @@ guest_ssh() {
 }
 
 ensure_up() {
-    is_installed || die "no VM yet. Set it up first: debsway install claude-vm${setup_arg}"
+    is_installed || die "no VM yet. Set it up first: wrenctl install claude-vm${setup_arg}"
     if ! mockvps --status 2>/dev/null | grep -q Running; then
         # Say why the window is quiet: mockvps's own steps ("==> Waiting for
         # SSH"...) and errors, but not the summary it ends with

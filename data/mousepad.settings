@@ -2,7 +2,7 @@
 # gsettings set. One per line: SCHEMA KEY VALUE (the value as gsettings
 # writes it). Only what differs from Mousepad's own defaults.
 # White text on black (data/mousepad-dark.xml), the terminal's font and size
-org.xfce.mousepad.preferences.view color-scheme 'debsway-dark'
+org.xfce.mousepad.preferences.view color-scheme 'wren-dark'
 org.xfce.mousepad.preferences.view use-default-monospace-font false
 org.xfce.mousepad.preferences.view font-name 'DejaVu Sans Mono 14'
 # A tab is 4 spaces

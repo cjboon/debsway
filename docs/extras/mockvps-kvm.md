@@ -3,9 +3,9 @@
 ## SYNOPSIS
 
 ```
-debsway install mockvps-kvm                     install what it needs and the mockvps-kvm command
-debsway remove mockvps-kvm                      remove the command (VMs stay: mockvps-kvm --uninstall first)
-debsway manual mockvps-kvm                      print the manual steps below
+wrenctl install mockvps-kvm                     install what it needs and the mockvps-kvm command
+wrenctl remove mockvps-kvm                      remove the command (VMs stay: mockvps-kvm --uninstall first)
+wrenctl manual mockvps-kvm                      print the manual steps below
 
 mockvps-kvm                    install a fresh Debian VM (5-15 min)
 ssh mockvps-kvm                log in to it (key only)
@@ -41,10 +41,10 @@ sudo apt install --no-install-recommends qemu-system-x86 qemu-utils wget cpio gz
     gpgv debian-archive-keyring socat iproute2
 # Your user may use KVM (log out and back in once after this)
 sudo adduser "$(id -un)" kvm
-# The command: a link to the program in debsway
+# The command: a link to the program in Wren Linux
 mkdir -p ~/.local/bin
-ln -sfn @DEBSWAY_DIR@/vendor/mockvps-kvm/mockvps-kvm.sh ~/.local/bin/mockvps-kvm
-chmod +x @DEBSWAY_DIR@/vendor/mockvps-kvm/mockvps-kvm.sh
+ln -sfn @WREN_DIR@/vendor/mockvps-kvm/mockvps-kvm.sh ~/.local/bin/mockvps-kvm
+chmod +x @WREN_DIR@/vendor/mockvps-kvm/mockvps-kvm.sh
 mockvps-kvm
 ```
 

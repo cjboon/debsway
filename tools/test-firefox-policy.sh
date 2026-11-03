@@ -18,7 +18,7 @@ check() { # DESCRIPTION CONDITION-COMMAND...
     if "$@" >/dev/null 2>&1; then printf '  ok    %s\n' "$what"; else printf '  FAIL  %s\n' "$what"; fails=$((fails + 1)); fi
 }
 
-export DEBSWAY_FIREFOX_ETC=$T/etc DEBSWAY_FIREFOX_DIST=$T/dist
+export WREN_FIREFOX_ETC=$T/etc WREN_FIREFOX_DIST=$T/dist
 mkdir -p "$T/etc"
 POLICY=$T/dist/policies.json
 allow() { bash "$HERE/bin/ublock-allow" "$@"; }
@@ -60,7 +60,7 @@ assert s.index("\"dns=$dns\"") < s.index("ublock-allow --mode")
 
 # A policies.json someone else wrote is left alone
 printf '{"policies": {}}\n' >"$POLICY"
-rm -f "$T/dist/.debsway-written"
+rm -f "$T/dist/.wren-written"
 check "someone else's policies.json is refused" bash -c "! bash '$HERE/bin/ublock-allow' --refresh"
 check "and not changed" grep -qx '{"policies": {}}' "$POLICY"
 
@@ -69,9 +69,9 @@ check "and not changed" grep -qx '{"policies": {}}' "$POLICY"
 rm -rf "${T:?}/dist" "${T:?}/etc"
 mkdir -p "$T/etc"
 rules() { python3 -I -c 'import json,sys; p=json.load(open(sys.argv[1]))["policies"]["3rdparty"]["Extensions"]["uBlock0@raymondhill.net"]["adminSettings"]; print(json.loads(p)["dynamicFilteringString"])' "$POLICY"; }
-rm -f "$T/etc/debsway-ublock-mode"
+rm -f "$T/etc/wren-ublock-mode"
 allow --refresh
-check "no mode chosen (debsway before the choice): medium, other sites' scripts blocked" grep -qx '\* \* 3p-script block' <<<"$(rules)"
+check "no mode chosen (Wren Linux before the choice): medium, other sites' scripts blocked" grep -qx '\* \* 3p-script block' <<<"$(rules)"
 allow --mode standard >/dev/null
 check "--mode standard: other sites' scripts and frames are no longer blocked" bash -c '! grep -q "3p-script block\|3p-frame block" <<<"$1"' _ "$(rules)"
 check "...the filter lists still work (only the blocking rules go)" grep -q 'behind-the-scene \* \* noop' <<<"$(rules)"
@@ -85,14 +85,14 @@ check "the sandboxed Firefox explains both modes and asks which (default medium)
 import sys; s = open(sys.argv[1]).read()
 q = "choose ublock \"Which way should uBlock Origin work?\" \"$ublock\" medium standard"
 assert q in s and "ublock=medium" in s
-assert "  medium    blocks ads" in s and "  standard  blocks ads" in s and "debsway\x27s default" in s
+assert "  medium    blocks ads" in s and "  standard  blocks ads" in s and "Wren Linux\x27s default" in s
 assert s.index("parts/firefox-hardening.sh\"") < s.index("ublock-allow --mode \"$ublock\"")
 assert s.index(q) < s.index("ublock-allow --mode \"$ublock\"")
 ' "$HERE/extras/firefox-sandbox.sh"
 
 # choose (lib/core.sh): one of the options, by its first letter or whole word
 # (the answer is the last line: a wrong one first prints a hint)
-pick() { printf '%s\n' "$@" >"$T/answers"; DEBSWAY_TEST_ANSWERS="$T/answers" bash -c '. "$1/lib.sh"; choose v "Which?" standard standard medium; echo "$v"' _ "$HERE" 2>/dev/null | tail -1; }
+pick() { printf '%s\n' "$@" >"$T/answers"; WREN_TEST_ANSWERS="$T/answers" bash -c '. "$1/lib.sh"; choose v "Which?" standard standard medium; echo "$v"' _ "$HERE" 2>/dev/null | tail -1; }
 check "choose: m is medium, a whole word too, Enter the default" \
     bash -c '[ "$1" = medium ] && [ "$2" = medium ] && [ "$3" = standard ]' _ "$(pick m)" "$(pick Medium)" "$(pick "")"
 check "...something else asks again" test "$(pick x s)" = standard
