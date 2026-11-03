@@ -3,7 +3,16 @@
 # One command for debsway. Without an option it opens the menu on a sway
 # screen and prints the help anywhere else. man debsway has the details.
 set -u
-DIR=${DEBSWAY_DIR:-$HOME/debsway}
+# Where debsway is: DEBSWAY_DIR if you set it; else the root-owned copy the
+# debsway package installs, which no program running as you can change; else
+# your own copy, ~/debsway
+if [ -n "${DEBSWAY_DIR:-}" ]; then
+    DIR=$DEBSWAY_DIR
+elif [ -f "${DEBSWAY_SYSTEM_DIR:-/usr/share/debsway}/lib.sh" ]; then
+    DIR=${DEBSWAY_SYSTEM_DIR:-/usr/share/debsway}
+else
+    DIR=$HOME/debsway
+fi
 
 usage() {
     cat <<'TEXT'

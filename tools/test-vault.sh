@@ -50,7 +50,7 @@ C=$T/home/.local/share/debsway-vault
 run() { : >"$T/calls"; bash "$V" "$@" >"$T/out" 2>&1; }
 
 run open
-check "no vault yet: open says how to make one" grep -q 'extras/vault.sh' "$T/out"
+check "no vault yet: open says how to make one" grep -q 'debsway install vault' "$T/out"
 mkdir -p "$C" && : >"$C/gocryptfs.conf"
 
 now=$(date +%s)

@@ -79,7 +79,7 @@ printf '#!/bin/bash\nexit 1\n' >"$T/session-fails"
 chmod +x "$T/session-fails"
 said=$(env PATH="$T/fake:/usr/bin:/bin" HOME="$T/home" DEBSWAY_SUDO="$T/fake/sudo" DEBSWAY_YTDLP_SESSION="$T/session-fails" \
     DEBSWAY_YTDLP_OUT="$T/out" bash "$HERE/bin/yt-dlp" URL 2>&1)
-check "when it fails with nothing downloaded, it says how to update yt-dlp" grep -q 'bash ~/debsway/extras/yt-dlp.sh' <<<"$said"
+check "when it fails with nothing downloaded, it says how to update yt-dlp" grep -q 'debsway install yt-dlp' <<<"$said"
 
 # ---- the session script, as ytdlp would run it (paths moved into the temp folder) ----
 S=$T/yt-dlp-session

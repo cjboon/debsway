@@ -16,7 +16,7 @@ esac
 if [ -n "$account" ]; then
     [[ $account =~ ^[a-z][a-z0-9]{0,14}$ ]] || die "an account name is small letters and digits, a letter first."
     [ -f "$HOME/.claude-$account/settings.json" ] ||
-        die "the account $account isn't set up. Run: bash ~/debsway/extras/claude-regular.sh --account $account"
+        die "the account $account isn't set up. Run: debsway install claude-regular --account $account"
     export CLAUDE_CONFIG_DIR=$HOME/.claude-$account
 fi
 exec /usr/bin/claude "$@"

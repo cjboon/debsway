@@ -112,7 +112,7 @@ case $1 in
         switch_off
         say "off: DNS goes to the network's own server, unencrypted. Firefox encrypts its own (restart it)." ;;
     on)
-        [ -f "$CONF" ] || die "Unbound isn't set up for it: bash ~/debsway/parts/secure-dns.sh"
+        [ -f "$CONF" ] || die "Unbound isn't set up for it: debsway part secure-dns"
         [ ! -L "$RESOLV" ] || die "$RESOLV is a link ($(readlink "$RESOLV")): something else runs DNS here."
         if is_on; then
             say "already on."

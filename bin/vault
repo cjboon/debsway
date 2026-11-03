@@ -79,7 +79,7 @@ case ${1:-status} in
             '') ;;
             *) die "usage: vault open [--for TIME | --no-timeout]" ;;
         esac
-        [ -f "$CIPHER/gocryptfs.conf" ] || die "There is no vault yet. Make one with: bash ~/debsway/extras/vault.sh"
+        [ -f "$CIPHER/gocryptfs.conf" ] || die "There is no vault yet. Make one with: debsway install vault"
         if is_open; then
             say "It is open already ($MNT)."
         else

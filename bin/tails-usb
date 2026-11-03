@@ -4,6 +4,15 @@
 # here), checks its signature and that it is the current release, writes it to
 # a USB stick you pick and type the name of, and reads it back to check.
 # Everything on the stick is erased. A checked copy is kept for the next stick.
-DIR=${DEBSWAY_DIR:-$HOME/debsway}
+# Where debsway is: DEBSWAY_DIR if you set it; else the root-owned copy the
+# debsway package installs, which no program running as you can change; else
+# your own copy, ~/debsway
+if [ -n "${DEBSWAY_DIR:-}" ]; then
+    DIR=$DEBSWAY_DIR
+elif [ -f "${DEBSWAY_SYSTEM_DIR:-/usr/share/debsway}/lib.sh" ]; then
+    DIR=${DEBSWAY_SYSTEM_DIR:-/usr/share/debsway}
+else
+    DIR=$HOME/debsway
+fi
 [ -f "$DIR/extras/tails-usb.sh" ] || { echo "tails-usb: can't find the debsway folder ($DIR). Set DEBSWAY_DIR to where it is." >&2; exit 1; }
 exec bash "$DIR/extras/tails-usb.sh" --make "$@"

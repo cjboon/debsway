@@ -93,7 +93,7 @@ rnobz() { env PATH="$T/nobz" DEBSWAY_SYS="$T/sys" XDG_RUNTIME_DIR="$T/run" "$BAS
 echo "unblocked unblocked" >"$T/rf/bluetooth"
 check "an adapter without bluez: Bluetooth isn't listed (the menu shows no switch)" bash -c '! grep -q bluetooth <<<"$1"' _ "$(rnobz list)"
 rnobz bluetooth on 2>"$T/err"; rc=$?
-check "...and switching it on fails, saying how to install it" bash -c '[ "$1" -eq 1 ] && grep -q "extras/bluetooth.sh" "$2"' _ "$rc" "$T/err"
+check "...and switching it on fails, saying how to install it" bash -c '[ "$1" -eq 1 ] && grep -q "debsway install bluetooth" "$2"' _ "$rc" "$T/err"
 check "the extra's --remove blocks the radio before bluez goes" python3 -I -c 'import sys; s = open(sys.argv[1]).read(); r = s.index("--remove ]"); b = s.index("rfkill block bluetooth", r); p = s.index("apt_purge bluez", r); assert b < p' "$HERE/extras/bluetooth.sh"
 
 # what a desktop does not have is not listed, and asking for it fails

@@ -27,10 +27,10 @@ if [ -n "$account" ]; then
     AGENT=claude-agent-$account
     PROJECTS=$HOME/projects-$account
     sudo -n -u "$AGENT" -l "$SESSION" >/dev/null 2>&1 ||
-        die "the account $account isn't set up. Run: bash ~/debsway/extras/claude-code.sh --account $account"
+        die "the account $account isn't set up. Run: debsway install claude-code --account $account"
 fi
 sudo -n -u "$AGENT" -l "$SESSION" >/dev/null 2>&1 ||
-    die "the sandbox isn't set up. Run: bash ~/debsway/extras/claude-code.sh   (claude-unsandboxed runs it as you.)"
+    die "the sandbox isn't set up. Run: debsway install claude-code   (claude-unsandboxed runs it as you.)"
 where=${PROJECTS/#$HOME/\~}
 
 here=$(pwd -P)

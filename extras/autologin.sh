@@ -48,4 +48,4 @@ autologin_conf "$user" | sudo install -D -o root -g root -m 0644 /dev/stdin "$CO
 sudo systemctl daemon-reload
 note "From the next boot, tty1 logs $user in by itself and sway starts."
 note "The screen lock (Super+Escape, and after you're idle) still asks for your password, and so does sudo."
-note "Undo it with: bash ~/debsway/extras/autologin.sh --remove"
+note "Undo it with: bash $DEBSWAY_DIR/extras/autologin.sh --remove"

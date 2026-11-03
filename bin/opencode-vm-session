@@ -51,7 +51,7 @@ guest_ssh() {
 }
 
 ensure_up() {
-    is_installed || die "no VM yet. Set it up first: bash ~/debsway/extras/opencode-vm.sh"
+    is_installed || die "no VM yet. Set it up first: debsway install opencode-vm"
     if ! mockvps --status 2>/dev/null | grep -q Running; then
         # Say why the window is quiet: mockvps's own steps ("==> Waiting for
         # SSH"...) and errors, but not the summary it ends with

@@ -61,10 +61,10 @@ fi
 
 if [ -n "$account" ]; then
     sudo -n -u "$AGENT" -l "$SESSION" >/dev/null 2>&1 ||
-        die "the account $account isn't set up. Run: bash ~/debsway/extras/claude-vm.sh --account $account"
+        die "the account $account isn't set up. Run: debsway install claude-vm --account $account"
 fi
 sudo -n -u "$AGENT" -l "$SESSION" >/dev/null 2>&1 ||
-    die "the VM sandbox isn't set up. Run: bash ~/debsway/extras/claude-vm.sh"
+    die "the VM sandbox isn't set up. Run: debsway install claude-vm"
 
 if [ -n "${CLAUDE_VM_HOLD:-}" ]; then
     rc=0

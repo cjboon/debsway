@@ -56,7 +56,7 @@ done
 SESSION=/usr/local/libexec/firefox-session
 # The one command your user may run as that user (see /etc/sudoers.d)
 sudo -n -u "$user" -l "$SESSION" >/dev/null 2>&1 ||
-    die "your user isn't set up to start it. Run: bash ~/debsway/extras/firefox-sandbox.sh${name:+  (or new-profile.sh for the profile $name)}  (firefox-esr runs Firefox as you.)"
+    die "your user isn't set up to start it. Run: debsway install firefox-sandbox${name:+  (or new-profile.sh for the profile $name)}  (firefox-esr runs Firefox as you.)"
 command -v flock >/dev/null || die "flock is missing (package util-linux)."
 
 # Already open? Then the link (or a new window) goes to that Firefox.
@@ -67,7 +67,7 @@ if ! flock -n 9; then
 fi
 
 sock=$rt/firefox$tag-wayland
-restrict=$(command -v wayland-restrict) || die "wayland-restrict is missing. Run: bash ~/debsway/extras/firefox-sandbox.sh"
+restrict=$(command -v wayland-restrict) || die "wayland-restrict is missing. Run: debsway install firefox-sandbox"
 command -v setfacl >/dev/null || die "setfacl is missing (package acl)."
 # (firefox-session accepts only /home/NAME/Downloads, or .../Downloads/PROFILE)
 downloads=$HOME/Downloads${name:+/$name}

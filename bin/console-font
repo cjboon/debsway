@@ -121,7 +121,7 @@ if [ "$where" = foot ]; then
     }
     apply() {
         local font=$1 new
-        [ -f "$FOOT_INI" ] || { echo "console-font: there is no $FOOT_INI (bash ~/debsway/parts/foot-config.sh writes it)" >&2; return 1; }
+        [ -f "$FOOT_INI" ] || { echo "console-font: there is no $FOOT_INI (debsway part foot-config writes it)" >&2; return 1; }
         grep -q '^font=' "$FOOT_INI" || { echo "console-font: $FOOT_INI has no font= line to change" >&2; return 1; }
         new=$(mktemp)
         sed "s|^font=.*|font=$font|" "$FOOT_INI" >"$new"

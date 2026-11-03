@@ -22,7 +22,7 @@ if [ "$me" != claude-vm ]; then
     setup_arg=" --account ${me#claude-vm-}"
     port=$(awk -v n="${me#claude-vm-}" '$1 == n && $2 ~ /^[0-9]+$/ && $2 >= 2250 && $2 <= 2299 { print $2; exit }' \
         /etc/debsway/claude-vm-ports 2>/dev/null) || true
-    [ -n "$port" ] || { echo "claude-vm-session: no console port for $me; run: bash ~/debsway/extras/claude-vm.sh$setup_arg" >&2; exit 1; }
+    [ -n "$port" ] || { echo "claude-vm-session: no console port for $me; run: debsway install claude-vm$setup_arg" >&2; exit 1; }
 fi
 
 # Run again without a way to reach XWayland's abstract socket, which any user
@@ -66,7 +66,7 @@ guest_ssh() {
 }
 
 ensure_up() {
-    is_installed || die "no VM yet. Set it up first: bash ~/debsway/extras/claude-vm.sh${setup_arg}"
+    is_installed || die "no VM yet. Set it up first: debsway install claude-vm${setup_arg}"
     if ! mockvps --status 2>/dev/null | grep -q Running; then
         # Say why the window is quiet: mockvps's own steps ("==> Waiting for
         # SSH"...) and errors, but not the summary it ends with

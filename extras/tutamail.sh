@@ -78,5 +78,5 @@ fi
 # Wayland directly, so it needs no XWayland.
 write_launcher "$NAME" tutamail.sh tutanota-desktop ELECTRON_OZONE_PLATFORM_HINT=wayland
 note "Tuta keeps you logged in only with a keyring to store that in. Without one"
-note "(bash ~/debsway/extras/seahorse.sh), you log in at every start."
-note "Updates: run this script again; bash ~/debsway/test.sh says when one is out."
+note "(bash $DEBSWAY_DIR/extras/seahorse.sh), you log in at every start."
+note "Updates: run this script again; bash $DEBSWAY_DIR/test.sh says when one is out."

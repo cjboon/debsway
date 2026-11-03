@@ -64,7 +64,7 @@ boot() {
 }
 
 ensure_up() {
-    is_installed || die "no VM yet. Set it up first: bash ~/debsway/extras/onion-site.sh"
+    is_installed || die "no VM yet. Set it up first: debsway install onion-site"
     running || boot
 }
 
@@ -92,7 +92,7 @@ case "${1:-}" in
     update)
         # apt through the host's Tor: restart the VM with the relay, upgrade, and
         # restart it without the relay. PROVISION_FILES runs the upgrade as root.
-        is_installed || die "no VM yet. Set it up first: bash ~/debsway/extras/onion-site.sh"
+        is_installed || die "no VM yet. Set it up first: debsway install onion-site"
         up=$(mktemp)
         trap 'rm -f "$up"' EXIT
         printf '%s\n' '#!/bin/bash' 'set -e' 'export DEBIAN_FRONTEND=noninteractive' \

@@ -59,6 +59,6 @@ chmod 700 "$MNT"
 note "Open it with: vault open   (for an hour; vault open --for 2h, or --no-timeout)"
 note "It closes itself when its time is up or the screen locks. vault close closes it now."
 if [ ! -x "$HOME/.local/bin/debsway-idle" ] || ! grep -q 'on-lock.d' "$HOME/.local/bin/debsway-idle"; then
-    warn "debsway's idle lock here doesn't run on-lock programs yet: run bash ~/debsway/update.sh"
+    warn "debsway's idle lock here doesn't run on-lock programs yet: run bash $DEBSWAY_DIR/update.sh"
     warn "(until then the vault closes within seconds of the lock, but not before the laptop sleeps)."
 fi

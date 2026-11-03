@@ -30,7 +30,7 @@ export PATH="$T/fake:$PATH" HOME="$T/home"
 run() { bash "$HERE/bin/opencode-vm" "$@"; }
 
 check "opencode-vm says what to do when the sandbox isn't set up" \
-    bash -c "! out=\$(bash '$HERE/bin/opencode-vm' 2>&1) && [[ \$out == *opencode-vm.sh* ]]"
+    bash -c "! out=\$(bash '$HERE/bin/opencode-vm' 2>&1) && [[ \$out == *'debsway install opencode-vm'* ]]"
 touch "$T/rule"
 check "opencode-vm rejects an unknown command" \
     bash -c "! out=\$(bash '$HERE/bin/opencode-vm' bogus 2>&1) && [[ \$out == *'unknown command'* ]]"

@@ -23,7 +23,7 @@ say() {
     if [ ! -t 2 ] && command -v notify-send >/dev/null; then notify-send -a debsway "Wi-Fi sign-in" "$*" 2>/dev/null || true; fi
 }
 
-[ -x "$INCOGNITO" ] || { say "the incognito window isn't set up: bash ~/debsway/parts/incognito.sh"; exit 1; }
+[ -x "$INCOGNITO" ] || { say "the incognito window isn't set up: debsway part incognito"; exit 1; }
 
 was_on=false
 if [ -x "$SECURE_DNS" ] && [ "$("$SECURE_DNS" status)" = on ]; then

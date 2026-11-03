@@ -141,11 +141,21 @@ Print where the debsway folder is.
 Show the short help.
 .SH FILES
 .TP
+.I /usr/share/debsway
+The debsway folder as the debsway package installs it, owned by root, so no
+program running as you can change the scripts that
+.B debsway
+runs with sudo.
+When it is there it is used, unless
+.B DEBSWAY_DIR
+says otherwise.
+.TP
 .I ~/debsway
-The debsway folder: the scripts, and
+Your own copy of the debsway folder (the scripts, and
 .I README.md
 and
-.IR THREAT-MODEL.md .
+.IR THREAT-MODEL.md ),
+used when the package isn't installed.
 .TP
 .I ~/.local/bin
 Where the commands the scripts install go (debsway, keys, timer, ...).
@@ -161,7 +171,9 @@ Tab completion for this command (Debian's bash-completion loads it).
 .SH ENVIRONMENT
 .TP
 .B DEBSWAY_DIR
-Where the debsway folder is, if it is not
+Use the debsway folder there, instead of
+.I /usr/share/debsway
+or
 .IR ~/debsway .
 .TP
 .B DEBSWAY_ESC_WAIT

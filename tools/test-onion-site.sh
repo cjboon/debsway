@@ -32,7 +32,7 @@ printf '#!/bin/sh\nexit 0\n' >"$T/fake/systemctl"
 chmod +x "$T/fake/sudo" "$T/fake/systemctl"
 os() { PATH="$T/fake:$PATH" HOME="$T/home" XDG_STATE_HOME="$T/state" bash "$HERE/bin/onion-site" "$@"; }
 out=$(os start 2>&1) && unset_ok=false || unset_ok=true
-check "it says how to set it up when it isn't" bash -c '$1 && grep -q "extras/onion-site.sh" <<<"$2"' _ "$unset_ok" "$out"
+check "it says how to set it up when it isn't" bash -c '$1 && grep -q "debsway install onion-site" <<<"$2"' _ "$unset_ok" "$out"
 touch "$T/rule"
 check "an unknown command is refused" not os bogus
 check "upload needs static or app" not os upload elsewhere "$T"

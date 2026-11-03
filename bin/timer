@@ -324,7 +324,7 @@ IDLE=${DEBSWAY_IDLE:-$HOME/.local/bin/debsway-idle}   # (a test points this else
 lock_cmd() {
     local m
     if [ ! -x "$IDLE" ]; then
-        err "the screen doesn't lock by itself here (bash ~/debsway/parts/swayidle.sh sets that up)"
+        err "the screen doesn't lock by itself here (debsway part swayidle sets that up)"
         return 1
     fi
     if [ -z "${1:-}" ]; then

@@ -263,7 +263,7 @@ for bad in 0 121 abc 5h -3; do
 done
 check "...and the time stays as it was" test "$("$IDLE" --minutes)" = 15
 check "without the idle lock set up it says how to get it" \
-    bash -c 'out=$(DEBSWAY_IDLE=/nonexistent bash "$1" lock 10 2>&1); [ $? -ne 0 ] && grep -q "parts/swayidle.sh" <<<"$out"' _ "$TIMER"
+    bash -c 'out=$(DEBSWAY_IDLE=/nonexistent bash "$1" lock 10 2>&1); [ $? -ne 0 ] && grep -q "debsway part swayidle" <<<"$out"' _ "$TIMER"
 : >"$T/calls"
 t lock 10 >/dev/null
 "$IDLE"

@@ -129,7 +129,7 @@ step() {
     local pics=() cur i n=0
     mapfile -t pics < <(collection)
     n=${#pics[@]}
-    [ "$n" -gt 0 ] || { echo "wallpaper: no pictures in $COLL (bash ~/debsway/extras/wallpapers.sh fetches some)" >&2; return 1; }
+    [ "$n" -gt 0 ] || { echo "wallpaper: no pictures in $COLL (debsway install wallpapers fetches some)" >&2; return 1; }
     cur=$(cat "$CURRENT" 2>/dev/null)
     i=-1
     for ((k = 0; k < n; k++)); do [ "${pics[k]##*/}" = "$cur" ] && i=$k; done

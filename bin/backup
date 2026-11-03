@@ -4,7 +4,7 @@
 #   backup ARGS...    any restic command, on your backup (e.g. backup snapshots)
 # Without a PASSWORD_COMMAND in the config, restic asks for the password.
 conf="$HOME/.config/debsway/backup.conf"
-[ -f "$conf" ] || { echo "Not set up. Run: bash ~/debsway/extras/backup.sh" >&2; exit 1; }
+[ -f "$conf" ] || { echo "Not set up. Run: debsway install backup" >&2; exit 1; }
 repo=$(sed -n 's/^BACKUP_REPO=//p' "$conf")
 cmd=$(sed -n 's/^PASSWORD_COMMAND=//p' "$conf")
 if [ ! -f "$repo/config" ]; then

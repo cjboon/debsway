@@ -30,7 +30,7 @@ export PATH="$T/fake:$PATH" HOME="$T/home"
 run() { bash "$HERE/bin/claude-vm" "$@"; }
 
 check "claude-vm says what to do when the sandbox isn't set up" \
-    bash -c "! out=\$(bash '$HERE/bin/claude-vm' 2>&1) && [[ \$out == *claude-vm.sh* ]]"
+    bash -c "! out=\$(bash '$HERE/bin/claude-vm' 2>&1) && [[ \$out == *'debsway install claude-vm'* ]]"
 touch "$T/rule-claude-vm"
 check "claude-vm rejects an unknown command" \
     bash -c "! out=\$(bash '$HERE/bin/claude-vm' bogus 2>&1) && [[ \$out == *'unknown command'* ]]"
@@ -197,7 +197,7 @@ check "provisioning calls it on the guest's real file" \
 echo claude-vm-work >"$S/me"
 out=$(session status 2>&1)
 check "an account without a console port (not set up by root) starts nothing, and says how" \
-    bash -c '[[ $1 == *"claude-vm.sh --account work"* ]] && [ ! -s "$2" ]' _ "$out" "$S/calls"
+    bash -c '[[ $1 == *"debsway install claude-vm --account work"* ]] && [ ! -s "$2" ]' _ "$out" "$S/calls"
 printf 'other 2251\nwork 2250\n' >"$S/ports"
 touch "$S/vm-running"; echo disk >"$S/home/vm/claude-vm-work.qcow2"
 session connect >/dev/null 2>&1
@@ -214,7 +214,7 @@ rm -f "$S/me" "$S/home/vm/claude-vm-work.qcow2"
 : >"$T/calls"
 rm -f "$T/rule-claude-vm-work"
 check "claude-vm --account: not set up yet, it says how, and starts nothing" bash -c "
-    ! out=\$(bash '$HERE/bin/claude-vm' --account work status 2>&1) && [[ \$out == *'claude-vm.sh --account work'* ]] && [ ! -s '$T/calls' ]"
+    ! out=\$(bash '$HERE/bin/claude-vm' --account work status 2>&1) && [[ \$out == *'debsway install claude-vm --account work'* ]] && [ ! -s '$T/calls' ]"
 touch "$T/rule-claude-vm-work"
 bash "$HERE/bin/claude-vm" --account work status >/dev/null 2>&1
 check "...set up: the session runs as claude-vm-work" grep -qx "sudo -n -u claude-vm-work /usr/local/libexec/claude-vm-session status" "$T/calls"

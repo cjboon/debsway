@@ -18,7 +18,7 @@ for d in "${dirs[@]}"; do
     real=$d/w3m
     break
 done
-[ -n "$real" ] || { echo "w3m isn't installed: bash ~/debsway/extras/w3m.sh" >&2; exit 127; }
+[ -n "$real" ] || { echo "w3m isn't installed: debsway install w3m" >&2; exit 127; }
 
 forget
 trap forget EXIT

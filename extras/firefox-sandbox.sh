@@ -233,7 +233,7 @@ say "incognito"
 note "incognito opens a throwaway Firefox as a separate, locked-down user, with"
 note "its own clipboard, no shared folders, sound and video, and nothing kept."
 bash "$DEBSWAY_DIR/parts/incognito.sh" ||
-    warn "incognito didn't finish setting up; run it again with: bash ~/debsway/parts/incognito.sh"
+    warn "incognito didn't finish setting up; run it again with: bash $DEBSWAY_DIR/parts/incognito.sh"
 
 note "Run it with: firefox   (or Super+d). firefox-esr runs Firefox as you instead."
 note "It cannot reach your router or local services; to allow that for a while:"

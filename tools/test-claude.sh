@@ -27,7 +27,7 @@ chmod +x "$T/fake/sudo"
 export PATH="$T/fake:$PATH" HOME="$T/home"
 run() { (cd "$1" && shift && bash "$HERE/bin/claude" "$@"); }
 
-check "claude says what to do when the sandbox isn't set up" bash -c "! out=\$(cd '$T/home/projects/app' && bash '$HERE/bin/claude' 2>&1) && [[ \$out == *extras/claude-code.sh* ]]"
+check "claude says what to do when the sandbox isn't set up" bash -c "! out=\$(cd '$T/home/projects/app' && bash '$HERE/bin/claude' 2>&1) && [[ \$out == *'debsway install claude-code'* ]]"
 touch "$T/rule-claude-agent"
 check "claude refuses to start outside ~/projects" bash -c "! out=\$(cd '$T/home/other' && bash '$HERE/bin/claude' 2>&1) && [[ \$out == *'only works inside ~/projects'* ]]"
 check "a refusal starts nothing" test ! -e "$T/calls"
@@ -49,7 +49,7 @@ check "claude-unsandboxed runs the real thing as you" grep -q 'exec /usr/bin/cla
 W=$(cd "$T/home/projects-work/app" && pwd -P)
 : >"$T/calls"
 check "--account: not set up yet, it says how, and starts nothing" bash -c "
-    ! out=\$(cd '$W' && bash '$HERE/bin/claude' --account work 2>&1) && [[ \$out == *'claude-code.sh --account work'* ]] && [ ! -s '$T/calls' ]"
+    ! out=\$(cd '$W' && bash '$HERE/bin/claude' --account work 2>&1) && [[ \$out == *'debsway install claude-code --account work'* ]] && [ ! -s '$T/calls' ]"
 touch "$T/rule-claude-agent-work"
 run "$W" --account work --resume foo
 check "--account work: the session runs as claude-agent-work, in ~/projects-work, with the other arguments" \

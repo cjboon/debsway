@@ -18,7 +18,7 @@ die() { printf 'incognito: %s\n' "$*" >&2; exit 1; }
 
 # Keeps it off XWayland's abstract socket, which any user can connect to
 noabs=/usr/local/libexec/debsway-no-abstract-sockets
-[ -x "$noabs" ] || die "$noabs is missing. Run: bash ~/debsway/parts/incognito.sh"
+[ -x "$noabs" ] || die "$noabs is missing. Run: debsway part incognito"
 
 me=$(id -un)
 [ "$me" = incognito ] || [ "$me" = wifi-signin ] || die "this runs as the user incognito or wifi-signin; use the incognito command."

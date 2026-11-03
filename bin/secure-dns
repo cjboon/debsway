@@ -23,7 +23,7 @@ cmd=${1:-status}
 case $cmd in
     status) state ;;
     on | off)
-        [ -x "$SWITCH" ] || die "it isn't set up. Run: bash ~/debsway/parts/secure-dns.sh"
+        [ -x "$SWITCH" ] || die "it isn't set up. Run: debsway part secure-dns"
         rc=0
         sudo -n "$SWITCH" "$cmd" || rc=$?
         if [ "$cmd" = on ] && [ "$rc" = 0 ]; then rm -f "$LEFT_OFF"; fi

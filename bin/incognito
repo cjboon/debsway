@@ -35,12 +35,12 @@ case $WAYLAND_DISPLAY in
 esac
 [ -S "$rt/$WAYLAND_DISPLAY" ] || die "can't find your Wayland socket ($rt/$WAYLAND_DISPLAY)."
 sock=$rt/$user-wayland
-restrict=$(command -v wayland-restrict) || die "wayland-restrict is missing. Run: bash ~/debsway/parts/incognito.sh"
+restrict=$(command -v wayland-restrict) || die "wayland-restrict is missing. Run: debsway part incognito"
 command -v setfacl >/dev/null || die "setfacl is missing (package acl)."
 command -v flock >/dev/null || die "flock is missing (package util-linux)."
 # The one command your user may run as incognito or wifi-signin (see /etc/sudoers.d)
 sudo -n -u "$user" -l /usr/local/libexec/incognito-session >/dev/null 2>&1 ||
-    die "your user isn't set up to start it. Run: bash ~/debsway/parts/incognito.sh"
+    die "your user isn't set up to start it. Run: debsway part incognito"
 
 # One of each kind at a time: the second would take back the access the first one needs
 exec 9>"$rt/$user.lock"

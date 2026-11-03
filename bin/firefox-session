@@ -19,7 +19,7 @@ die() { printf 'firefox: %s\n' "$*" >&2; exit 1; }
 
 # Keeps it off XWayland's abstract socket, which any user can connect to
 noabs=/usr/local/libexec/debsway-no-abstract-sockets
-need_noabs() { [ -x "$noabs" ] || die "$noabs is missing. Run: bash ~/debsway/extras/firefox-sandbox.sh"; }
+need_noabs() { [ -x "$noabs" ] || die "$noabs is missing. Run: debsway install firefox-sandbox"; }
 
 # Who this is: "firefox" (tag empty), or "fx-NAME" for the profile NAME
 user=$(id -un)

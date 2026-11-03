@@ -112,7 +112,12 @@ debsway part NAME         re-runs one base part
 *Cost:* one session. *Security:* none lost, and from here on the docs don't
 depend on where debsway lives.
 
-### 1b. Make every script work from wherever it is installed
+### 1b. Make every script work from wherever it is installed (done)
+
+Done: the commands look for `DEBSWAY_DIR`, then a root-owned
+`/usr/share/debsway`, then `~/debsway`; messages say `debsway install NAME`
+or name the folder the script runs from; `tools/test-location.sh` checks it.
+
 
 - **The folder:** `DEBSWAY_DIR` is already worked out from where `lib.sh`
   is. Check that nothing assumes `~/debsway`: grep for it in the scripts

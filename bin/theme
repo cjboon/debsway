@@ -113,7 +113,7 @@ gtk() {
 apply() {
     local t tmp
     t=$(current)
-    load "$t" || die "the $t theme's colors ($THEMES/$t) can't be read; run bash ~/debsway/parts/theme.sh"
+    load "$t" || die "the $t theme's colors ($THEMES/$t) can't be read; run debsway part theme"
     mkdir -p "${SNIPPET%/*}"
     snippet "$t" >"$SNIPPET.new" && mv -f "$SNIPPET.new" "$SNIPPET"
     # foot: only debsway's foot.ini; its [colors] section, up to the next section
@@ -144,7 +144,7 @@ case ${1:-} in
     "" | status)
         echo "Theme: $(current)" ;;
     light | dark)
-        load "$1" || die "the $1 theme's colors ($THEMES/$1) can't be read; run bash ~/debsway/parts/theme.sh"
+        load "$1" || die "the $1 theme's colors ($THEMES/$1) can't be read; run debsway part theme"
         mkdir -p "${STATE%/*}"
         echo "$1" >"$STATE"
         apply

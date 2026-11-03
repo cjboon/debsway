@@ -46,7 +46,7 @@ Wallpapers/ (one folder up) is to choose from: Super+] and Super+[ step
 through it on the desktop itself, Super+Shift+w (or "wallpaper pick")
 lists it by name, and Super+\ goes back to no wallpaper. The one you stop
 on is copied here as chosen.jpg, so it stays.
-bash ~/debsway/extras/wallpapers.sh fills it with space and Earth pictures
+debsway install wallpapers fills it with space and Earth pictures
 (NASA, Webb, Earth Observatory) and Budgie's photos, or just sets it up for
 pictures of your own.
 EOF

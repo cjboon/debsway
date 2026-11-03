@@ -75,8 +75,8 @@ save them through Firefox into ~/Downloads, then move them here, with a name
 you will recognise. debsway never changes or removes them. Pictures from the
 web are often copyrighted: fine on your own screen, but don't share them on.
 
-bash ~/debsway/extras/wallpapers.sh fetches more (each source is topped up);
-with --remove it takes out what it downloaded, nothing of yours.
+debsway install wallpapers fetches more (each source is topped up);
+debsway remove wallpapers takes out what it downloaded, nothing of yours.
 EOF
     listed README.txt
 }

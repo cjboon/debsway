@@ -31,7 +31,7 @@ case "$cmd" in
         [ -d "${3:-}" ] || die "no folder '${3:-}'. onion-site upload ${2} FOLDER"
         ;;
     address)
-        [ -s "$ADDRESS" ] || die "no address saved here. Run: bash ~/debsway/extras/onion-site.sh"
+        [ -s "$ADDRESS" ] || die "no address saved here. Run: debsway install onion-site"
         cat "$ADDRESS"
         exit 0 ;;
     -h | --help | "")
@@ -42,7 +42,7 @@ case "$cmd" in
 esac
 
 sudo -n -u "$AGENT" -l "$SESSION" >/dev/null 2>&1 ||
-    die "the onion site isn't set up. Run: bash ~/debsway/extras/onion-site.sh"
+    die "the onion site isn't set up. Run: debsway install onion-site"
 
 # The site needs both its VM and this computer's tor service; say so when tor
 # isn't running, which is the usual reason the address can't be reached

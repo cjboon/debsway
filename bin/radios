@@ -91,7 +91,7 @@ case $cmd in
             [ "$action" != --wait ] || action=status
         fi
         if [ "$cmd" = bluetooth ] && ! command -v bluetoothctl >/dev/null && compgen -G "$SYS/class/bluetooth/*" >/dev/null; then
-            echo "radios: Bluetooth isn't installed. Install it: bash ~/debsway/extras/bluetooth.sh" >&2
+            echo "radios: Bluetooth isn't installed. Install it: debsway install bluetooth" >&2
             exit 1
         fi
         exists "$cmd" || { echo "radios: no $cmd on this computer." >&2; exit 1; }

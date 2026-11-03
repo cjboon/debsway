@@ -152,5 +152,5 @@ sudo systemctl enable debsway-ytdlp-firewall.service >/dev/null &&
     warn "Couldn't load the firewall rule; check: systemctl status debsway-ytdlp-firewall"
 
 note "Use it like yt-dlp:  yt-dlp URL   (yt-dlp -x URL: the sound only). Files land in ~/Downloads."
-note "When a site stops working, update it: bash ~/debsway/extras/yt-dlp.sh"
+note "When a site stops working, update it: bash $DEBSWAY_DIR/extras/yt-dlp.sh"
 note "Treat what it downloads as untrusted; mpv from the media extra plays it in a sandbox."
