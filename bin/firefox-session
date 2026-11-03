@@ -141,6 +141,27 @@ cp /usr/local/share/debsway/firefox-user.js "$profile/user.js"
     echo "user_pref(\"browser.download.dir\", \"$downloads\");"
     echo 'user_pref("browser.download.useDownloadDir", true);'
 } >>"$profile/user.js"
+# doh_prefs normal|signin: Firefox's own DNS, set at every start. While secure
+# DNS is on (parts/secure-dns.sh; /etc/resolv.conf says so) Firefox uses the
+# system's, which is encrypted; while it is off, its own DNS over HTTPS to
+# Quad9: strict (never plain DNS, so a hostile network can't push it back to
+# plain DNS by blocking the encrypted kind) unless fallback was chosen at the
+# sandboxed Firefox's install. The Wi-Fi sign-in window (signin) uses the
+# network's own DNS: that is what it is for. (The same in firefox-session and
+# incognito-session; a test checks.)
+doh_prefs() {
+    local mode=3
+    if [ "$1" = signin ] ||
+        { [ ! -L /etc/resolv.conf ] && grep -qsE '^# Written by debsway (parts|extras)/secure-dns\.sh' /etc/resolv.conf; }; then
+        mode=5
+    elif [ "$(sed -n 's/^dns=//p' /etc/debsway/firefox.conf 2>/dev/null | head -1)" = fallback ]; then
+        mode=2
+    fi
+    echo "user_pref(\"network.trr.mode\", $mode);"
+    echo 'user_pref("network.trr.uri", "https://dns.quad9.net/dns-query");'
+    echo 'user_pref("network.trr.custom_uri", "https://dns.quad9.net/dns-query");'
+}
+doh_prefs normal >>"$profile/user.js"
 # Light or dark (bin/theme): Firefox's own theme, what websites are told you
 # prefer, and the New Tab fox to match
 if [ "$theme" = light ]; then

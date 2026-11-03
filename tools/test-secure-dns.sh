@@ -152,15 +152,13 @@ check "...the network's copy kept, to put back" grep -qx "nameserver 192.168.1.1
 check "...NetworkManager told to leave resolv.conf alone" grep -qx "dns=none" "$W/etc/NetworkManager/conf.d/90-debsway-secure-dns.conf"
 check "...its firewall rule enabled and loaded" bash -c '
     grep -qx "systemctl enable debsway-secure-dns-firewall.service" "$1" && grep -qx "systemctl restart debsway-secure-dns-firewall.service" "$1"' _ "$W/calls"
-check "...Firefox's DNS policy written again" grep -qx "ublock-allow --refresh" "$W/calls"
 check "...status: on" test "$(sw status)" = on
 : >"$W/calls"
 sw off >/dev/null 2>&1
 check "off: the network's DNS server back" grep -qx "nameserver 192.168.1.1" "$W/etc/resolv.conf"
 check "...NetworkManager may write it again" test ! -e "$W/etc/NetworkManager/conf.d/90-debsway-secure-dns.conf"
 check "...the firewall rule off, also at boot" grep -qx "systemctl disable --now debsway-secure-dns-firewall.service" "$W/calls"
-check "...and Firefox's policy written again (it then encrypts its own)" grep -qx "ublock-allow --refresh" "$W/calls"
-: >"$W/no-dns" "$W/calls"
+: >"$W/no-dns"; : >"$W/calls"
 check "on where names don't resolve (a sign-in page): it says so, and fails" bash -c '! sw on'
 check "...and stays off: the network's DNS server, no firewall rule" bash -c '
     grep -qx "nameserver 192.168.1.1" "$1" && [ "$(sw status)" = off ] && ! grep -q "systemctl enable" "$2"' _ "$W/etc/resolv.conf" "$W/calls"

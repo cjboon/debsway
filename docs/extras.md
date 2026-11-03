@@ -309,14 +309,15 @@ about incognito; your profiles stay).
   scripts have added hidden login boxes to read what Firefox filled in.
 - **HTTPS-Only Mode**: Firefox won't load an unencrypted page without
   asking first, so nobody on café or hotel Wi-Fi can tamper with it.
-- **Its DNS, encrypted either way** (a locked policy, never a provider
+- **Its DNS, encrypted either way** (set at each start, never a provider
   Firefox picks itself): with secure DNS on, its own DNS-over-HTTPS is
   off and it looks names up the way the rest of the system does, encrypted;
-  without it, Firefox encrypts its own lookups to Quad9 (DNS over HTTPS),
-  strict by default (never plain DNS, so a Wi-Fi sign-in page won't load in
-  Firefox) or with fallback to the network's, as chosen at the sandboxed
-  Firefox's install. Every Firefox debsway runs gets this, `incognito` and the
-  sandboxed `firefox` included.
+  with it off, Firefox encrypts its own lookups to Quad9 (DNS over HTTPS),
+  strict by default (never plain DNS) or with fallback to the network's, as
+  chosen at the sandboxed Firefox's install. Every Firefox debsway runs gets
+  this, `incognito` and the sandboxed `firefox` included, except the Wi-Fi
+  sign-in window (`wifi-signin`), which uses the network's DNS so a sign-in
+  page can load, and is thrown away when it closes.
 - **A notice when Firefox needs a restart**: after an update, the running
   browser keeps the old, unfixed version until you restart it. A check
   every 10 minutes shows a notification when that's the case.
@@ -331,7 +332,10 @@ policies file exists), and a systemd user timer.
 
 `incognito` opens Firefox as a different, locked-down user, for sites you
 don't trust or don't want tied to the rest of your browsing. `incognito
-https://example.org/` opens a page. What `parts/incognito.sh` sets up:
+https://example.org/` opens a page. `wifi-signin` (the debsway menu's
+"Wi-Fi sign-in") opens it as the Wi-Fi sign-in window: the network's own DNS
+and plain http allowed, for a café's or hotel's sign-in page, with secure
+DNS off only while it is open. What `parts/incognito.sh` sets up:
 
 - **A user with nothing**: no password, no login, no home folder on disk,
   no group but its own and `render` (so no sound card, no USB; `render` lets

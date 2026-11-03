@@ -178,6 +178,7 @@ if __name__ == "__main__":
         "sway-switches-space": ["k", " ", "\r", "\x1b"],
         "sway-securedns-click": [click_on("Secure DNS"), "\r", "\x1b"],
         "sway-theme-click": [click_on("Theme"), "\x1b"],
+        "sway-signin": [click_on("Wi-Fi sign-in")],
     }
     drawn, status = run(script, env, scenarios[scenario])
     if len(sys.argv) > 7:
@@ -290,9 +291,17 @@ check "...a click on it too" grep -qx "secure-dns toggle" "$T/ran"
 : >"$T/ran"
 menu sway-theme-click
 check "a click on Theme switches the theme" grep -qx "theme toggle" "$T/ran"
+printf '#!/bin/sh\n' >"$T/apps/wifi-signin"
+chmod +x "$T/apps/wifi-signin"
+DEBSWAY_MENU_APPS="$DEBSWAY_MENU_APPS $T/apps/wifi-signin"
+: >"$T/ran"
+menu sway-signin
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+check "Wi-Fi sign-in opens the sign-in window through sway, and the menu closes" bash -c '
+    grep -qx "swaymsg exec $1" "$2" && grep -q "STATUS 0" <<<"$3"' _ "$T/apps/wifi-signin" "$T/ran" "$out"
 # shellcheck disable=SC2016  # the inner shell expands its own variables
 check "the menu looks for theme and secure-dns where they are installed" bash -c '
-    grep "^APPS=" "$1" | grep -q "\$HOME/.local/bin/theme \$HOME/.local/bin/secure-dns}"' _ "$HERE/bin/debsway-menu"
+    grep "^APPS=" "$1" | grep -q "\$HOME/.local/bin/theme \$HOME/.local/bin/secure-dns /usr/local/bin/wifi-signin}"' _ "$HERE/bin/debsway-menu"
 unset DEBSWAY_MENU_APPS
 rm -f "$T/fake/swaymsg"
 menu enter

@@ -14,13 +14,11 @@ on_crypt() { lsblk -s -no TYPE "$1" 2>/dev/null | grep -qx crypt; }
 
 # Security at a glance: the few things that matter most, each checked here,
 # with what to run when one isn't done. [x] yes, [~] partly, [ ] no. The
-# details follow below. (DEBSWAY_ETC, DEBSWAY_FX_CLIENT and
-# DEBSWAY_FIREFOX_DIST: where /etc, the firefox command and Firefox's
-# policies are, for tests.)
+# details follow below. (DEBSWAY_ETC and DEBSWAY_FX_CLIENT: where /etc and
+# the firefox command are, for tests.)
 glance() { printf '  [%s] %s\n' "$1" "$2"; }
 ETC=${DEBSWAY_ETC:-/etc}
 FX=${DEBSWAY_FX_CLIENT:-/usr/local/bin/firefox}
-FX_POLICY=${DEBSWAY_FIREFOX_DIST:-/usr/share/firefox-esr/distribution}/policies.json
 echo "Security at a glance:"
 root_src=$(findmnt -no SOURCE / 2>/dev/null | sed 's/\[.*//')
 if [ -n "$root_src" ] && on_crypt "$root_src"; then
@@ -54,7 +52,8 @@ else
 fi
 if secure_dns_on; then
     glance x "DNS encrypted, for every program"
-elif [ -x "$FX" ] && grep -qs '"DNSOverHTTPS": { "Enabled": true' "$FX_POLICY"; then
+elif [ -x "$FX" ]; then
+    # (debsway's Firefox encrypts its own while secure DNS is off: bin/firefox-session)
     if secure_dns_installed; then
         glance "~" "Secure DNS switched off: Firefox encrypts its own, other programs don't (debsway menu: Secure DNS)"
     else

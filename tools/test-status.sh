@@ -64,8 +64,7 @@ check "...none done: each says so, with what to run" bash -c '
     grep -q "\[ \] Disk NOT encrypted" <<<"$1" && grep -q "\[~\] Screen locks only when you lock it" <<<"$1" &&
     grep -q "\[ \] Firewall off: bash parts/ufw.sh" <<<"$1" && grep -q "\[ \] Security updates don.t install by themselves" <<<"$1" &&
     grep -q "\[ \] No sandboxed browser" <<<"$1" && grep -q "\[ \] DNS not encrypted" <<<"$1"' _ "$out"
-# the sandboxed Firefox with its own encrypted DNS, no secure DNS
-printf '{\n  "policies": {\n    "DNSOverHTTPS": { "Enabled": true, "ProviderURL": "https://dns.quad9.net/dns-query", "Fallback": false, "Locked": true },\n  }\n}\n' >"$G/dist/policies.json"
+# the sandboxed Firefox (it encrypts its own DNS while secure DNS is off), no secure DNS
 out=$(glance "$G/firefox")
 check "...Firefox's own encrypted DNS without secure DNS: partly ([~])" grep -q '\[~\] DNS encrypted for Firefox only' <<<"$out"
 

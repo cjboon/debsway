@@ -9,8 +9,8 @@
 #    profile can turn it back on (extras/firefox-profiles/new-profile.sh asks).
 #  - HTTPS-Only Mode: Firefox won't load unencrypted pages without asking,
 #    so nobody on café or hotel Wi-Fi can tamper with them.
-#  - Firefox's own DNS-over-HTTPS is off and locked: it looks names up the
-#    way the rest of the system does, not through a provider it picked.
+#  - (Firefox's own DNS is set by each debsway Firefox at its start, not here:
+#    bin/firefox-session and bin/incognito-session.)
 #  - A notice when Firefox was updated while it's running: the running
 #    browser keeps the old, unfixed version until you restart it.
 # These are defaults: change one in a profile at about:config.

@@ -125,16 +125,26 @@ one and anyone on the way can answer falsely. With it:
 - **The switch.** Wi-Fi sign-in pages (cafés, hotels, trains) need the
   network's own DNS, so they don't work while it's on: switch it off in the
   debsway menu (the Secure DNS line: Space or Enter) or with `secure-dns off`,
-  sign in, and switch it on again (`secure-dns on`). Switching on checks that
+  sign in, and switch it on again (`secure-dns on`); the Wi-Fi sign-in window
+  below does all of that for you. Switching on checks that
   names resolve first and stays off if they don't. Your user may switch it
   without a password: a sudo rule allows exactly `on` and `off` of the switch
   script (`bin/secure-dns-switch`), so a program running as you could switch
   it off too (Status then says so).
 - **While it is off**, other programs use the network's DNS, unencrypted.
-  debsway's Firefox encrypts its own instead (DNS over HTTPS to Quad9; its
-  policy follows the switch at its next start): strict by default, so a
-  sign-in page doesn't load in Firefox even then, unless "fallback" was
-  chosen at the sandboxed Firefox's install.
+  debsway's Firefox encrypts its own instead (DNS over HTTPS to Quad9, set
+  at each start, so it follows the switch at its next start): strict by
+  default, so a hostile network can't push it back to plain DNS by blocking
+  the encrypted kind.
+- **The Wi-Fi sign-in window** (the debsway menu's "Wi-Fi sign-in", or
+  `wifi-signin`) is the easy way through a sign-in page: it switches secure
+  DNS off, opens a throwaway incognito window (in memory, gone when it
+  closes) that alone uses the network's own DNS and allows plain http,
+  opening Mozilla's test page so the network can show its sign-in page, and
+  switches secure DNS on again when you close it. Every other Firefox keeps
+  its encrypted DNS meanwhile; only programs that look names up during that
+  minute use the network's. uBlock's medium mode can block a sign-in page's
+  scripts from other sites: allow them with uBlock's button in that window.
 - **DNS over HTTPS** looks like any web traffic, so no firewall can stop it.
   Firefox's own is off while this is on; Mullvad Browser keeps its own.
 

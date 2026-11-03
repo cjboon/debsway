@@ -239,7 +239,7 @@ text_editor() {
 }
 # app NAME...: the first of these commands that is installed, from APPS (where
 # debsway and Debian put them; DEBSWAY_MENU_APPS: a test's own list)
-APPS=${DEBSWAY_MENU_APPS-/usr/bin/thunar /usr/bin/keepassxc $HOME/.local/bin/tuta /usr/bin/signal-desktop $HOME/.local/bin/simplex $HOME/.local/bin/claude-vm $HOME/.local/bin/claude $HOME/.local/bin/claude-regular $HOME/.local/bin/opencode-vm $HOME/.local/bin/vault $HOME/.local/bin/backup $HOME/.local/bin/theme $HOME/.local/bin/secure-dns}
+APPS=${DEBSWAY_MENU_APPS-/usr/bin/thunar /usr/bin/keepassxc $HOME/.local/bin/tuta /usr/bin/signal-desktop $HOME/.local/bin/simplex $HOME/.local/bin/claude-vm $HOME/.local/bin/claude $HOME/.local/bin/claude-regular $HOME/.local/bin/opencode-vm $HOME/.local/bin/vault $HOME/.local/bin/backup $HOME/.local/bin/theme $HOME/.local/bin/secure-dns /usr/local/bin/wifi-signin}
 app() {
     local want c
     for want; do
@@ -274,6 +274,10 @@ if [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null; then
     if [ -n "$CLAUDE_CMD" ]; then ids+=(claude); items+=(Claude); fi
     # (opencode-vm opens a window of its own)
     if [ -n "$OPENCODE_CMD" ]; then ids+=(opencode); items+=(opencode); fi
+    # A throwaway window for a Wi-Fi sign-in page (it switches secure DNS off
+    # while it is open, and on again after)
+    SIGNIN_CMD=$(app wifi-signin)
+    if [ -n "$SIGNIN_CMD" ]; then ids+=(signin); items+=("Wi-Fi sign-in"); fi
 fi
 BACKUP_CMD=$(app backup) VAULT_CMD=$(app vault)
 if [ -n "$BACKUP_CMD" ]; then ids+=(backup); items+=("Back up now"); fi
@@ -392,9 +396,10 @@ run_choice() {
         browser)
             swaymsg exec "$BROWSER" >/dev/null 2>&1
             exit 0 ;;
-        files | passwords | mail | signal | simplex | claude | opencode)
+        files | passwords | mail | signal | simplex | claude | opencode | signin)
             local cmd
             case ${ids[sel]} in
+                signin) cmd=$SIGNIN_CMD ;;
                 files) cmd=$FILES_CMD ;; passwords) cmd=$PASSWORDS_CMD ;;
                 mail) cmd=$MAIL_CMD ;; signal) cmd=$SIGNAL_CMD ;;
                 simplex) cmd=$SIMPLEX_CMD ;; claude) cmd=$CLAUDE_CMD ;;

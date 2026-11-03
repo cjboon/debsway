@@ -8,8 +8,9 @@
 #           If names don't resolve that way (a Wi-Fi sign-in page, port 853
 #           blocked), it switches off again and says so.
 #   off     DNS goes to the network's own server again, unencrypted: for Wi-Fi
-#           with a sign-in page. Firefox then encrypts its own lookups (its
-#           policy, written by ublock-allow, follows at its next start).
+#           with a sign-in page (or use the Wi-Fi sign-in window, which does
+#           this for you). debsway's Firefox then encrypts its own lookups
+#           (it reads this at its start: bin/firefox-session).
 #   status  on or off
 set -euo pipefail
 umask 022
@@ -91,15 +92,6 @@ resolves() {
     return 1
 }
 
-# others_follow: debsway's Firefox uses the system's DNS while this is on and
-# encrypts its own while it is off (its policy; it follows at its next start)
-others_follow() {
-    if [ -x /usr/local/bin/ublock-allow ]; then
-        /usr/local/bin/ublock-allow --refresh >/dev/null 2>&1 ||
-            say "Couldn't write Firefox's DNS policy again: sudo ublock-allow --refresh"
-    fi
-}
-
 switch_off() {
     firewall_off
     hands_back
@@ -118,7 +110,6 @@ case $1 in
             exit 0
         fi
         switch_off
-        others_follow
         say "off: DNS goes to the network's own server, unencrypted. Firefox encrypts its own (restart it)." ;;
     on)
         [ -f "$CONF" ] || die "Unbound isn't set up for it: bash ~/debsway/parts/secure-dns.sh"
@@ -145,7 +136,6 @@ case $1 in
             firewall_off
             say "the firewall rule that keeps DNS from going around Unbound didn't load; encrypted DNS is on without it (systemctl status $UNIT)."
         fi
-        others_follow
         say "on: every lookup goes to Unbound, encrypted and checked with DNSSEC. Restart Firefox to follow." ;;
     *) die "usage: secure-dns-switch on|off|status" ;;
 esac

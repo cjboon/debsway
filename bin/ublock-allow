@@ -16,8 +16,7 @@
 #   ublock-allow --remove example.com
 #   ublock-allow --list               the mode, and the sites allowed
 #   ublock-allow --mode standard|medium
-#   ublock-allow --refresh            write it again (secure DNS's switch does,
-#                                     when it is switched on or off)
+#   ublock-allow --refresh            write it again (as it is)
 # Restart Firefox afterwards.
 set -euo pipefail
 
@@ -25,12 +24,6 @@ ETC=${DEBSWAY_FIREFOX_ETC:-/etc/firefox-esr}
 LIST="$ETC/debsway-ublock-allow"
 # standard or medium; no file: medium, as debsway was before the choice
 MODE_FILE="$ETC/debsway-ublock-mode"
-# Firefox's own DNS (DNSOverHTTPS below) depends on secure DNS's switch
-# (parts/secure-dns.sh: while on, /etc/resolv.conf says so in its first line),
-# and on the choice made at the sandboxed Firefox's install (dns=strict or fallback)
-RESOLV=${DEBSWAY_RESOLV_CONF:-/etc/resolv.conf}
-CHOICES=${DEBSWAY_FIREFOX_CHOICES:-/etc/debsway/firefox.conf}
-QUAD9_DOH=https://dns.quad9.net/dns-query
 # Debian's Firefox only finds policies.json in its install folder (it looks
 # in /etc/firefox-esr/policies too, but the Debian build never reads it)
 DIST=${DEBSWAY_FIREFOX_DIST:-/usr/share/firefox-esr/distribution}
@@ -55,19 +48,6 @@ site_of() {
 
 sites() { [ -f "$LIST" ] && grep -v '^#' "$LIST" | grep . || true; }
 mode() { if [ "$(head -c 16 "$MODE_FILE" 2>/dev/null)" = standard ]; then echo standard; else echo medium; fi; }
-# doh: the DNSOverHTTPS policy. With secure DNS on, the system's DNS is
-# already encrypted (and the one way out): Firefox's own is off. Off,
-# Firefox encrypts its own lookups, to Quad9; strict (never plain DNS, so
-# Wi-Fi sign-in pages don't load in Firefox) unless fallback was chosen.
-doh() {
-    local fallback=false
-    if [ ! -L "$RESOLV" ] && grep -qsE '^# Written by debsway (parts|extras)/secure-dns\.sh' "$RESOLV"; then
-        echo '{ "Enabled": false, "Locked": true }'
-        return
-    fi
-    [ "$(sed -n 's/^dns=//p' "$CHOICES" 2>/dev/null | head -1)" != fallback ] || fallback=true
-    printf '{ "Enabled": true, "ProviderURL": "%s", "Fallback": %s, "Locked": true }\n' "$QUAD9_DOH" "$fallback"
-}
 
 # The policy: uBlock's own default rules, block other sites' scripts and
 # frames everywhere, then the allowed sites. uBlock wants it as a JSON
@@ -97,12 +77,10 @@ write_policy() {
     #                            for every add-on; incognito is private all the time).
     #   Override*Page          - no Mozilla first-run or what's-new tabs; Firefox
     #                            opens straight to the home page.
-    #   DNSOverHTTPS           - locked: off while secure DNS is on (Firefox
-    #                            looks names up the way the rest of the system
-    #                            does, encrypted); while it is off, on, to Quad9
-    #                            (doh above), never a provider of Firefox's
-    #                            own choosing.
-    printf '{\n  "policies": {\n    "SearchEngines": { "Default": "DuckDuckGo", "DefaultPrivate": "DuckDuckGo" },\n    "OverrideFirstRunPage": "",\n    "OverridePostUpdatePage": "",\n    "DNSOverHTTPS": %s,\n    "ExtensionSettings": {\n      "uBlock0@raymondhill.net": { "private_browsing": true }\n    },\n    "3rdparty": {\n      "Extensions": {\n        "uBlock0@raymondhill.net": {\n          "adminSettings": "%s"\n        }\n      }\n    }\n  }\n}\n' "$(doh)" "$inner" |
+    #   (Firefox's own DNS isn't set here: each Firefox debsway starts sets
+    #   it at its start, firefox-session and incognito-session, so the Wi-Fi
+    #   sign-in window can differ from the rest. A policy would lock it for all.)
+    printf '{\n  "policies": {\n    "SearchEngines": { "Default": "DuckDuckGo", "DefaultPrivate": "DuckDuckGo" },\n    "OverrideFirstRunPage": "",\n    "OverridePostUpdatePage": "",\n    "ExtensionSettings": {\n      "uBlock0@raymondhill.net": { "private_browsing": true }\n    },\n    "3rdparty": {\n      "Extensions": {\n        "uBlock0@raymondhill.net": {\n          "adminSettings": "%s"\n        }\n      }\n    }\n  }\n}\n' "$inner" |
         $SUDO tee "$POLICY" >/dev/null
     sum=$(sha256sum "$POLICY")
     echo "$sum" | $SUDO tee "$OURS" >/dev/null

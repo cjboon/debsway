@@ -16,7 +16,8 @@ What's different from a dotfiles repo:
   JIT off, DuckDuckGo, and `firefox` runs it as its own locked-down user (shared
   clipboard and `~/Downloads`, nothing else of yours). `incognito` opens a throwaway Firefox as a
   separate locked-down user, in memory, on a restricted Wayland socket,
-  with its own firewall rule and audio, that plays video and sound.
+  with its own firewall rule and audio, that plays video and sound. "Wi-Fi sign-in" in the
+  debsway menu opens one for a café's sign-in page, the only window that uses the network's DNS.
 - **Sandboxes for the risky things**: images and video open in bubblewrap;
   Claude Code can run as its own user or in a VM; Tor Browser, Whonix,
   wallets and more are one script each in `extras/`.

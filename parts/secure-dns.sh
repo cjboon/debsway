@@ -17,8 +17,9 @@
 #    names resolve first, and stays off if they don't. Your user may switch it
 #    without a password (bin/secure-dns-switch, through a sudo rule that allows
 #    exactly "on" and "off"), so a program running as you could switch it off.
-#  - While it is off, debsway's Firefox encrypts its own lookups (to Quad9; its
-#    policy follows the switch). Other programs use the network's DNS.
+#  - While it is off, debsway's Firefox encrypts its own lookups (to Quad9; set
+#    at its start). Other programs use the network's DNS. The Wi-Fi sign-in
+#    window (wifi-signin, parts/incognito.sh) switches it off and on for you.
 #  - While it is on, NetworkManager, dhclient, dhcpcd and wifi.sh leave
 #    /etc/resolv.conf alone. Mullvad VPN still uses its own DNS in its tunnel.
 # Run again (as update.sh does), it keeps the switch where you left it; it

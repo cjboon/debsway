@@ -139,8 +139,9 @@ With the extras:
   send DNS out, so nothing goes around it unencrypted (DNS over HTTPS can't
   be stopped that way). If the resolver can't be reached, names stop
   resolving instead of falling back, and Wi-Fi sign-in pages don't work.
-  Switched off (for such a page, in the debsway menu), other programs use
-  the network's DNS unencrypted; Firefox encrypts its own. Your user may
+  Switched off (for such a page; the Wi-Fi sign-in window does it only while
+  it is open), other programs use the network's DNS unencrypted; Firefox
+  encrypts its own, except that throwaway sign-in window. Your user may
   switch it without a password, so a program running as you could too.
 
 ## What it doesn't protect against

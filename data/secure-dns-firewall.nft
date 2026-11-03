@@ -9,7 +9,7 @@
 #
 # DNS over HTTPS (port 443) looks like any other web traffic, so it can't be
 # stopped this way: a program with its own (Mullvad Browser, for one) still
-# uses it. Firefox's is off while this is on (its policy, bin/ublock-allow).
+# uses it. Firefox's is off while this is on (set at its start, bin/firefox-session).
 #
 # A VPN's tunnel (wg*, tun*) is allowed: Mullvad VPN points /etc/resolv.conf
 # at its own DNS server inside the tunnel while it is connected.

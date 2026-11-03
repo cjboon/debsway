@@ -1,8 +1,8 @@
 #!/bin/bash
 # Checks the policies.json that bin/ublock-allow writes for every Firefox
 # (parts/firefox-hardening.sh): it is valid JSON, keeps uBlock's medium mode and
-# the allowed sites, and sets Firefox's own DNS: off while secure DNS is on,
-# encrypted to Quad9 without it (strict, or with fallback as chosen). Uses a
+# the allowed sites, and sets no DNS (each Firefox sets its own at its start,
+# tools/test-wifi-signin.sh checks that). Uses a
 # temp folder for /etc/firefox-esr and Firefox's distribution folder, so it
 # changes nothing. Run by test.sh, or:  bash tools/test-firefox-policy.sh
 # shellcheck disable=SC2016  # the inner shells and Python expand their own variables
@@ -11,6 +11,7 @@ HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 fails=0
+not() { ! "$@"; }
 check() { # DESCRIPTION CONDITION-COMMAND...
     local what=$1
     shift
@@ -18,12 +19,6 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 }
 
 export DEBSWAY_FIREFOX_ETC=$T/etc DEBSWAY_FIREFOX_DIST=$T/dist
-# (stand-ins for /etc/resolv.conf and the sandbox's choices: never this
-# computer's own; secure DNS switched on to start with)
-export DEBSWAY_RESOLV_CONF=$T/resolv.conf DEBSWAY_FIREFOX_CHOICES=$T/firefox.conf
-sd_on() { printf '%s\n' '# Written by debsway parts/secure-dns.sh. Every name goes to Unbound on this' 'nameserver 127.0.0.1' >"$T/resolv.conf"; }
-sd_off() { echo "nameserver 192.168.1.1" >"$T/resolv.conf"; }
-sd_on
 mkdir -p "$T/etc"
 POLICY=$T/dist/policies.json
 allow() { bash "$HERE/bin/ublock-allow" "$@"; }
@@ -47,8 +42,7 @@ if ! command -v python3 >/dev/null; then
     exit
 fi
 check "the file is valid JSON" python3 -I -m json.tool "$POLICY"
-check "secure DNS on: Firefox's own DNS-over-HTTPS is off (it uses the system's)" test "$(policy DNSOverHTTPS Enabled)" = false
-check "and locked, so a profile can't turn it back on" test "$(policy DNSOverHTTPS Locked)" = true
+check "no DNS in it: a locked policy would hold every Firefox, the Wi-Fi sign-in window too" not grep -q DNSOverHTTPS "$POLICY"
 check "uBlock's medium mode is still set" \
     bash -c "grep -q '3p-script block' <<<\"\$1\"" _ "$(policy 3rdparty Extensions uBlock0@raymondhill.net adminSettings)"
 check "DuckDuckGo is still the search engine" test "$(policy SearchEngines Default)" = '"DuckDuckGo"'
@@ -56,27 +50,7 @@ check "DuckDuckGo is still the search engine" test "$(policy SearchEngines Defau
 allow example.com >/dev/null
 check "an allowed site lands in the policy" \
     bash -c "grep -q 'example.com \* 3p-script noop' <<<\"\$1\"" _ "$(policy 3rdparty Extensions uBlock0@raymondhill.net adminSettings)"
-check "and the DNS setting stays" test "$(policy DNSOverHTTPS Enabled)" = false
 
-# Secure DNS off (or not installed): Firefox encrypts its own, to Quad9; strict
-# unless fallback was chosen; locked either way
-sd_off
-allow --refresh
-check "secure DNS off: Firefox's own DNS over HTTPS, to Quad9" \
-    bash -c '[ "$1" = true ] && [ "$2" = "\"https://dns.quad9.net/dns-query\"" ]' _ "$(policy DNSOverHTTPS Enabled)" "$(policy DNSOverHTTPS ProviderURL)"
-check "...strict: no fallback to plain DNS (debsway's default)" test "$(policy DNSOverHTTPS Fallback)" = false
-check "...written as status.sh's summary looks for it" grep -qF '"DNSOverHTTPS": { "Enabled": true' "$POLICY"
-check "...and locked" test "$(policy DNSOverHTTPS Locked)" = true
-echo dns=fallback >"$T/firefox.conf"
-allow --refresh
-check "...with fallback when that was chosen" test "$(policy DNSOverHTTPS Fallback)" = true
-sd_on
-allow --refresh
-check "secure DNS switched on again: off again" test "$(policy DNSOverHTTPS Enabled)" = false
-rm -f "$T/firefox.conf"
-check "secure DNS's switch writes the policy again when it is switched on or off" bash -c '
-    [ "$(sed -n "/^others_follow() {/,/^}/p" "$1" | grep -c "/usr/local/bin/ublock-allow --refresh")" = 1 ] &&
-    [ "$(grep -c "^ *others_follow$" "$1")" = 2 ]' _ "$HERE/bin/secure-dns-switch"
 check "the sandboxed Firefox asks strict or fallback (default strict), explained, and saves it" python3 -I -c '
 import sys; s = open(sys.argv[1]).read()
 assert "choose dns \"Firefox\x27s own encrypted DNS?\" \"$dns\" strict fallback" in s and "dns=strict" in s

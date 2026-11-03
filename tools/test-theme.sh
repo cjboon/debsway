@@ -163,7 +163,7 @@ check "...light: Firefox's light look" grep -q 'firefox-compact-light@mozilla.or
 check "incognito hands over the theme, dark when none was chosen" python3 -I -c '
 import sys; s = open(sys.argv[1]).read()
 assert "case $theme in light | dark) ;; *) theme=dark ;; esac" in s
-assert "\"$audio_arg\" \"$theme\" \"$@\"" in s' "$HERE/bin/incognito"
+assert "\"$audio_arg\" \"$theme\" \"$kind\" \"$@\"" in s' "$HERE/bin/incognito"
 
 # ---- the part, and the menu's line
 check "the part is in the base, after foot's and mako's" bash -c '. "$1/packages.sh"; p=" ${PARTS[*]} "; [[ $p == *" mako foot-config wallpaper theme "* ]]' _ "$HERE"

@@ -18,9 +18,9 @@ noabs=/usr/local/libexec/debsway-no-abstract-sockets
 [ -x "$noabs" ] || die "$noabs is missing. Run: bash ~/debsway/parts/incognito.sh"
 
 [ "$(id -un)" = incognito ] || die "this runs as the user incognito; use the incognito command."
-[ $# -ge 4 ] || die "usage: incognito-session RUNTIME_DIR WAYLAND_DISPLAY AUDIO THEME [URL...]"
-host_rt=$1 host_wl=$2 audio=$3 theme=$4
-shift 4
+[ $# -ge 5 ] || die "usage: incognito-session RUNTIME_DIR WAYLAND_DISPLAY AUDIO THEME normal|signin [URL...]"
+host_rt=$1 host_wl=$2 audio=$3 theme=$4 kind=$5
+shift 5
 
 # These come from the user who called us, so nothing else is accepted
 [[ $host_rt =~ ^/run/user/[0-9]+$ ]] || die "unexpected runtime folder."
@@ -28,6 +28,7 @@ shift 4
 [ -S "$host_rt/$host_wl" ] || die "can't reach the Wayland socket."
 [[ $audio == - || $audio == incognito-audio.fifo ]] || die "unexpected sound pipe name."
 [[ $theme == light || $theme == dark ]] || die "unexpected theme."
+[[ $kind == normal || $kind == signin ]] || die "unexpected window kind."
 if [ "$audio" != - ]; then
     [ -p "$host_rt/$audio" ] || audio=-
     for c in pipewire wireplumber pipewire-pulse; do
@@ -73,6 +74,33 @@ cp /usr/local/share/debsway/incognito-user.js "$base/profile/user.js"
         echo 'user_pref("extensions.activeThemeID", "firefox-compact-dark@mozilla.org");'
     fi
 } >>"$base/profile/user.js"
+
+# doh_prefs normal|signin: Firefox's own DNS, set at every start. While secure
+# DNS is on (parts/secure-dns.sh; /etc/resolv.conf says so) Firefox uses the
+# system's, which is encrypted; while it is off, its own DNS over HTTPS to
+# Quad9: strict (never plain DNS, so a hostile network can't push it back to
+# plain DNS by blocking the encrypted kind) unless fallback was chosen at the
+# sandboxed Firefox's install. The Wi-Fi sign-in window (signin) uses the
+# network's own DNS: that is what it is for. (The same in firefox-session and
+# incognito-session; a test checks.)
+doh_prefs() {
+    local mode=3
+    if [ "$1" = signin ] ||
+        { [ ! -L /etc/resolv.conf ] && grep -qsE '^# Written by debsway (parts|extras)/secure-dns\.sh' /etc/resolv.conf; }; then
+        mode=5
+    elif [ "$(sed -n 's/^dns=//p' /etc/debsway/firefox.conf 2>/dev/null | head -1)" = fallback ]; then
+        mode=2
+    fi
+    echo "user_pref(\"network.trr.mode\", $mode);"
+    echo 'user_pref("network.trr.uri", "https://dns.quad9.net/dns-query");'
+    echo 'user_pref("network.trr.custom_uri", "https://dns.quad9.net/dns-query");'
+}
+doh_prefs "$kind" >>"$base/profile/user.js"
+# The Wi-Fi sign-in window: sign-in pages are plain http (HTTPS-Only would
+# stop at a warning first)
+if [ "$kind" = signin ]; then
+    echo 'user_pref("dom.security.https_only_mode", false);' >>"$base/profile/user.js"
+fi
 
 # Its own sound server. The only sink it has writes into the pipe; there
 # are no sound cards and no microphone to reach. WirePlumber's "policy"

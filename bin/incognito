@@ -1,5 +1,5 @@
 #!/bin/bash
-# incognito [--no-audio] [URL]: written by debsway parts/incognito.sh
+# incognito [--no-audio] [--signin] [URL]: written by debsway parts/incognito.sh
 # Opens Firefox as a different, locked-down user (incognito), inside its own
 # small window system, so it shares no clipboard and no folder with you.
 # Everything it stores is kept in memory and deleted when you close it.
@@ -10,12 +10,15 @@
 # do is write sound into one pipe, which a player of yours reads and plays.
 # It never gets to your audio server, so it can't hear your microphone or
 # your other programs.
+# --signin: the Wi-Fi sign-in window (bin/wifi-signin): it uses the network's
+# own DNS, not Firefox's encrypted DNS, so a sign-in page can load.
 set -euo pipefail
 
 die() { printf 'incognito: %s\n' "$*" >&2; exit 1; }
 
-audio=true
+audio=true kind=normal
 if [ "${1:-}" = --no-audio ]; then audio=false; shift; fi
+if [ "${1:-}" = --signin ]; then kind=signin; shift; fi
 
 [ "$(id -u)" -ne 0 ] || die "run it as your normal user, not root."
 [ -n "${WAYLAND_DISPLAY:-}" ] || die "it needs your sway session; start sway first."
@@ -87,5 +90,5 @@ rc=0
 # the theme (bin/theme): just the word light or dark
 theme=$(head -c 16 "${XDG_CONFIG_HOME:-$HOME/.config}/debsway/theme" 2>/dev/null || true)
 case $theme in light | dark) ;; *) theme=dark ;; esac
-sudo -n -u incognito /usr/local/libexec/incognito-session "$rt" "${sock##*/}" "$audio_arg" "$theme" "$@" || rc=$?
+sudo -n -u incognito /usr/local/libexec/incognito-session "$rt" "${sock##*/}" "$audio_arg" "$theme" "$kind" "$@" || rc=$?
 exit "$rc"
