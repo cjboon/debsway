@@ -4,6 +4,7 @@
 # the allowed sites, and turns Firefox's own DNS-over-HTTPS off for good. Uses a
 # temp folder for /etc/firefox-esr and Firefox's distribution folder, so it
 # changes nothing. Run by test.sh, or:  bash tools/test-firefox-policy.sh
+# shellcheck disable=SC2016  # the inner shells and Python expand their own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 
 T=$(mktemp -d)
@@ -55,5 +56,39 @@ printf '{"policies": {}}\n' >"$POLICY"
 rm -f "$T/dist/.debsway-written"
 check "someone else's policies.json is refused" bash -c "! bash '$HERE/bin/ublock-allow' --refresh"
 check "and not changed" grep -qx '{"policies": {}}' "$POLICY"
+
+# uBlock's mode, chosen at the sandboxed Firefox's install: standard or medium
+# (from a clean folder: the check above left someone else's policies.json)
+rm -rf "${T:?}/dist" "${T:?}/etc"
+mkdir -p "$T/etc"
+rules() { python3 -I -c 'import json,sys; p=json.load(open(sys.argv[1]))["policies"]["3rdparty"]["Extensions"]["uBlock0@raymondhill.net"]["adminSettings"]; print(json.loads(p)["dynamicFilteringString"])' "$POLICY"; }
+rm -f "$T/etc/debsway-ublock-mode"
+allow --refresh
+check "no mode chosen (debsway before the choice): medium, other sites' scripts blocked" grep -qx '\* \* 3p-script block' <<<"$(rules)"
+allow --mode standard >/dev/null
+check "--mode standard: other sites' scripts and frames are no longer blocked" bash -c '! grep -q "3p-script block\|3p-frame block" <<<"$1"' _ "$(rules)"
+check "...the filter lists still work (only the blocking rules go)" grep -q 'behind-the-scene \* \* noop' <<<"$(rules)"
+check "...and --list says so" grep -qx 'uBlock Origin: standard mode' <<<"$(allow --list)"
+allow example.org >/dev/null
+check "...a site allowed then stays allowed (it counts once medium mode is back)" grep -qx 'example.org \* 3p-script noop' <<<"$(rules)"
+allow --mode medium >/dev/null
+check "--mode medium: blocked again, the allowed site still let through" bash -c 'grep -qx "\* \* 3p-script block" <<<"$1" && grep -qx "example.org \* 3p-script noop" <<<"$1"' _ "$(rules)"
+check "a mode that isn't standard or medium is refused" bash -c '! "$@"' _ bash "$HERE/bin/ublock-allow" --mode loose
+check "the sandboxed Firefox explains both modes and asks which (default medium), set after the hardening put ublock-allow in place" python3 -I -c '
+import sys; s = open(sys.argv[1]).read()
+q = "choose ublock \"Which way should uBlock Origin work?\" \"$ublock\" medium standard"
+assert q in s and "ublock=medium" in s
+assert "  medium    blocks ads" in s and "  standard  blocks ads" in s and "debsway\x27s default" in s
+assert s.index("parts/firefox-hardening.sh\"") < s.index("ublock-allow --mode \"$ublock\"")
+assert s.index(q) < s.index("ublock-allow --mode \"$ublock\"")
+' "$HERE/extras/firefox-sandbox.sh"
+
+# choose (lib/core.sh): one of the options, by its first letter or whole word
+# (the answer is the last line: a wrong one first prints a hint)
+pick() { printf '%s\n' "$@" >"$T/answers"; DEBSWAY_TEST_ANSWERS="$T/answers" bash -c '. "$1/lib.sh"; choose v "Which?" standard standard medium; echo "$v"' _ "$HERE" 2>/dev/null | tail -1; }
+check "choose: m is medium, a whole word too, Enter the default" \
+    bash -c '[ "$1" = medium ] && [ "$2" = medium ] && [ "$3" = standard ]' _ "$(pick m)" "$(pick Medium)" "$(pick "")"
+check "...something else asks again" test "$(pick x s)" = standard
+check "...and with no answer at all, the default" test "$(pick)" = standard
 
 [ "$fails" -eq 0 ]

@@ -326,10 +326,13 @@ about incognito; your profiles stay).
 
 `extras/firefox-sandbox.sh` runs `parts/firefox-hardening.sh`, which sets these for every Firefox profile:
 
-- **uBlock Origin in "medium mode"**: scripts and frames from other
-  sites are blocked everywhere. That's where most malicious ads and
-  drive-by attacks come from, and most trackers. Some sites break: allow
-  one with `ublock-allow example.com` (then restart Firefox).
+- **uBlock Origin, in the mode you choose at install**: standard blocks
+  ads, trackers and known malware sites with its filter lists, and sites
+  work. "Medium mode", the default, also blocks scripts and frames from
+  other sites everywhere. That's where most malicious ads and drive-by
+  attacks come from, and most trackers. Some sites break then: allow one
+  with `ublock-allow example.com` (then restart Firefox).
+  `ublock-allow --mode standard|medium` switches later.
   `ublock-allow --list` and `ublock-allow --remove example.com` manage
   the list. Changes made by clicking in uBlock's popup work too, but
   only until Firefox restarts, because uBlock re-reads debsway's rules at
@@ -387,7 +390,7 @@ https://example.org/` opens a page. What `parts/incognito.sh` sets up:
   the CPU decodes the video: 720p is comfortable, 1080p may stutter, and
   sound can drift a fraction of a second behind the picture. Protected
   (DRM) video doesn't play. `incognito --no-audio` leaves the pipe out.
-  If uBlock's medium mode breaks a player, `ublock-allow site.com` applies
+  If uBlock's medium mode (if you chose it) breaks a player, `ublock-allow site.com` applies
   here too.
 - **Off your network**: a firewall rule that matches only the `incognito`
   user (`data/incognito-firewall.nft`, loaded at every boot) turns away its

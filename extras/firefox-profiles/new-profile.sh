@@ -8,7 +8,7 @@
 # The window shows only the page: no tabs, address bar or bookmarks bar.
 #
 #   bash new-profile.sh                       asks for the name and address
-#   bash new-profile.sh NAME URL [--fast-js] [--show-toolbars]
+#   bash new-profile.sh NAME URL [--fast-js] [--show-toolbars] [--no-sound]
 #                                             e.g. bash new-profile.sh bank https://mybank.example
 #   bash new-profile.sh --remove NAME         removes firefox-NAME; asks whether to delete the profile and its user
 #   bash new-profile.sh --manual              prints the steps to make one by hand
@@ -16,6 +16,8 @@
 # --fast-js turns the JavaScript JIT back on for this profile (debsway's
 # parts/firefox-hardening.sh turns it off everywhere), for heavy web apps.
 # --show-toolbars keeps Firefox's tabs and address bar for this profile.
+# --no-sound: no sound from it (a bank needs none; a video site does).
+# Run without NAME and URL, it asks, fast JavaScript and sound included.
 . "$(dirname -- "${BASH_SOURCE[0]}")/../../lib.sh"
 . "$DEBSWAY_DIR/lib/firefox-sandbox.sh"
 . "$DEBSWAY_DIR/lib/firefox-profiles.sh"
@@ -32,7 +34,7 @@ if [ "${1:-}" = --remove ]; then
     exit
 fi
 
-fast=no toolbars=hidden
+fast=no toolbars=hidden sound=yes
 if [ $# -ge 2 ]; then
     name=$1 url=$2
     shift 2
@@ -40,19 +42,26 @@ if [ $# -ge 2 ]; then
         case $opt in
             --fast-js) fast=yes ;;
             --show-toolbars) toolbars=shown ;;
-            *) die "Usage: bash new-profile.sh NAME URL [--fast-js] [--show-toolbars]" ;;
+            --no-sound) sound=no ;;
+            *) die "Usage: bash new-profile.sh NAME URL [--fast-js] [--show-toolbars] [--no-sound]" ;;
         esac
     done
 else
     note "A name for the profile: lowercase letters, digits and dashes, e.g. bank."
     tty_read name "    name> "
     tty_read url "    address (e.g. https://mybank.example)> "
-    if ask "Fast JavaScript for this site? Only for heavy web apps (mail, office, chat) that feel slow" n; then
+    note "Fast JavaScript makes heavy sites quicker (web mail, office, chat), but the"
+    note "part that does it (the JIT) is where many browser attacks happen. Off, the"
+    note "site still works, just slower: keep it off unless this site feels sluggish."
+    if ask "Fast JavaScript for this site?" n; then
         fast=yes
+    fi
+    if ! ask "Sound from this site (videos, music)? It can't hear your microphone either way." y; then
+        sound=no
     fi
 fi
 valid_name "$name" || die "\"$name\" isn't a usable name: lowercase letters, digits and dashes, starting with a letter, at most 28 long (and not esr, restart-check or session)."
 [[ $url == *:* ]] || url="https://$url"
 valid_url "$url" || die "\"$url\" doesn't look like a web address."
 
-make_profile "$name" "$url" "$fast" "$toolbars"
+make_profile "$name" "$url" "$fast" "$toolbars" "$sound"

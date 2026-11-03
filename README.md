@@ -12,7 +12,7 @@ or settings app: one compositor and plain text configs.
 
 What's different from a dotfiles repo:
 
-- **Hardened Firefox** (an extra you pick): uBlock Origin in medium mode, HTTPS-Only,
+- **Hardened Firefox** (an extra you pick): uBlock Origin (standard or medium mode, your choice), HTTPS-Only,
   JIT off, DuckDuckGo, and `firefox` runs it as its own locked-down user (shared
   clipboard and `~/Downloads`, nothing else of yours). `incognito` opens a throwaway Firefox as a
   separate locked-down user, in memory, on a restricted Wayland socket,
@@ -358,8 +358,8 @@ main ones:
 
 ## Troubleshooting
 
-- **A site doesn't work in Firefox**: uBlock's medium mode is probably
-  blocking a script it needs. `ublock-allow thatsite.com`, then restart
+- **A site doesn't work in Firefox**: if you chose uBlock's medium mode, it is
+  probably blocking a script the site needs (`ublock-allow --list` says the mode). `ublock-allow thatsite.com`, then restart
   Firefox. To try it first: in uBlock's popup, make the red box next to
   "3rd-party scripts" grey and reload the page (that lasts until Firefox
   restarts).

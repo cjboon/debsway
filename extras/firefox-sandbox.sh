@@ -15,9 +15,15 @@
 #    computer's own services (data/firefox-firewall.nft); how to lift it for a
 #    while is in that file. DNS stays open.
 #  - Your user may run exactly one thing as firefox (a rule in /etc/sudoers.d).
-#  - It becomes your default browser, so links from other programs (a terminal,
-#    a file manager...) open in it, not in firefox-esr. firefox-esr is the same
-#    Firefox run as you, with everything you can reach, and stays installed.
+#  - It asks four things (remembered, in /etc/debsway/firefox.conf, which only
+#    root can write; asked again when you run this again in a terminal):
+#    fast JavaScript (the JIT; default no: it is where many browser attacks
+#    happen), sound (default yes), whether it is your default browser, so
+#    links from other programs open in it (default yes), and uBlock Origin's
+#    mode: medium (default: other sites' scripts blocked, ublock-allow lets a
+#    site through) or standard (ads, trackers and malware only). firefox-esr is the
+#    same Firefox run as you, with everything you can reach, and stays
+#    installed. No video calls: it has no microphone or camera, so WebRTC is off.
 #  - Firefox profiles made with firefox-profiles/new-profile.sh each get a user
 #    of their own like this one (fx-NAME).
 #  - It sets up Firefox ESR the debsway way for every profile (video codecs,
@@ -63,6 +69,7 @@ if [ "${1:-}" = --remove ]; then
     sudo nft delete table inet debsway_firefox 2>/dev/null || true
     [ -f "$BIN/media-sandbox" ] || [ -x /usr/local/bin/incognito ] || remove_bin wayland-restrict
     fx_disallow_session "$NAME"
+    sudo rm -f /etc/debsway/firefox.conf
     sudo rm -f "$LIMITS" "$CMD" "$SESSION" "$PREFS" "$FIREWALL" "$UNIT"
     remove_no_abstract
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
@@ -109,6 +116,38 @@ if is_installed debsway-firefox; then
     note "Took over Firefox ESR from debsway's old Firefox extra."
 fi
 
+say "Your choices (asked again whenever you run this in a terminal)"
+CHOICES=/etc/debsway/firefox.conf
+chosen() { sed -n "s/^$1=//p" "$CHOICES" 2>/dev/null | head -1; }
+# last time's answers are the defaults (with no terminal to ask on: kept)
+fast=n sound=y links=y ublock=medium
+[ "$(chosen fast_js)" != yes ] || fast=y
+[ "$(chosen ublock)" != standard ] || ublock=standard
+[ "$(chosen sound)" != no ] || sound=n
+[ "$(chosen default_browser)" != no ] || links=n
+note "Fast JavaScript makes heavy sites quicker, but the part that does it (the JIT)"
+note "is where many browser attacks happen; off, sites still work, just slower."
+if ask "Turn on fast JavaScript?" "$fast"; then fast=yes; else fast=no; fi
+if ask "Sound in Firefox (videos, music)? It can't hear your microphone either way." "$sound"; then sound=yes; else sound=no; fi
+if ask "Open links from other programs in it (your default browser)?" "$links"; then links=yes; else links=no; fi
+note "uBlock Origin blocks ads in every Firefox here. It can work two ways:"
+note "  medium    blocks ads, trackers and known malware sites, and also the"
+note "            scripts and frames a site loads from other sites, which is where"
+note "            most malicious ads come from. Safer, but many sites break until"
+note "            you allow them, one by one: ublock-allow example.com (then"
+note "            restart Firefox). debsway's default."
+note "  standard  blocks ads, trackers and known malware sites; the rest of a site"
+note "            runs, so sites work as you expect. Easier for people who'd"
+note "            rather not allow sites."
+choose ublock "Which way should uBlock Origin work?" "$ublock" medium standard
+sudo install -d -o root -g root -m 0755 "${CHOICES%/*}"
+printf '%s\n' '# Written by debsway extras/firefox-sandbox.sh: run it again to change these' \
+    "fast_js=$fast" "sound=$sound" "default_browser=$links" "ublock=$ublock" | sudo tee "$CHOICES" >/dev/null
+sudo chmod 0644 "$CHOICES"
+note "Fast JavaScript: $fast. Sound: $sound. Default browser: $links. uBlock: $ublock mode."
+# uBlock's mode, for every Firefox profile (ublock-allow came with the hardening above)
+sudo /usr/local/bin/ublock-allow --mode "$ublock" >/dev/null || warn "Couldn't set uBlock's $ublock mode: ublock-allow --mode $ublock"
+
 say "The $NAME user"
 # No password to guess, no login shell, a home only it can enter; in the group
 # debsway-fx that the firewall rule matches (profiles with a user of their own are too)
@@ -153,8 +192,13 @@ say "Default browser"
 # Links from other programs go to xdg-open, which asks this list. Only your user's
 # settings change; firefox-esr stays installed and can still be started by name.
 install -D -m 0644 "$DEBSWAY_DIR/data/debsway-firefox.desktop" "$DESKTOP"
-set_default_app debsway-firefox.desktop x-scheme-handler/http x-scheme-handler/https
-note "Links from other programs now open in the sandboxed Firefox."
+if [ "$links" = yes ]; then
+    set_default_app debsway-firefox.desktop x-scheme-handler/http x-scheme-handler/https
+    note "Links from other programs now open in the sandboxed Firefox."
+else
+    unset_default_app debsway-firefox.desktop
+    note "Links from other programs open as before (not in the sandboxed Firefox)."
+fi
 
 say "incognito"
 note "incognito opens a throwaway Firefox as a separate, locked-down user, with"

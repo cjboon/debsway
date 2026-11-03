@@ -138,6 +138,18 @@ cp /usr/local/share/debsway/firefox-user.js "$profile/user.js"
     echo "user_pref(\"browser.download.dir\", \"$downloads\");"
     echo 'user_pref("browser.download.useDownloadDir", true);'
 } >>"$profile/user.js"
+# fast JavaScript: the JIT back on (parts/firefox-hardening.sh turns it off)
+jit_on() {
+    echo 'user_pref("javascript.options.ion", true);'
+    echo 'user_pref("javascript.options.baselinejit", true);'
+    echo 'user_pref("javascript.options.native_regexp", true);'
+    echo 'user_pref("javascript.options.asmjs", true);'
+}
+# The main Firefox: the choices made at its install, in a file only root can
+# write (/etc/debsway/firefox.conf)
+if [ -z "$tag" ] && [ "$(sed -n 's/^fast_js=//p' /etc/debsway/firefox.conf 2>/dev/null | head -1)" = yes ]; then
+    jit_on >>"$profile/user.js"
+fi
 # A profile with its own user: its address and its JavaScript choice are in a file
 # only root can write (/etc/debsway/firefox-profiles/NAME.conf)
 if [ -n "$tag" ]; then
@@ -151,12 +163,7 @@ if [ -n "$tag" ]; then
         echo "// The profile $tag: opens $url on start; keeps its cookies and logins."
         echo 'user_pref("browser.startup.page", 1);'
         echo "user_pref(\"browser.startup.homepage\", \"$url\");"
-        if [ "$fast" = yes ]; then
-            echo 'user_pref("javascript.options.ion", true);'
-            echo 'user_pref("javascript.options.baselinejit", true);'
-            echo 'user_pref("javascript.options.native_regexp", true);'
-            echo 'user_pref("javascript.options.asmjs", true);'
-        fi
+        if [ "$fast" = yes ]; then jit_on; fi
         if [ "$toolbars" != shown ]; then
             # Only the page: no tabs, address bar or bookmarks (userChrome.css
             # below). Links open in the same tab, so nothing piles up out of sight.

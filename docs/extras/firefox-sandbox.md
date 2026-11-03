@@ -23,7 +23,14 @@ Wayland socket. A firewall rule on its group, `debsway-fx`
 computer's own services; DNS stays open. Your user may run exactly one thing
 as it, the session script `bin/firefox-session`, through a rule in
 `/etc/sudoers.d`, and a limit on processes keeps a runaway page from filling
-the machine. It becomes your default browser. It also sets up Firefox's
+the machine. Its install asks four things, remembered in
+`/etc/debsway/firefox.conf` (which only root can write) and asked again when
+you run it again in a terminal: fast JavaScript (the JIT; default no, since
+it is where many browser attacks happen), sound (default yes), whether it is
+your default browser, so links from other programs open in it (default yes),
+and uBlock Origin's mode: medium (default: other sites' scripts blocked too;
+you allow sites with `ublock-allow`) or standard (ads, trackers and malware
+sites blocked, sites work). It also sets up Firefox's
 hardening and `incognito` ([firefox.md](firefox.md)), and the profiles made
 with `extras/firefox-profiles/new-profile.sh` each get a user like it.
 
@@ -31,8 +38,8 @@ with `extras/firefox-profiles/new-profile.sh` each get a user like it.
 
 - What lands in `~/Downloads` comes from the web: treat it as untrusted.
 - The clipboard is shared while its window has focus.
-- No WebRTC, here and in the profiles: video calls and browser-to-browser file
-  transfers don't work. Use `firefox-regular` for those.
+- No WebRTC and no microphone or camera, here and in the profiles: video calls
+  and browser-to-browser file transfers don't work.
 - It shares your kernel: a kernel bug could let a page out of its user.
 - It's your network and your address; and `firefox-esr` runs as you, without any of this.
 
@@ -64,6 +71,10 @@ sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/no-abstract-sockets /usr/
 sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/firefox /usr/local/bin/firefox
 sudo install -o root -g root -m 0755 @DEBSWAY_DIR@/bin/firefox-session /usr/local/libexec/firefox-session
 sudo install -o root -g root -m 0644 @DEBSWAY_DIR@/data/firefox-user.js /usr/local/share/debsway/firefox-user.js
+# Your choices: fast JavaScript (yes/no), sound, default browser; only root can change them
+sudo install -d -o root -g root -m 0755 /etc/debsway
+printf 'fast_js=no\nsound=yes\ndefault_browser=yes\nublock=medium\n' | sudo tee /etc/debsway/firefox.conf
+sudo /usr/local/bin/ublock-allow --mode medium
 
 # Your user may run the session script, and nothing else, as firefox. visudo
 # checks the rule first: never put a rule in /etc/sudoers.d it hasn't passed.
@@ -103,7 +114,7 @@ sudo rm /etc/systemd/system/debsway-firefox-firewall.service /etc/debsway/firefo
 sudo systemctl daemon-reload
 # The sudo rule, the limits, the command, its session script and prefs
 sudo rm /etc/sudoers.d/debsway-firefox /etc/security/limits.d/50-debsway-firefox.conf
-sudo rm /usr/local/bin/firefox /usr/local/libexec/firefox-session /usr/local/share/debsway/firefox-user.js
+sudo rm /usr/local/bin/firefox /usr/local/libexec/firefox-session /usr/local/share/debsway/firefox-user.js /etc/debsway/firefox.conf
 sudo rm -rf /dev/shm/firefox-run
 # Links open in firefox-esr again
 sed -i '/=debsway-firefox\.desktop$/d' ~/.config/mimeapps.list

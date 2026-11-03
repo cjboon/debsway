@@ -2,20 +2,27 @@
 # ublock-allow: sites allowed to load scripts and frames from other sites.
 # Written by debsway parts/firefox-hardening.sh.
 #
-# uBlock Origin runs in "medium mode" for every Firefox profile: scripts
-# and frames from other sites (ad networks, trackers, most malicious ads)
-# are blocked everywhere. When a site breaks because of it, allow that
-# site here. uBlock reads these rules at every start, so clicks in its
-# popup only last until Firefox restarts; this list stays.
+# uBlock Origin runs in one of two modes for every Firefox profile, chosen
+# when the sandboxed Firefox is installed (extras/firefox-sandbox.sh):
+#   standard  its filter lists block ads, trackers and known malware sites;
+#             the rest of a site runs, so sites work
+#   medium    besides, scripts and frames from other sites (ad networks,
+#             trackers, most malicious ads) are blocked everywhere; when a
+#             site breaks because of it, allow that site here
+# uBlock reads these rules at every start, so clicks in its popup only last
+# until Firefox restarts; this list stays.
 #
 #   ublock-allow example.com          allow example.com (and its subdomains)
 #   ublock-allow --remove example.com
-#   ublock-allow --list
+#   ublock-allow --list               the mode, and the sites allowed
+#   ublock-allow --mode standard|medium
 # Restart Firefox afterwards.
 set -euo pipefail
 
 ETC=${DEBSWAY_FIREFOX_ETC:-/etc/firefox-esr}
 LIST="$ETC/debsway-ublock-allow"
+# standard or medium; no file: medium, as debsway was before the choice
+MODE_FILE="$ETC/debsway-ublock-mode"
 # Debian's Firefox only finds policies.json in its install folder (it looks
 # in /etc/firefox-esr/policies too, but the Debian build never reads it)
 DIST=${DEBSWAY_FIREFOX_DIST:-/usr/share/firefox-esr/distribution}
@@ -39,6 +46,7 @@ site_of() {
 }
 
 sites() { [ -f "$LIST" ] && grep -v '^#' "$LIST" | grep . || true; }
+mode() { if [ "$(head -c 16 "$MODE_FILE" 2>/dev/null)" = standard ]; then echo standard; else echo medium; fi; }
 
 # The policy: uBlock's own default rules, block other sites' scripts and
 # frames everywhere, then the allowed sites. uBlock wants it as a JSON
@@ -48,7 +56,9 @@ write_policy() {
     rules=('behind-the-scene * * noop' 'behind-the-scene * image noop'
         'behind-the-scene * 3p noop' 'behind-the-scene * inline-script noop'
         'behind-the-scene * 1p-script noop' 'behind-the-scene * 3p-script noop'
-        'behind-the-scene * 3p-frame noop' '* * 3p-script block' '* * 3p-frame block')
+        'behind-the-scene * 3p-frame noop')
+    # medium mode: other sites' scripts and frames blocked everywhere
+    [ "$(mode)" != medium ] || rules+=('* * 3p-script block' '* * 3p-frame block')
     while read -r s; do
         [ -n "$s" ] && rules+=("$s * 3p-script noop" "$s * 3p-frame noop")
     done < <(sites)
@@ -89,15 +99,22 @@ policy_is_ours() {
 }
 
 case "${1:-}" in
-    --remove | --refresh) policy_is_ours ;;
+    --remove | --refresh | --mode) policy_is_ours ;;
     --list | "" | -*) ;;
     *) policy_is_ours ;;
 esac
 
 case "${1:-}" in
     --list | "")
+        echo "uBlock Origin: $(mode) mode"
         if [ -n "$(sites)" ]; then sites; else echo "(no sites allowed yet)"; fi
-        [ -n "${1:-}" ] || echo "Usage: ublock-allow SITE | --remove SITE | --list"
+        [ -n "${1:-}" ] || echo "Usage: ublock-allow SITE | --remove SITE | --list | --mode standard|medium"
+        ;;
+    --mode)
+        case ${2:-} in standard | medium) ;; *) die "Usage: ublock-allow --mode standard|medium" ;; esac
+        echo "$2" | $SUDO tee "$MODE_FILE" >/dev/null
+        write_policy
+        echo "uBlock Origin: $2 mode. Restart Firefox for it to take effect."
         ;;
     --remove)
         [ $# -eq 2 ] || die "Usage: ublock-allow --remove SITE"
@@ -112,7 +129,7 @@ case "${1:-}" in
         write_policy
         ;;
     -*)
-        die "Usage: ublock-allow SITE | --remove SITE | --list"
+        die "Usage: ublock-allow SITE | --remove SITE | --list | --mode standard|medium"
         ;;
     *)
         site=$(site_of "$1")
@@ -121,5 +138,6 @@ case "${1:-}" in
         $SUDO mv "$LIST.new" "$LIST"
         write_policy
         echo "Allowed $site to load scripts and frames from other sites. Restart Firefox for it to take effect."
+        [ "$(mode)" = medium ] || echo "(uBlock is in standard mode, which doesn't block them anyway; this counts in medium mode.)"
         ;;
 esac

@@ -87,6 +87,12 @@ check "a profile shows only the page unless asked (toolbars=hidden)" grep -qx 't
 run x x 'make_profile mail https://mail.example/ no shown' >/dev/null 2>&1
 check "...--show-toolbars keeps them (toolbars=shown)" grep -qx 'toolbars=shown' "$T/files/mail.conf"
 check "a toolbars value that isn't hidden or shown is refused" not run x x 'make_profile odd https://x.example/ no sideways'
+check "a profile has sound unless it says otherwise (sound=yes)" grep -qx 'sound=yes' "$T/files/mail.conf"
+run x x 'make_profile quiet https://quiet.example/ no hidden no' >/dev/null 2>&1
+check "...--no-sound writes sound=no, in the file only root can write" grep -qx 'sound=no' "$T/files/quiet.conf"
+check "...and a sound value that isn't yes or no is refused" not run x x 'make_profile loud https://x.example/ no hidden maybe'
+check "new-profile.sh takes --no-sound, and asks about sound when run without a name" \
+    bash -c 'grep -q -- "--no-sound) sound=no" "$1" && grep -q "Sound from this site" "$1" && grep -q "make_profile \"\$name\" \"\$url\" \"\$fast\" \"\$toolbars\" \"\$sound\"" "$1"' _ "$HERE/extras/firefox-profiles/new-profile.sh"
 check "new-profile.sh takes --show-toolbars" grep -q -- '--show-toolbars) toolbars=shown' "$HERE/extras/firefox-profiles/new-profile.sh"
 # the session hides tabs, address bar and bookmarks for a profile, unless toolbars=shown
 FS=$HERE/bin/firefox-session

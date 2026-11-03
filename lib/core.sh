@@ -68,6 +68,30 @@ ask() {
     [[ ${reply:-$def} =~ ^[Yy] ]]
 }
 
+# choose VAR "Question" DEFAULT OPTION...: one of the OPTIONs into VAR, typed
+# in full or by its first letter; Enter (or no terminal to ask on) gives
+# DEFAULT. Anything else asks again. The OPTIONs start with different letters.
+choose() {
+    local _var=$1 _q=$2 _def=$3 _reply _o _hint=""
+    shift 3
+    for _o; do _hint+="${_hint:+ / }$_o"; done
+    while :; do
+        tty_read _reply "    $_q $_hint (Enter: $_def) "
+        _reply=${_reply,,}
+        if [ -z "$_reply" ]; then
+            printf -v "$_var" '%s' "$_def"
+            return
+        fi
+        for _o; do
+            if [ "$_reply" = "$_o" ] || [ "$_reply" = "${_o:0:1}" ]; then
+                printf -v "$_var" '%s' "$_o"
+                return
+            fi
+        done
+        note "Type one of: $_hint"
+    done
+}
+
 # auto_or_ask VARNAME "Question?" [y|n]: for prompts install-base.sh needs to
 # answer for you when it installs its default apps unattended. If VARNAME is
 # set to yes/no (1/y/yes or 0/n/no) that is the answer, with no prompt;

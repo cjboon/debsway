@@ -120,6 +120,52 @@ check "the session accepts the users firefox and fx-NAME only" python3 -I -c '
 s = open(__import__("sys").argv[1]).read()
 assert "    firefox) tag= ;;" in s and "    fx-*)" in s and "this runs as the user firefox (or fx-NAME)" in s
 ' "$HERE/bin/firefox-session"
+# the choices made at install (/etc/debsway/firefox.conf), run with a copy of it
+conf_lines() { # FILE PATTERN: the lines of FILE from PATTERN up to the profiles' part, reading $T/fx.conf instead
+    sed -n "/$2/,/^# A profile with its own user/p" "$1" | sed '$d' | sed "s|/etc/debsway/firefox.conf|$T/fx.conf|g"
+}
+printf 'fast_js=yes\nsound=no\ndefault_browser=no\n' >"$T/fx.conf"
+mkdir -p "$T/prof"
+: >"$T/prof/user.js"
+( profile=$T/prof tag=; eval "$(conf_lines "$HERE/bin/firefox-session" '^jit_on() {')" ) 2>/dev/null
+check "fast JavaScript chosen: the main Firefox gets the JIT back" grep -qx 'user_pref("javascript.options.ion", true);' "$T/prof/user.js"
+: >"$T/prof/user.js"
+printf 'fast_js=no\n' >"$T/fx.conf"
+( profile=$T/prof tag=; eval "$(conf_lines "$HERE/bin/firefox-session" '^jit_on() {')" ) 2>/dev/null
+check "...not chosen: it stays off" test ! -s "$T/prof/user.js"
+printf 'fast_js=yes\n' >"$T/fx.conf"
+( profile=$T/prof tag=-bank; eval "$(conf_lines "$HERE/bin/firefox-session" '^jit_on() {')" ) 2>/dev/null
+check "...and the main Firefox's choice isn't a profile's (it has its own)" test ! -s "$T/prof/user.js"
+# sound: the main Firefox's choice from its file, a profile's from its own
+sound_of() { # NAME (empty: the main Firefox): what the firefox command decides
+    local name=$1 audio=true
+    eval "$(sed -n '/^# sound off when that was the choice/,/|| audio=false$/p' "$HERE/bin/firefox" |
+        sed "s|/etc/debsway/firefox.conf|$T/fx.conf|; s|/etc/debsway/firefox-profiles/|$T/prof-|")"
+    echo "$audio"
+}
+printf 'sound=no\n' >"$T/fx.conf"
+printf 'sound=yes\n' >"$T/prof-bank.conf"
+check "sound chosen off: the main Firefox starts without sound" test "$(sound_of '')" = false
+check "...but a profile follows its own choice, not the main one's" test "$(sound_of bank)" = true
+printf 'sound=yes\n' >"$T/fx.conf"
+printf 'sound=no\n' >"$T/prof-bank.conf"
+check "...a profile with sound off is silent, the main Firefox not" bash -c '[ "$1" = false ] && [ "$2" = true ]' _ "$(sound_of bank)" "$(sound_of '')"
+rm -f "$T/prof-bank.conf"
+check "...never asked (no file): with sound" test "$(sound_of bank)" = true
+check "the install asks about fast JavaScript (default no), sound and links (default yes), last answers first" python3 -I -c '
+import sys; s = open(sys.argv[1]).read()
+assert "fast=n sound=y links=y" in s
+for q in ("Turn on fast JavaScript?", "Sound in Firefox", "Open links from other programs in it"):
+    assert q in s, q
+assert s.index("chosen fast_js") < s.index("Turn on fast JavaScript?")
+' "$HERE/extras/firefox-sandbox.sh"
+check "...writes the answers where only root can change them" grep -q 'sudo tee "$CHOICES"' "$HERE/extras/firefox-sandbox.sh"
+check "...links not wanted: it stops being the default browser" python3 -I -c '
+import sys; s = open(sys.argv[1]).read(); d = s.index("say \"Default browser\"")
+b = s[d:s.index("say \"incognito\"", d)]
+assert "if [ \"$links\" = yes ]; then" in b and "unset_default_app debsway-firefox.desktop" in b
+' "$HERE/extras/firefox-sandbox.sh"
+check "...and --remove takes the answers away" grep -q 'sudo rm -f /etc/debsway/firefox.conf' "$HERE/extras/firefox-sandbox.sh"
 check "a profile's settings come from the file only root can write" grep -q '/etc/debsway/firefox-profiles/\$tag.conf' "$HERE/bin/firefox-session"
 check "the address in it is checked before it is used" grep -q "isn't a plain web address" "$HERE/bin/firefox-session"
 check "the session's own checks come before it looks for the Landlock wrapper" python3 -I -c '

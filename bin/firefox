@@ -37,6 +37,10 @@ while [ $# -gt 0 ]; do
 done
 # user, lock, socket and sound pipe names: "firefox" alone, or one set per profile
 if [ -z "$name" ]; then user=firefox tag=; else user=fx-$name tag=-$name; fi
+# sound off when that was the choice: at the install for the main Firefox
+# (/etc/debsway/firefox.conf), at new-profile.sh for a profile (its own file)
+if [ -z "$name" ]; then choices=/etc/debsway/firefox.conf; else choices=/etc/debsway/firefox-profiles/$name.conf; fi
+[ "$(sed -n 's/^sound=//p' "$choices" 2>/dev/null | head -1)" != no ] || audio=false
 
 [ "$(id -u)" -ne 0 ] || die "run it as your normal user, not root."
 [ -n "${WAYLAND_DISPLAY:-}" ] || die "it needs your sway session; start sway first."

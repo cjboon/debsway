@@ -13,9 +13,10 @@ incognito [URL]               a throwaway Firefox that keeps nothing (incognito 
 ```
 
 The sandboxed Firefox sets up Firefox ESR the debsway way for every profile
-(`parts/firefox-hardening.sh`): uBlock Origin from Debian in medium mode, so
-scripts and frames from other sites are blocked, which is where most malicious
-ads come from; the JavaScript JIT off, which most serious Firefox exploits
+(`parts/firefox-hardening.sh`): uBlock Origin from Debian, in the mode chosen
+at install: standard (ads, trackers and known malware sites blocked) or medium
+(scripts and frames from other sites blocked too, which is where most malicious
+ads come from); the JavaScript JIT off, which most serious Firefox exploits
 target; HTTPS-Only Mode; Firefox's own DNS over HTTPS off; a blank New Tab;
 and a notice when Firefox was updated while running and needs a restart. The
 prefs are `data/firefox-hardening.js`, the policies come from
@@ -29,7 +30,7 @@ can't hear your microphone, and a firewall rule on that user
 
 ## LIMITS
 
-- uBlock's medium mode breaks some sites until you allow them; the JIT being off makes heavy sites slower.
+- uBlock's medium mode, if chosen, breaks some sites until you allow them; the JIT being off makes heavy sites slower.
 - `incognito` is still your network and your address: use Tor Browser or a VPN for that.
 - `incognito` has no WebRTC: video calls and browser-to-browser file transfers don't work there.
 - Any window, `incognito` included, can be captured by screenshots.
@@ -43,10 +44,10 @@ can't hear your microphone, and a firewall rule on that user
 sudo apt install --no-install-recommends firefox-esr webext-ublock-origin-firefox libnotify-bin
 # The default prefs for every profile (Firefox reads /etc/firefox-esr/*.js)
 sudo install -m 0644 @DEBSWAY_DIR@/data/firefox-hardening.js /etc/firefox-esr/debsway-hardening.js
-# uBlock Origin in medium mode, DNS over HTTPS off: ublock-allow writes
-# Firefox's policies.json, and adds sites you allow later
+# uBlock Origin (medium mode, or standard), DNS over HTTPS off: ublock-allow
+# writes Firefox's policies.json, and adds sites you allow later
 sudo install -m 0755 @DEBSWAY_DIR@/bin/ublock-allow /usr/local/bin/ublock-allow
-sudo /usr/local/bin/ublock-allow --refresh
+sudo /usr/local/bin/ublock-allow --mode medium
 # The restart notice: a check every 10 minutes, as your user
 install -D -m 0755 @DEBSWAY_DIR@/bin/firefox-restart-check ~/.local/bin/firefox-restart-check
 mkdir -p ~/.config/systemd/user

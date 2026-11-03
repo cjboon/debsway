@@ -237,8 +237,12 @@ With the extras:
 
 ## Trade-offs it makes
 
-- **Some sites break** with uBlock's medium mode. Allow one with
-  `ublock-allow example.com`, then restart Firefox.
+- **uBlock's mode is a choice** at the sandboxed Firefox's install. Medium
+  (the default) also blocks other sites' scripts and frames, where most
+  malicious ads come from, and some sites break: allow one with
+  `ublock-allow example.com`, then restart Firefox. Standard blocks ads,
+  trackers and known malware sites but lets other sites' scripts run, so
+  sites work.
 - **JavaScript is slower** without the JIT. Heavy web apps can get it
   back in their own profile (`extras/firefox-profiles/new-profile.sh`, "fast
   JavaScript").
