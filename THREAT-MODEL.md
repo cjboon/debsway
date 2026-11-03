@@ -48,6 +48,13 @@ this page to decide what else you need.
   you first got (a stick, or the download in the README) is trusted as it is;
   someone in the way can still hold updates back; and until the key is
   pinned, updates come in unchecked (`update.sh` says so each time).
+  On the computer debsway is published from, `extras/signing-key.sh` keeps
+  the signing subkey with its own user, `debsway-signer`, off every network
+  and unreadable to your user, and signs only after your sudo password; the
+  primary key lives only in the encrypted backup on your USB stick. Root
+  there can still read the subkey, and a program running as you can have
+  something signed while sudo remembers your password (a few minutes, in
+  that terminal).
 - **Tampered downloads.** Everything debsway downloads from outside
   Debian is checked against the project's signing key, pinned by
   fingerprint in `pins.sh`, before it's used. `test.sh` re-checks them.

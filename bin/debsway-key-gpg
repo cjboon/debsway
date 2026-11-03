@@ -1,0 +1,40 @@
+#!/bin/bash
+# debsway-key-gpg: written by debsway extras/signing-key.sh
+# What git runs as gpg in a repository debsway-key git-setup set up
+# (gpg.program). Signing goes to debsway's signer (its own user, with no
+# network; sudo asks for your password now and then); checking a signature is
+# done here, as you, with the public key only. Anything else is refused.
+set -uo pipefail
+die() { printf 'debsway-key-gpg: %s\n' "$*" >&2; exit 2; }
+
+# (a test points these at a pretend sudo and a copy of the signer)
+SUDO=${DEBSWAY_SUDO:-sudo}
+SIGNER=${DEBSWAY_SIGNER:-/usr/local/libexec/debsway-signer}
+STATE=${XDG_DATA_HOME:-$HOME/.local/share}/debsway/signing-key
+
+f=$(cat "$STATE/fingerprint" 2>/dev/null) || die "there is no signing key here: run debsway-key"
+
+# git checks a signature: gpg ... --verify SIGFILE -
+for a; do
+    if [ "$a" = --verify ]; then
+        exec gpg --homedir "$STATE/public" --no-auto-key-retrieve --no-auto-key-locate "$@"
+    fi
+done
+
+# git signs: gpg --status-fd=2 -bsau KEY (data on stdin, the signature on stdout)
+key=
+while [ $# -gt 0 ]; do
+    case $1 in
+        --status-fd=2) shift ;;
+        -bsau) key=${2:-}; shift 2 || die "no key after -bsau." ;;
+        *) die "only signing (as git does it) and checking are done here, not \"$1\"." ;;
+    esac
+done
+[ -n "$key" ] || die "only signing (as git does it) and checking are done here."
+# the key git was told to sign with must be this one (user.signingkey)
+[ "$key" = "$f" ] || die "git asked for the key $key; debsway's is $f (debsway-key git-setup)."
+until=$(cat "$STATE/expires" 2>/dev/null || echo 0)
+if [ "$until" != 0 ] && [ $(((until - $(date +%s)) / 86400)) -lt 90 ]; then
+    printf 'debsway-key: the signing subkey stops signing in %s days: debsway-key renew BACKUP\n' $(((until - $(date +%s)) / 86400)) >&2
+fi
+exec "$SUDO" -u debsway-signer "$SIGNER" sign

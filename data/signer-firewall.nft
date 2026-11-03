@@ -1,0 +1,17 @@
+# Keeps debsway-signer, the user that holds debsway's signing key, off every
+# network (debsway extras/signing-key.sh). Only that user's traffic is
+# touched, and all of it is dropped: the internet, the local network, this
+# computer's own services, DNS. It signs what it is given and has no reason to
+# send anything anywhere, so a key thief inside it can't send the key out
+# either. (gpg talks to its agent through a file socket, which no firewall
+# rule touches.)
+
+table inet debsway_signer
+delete table inet debsway_signer
+
+table inet debsway_signer {
+    chain output {
+        type filter hook output priority 0; policy accept;
+        meta skuid "debsway-signer" drop
+    }
+}

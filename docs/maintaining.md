@@ -49,6 +49,17 @@ change only when the newest commit carries a good signature from that key
 with throwaway keys). One signed commit on top vouches for everything under
 it, since each commit's id covers the ones before it.
 
+The easy way: `debsway install signing-key`, then `debsway-key` with a USB
+stick mounted. Its first run explains and asks, makes the key in two parts
+(a primary key that only certifies, in an encrypted backup on the stick and
+nowhere else; and a signing subkey, kept here by its own user with no network,
+that your own user can't read), and offers to set git up to sign every commit
+and to pin the key. Then commit what `debsway-key pin` changed, signed, and
+push it: computers that update to it take it unchecked (their copy has no pin
+yet); every update after that is checked. `man debsway-key` and
+[extras/signing-key.md](extras/signing-key.md) have the rest, the steps by
+hand included. In short, by hand:
+
 1. Make the key on a computer you trust, best one that is offline: a primary
    key that only certifies, and a signing subkey for every day.
    `gpg --quick-generate-key "debsway signing key <you@example.org>" ed25519 cert never`,
@@ -64,12 +75,11 @@ it, since each commit's id covers the ones before it.
 3. Sign from then on: `git config commit.gpgsign true` and
    `git config user.signingkey FINGERPRINT` in `~/debsway`. Check one with
    `git log --show-signature -1`.
-4. Commit and push all of this as one signed commit. Computers that update to
-   it take it unchecked (their copy has no pin yet); every update after that
-   is checked.
+4. Commit and push all of this as one signed commit.
 
-A new subkey: export the key again into `data/debsway-signing-key.asc` and
-commit that with the old subkey's signature, before it expires. A key that has
+A new subkey, or a renewed one (`debsway-key renew BACKUP`): export the key
+again into `data/debsway-signing-key.asc` (`debsway-key pin`) and commit that
+with the old subkey's signature, before it expires. A key that has
 expired or been revoked fails the check, and updates stop until a copy with
 the new key is brought in by hand.
 

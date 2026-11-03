@@ -553,6 +553,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "The signing key (extras/signing-key.sh, debsway-key), with a pretend sudo"
+if out=$(bash tools/test-signing-key.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") signing key checks"
+else
+    bad "signing key checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "update.sh: only what debsway's own key signed, with throwaway keys"
 if out=$(bash tools/test-update-signed.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") signed update checks"

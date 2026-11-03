@@ -6,6 +6,10 @@
 # change a package, because apt checks every file against InRelease, and
 # InRelease against your key.
 #   bash tools/make-apt-repo.sh --key FINGERPRINT --out FOLDER DEB...
+#   bash tools/make-apt-repo.sh --sign-cmd debsway-key --out FOLDER DEB...
+#     [--sign-cmd CMD]   sign with CMD (CMD fingerprint, CMD clearsign, CMD
+#                        detach-sign, CMD public) instead of gpg's own keyring:
+#                        debsway-key, whose key never leaves its own user
 #     [--valid-days N]   InRelease is good for N days (default 14): sign again
 #                        within that time, or apt stops taking the repository
 #                        (so a server can't keep serving an old, fixed hole)
@@ -19,18 +23,23 @@ HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 . "$HERE/pins.sh"
 
 die() { printf 'make-apt-repo: %s\n' "$*" >&2; exit 1; }
-usage="usage: make-apt-repo.sh --key FINGERPRINT --out FOLDER [--valid-days N] DEB..."
+usage="usage: make-apt-repo.sh --key FINGERPRINT | --sign-cmd CMD --out FOLDER [--valid-days N] DEB..."
 
-key='' out='' days=14 debs=()
+key='' out='' days=14 debs=() signcmd=
 while [ $# -gt 0 ]; do
     case $1 in
         --key) key=${2:?$usage}; shift 2 ;;
         --out) out=${2:?$usage}; shift 2 ;;
         --valid-days) days=${2:?$usage}; shift 2 ;;
+        --sign-cmd) signcmd=${2:?$usage}; shift 2 ;;
         -*) die "$usage" ;;
         *) debs+=("$1"); shift ;;
     esac
 done
+if [ -n "$signcmd" ]; then
+    [ -z "$key" ] || die "--key or --sign-cmd, not both."
+    key=$("$signcmd" fingerprint) || die "$signcmd has no key."
+fi
 [ -n "$key" ] && [ -n "$out" ] && [ ${#debs[@]} -gt 0 ] || die "$usage"
 [[ $key =~ ^[0-9A-F]{40}$ ]] || die "the key is its full fingerprint: 40 hexadecimal digits, in capitals."
 [[ $days =~ ^[0-9]+$ ]] && [ "$days" -ge 1 ] && [ "$days" -le 90 ] || die "--valid-days is 1 to 90."
@@ -41,7 +50,7 @@ command -v gpg >/dev/null || die "gpg is missing."
 if [ -n "${DEBSWAY_SIGNING_FPR:-}" ] && [ "$key" != "$DEBSWAY_SIGNING_FPR" ]; then
     die "pins.sh pins $DEBSWAY_SIGNING_FPR; a repository signed with $key would be refused by every debsway computer."
 fi
-gpg --batch --list-secret-keys "$key" >/dev/null 2>&1 || die "gpg has no secret key $key here."
+[ -n "$signcmd" ] || gpg --batch --list-secret-keys "$key" >/dev/null 2>&1 || die "gpg has no secret key $key here."
 for d in "${debs[@]}"; do
     [ -f "$d" ] || die "no file $d"
     p=$(dpkg-deb -f "$d" Package 2>/dev/null) || die "$d isn't a package."
@@ -80,9 +89,16 @@ done
     sed '1,/^Date:/d' "$out/Release.tmp"
 } >"$out/dists/$DEBIAN_RELEASE/Release"
 rm -f "$out/Release.tmp"
-gpg --batch --yes --local-user "$key" --clearsign -o "$out/dists/$DEBIAN_RELEASE/InRelease" "$out/dists/$DEBIAN_RELEASE/Release"
-gpg --batch --yes --local-user "$key" --armor --detach-sign -o "$out/dists/$DEBIAN_RELEASE/Release.gpg" "$out/dists/$DEBIAN_RELEASE/Release"
-gpg --batch --armor --export "$key" >"$out/debsway-archive-keyring.asc"
+R=$out/dists/$DEBIAN_RELEASE
+if [ -n "$signcmd" ]; then
+    "$signcmd" clearsign <"$R/Release" >"$R/InRelease" || die "$signcmd didn't sign."
+    "$signcmd" detach-sign <"$R/Release" >"$R/Release.gpg" || die "$signcmd didn't sign."
+    "$signcmd" public >"$out/debsway-archive-keyring.asc"
+else
+    gpg --batch --yes --local-user "$key" --clearsign -o "$R/InRelease" "$R/Release"
+    gpg --batch --yes --local-user "$key" --armor --detach-sign -o "$R/Release.gpg" "$R/Release"
+    gpg --batch --armor --export "$key" >"$out/debsway-archive-keyring.asc"
+fi
 
 echo "Repository in $out, signed by $key, good until $(LC_ALL=C date -u -d "+$days days" +%Y-%m-%d)."
 echo "Upload all of $out as it is (rsync -a --delete). Sign it again before then."

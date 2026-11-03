@@ -91,6 +91,7 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 
 - [git, to track changes to files](git.md)
 - [Tools for working on debsway: lintian and shellcheck](debsway-dev.md)
+- [debsway's signing key, kept by a user of its own](signing-key.md)
 - [Thunar, a file manager](file-manager.md)
 - [Mousepad, a plain text editor](mousepad.md)
 - [Screenshots](grim-slurp.md)

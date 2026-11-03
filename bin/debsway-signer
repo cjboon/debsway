@@ -1,0 +1,174 @@
+#!/bin/bash
+# debsway-signer: written by debsway extras/signing-key.sh
+# Installed as /usr/local/libexec/debsway-signer, run as the user
+# debsway-signer, which holds debsway's signing subkey: that user has no
+# password, no login and no network (a firewall rule drops all it sends), and
+# your own user can't read its files. Your user may run this, and nothing
+# else, as debsway-signer, after typing your sudo password. It does a few
+# fixed things and never hands out a secret key:
+#   new NAME EMAIL   make the key (once): a primary key that only certifies and
+#                    a signing subkey; the passphrase for the backup on stdin.
+#                    Writes, as a tar on stdout, the backup (the whole key,
+#                    encrypted with that passphrase), a revocation certificate
+#                    and the public key. Keeps only the subkey: the primary key
+#                    lives on in the backup alone.
+#   sign             what git asks for: a detached, armored signature of stdin
+#   clearsign        stdin signed in place (an apt repository's InRelease)
+#   detach-sign      a detached, armored signature of stdin (Release.gpg)
+#   public           the public key
+#   fingerprint      the primary key's fingerprint
+#   expires          until when the signing subkey can sign (seconds since 1970; 0: never)
+#   renew            the signing subkey good for two more years: the backup's
+#                    passphrase on the first line of stdin, the backup after it;
+#                    writes the renewed backup and public key as a tar on stdout
+set -euo pipefail
+umask 077
+export PATH=/usr/bin:/bin
+# (a test points these at a temp folder)
+HOME_DIR=/var/lib/debsway-signer
+KEYRING=$HOME_DIR/gnupg
+SHM=/dev/shm
+
+die() { printf 'debsway-signer: %s\n' "$*" >&2; exit 1; }
+
+[ "$(id -un)" = debsway-signer ] ||
+    die "this runs as the user debsway-signer; use debsway-key."
+[ $# -ge 1 ] || die "usage: debsway-signer new NAME EMAIL | sign | clearsign | detach-sign | public | fingerprint | expires | renew"
+cmd=$1
+shift
+
+G=(gpg --homedir "$KEYRING" --batch --no-tty --quiet --no-auto-key-retrieve --no-auto-key-locate)
+fpr() { cat "$KEYRING/fingerprint" 2>/dev/null || die "there is no key yet: debsway-key makes one."; }
+# the arguments a command may have: exactly this many
+args() {
+    local n=$1
+    shift
+    [ $# -eq "$n" ] || die "unexpected arguments."
+}
+
+# primary_secret HOME FPR: + when the primary key's secret part is in that
+# keyring, # when only a stub of it is (gpg's field 15)
+primary_secret() { gpg --homedir "$1" --batch --with-colons --list-secret-keys "$2" 2>/dev/null | awk -F: '$1 == "sec" { print $15; exit }'; }
+
+# scratch: a temp keyring in memory, for the moments the primary key is out
+scratch() {
+    local d
+    d=$(mktemp -d "$SHM/debsway-signer.XXXXXXXX")
+    mkdir -m 700 "$d/g" "$d/out" "$d/h"
+    echo "$d"
+}
+scratch_done() {
+    gpgconf --homedir "$1/g" --kill all 2>/dev/null || true
+    gpgconf --homedir "$1/h" --kill all 2>/dev/null || true
+    rm -rf "$1"
+}
+# encrypt_backup PASSFILE IN OUT: IN encrypted to the passphrase in PASSFILE
+# (AES-256, gpg's slowest key derivation)
+encrypt_backup() {
+    gpg --homedir "$S/h" --batch --no-tty --quiet --pinentry-mode loopback --passphrase-file "$1" \
+        --symmetric --cipher-algo AES256 --s2k-mode 3 --s2k-digest-algo SHA512 --s2k-count 65011712 \
+        --armor -o "$3" "$2"
+}
+# keep_subkey G-HOME: the subkeys of the key in G-HOME into the keyring, the
+# public key next to them; the primary's secret part isn't copied
+keep_subkey() {
+    local f=$2 tmp
+    tmp=$(mktemp -d "$HOME_DIR/.new.XXXXXXXX")
+    chmod 700 "$tmp"
+    gpg --homedir "$1" --batch --quiet --export-secret-subkeys "$f" >"$tmp/sub.gpg"
+    gpg --homedir "$1" --batch --quiet --armor --export "$f" >"$tmp/public.asc"
+    gpg --homedir "$tmp" --batch --quiet --import "$tmp/sub.gpg" 2>/dev/null
+    gpg --homedir "$tmp" --batch --quiet --import "$tmp/public.asc" 2>/dev/null
+    # only a stub of the primary: it can't certify, so it can't make new keys
+    [ "$(primary_secret "$tmp" "$f")" = "#" ] ||
+        { gpgconf --homedir "$tmp" --kill all 2>/dev/null; rm -rf "$tmp"; die "the primary key's secret part didn't stay out of the keyring."; }
+    echo "$f" >"$tmp/fingerprint"
+    rm -f "$tmp/sub.gpg"
+    gpgconf --homedir "$tmp" --kill all 2>/dev/null || true
+    gpgconf --homedir "$KEYRING" --kill all 2>/dev/null || true
+    rm -rf "$KEYRING.old"
+    [ ! -d "$KEYRING" ] || mv "$KEYRING" "$KEYRING.old"
+    mv "$tmp" "$KEYRING"
+    rm -rf "$KEYRING.old"
+}
+
+case $cmd in
+    new)
+        args 2 "$@"
+        name=$1 email=$2
+        [[ $name =~ ^[[:alnum:]][[:alnum:]\ .\'_-]{0,63}$ ]] || die "a name of letters, digits, spaces and . ' _ -, please."
+        [[ $email =~ ^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24}$ ]] || die "that isn't an email address."
+        [ ! -s "$KEYRING/fingerprint" ] || die "there is a key already ($(cat "$KEYRING/fingerprint")). Renew it (debsway-key renew), or remove the extra first."
+        S=$(scratch)
+        trap 'scratch_done "$S"' EXIT
+        IFS= read -r pass || die "no passphrase was given."
+        [ ${#pass} -ge 20 ] || die "the passphrase must be at least 20 characters (six random words are about 40)."
+        printf '%s\n' "$pass" >"$S/pass"
+        unset pass
+        T=(gpg --homedir "$S/g" --batch --no-tty --quiet --pinentry-mode loopback --passphrase '')
+        "${T[@]}" --quick-generate-key "$name <$email>" ed25519 cert never 2>/dev/null
+        f=$("${T[@]}" --with-colons --list-keys | awk -F: '$1 == "fpr" { print $10; exit }')
+        [[ $f =~ ^[0-9A-F]{40}$ ]] || die "gpg didn't make the key."
+        "${T[@]}" --quick-add-key "$f" ed25519 sign 2y 2>/dev/null
+        # the whole key, encrypted to the passphrase; checked before anything is kept
+        "${T[@]}" --export-secret-keys "$f" >"$S/full.gpg"
+        encrypt_backup "$S/pass" "$S/full.gpg" "$S/out/debsway-signing-key-backup.asc"
+        gpg --homedir "$S/h" --batch --no-tty --quiet --pinentry-mode loopback --passphrase-file "$S/pass" \
+            --decrypt "$S/out/debsway-signing-key-backup.asc" 2>/dev/null | cmp -s - "$S/full.gpg" ||
+            die "the backup didn't decrypt to the key again; nothing was kept."
+        rm -f "$S/full.gpg" "$S/pass"
+        cp "$S/g/openpgp-revocs.d/$f.rev" "$S/out/debsway-signing-key-revocation.asc"
+        "${T[@]}" --armor --export "$f" >"$S/out/debsway-signing-key-public.asc"
+        keep_subkey "$S/g" "$f"
+        tar -C "$S/out" -cf - debsway-signing-key-backup.asc debsway-signing-key-revocation.asc debsway-signing-key-public.asc ;;
+    sign)
+        args 0 "$@"
+        exec "${G[@]}" --status-fd=2 --armor --detach-sign --local-user "$(fpr)" ;;
+    clearsign)
+        args 0 "$@"
+        exec "${G[@]}" --clearsign --local-user "$(fpr)" ;;
+    detach-sign)
+        args 0 "$@"
+        exec "${G[@]}" --armor --detach-sign --local-user "$(fpr)" ;;
+    public)
+        args 0 "$@"
+        cat "$KEYRING/public.asc" ;;
+    fingerprint)
+        args 0 "$@"
+        fpr ;;
+    expires)
+        args 0 "$@"
+        "${G[@]}" --with-colons --list-secret-keys "$(fpr)" | awk -F: '
+            $1 == "ssb" && $2 !~ /[erd]/ && $12 ~ /s/ { found = 1; if ($7 == "") never = 1; else if ($7 + 0 > max) max = $7 + 0 }
+            END { if (!found) exit 1; print (never ? 0 : max) }' ;;
+    renew)
+        args 0 "$@"
+        f=$(fpr)
+        S=$(scratch)
+        trap 'scratch_done "$S"' EXIT
+        IFS= read -r pass || die "no passphrase was given."
+        printf '%s\n' "$pass" >"$S/pass"
+        unset pass
+        cat >"$S/backup.asc"
+        gpg --homedir "$S/h" --batch --no-tty --quiet --pinentry-mode loopback --passphrase-file "$S/pass" \
+            --decrypt "$S/backup.asc" >"$S/full.gpg" 2>/dev/null || die "the backup doesn't open with that passphrase."
+        T=(gpg --homedir "$S/g" --batch --no-tty --quiet --pinentry-mode loopback --passphrase '')
+        "${T[@]}" --import "$S/full.gpg" 2>/dev/null
+        case $(primary_secret "$S/g" "$f") in
+            +) ;;
+            "") die "that backup isn't the key $f." ;;
+            *) die "that backup has no primary key in it, so it can't renew the subkey." ;;
+        esac
+        subs=$("${T[@]}" --with-colons --list-keys "$f" | awk -F: '$1 == "sub" && $12 ~ /s/ { getline; print $10 }')
+        [ -n "$subs" ] || die "the key has no signing subkey."
+        # shellcheck disable=SC2086  # one fingerprint a word
+        "${T[@]}" --quick-set-expire "$f" 2y $subs 2>/dev/null
+        "${T[@]}" --export-secret-keys "$f" >"$S/full.gpg"
+        encrypt_backup "$S/pass" "$S/full.gpg" "$S/out/debsway-signing-key-backup.asc"
+        rm -f "$S/full.gpg" "$S/pass"
+        "${T[@]}" --armor --export "$f" >"$S/out/debsway-signing-key-public.asc"
+        keep_subkey "$S/g" "$f"
+        tar -C "$S/out" -cf - debsway-signing-key-backup.asc debsway-signing-key-public.asc ;;
+    *)
+        die "unknown command \"$cmd\"." ;;
+esac

@@ -1,0 +1,157 @@
+.TH DEBSWAY-KEY 1 "debsway" "debsway" "User Commands"
+.SH NAME
+debsway-key \- make, keep and use debsway's signing key
+.SH SYNOPSIS
+.B debsway-key
+.RI [ COMMAND ]
+.SH DESCRIPTION
+Every debsway computer checks its updates against one key:
+.B update.sh
+brings in only commits it signed, and apt only packages from a repository it
+signed.
+Whoever has the key could put anything on all of those computers, as root;
+whoever loses it can't publish debsway any more.
+.B debsway-key
+makes that key and uses it, the careful way.
+.PP
+The key has two parts.
+The
+.B primary key
+only vouches for the other; it goes into a backup on your USB stick, encrypted
+with a passphrase you choose, and is then deleted from this computer.
+The
+.B signing subkey
+does the daily signing.
+It is held by
+.BR debsway-signer ,
+a system user with no password, no login and no network (a firewall rule drops
+everything it sends), whose files your own user can't read.
+Your user may run one program as that user, the signer, and only after typing
+your sudo password.
+The signer signs, hands out the public key, and makes or renews the key; it
+never hands out a secret key.
+.SH COMMANDS
+.TP
+.B debsway-key
+The first time: explains, asks for the name and email on the key, the folder
+on a USB stick for the backup, and the backup's passphrase (at least 20
+characters; it suggests one of random words), then makes the key.
+In
+.I FOLDER/debsway-signing-key
+it writes
+.I debsway-signing-key-backup.asc
+(the whole key, encrypted with the passphrase),
+.I debsway-signing-key-revocation.asc
+(declares the key void, if it is ever stolen; it works without the
+passphrase) and
+.I debsway-signing-key-public.asc
+(the public key).
+Then it offers
+.B git-setup
+and
+.BR pin .
+Once there is a key, the same as
+.BR status .
+.TP
+.B status
+The key's fingerprint, until when the signing subkey signs, whether git signs
+with it and whether
+.I pins.sh
+pins it.
+It warns when the subkey stops signing within 90 days.
+.TP
+.BR git-setup " [\fIDIR\fR]"
+git in
+.I DIR
+(by default the debsway folder) signs every commit and tag with the key, through
+.BR debsway-key-gpg ,
+which hands signing to the signer and checks signatures with the public key.
+sudo asks for your password now and then.
+.TP
+.BR pin " [\fIDIR\fR]"
+Writes the public key to
+.I DIR/data/debsway-signing-key.asc
+and its fingerprint to
+.B DEBSWAY_SIGNING_FPR
+in
+.IR DIR/pins.sh ,
+for you to look at, commit (signed) and push.
+From then on every debsway computer that updates past that commit takes only
+what this key signed.
+.TP
+.BI sign-repo " FOLDER DEB" ...
+Makes a signed apt repository of debsway's packages in
+.I FOLDER
+.RB ( tools/make-apt-repo.sh ),
+signed by the signer.
+Upload
+.I FOLDER
+as it is.
+It is good for 14 days: sign it again within that time.
+.TP
+.BI renew " BACKUP"
+Gives the signing subkey two more years, from the backup (it asks for its
+passphrase).
+The renewed backup replaces
+.I BACKUP
+(the old one is kept as
+.IR BACKUP.old );
+copy it to your second stick, then
+.B pin
+and publish the renewed public key before the old date.
+.TP
+.BR public ", " fingerprint
+The public key, or the primary key's fingerprint.
+.TP
+.BR clearsign ", " detach-sign
+Signs standard input to standard output, in place or detached (armored).
+.TP
+.BR \-\-help
+A short help.
+.SH KEEPING THE KEY SAFE
+.IP \(bu 2
+Keep the backup on two USB sticks, in two places, away from this computer.
+.IP \(bu 2
+Keep the passphrase on paper, apart from the sticks: someone with both has
+your key.
+.IP \(bu 2
+Keep the revocation certificate apart from the sticks too (printed, say):
+whoever has it can void your key, though not sign with it.
+.IP \(bu 2
+Renew the subkey before it stops signing: after that every debsway computer
+refuses updates until a new key reaches it by hand.
+.IP \(bu 2
+If you think the signing subkey was taken (this computer was broken into),
+make a new one from the backup, publish it, and say so.
+.SH FILES
+.TP
+.I /usr/local/libexec/debsway-signer
+The signer, root's, run as debsway-signer.
+.TP
+.I /var/lib/debsway-signer
+debsway-signer's home: the signing subkey, readable by that user alone.
+.TP
+.I /etc/sudoers.d/debsway-signer
+What your user may run as debsway-signer: the signer, with your password.
+.TP
+.I /etc/debsway/signer.nft
+The firewall rule that drops everything debsway-signer sends.
+.TP
+.I ~/.local/share/debsway/signing-key
+What your user knows of the key: its fingerprint, until when it signs, and the
+public key.
+.SH ENVIRONMENT
+.TP
+.B DEBSWAY_DIR
+The debsway folder that
+.BR git-setup ,
+.B pin
+and
+.B sign-repo
+use, if not the usual one.
+.SH SEE ALSO
+.BR debsway (1),
+.BR gpg (1),
+.IR docs/maintaining.md ,
+.I THREAT-MODEL.md
+in the debsway folder.

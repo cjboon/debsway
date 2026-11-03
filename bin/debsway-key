@@ -1,0 +1,282 @@
+#!/bin/bash
+# debsway-key: written by debsway extras/signing-key.sh
+# Makes and uses debsway's signing key, the key every debsway computer checks
+# updates against. The key is held by its own user, debsway-signer, with no
+# network, that your user can't read; this asks it to sign, after your sudo
+# password. man debsway-key has the details.
+#   debsway-key                    the first time: questions, the key, its backup
+#   debsway-key status             the key, and until when it signs
+#   debsway-key git-setup [DIR]    git in DIR signs every commit and tag with it
+#   debsway-key pin [DIR]          DIR's pins.sh and data/ name the key (then commit and push)
+#   debsway-key sign-repo FOLDER DEB...   a signed apt repository (tools/make-apt-repo.sh)
+#   debsway-key renew BACKUP       two more years for the signing subkey, from the backup
+#   debsway-key public | fingerprint | clearsign | detach-sign
+set -uo pipefail
+umask 077
+
+die() { printf 'debsway-key: %s\n' "$*" >&2; exit 1; }
+say() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
+note() { printf '    %s\n' "$*"; }
+warn() { printf '\033[1;33m!!\033[0m %s\n' "$*" >&2; }
+
+# (a test points these at a pretend sudo and a copy of the signer)
+SUDO=${DEBSWAY_SUDO:-sudo}
+SIGNER=${DEBSWAY_SIGNER:-/usr/local/libexec/debsway-signer}
+STATE=${XDG_DATA_HOME:-$HOME/.local/share}/debsway/signing-key
+BIN=$HOME/.local/bin
+# Where debsway is: DEBSWAY_DIR if you set it; else the root-owned copy the
+# debsway package installs, which no program running as you can change; else
+# your own copy, ~/debsway
+if [ -n "${DEBSWAY_DIR:-}" ]; then
+    DIR=$DEBSWAY_DIR
+elif [ -f "${DEBSWAY_SYSTEM_DIR:-/usr/share/debsway}/lib.sh" ]; then
+    DIR=${DEBSWAY_SYSTEM_DIR:-/usr/share/debsway}
+else
+    DIR=$HOME/debsway
+fi
+
+signer() { "$SUDO" -u debsway-signer "$SIGNER" "$@"; }
+
+# answer VAR "Question" [DEFAULT]: a line from the terminal (or, for a test, the
+# file DEBSWAY_KEY_ANSWERS, a line each); hidden with HIDE=1
+answer() {
+    local _v=$1 _q=$2 _d=${3:-} _a=''
+    if [ -n "${DEBSWAY_KEY_ANSWERS:-}" ]; then
+        [ -e /proc/self/fd/7 ] || exec 7<"$DEBSWAY_KEY_ANSWERS"
+        printf '    %s%s ' "$_q" "${_d:+ [$_d]}" >&2
+        IFS= read -r _a <&7 || _a=''
+        printf '\n' >&2
+    elif [ "${HIDE:-}" = 1 ]; then
+        IFS= read -rs -p "    $_q " _a </dev/tty || _a=''
+        printf '\n' >&2
+    else
+        IFS= read -r -p "    $_q${_d:+ [$_d]} " _a </dev/tty || _a=''
+    fi
+    printf -v "$_v" '%s' "${_a:-$_d}"
+}
+yes_no() { local r; answer r "$1 [y/N]"; [[ $r =~ ^[Yy] ]]; }
+
+fingerprint() { signer fingerprint 2>/dev/null; }
+# remember: what your own user may know about the key, kept without asking the
+# signer each time: its fingerprint, until when it signs, and the public key
+# (in a keyring of its own, for git to check signatures with)
+remember() {
+    local f until
+    f=$(signer fingerprint) || die "the signer has no key."
+    until=$(signer expires) || die "the signer's key can't sign."
+    mkdir -p "$STATE/public"
+    chmod 700 "$STATE/public"
+    echo "$f" >"$STATE/fingerprint"
+    echo "$until" >"$STATE/expires"
+    signer public >"$STATE/public.asc"
+    gpg --homedir "$STATE/public" --batch --quiet --import "$STATE/public.asc" 2>/dev/null
+    gpgconf --homedir "$STATE/public" --kill all 2>/dev/null || true
+}
+# days_left: until the signing subkey stops signing (empty: never)
+days_left() {
+    local until
+    until=$(cat "$STATE/expires" 2>/dev/null) || return 0
+    [ "$until" != 0 ] || return 0
+    echo $(((until - $(date +%s)) / 86400))
+}
+expiry_warning() {
+    local d
+    d=$(days_left)
+    [ -n "$d" ] || return 0
+    if [ "$d" -lt 90 ]; then
+        warn "The signing subkey stops signing in $d days. Renew it before then: debsway-key renew BACKUP"
+        warn "(after it has stopped, every debsway computer refuses updates until a new key reaches it by hand)"
+    fi
+}
+
+setup() {
+    if [ -s "$STATE/fingerprint" ] && fingerprint >/dev/null; then
+        status
+        return
+    fi
+    command -v gpg >/dev/null || die "gpg is missing."
+    [ -x "$SIGNER" ] || die "the signer isn't set up. Run: debsway install signing-key"
+    cat <<'EOF'
+
+    debsway's signing key
+    ---------------------
+    Every debsway computer will trust this key: update.sh brings in only
+    commits it signed, and apt only packages from a repository it signed.
+    Whoever has it can put anything onto every one of those computers, as root.
+    Whoever loses it can't publish debsway any more (and computers keep the old
+    key until a new one reaches them by hand).
+
+    So it is made in two parts:
+      - the primary key, which vouches for the other. It goes into a backup,
+        encrypted with a passphrase you choose, and is then deleted from this
+        computer. You need it only to renew (every two years) or replace the
+        signing key.
+      - the signing key, kept here by its own user (debsway-signer), with no
+        network, that your own user can't read. It signs when you type your
+        sudo password, and never hands itself out.
+
+    You need: a USB stick for the backup (better two), and paper.
+
+EOF
+    local name email dest pass pass2 suggestion f
+    answer name "Name on the key:" "debsway signing key"
+    answer email "Email on the key (public, in every signature):" "$(git config --global user.email 2>/dev/null || true)"
+    [ -n "$email" ] || die "an email address is needed."
+
+    say "Where the backup goes"
+    note "A folder on a USB stick, kept somewhere safe and away from this computer."
+    note "Not on this computer's disk: a backup there goes with the computer."
+    local sticks=()
+    mapfile -t sticks < <(find "/media/$(id -un)" -mindepth 1 -maxdepth 1 -type d 2>/dev/null)
+    [ ${#sticks[@]} -eq 0 ] || note "Sticks mounted now: ${sticks[*]} (usb mount mounts one)"
+    answer dest "Backup folder:" "${sticks[0]:-}"
+    [ -n "$dest" ] && [ -d "$dest" ] && [ -w "$dest" ] || die "\"$dest\" isn't a folder you can write to. Mount the stick (usb mount) and run debsway-key again."
+    dest=$(cd "$dest" && pwd)
+    case $dest/ in
+        "$HOME"/* | /tmp/* | /var/tmp/*)
+            warn "$dest is on this computer, not on a stick."
+            yes_no "Put the backup there anyway (and copy it to a stick yourself later)?" || die "nothing was made." ;;
+    esac
+    [ ! -e "$dest/debsway-signing-key/debsway-signing-key-backup.asc" ] ||
+        die "$dest/debsway-signing-key already holds a backup. Use another folder."
+
+    say "The backup's passphrase"
+    note "It protects the primary key in the backup. Write it on paper and keep that"
+    note "apart from the stick: someone with both has your key; someone with neither"
+    note "piece of it can't. Lose the passphrase and the backup can't be opened."
+    if command -v diceware >/dev/null; then
+        suggestion=$(diceware -n 7 -d ' ' 2>/dev/null || true)
+        [ -z "$suggestion" ] || note "A suggestion, made just now from random words: $suggestion"
+    fi
+    HIDE=1 answer pass "Passphrase (at least 20 characters):"
+    HIDE=1 answer pass2 "The same again:"
+    [ "$pass" = "$pass2" ] || die "the two didn't match; nothing was made."
+    [ ${#pass} -ge 20 ] || die "at least 20 characters, please (six or seven random words); nothing was made."
+
+    say "Making the key (sudo asks for your password)"
+    mkdir -p "$dest/debsway-signing-key"
+    printf '%s\n' "$pass" | signer new "$name" "$email" >"$dest/debsway-signing-key/new.tar" ||
+        { rm -rf "$dest/debsway-signing-key"; die "the key wasn't made (see above)."; }
+    unset pass pass2
+    tar -C "$dest/debsway-signing-key" -xf "$dest/debsway-signing-key/new.tar" &&
+        rm -f "$dest/debsway-signing-key/new.tar" || die "the backup couldn't be written to $dest."
+    chmod 600 "$dest"/debsway-signing-key/*
+    sync
+    remember
+    f=$(cat "$STATE/fingerprint")
+    cat <<EOF
+
+    The key: $f
+    (the primary key's fingerprint: this is what pins.sh pins)
+
+    In $dest/debsway-signing-key:
+      debsway-signing-key-backup.asc      the whole key, encrypted with your passphrase
+      debsway-signing-key-revocation.asc  declares the key void, if it is ever stolen
+      debsway-signing-key-public.asc      the public key (anyone may have it)
+
+    Now, please:
+      1. Copy that folder to a second stick. Keep the two in different places.
+      2. Print the revocation certificate, or copy it by hand, and keep it apart
+         from the sticks: it works without the passphrase, so whoever has it can
+         void your key (but can't sign with it).
+      3. Write the passphrase on paper, and keep it apart from the sticks.
+      4. Check a stick can be read on another computer now and then; sticks
+         wear out.
+
+EOF
+    if git -C "$DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 && [ -w "$DIR" ]; then
+        if yes_no "Sign every commit and tag in $DIR with it from now on?"; then git_setup "$DIR"; fi
+        if yes_no "Pin it in $DIR (pins.sh and data/debsway-signing-key.asc), for you to commit?"; then pin "$DIR"; fi
+    fi
+}
+
+status() {
+    local f d
+    f=$(cat "$STATE/fingerprint" 2>/dev/null) || die "there is no key yet: run debsway-key"
+    d=$(days_left)
+    echo "Key: $f"
+    if [ -z "$d" ]; then echo "Signs: with no end date"; else echo "Signs: until $(date -d "@$(cat "$STATE/expires")" +%F) ($d days)"; fi
+    if git -C "$DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        if [ "$(git -C "$DIR" config user.signingkey)" = "$f" ] && [ "$(git -C "$DIR" config commit.gpgsign)" = true ]; then
+            echo "git in $DIR: signs every commit with it"
+        else
+            echo "git in $DIR: doesn't sign with it (debsway-key git-setup)"
+        fi
+    fi
+    if grep -qx "DEBSWAY_SIGNING_FPR=$f" "$DIR/pins.sh" 2>/dev/null; then
+        echo "pins.sh in $DIR: pins it"
+    else
+        echo "pins.sh in $DIR: doesn't pin it yet (debsway-key pin)"
+    fi
+    expiry_warning
+}
+
+git_setup() {
+    local d=${1:-$DIR} f
+    f=$(cat "$STATE/fingerprint" 2>/dev/null) || die "there is no key yet: run debsway-key"
+    git -C "$d" rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "$d isn't a git checkout."
+    git -C "$d" config user.signingkey "$f"
+    git -C "$d" config gpg.format openpgp
+    git -C "$d" config gpg.program "$BIN/debsway-key-gpg"
+    git -C "$d" config commit.gpgsign true
+    git -C "$d" config tag.gpgSign true
+    note "git in $d signs every commit and tag with $f (sudo asks for your password now and then)."
+    note "Check one: git -C $d log --show-signature -1"
+}
+
+pin() {
+    local d=${1:-$DIR} f
+    f=$(cat "$STATE/fingerprint" 2>/dev/null) || die "there is no key yet: run debsway-key"
+    [ -f "$d/pins.sh" ] && [ -w "$d/pins.sh" ] || die "$d has no pins.sh you can change (give your own copy: debsway-key pin DIR)."
+    grep -q '^DEBSWAY_SIGNING_FPR=' "$d/pins.sh" || die "$d/pins.sh has no DEBSWAY_SIGNING_FPR line (an older debsway)."
+    install -m 0644 "$STATE/public.asc" "$d/data/debsway-signing-key.asc"
+    sed -i "s/^DEBSWAY_SIGNING_FPR=.*/DEBSWAY_SIGNING_FPR=$f/" "$d/pins.sh"
+    say "Pinned in $d"
+    note "pins.sh: DEBSWAY_SIGNING_FPR=$f"
+    note "data/debsway-signing-key.asc: the public key"
+    note "Look at it (git -C $d diff), then commit it, signed, and push:"
+    note "  git -C $d commit -am 'debsway is signed with its own key now'"
+    note "From then on every debsway computer that updates past it takes only what this key signed."
+}
+
+renew() {
+    local backup=${1:-} pass dir
+    [ -n "$backup" ] && [ -f "$backup" ] || die "usage: debsway-key renew BACKUP (the debsway-signing-key-backup.asc on your stick)"
+    dir=$(cd "$(dirname -- "$backup")" && pwd)
+    [ -w "$dir" ] || die "$dir isn't writable: the renewed backup goes next to the old one."
+    HIDE=1 answer pass "The backup's passphrase:"
+    say "Renewing the signing subkey (sudo asks for your password)"
+    { printf '%s\n' "$pass"; cat "$backup"; } | signer renew >"$dir/renew.tar" || { rm -f "$dir/renew.tar"; die "it wasn't renewed (see above)."; }
+    unset pass
+    mv "$backup" "$backup.old"
+    tar -C "$dir" -xf "$dir/renew.tar" && rm -f "$dir/renew.tar" || die "the renewed backup couldn't be written to $dir."
+    chmod 600 "$dir"/debsway-signing-key-*
+    sync
+    remember
+    note "Renewed: it signs until $(date -d "@$(cat "$STATE/expires")" +%F). The old backup is kept as $backup.old."
+    note "Copy the new backup to your second stick too. Then, before the old date, put the"
+    note "renewed public key in debsway and publish it, signed: debsway-key pin, commit, push."
+}
+
+sign_repo() {
+    [ $# -ge 2 ] || die "usage: debsway-key sign-repo FOLDER DEB..."
+    local out=$1
+    shift
+    expiry_warning
+    exec bash "$DIR/tools/make-apt-repo.sh" --sign-cmd "$BIN/debsway-key" --out "$out" "$@"
+}
+
+case ${1:-} in
+    "" | setup) setup ;;
+    status) status ;;
+    git-setup) git_setup "${2:-}" ;;
+    pin) pin "${2:-}" ;;
+    renew) renew "${2:-}" ;;
+    sign-repo) shift; sign_repo "$@" ;;
+    public | fingerprint | clearsign | detach-sign)
+        [ $# -eq 1 ] || die "usage: debsway-key $1"
+        [ "$1" = public ] || [ "$1" = fingerprint ] || expiry_warning
+        signer "$1" ;;
+    -h | --help | help) sed -n '2,/^set /{ /^set /d; s/^# \{0,1\}//; p }' "$0" ;;
+    *) die "unknown command \"$1\" (debsway-key --help)" ;;
+esac
