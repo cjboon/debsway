@@ -178,8 +178,8 @@ if env -u SWAYSOCK WP_TEST_PATH="$T/fake:$PATH" HOME="$P/home" bash "$R/parts/wa
 check "the part: sway runs wallpaper at every start and reload" grep -qx "exec_always $P/home/.local/bin/wallpaper" "$P/home/.config/sway/config.d/wallpaper.conf"
 check "...Super+] and Super+[ step through the pictures, Super+Shift+w lists them, Super+\\ is none" \
     bash -c 'grep -qx "bindsym \$mod+bracketright exec $2/wallpaper next" "$1" && grep -qx "bindsym \$mod+bracketleft exec $2/wallpaper previous" "$1" && grep -qx "bindsym \$mod+Shift+w exec $2/wallpaper pick" "$1" && grep -qx "bindsym \$mod+backslash exec $2/wallpaper none" "$1"' _ "$P/home/.config/sway/config.d/wallpaper.conf" "$P/home/.local/bin"
-check "...the command is installed, the folder made, with a README" \
-    bash -c '[ -x "$1/.local/bin/wallpaper" ] && [ -d "$1/Pictures/debsway/desktop" ] && grep -q "Super+Shift+c" "$1/Pictures/debsway/README.txt"' _ "$P/home"
+check "...the command is installed, the desktop and firefox folders made, with a README" \
+    bash -c '[ -x "$1/.local/bin/wallpaper" ] && [ -d "$1/Pictures/debsway/desktop" ] && [ -d "$1/Pictures/debsway/firefox" ] && grep -q "Super+Shift+c" "$1/Pictures/debsway/README.txt" && grep -q "^firefox/" "$1/Pictures/debsway/README.txt"' _ "$P/home"
 env -u SWAYSOCK WP_TEST_PATH="$T/fake:$PATH" HOME="$P/home" bash "$R/parts/wallpaper.sh" --remove >"$T/out" 2>&1
 check "...--remove takes the snippet and the command, and leaves your pictures" \
     bash -c '[ ! -e "$1/.config/sway/config.d/wallpaper.conf" ] && [ ! -e "$1/.local/bin/wallpaper" ] && [ -d "$1/Pictures/debsway/desktop" ]' _ "$P/home"

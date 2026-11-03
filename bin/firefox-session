@@ -66,12 +66,12 @@ open)
         MOZ_ENABLE_WAYLAND=1 MOZ_DBUS_REMOTE=1 DBUS_SESSION_BUS_ADDRESS="$bus" \
         "$noabs" firefox-esr --profile "$profile" "$@" ;;
 start) ;;
-*) die "usage: firefox-session start RUNTIME_DIR WAYLAND_DISPLAY AUDIO DOWNLOADS [URL...] | open [URL...]" ;;
+*) die "usage: firefox-session start RUNTIME_DIR WAYLAND_DISPLAY AUDIO DOWNLOADS THEME PICTURE [URL...] | open [URL...]" ;;
 esac
 
-[ $# -ge 4 ] || die "usage: firefox-session start RUNTIME_DIR WAYLAND_DISPLAY AUDIO DOWNLOADS [URL...]"
-host_rt=$1 host_wl=$2 audio=$3 downloads=$4
-shift 4
+[ $# -ge 6 ] || die "usage: firefox-session start RUNTIME_DIR WAYLAND_DISPLAY AUDIO DOWNLOADS THEME PICTURE [URL...]"
+host_rt=$1 host_wl=$2 audio=$3 downloads=$4 theme=$5 picture=$6
+shift 6
 
 # These come from the user who called us, so nothing else is accepted
 [[ $host_rt =~ ^/run/user/[0-9]+$ ]] || die "unexpected runtime folder."
@@ -84,6 +84,9 @@ else
     # a profile gets its own folder, so one profile cannot read another's downloads
     [[ $downloads =~ ^/home/[A-Za-z0-9._-]+/Downloads/$tag$ ]] || die "unexpected downloads folder."
 fi
+[[ $theme == light || $theme == dark ]] || die "unexpected theme."
+# the New Tab picture: only the main Firefox's, under the one name the firefox command gives it
+[[ $picture == - || ( -z $tag && $picture =~ ^firefox-newtab\.(jpg|png)$ ) ]] || die "unexpected picture name."
 check_urls "$@"
 if [ "$audio" != - ]; then
     [ -p "$host_rt/$audio" ] || audio=-
@@ -138,6 +141,46 @@ cp /usr/local/share/debsway/firefox-user.js "$profile/user.js"
     echo "user_pref(\"browser.download.dir\", \"$downloads\");"
     echo 'user_pref("browser.download.useDownloadDir", true);'
 } >>"$profile/user.js"
+# Light or dark (bin/theme): Firefox's own theme, what websites are told you
+# prefer, and the New Tab fox to match
+if [ "$theme" = light ]; then
+    {
+        echo 'user_pref("extensions.activeThemeID", "firefox-compact-light@mozilla.org");'
+        echo 'user_pref("layout.css.prefers-color-scheme.content-override", 1);'
+        echo 'user_pref("browser.newtabpage.activity-stream.newtabWallpapers.wallpaper", "light-fox-anniversary");'
+    } >>"$profile/user.js"
+else
+    {
+        echo 'user_pref("extensions.activeThemeID", "firefox-compact-dark@mozilla.org");'
+        echo 'user_pref("layout.css.prefers-color-scheme.content-override", 0);'
+        echo 'user_pref("browser.newtabpage.activity-stream.newtabWallpapers.wallpaper", "dark-fox-anniversary");'
+    } >>"$profile/user.js"
+fi
+# Your picture behind the New Tab page, instead of the fox: checked again here
+# (a plain file, a real JPEG or PNG, at most 10 MB), and put in the stylesheet
+# itself, since Firefox won't load a file from outside into that page
+newtab_css=$profile/chrome/userContent.css
+mark='/* Written by debsway (firefox-session): your New Tab picture. */'
+pic=$host_rt/$picture
+kind=
+if [ "$picture" != - ] && [ -f "$pic" ] && [ ! -L "$pic" ] && [ "$(stat -c %s -- "$pic")" -le $((10 * 1024 * 1024)) ]; then
+    case $(head -c 8 -- "$pic" | od -An -tx1 | tr -d ' \n') in
+        89504e470d0a1a0a) kind=png ;;
+        ffd8ff*) kind=jpeg ;;
+    esac
+fi
+if [ -n "$kind" ]; then
+    mkdir -p "$profile/chrome"
+    {
+        echo "$mark"
+        echo '@-moz-document url("about:newtab"), url("about:home") {'
+        printf '    body { background: url("data:image/%s;base64,%s") center / cover no-repeat fixed !important; }\n' "$kind" "$(base64 -w0 -- "$pic")"
+        echo '}'
+    } >"$newtab_css"
+    echo 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' >>"$profile/user.js"
+elif [ "$(head -1 "$newtab_css" 2>/dev/null)" = "$mark" ]; then
+    rm -f "$newtab_css"
+fi
 # fast JavaScript: the JIT back on (parts/firefox-hardening.sh turns it off)
 jit_on() {
     echo 'user_pref("javascript.options.ion", true);'

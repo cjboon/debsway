@@ -25,7 +25,7 @@ fi
 
 say "Your own wallpaper ($PICS/desktop)"
 install_bin wallpaper
-mkdir -p "$PICS/desktop"
+mkdir -p "$PICS/desktop" "$PICS/firefox"
 # rewritten while its first line is debsway's, so it never tells of an older
 # debsway; once you change that line it is yours and left alone
 if [ ! -e "$PICS/README.txt" ] || head -1 "$PICS/README.txt" | grep -q 'written by debsway'; then
@@ -36,6 +36,11 @@ desktop/   Put a JPEG or PNG here and it becomes your wallpaper at the next
            login, or press Super+Shift+c. With several, the newest is used;
            with none, the default. "wallpaper status" says which, and why a
            file isn't used.
+
+firefox/   Put a JPEG or PNG here (at most 10 MB) and it is the background
+           of the sandboxed Firefox's New Tab page instead of the fox, from
+           its next start; the newest one counts. Firefox never sees this
+           folder: a checked copy is handed over at each start.
 
 Wallpapers/ (one folder up) is to choose from: Super+] and Super+[ step
 through it on the desktop itself, Super+Shift+w (or "wallpaper pick")

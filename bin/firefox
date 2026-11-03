@@ -74,6 +74,33 @@ downloads=$HOME/Downloads${name:+/$name}
 
 fifo=$rt/firefox$tag-audio.fifo
 player=
+# The theme (bin/theme, light or dark): the sandbox gets just the word
+theme=$(head -c 16 "${XDG_CONFIG_HOME:-$HOME/.config}/debsway/theme" 2>/dev/null || true)
+case $theme in light | dark) ;; *) theme=dark ;; esac
+# Your New Tab picture, for the main Firefox: the newest JPEG or PNG in
+# ~/Pictures/debsway/firefox. The sandbox never sees that folder: a checked
+# copy goes into your runtime folder, readable by firefox alone, and goes
+# again when Firefox closes. (firefox-session checks it once more.)
+picture=
+picture_arg=-
+if [ -z "$name" ]; then
+    best=
+    for p in "$HOME/Pictures/debsway/firefox"/*; do
+        [ -f "$p" ] && [ -r "$p" ] || continue
+        case ${p,,} in *.jpg | *.jpeg | *.png) ;; *) continue ;; esac
+        [ "$(stat -L -c %s -- "$p")" -le $((10 * 1024 * 1024)) ] || continue
+        case $(head -c 8 -- "$p" | od -An -tx1 | tr -d ' \n') in 89504e470d0a1a0a | ffd8ff*) ;; *) continue ;; esac
+        if [ -z "$best" ] || [ "$p" -nt "$best" ]; then best=$p; fi
+    done
+    if [ -n "$best" ]; then
+        ext=jpg
+        case ${best,,} in *.png) ext=png ;; esac
+        picture=$rt/firefox-newtab.$ext
+        rm -f "$rt"/firefox-newtab.*
+        (umask 077; cp -- "$best" "$picture")
+        picture_arg=${picture##*/}
+    fi
+fi
 if $audio && command -v pw-cat >/dev/null && [ -S "$rt/pipewire-0" ]; then
     :
 else
@@ -87,6 +114,7 @@ cleanup() {
     if [ -n "$player" ]; then kill "$player" 2>/dev/null || true; fi
     if [ -n "${WL_PID:-}" ]; then kill "$WL_PID" 2>/dev/null || true; fi
     rm -f "$fifo" "$sock"
+    if [ -n "$picture" ]; then rm -f "$picture"; fi
     setfacl -x "u:$user" "$rt" "$HOME" "$HOME/Downloads" 2>/dev/null || true
 }
 trap cleanup EXIT
@@ -101,6 +129,7 @@ IFS= read -r -t 10 line <&"${WL[0]}" && [ "$line" = ready ] ||
 mkdir -p "$downloads"
 setfacl -m "u:$user:--x" "$rt" "$HOME" "$HOME/Downloads"
 setfacl -m "u:$user:rw-" "$sock"
+if [ -n "$picture" ]; then setfacl -m "u:$user:r--" "$picture"; fi
 # Read, write and enter the downloads folder, for both of you, also for files made later
 setfacl -m "u:$user:rwx" "$downloads"
 setfacl -d -m "u:$user:rwx,u:$(id -un):rwx" "$downloads"
@@ -118,5 +147,5 @@ else
 fi
 
 rc=0
-sudo -n -u "$user" "$SESSION" start "$rt" "${sock##*/}" "$audio_arg" "$downloads" "$@" || rc=$?
+sudo -n -u "$user" "$SESSION" start "$rt" "${sock##*/}" "$audio_arg" "$downloads" "$theme" "$picture_arg" "$@" || rc=$?
 exit "$rc"

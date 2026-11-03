@@ -84,5 +84,8 @@ else
 fi
 
 rc=0
-sudo -n -u incognito /usr/local/libexec/incognito-session "$rt" "${sock##*/}" "$audio_arg" "$@" || rc=$?
+# the theme (bin/theme): just the word light or dark
+theme=$(head -c 16 "${XDG_CONFIG_HOME:-$HOME/.config}/debsway/theme" 2>/dev/null || true)
+case $theme in light | dark) ;; *) theme=dark ;; esac
+sudo -n -u incognito /usr/local/libexec/incognito-session "$rt" "${sock##*/}" "$audio_arg" "$theme" "$@" || rc=$?
 exit "$rc"

@@ -41,8 +41,8 @@ fx() { env PATH="$T/fake:$PATH" HOME="$T/home" XDG_RUNTIME_DIR="$T/run" WAYLAND_
 : >"$T/calls"
 fx --no-audio https://example.org/
 check "the first start runs the session as the firefox user" grep -q 'sudo -n -u firefox /usr/local/libexec/firefox-session start' "$T/calls"
-check "...with the runtime folder, the restricted socket, no sound, your Downloads and the address" \
-    grep -qF "firefox-session start $T/run firefox-wayland - $T/home/Downloads https://example.org/" "$T/calls"
+check "...with the runtime folder, the restricted socket, no sound, your Downloads, the theme (dark), no picture and the address" \
+    grep -qF "firefox-session start $T/run firefox-wayland - $T/home/Downloads dark - https://example.org/" "$T/calls"
 check "it gave the firefox user the socket and a way through to ~/Downloads, not the whole home" \
     grep -q "setfacl -m u:firefox:--x $T/run $T/home" "$T/calls"
 check "...read and write on ~/Downloads, for both of you, for later files too" \
@@ -64,7 +64,7 @@ wait %2 2>/dev/null
 FAKE_UP=2 fx --no-audio https://example.org/ >/dev/null 2>&1 &
 sleep 0.6
 fx --no-audio --profile bank
-check "a profile starts as its own user, next to the other Firefox" grep -qF "sudo -n -u fx-bank /usr/local/libexec/firefox-session start $T/run firefox-bank-wayland - $T/home/Downloads/bank" "$T/calls"
+check "a profile starts as its own user, next to the other Firefox" grep -qF "sudo -n -u fx-bank /usr/local/libexec/firefox-session start $T/run firefox-bank-wayland - $T/home/Downloads/bank dark -" "$T/calls"
 check "...with its own downloads folder, so profiles cannot read each other's files" test -d "$T/home/Downloads/bank"
 check "...and rights only for its own user on it" grep -q "setfacl -m u:fx-bank:rwx $T/home/Downloads/bank" "$T/calls"
 check "...and not the other user's" not grep -q "u:firefox:rwx $T/home/Downloads/bank" "$T/calls"
@@ -92,6 +92,34 @@ check "it refuses to run as root" grep -q 'run it as your normal user' "$HERE/bi
 
 # 4. The session only accepts what its caller may send. It resets its own PATH, so it
 # cannot be tricked into thinking it is the firefox user from here; instead its own
+# 2c. the theme and your New Tab picture
+wait 2>/dev/null
+mkdir -p "$T/home/.config/debsway" "$T/home/Pictures/debsway/firefox"
+echo light >"$T/home/.config/debsway/theme"
+printf '\x89PNG\r\n\x1a\n' >"$T/home/Pictures/debsway/firefox/old.png"
+touch -d '2026-01-01' "$T/home/Pictures/debsway/firefox/old.png"
+printf '\xff\xd8\xff\xe0 newest' >"$T/home/Pictures/debsway/firefox/new.jpg"
+printf 'not a picture' >"$T/home/Pictures/debsway/firefox/newest.png"
+# (the pretend sudo keeps a copy of the picture while "Firefox" runs)
+cat >"$T/fake/sudo" <<FAKE
+#!/bin/bash
+echo "sudo \$*" >>"$T/calls"
+case " \$* " in
+    *" -l "*) exit 0 ;;
+    *" start "*) for p in "$T"/run/firefox-newtab.*; do [ -e "\$p" ] && cp "\$p" "$T/handed"; done ;;
+esac
+FAKE
+: >"$T/calls"; rm -f "$T/handed"
+fx --no-audio
+check "the light theme: the session is told light" grep -qF "firefox-session start $T/run firefox-wayland - $T/home/Downloads light firefox-newtab.jpg" "$T/calls"
+check "your New Tab picture: the newest real one is handed over (one named .png that isn't a picture is passed over)" \
+    bash -c 'grep -q newest "$1"' _ "$T/handed"
+check "...readable by firefox alone, under the one name the session accepts" grep -q "setfacl -m u:firefox:r-- $T/run/firefox-newtab.jpg" "$T/calls"
+check "...and gone again when Firefox closes" test ! -e "$T/run/firefox-newtab.jpg"
+: >"$T/calls"
+fx --no-audio --profile bank
+check "...a profile gets the theme, never the picture" grep -qF "firefox-bank-wayland - $T/home/Downloads/bank light -" "$T/calls"
+rm -rf "$T/home/.config/debsway" "$T/home/Pictures"
 # validation lines are run against good and bad values.
 bad_arg() { # LINE-PATTERN VALUE VAR: does the script's check for VAR refuse VALUE?
     local line
@@ -100,13 +128,17 @@ bad_arg() { # LINE-PATTERN VALUE VAR: does the script's check for VAR refuse VAL
     ( die() { exit 1; }; export "$3=$2"; eval "${line//\[ -S*/true}" ) 2>/dev/null && return 1 || return 0
 }
 ok_arg() { ! bad_arg "$@"; }
-host_rt= host_wl= audio= downloads=
+host_rt= host_wl= audio= downloads= theme= picture=
 check "a runtime folder that is not /run/user/N is refused" bad_arg '=~ ^/run/user/' /tmp/x host_rt
 check "...and /run/user/1000 is accepted" ok_arg '=~ ^/run/user/' /run/user/1000 host_rt
 check "a Wayland name with a slash is refused" bad_arg 'unexpected Wayland display name' ../x host_wl
 check "...and wayland-1 is accepted" ok_arg 'unexpected Wayland display name' wayland-1 host_wl
 check "a sound pipe name it did not expect is refused" bad_arg 'unexpected sound pipe name' /etc/passwd audio
 check "...and firefox-audio.fifo or - are accepted" ok_arg 'unexpected sound pipe name' firefox-audio.fifo audio
+check "a theme other than light or dark is refused" bad_arg 'unexpected theme' 'dark;id' theme
+check "...light is accepted" ok_arg 'unexpected theme' light theme
+check "a picture name other than firefox-newtab.jpg or .png is refused" bad_arg 'unexpected picture name' ../../etc/passwd picture
+check "...firefox-newtab.png is accepted" ok_arg 'unexpected picture name' firefox-newtab.png picture
 check "a downloads folder other than /home/NAME/Downloads is refused" bad_arg 'unexpected downloads folder' /etc downloads
 check "...also one that climbs out with .." bad_arg 'unexpected downloads folder' '/home/a/../../etc/Downloads' downloads
 check "...and /home/me/Downloads is accepted" ok_arg 'unexpected downloads folder' /home/me/Downloads downloads
@@ -115,6 +147,7 @@ tag=bank
 check "a profile accepts /home/me/Downloads/bank" ok_arg '/Downloads/$tag$' /home/me/Downloads/bank downloads
 check "...not the shared Downloads folder" bad_arg '/Downloads/$tag$' /home/me/Downloads downloads
 check "...and not another profile's" bad_arg '/Downloads/$tag$' /home/me/Downloads/shop downloads
+check "a profile is never given a New Tab picture" bad_arg 'unexpected picture name' firefox-newtab.png picture
 tag=''
 check "the session accepts the users firefox and fx-NAME only" python3 -I -c '
 s = open(__import__("sys").argv[1]).read()
@@ -166,6 +199,34 @@ b = s[d:s.index("say \"incognito\"", d)]
 assert "if [ \"$links\" = yes ]; then" in b and "unset_default_app debsway-firefox.desktop" in b
 ' "$HERE/extras/firefox-sandbox.sh"
 check "...and --remove takes the answers away" grep -q 'sudo rm -f /etc/debsway/firefox.conf' "$HERE/extras/firefox-sandbox.sh"
+# what the session writes for the theme and the picture, run on a temp profile
+session_theme() { # THEME PICTURE: the session's lines, with $T/rt as the runtime folder
+    mkdir -p "$T/tp" "$T/rt"
+    : >"$T/tp/user.js"
+    ( profile=$T/tp host_rt=$T/rt theme=$1 picture=$2
+      eval "$(sed -n '/^# Light or dark (bin\/theme)/,/^# fast JavaScript:/p' "$HERE/bin/firefox-session")" ) 2>/dev/null
+}
+session_theme light -
+check "light: Firefox's light theme, websites told light, the light fox" bash -c '
+    grep -qx "user_pref(\"extensions.activeThemeID\", \"firefox-compact-light@mozilla.org\");" "$1" &&
+    grep -qx "user_pref(\"layout.css.prefers-color-scheme.content-override\", 1);" "$1" &&
+    grep -q "light-fox-anniversary" "$1"' _ "$T/tp/user.js"
+session_theme dark -
+check "dark: the dark ones" bash -c 'grep -q "firefox-compact-dark@mozilla.org" "$1" && grep -q "content-override\", 0" "$1" && grep -q "dark-fox-anniversary" "$1"' _ "$T/tp/user.js"
+printf '\xff\xd8\xff\xe0 a photo' >"$T/rt/firefox-newtab.jpg"
+session_theme dark firefox-newtab.jpg
+check "a picture: in the New Tab page's stylesheet, as data (Firefox loads no outside file there)" bash -c '
+    grep -q "^@-moz-document url(\"about:newtab\"), url(\"about:home\")" "$1" && grep -q "data:image/jpeg;base64,$(base64 -w0 "$2")" "$1" &&
+    grep -q "legacyUserProfileCustomizations.stylesheets\", true" "$3"' _ "$T/tp/chrome/userContent.css" "$T/rt/firefox-newtab.jpg" "$T/tp/user.js"
+printf 'not a picture' >"$T/rt/firefox-newtab.jpg"
+session_theme dark firefox-newtab.jpg
+check "...one that isn't really a picture: none, and the old stylesheet goes" test ! -e "$T/tp/chrome/userContent.css"
+ln -sf /etc/passwd "$T/rt/firefox-newtab.png"
+session_theme dark firefox-newtab.png
+check "...a link instead of a file isn't followed" test ! -e "$T/tp/chrome/userContent.css"
+printf '/* mine */\n' >"$T/tp/chrome/userContent.css"
+session_theme dark -
+check "...a userContent.css of your own is left alone" grep -qx '/\* mine \*/' "$T/tp/chrome/userContent.css"
 check "a profile's settings come from the file only root can write" grep -q '/etc/debsway/firefox-profiles/\$tag.conf' "$HERE/bin/firefox-session"
 check "the address in it is checked before it is used" grep -q "isn't a plain web address" "$HERE/bin/firefox-session"
 check "the session's own checks come before it looks for the Landlock wrapper" python3 -I -c '

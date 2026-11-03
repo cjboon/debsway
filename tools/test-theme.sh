@@ -6,7 +6,7 @@
 # debsway's own files; switching back gives the same files; the lock screen
 # gets the theme's color, black if the theme can't say; the debsway menu,
 # nmtui, the power menu and the wallpaper list take their colors from it.
-# In a temp home with pretend swaymsg, makoctl, notify-send and pgrep:
+# In a temp home with pretend swaymsg, makoctl, notify-send, gsettings and pgrep:
 # nothing reaches the running desktop. Run by test.sh, or:  bash tools/test-theme.sh
 # shellcheck disable=SC2016  # the inner shells expand their own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
@@ -22,7 +22,7 @@ not() { ! "$@"; }
 unset SWAYSOCK WAYLAND_DISPLAY
 
 mkdir -p "$T/fake"
-for p in swaymsg makoctl notify-send wmenu; do
+for p in swaymsg makoctl notify-send wmenu gsettings; do
     printf '#!/bin/sh\necho "%s $*" >>"%s/calls"\n' "$p" "$T" >"$T/fake/$p"
 done
 # (mako "isn't running": the real one on this desktop is never reloaded)
@@ -80,6 +80,13 @@ check "...notifications light" bash -c 'grep -qx "background-color=#f2efe9f0" "$
 check "...the launcher (Super+d) light" grep -q "^set \$menu wmenu-run -f 'monospace 12' -N f2efe9 -n 2b2b2b " "$H/.config/sway/config"
 check "...sway accepts it all" bash -c 'command -v sway >/dev/null || exit 0
     ! env -u WAYLAND_DISPLAY WLR_BACKENDS=headless WLR_RENDERER=pixman WLR_LIBINPUT_NO_DEVICES=1 sway -C -c "$1" 2>&1 | grep -q "\[ERROR\]"' _ "$H/.config/sway/config"
+th light >/dev/null
+check "...GTK apps prefer light: settings.ini for GTK 3 and 4, and libadwaita's color-scheme" bash -c '
+    grep -qx "gtk-application-prefer-dark-theme=false" "$1/gtk-3.0/settings.ini" && grep -qx "gtk-application-prefer-dark-theme=false" "$1/gtk-4.0/settings.ini" &&
+    grep -qx "gsettings set org.gnome.desktop.interface color-scheme prefer-light" "$2"' _ "$H/.config" "$T/calls"
+printf '[Settings]\ngtk-font-name=Mine 11\n' >"$H/.config/gtk-3.0/settings.ini"
+th light
+check "...a settings.ini line of your own stays" bash -c 'grep -qx "gtk-font-name=Mine 11" "$1" && [ "$(grep -c prefer-dark "$1")" = 1 ]' _ "$H/.config/gtk-3.0/settings.ini"
 th dark
 check "theme dark again: foot.ini, mako's config, the launcher and the snippet as before (nothing left half light)" bash -c '
     cmp -s "$1/dark.foot.ini" "$2/.config/foot/foot.ini" && cmp -s "$1/dark.theme.conf" "$2/.config/sway/config.d/theme.conf" &&
@@ -128,6 +135,19 @@ check "...and dark again: the menu as it was" bash -c 'grep -q "colors.backgroun
 rm -f "$H/.local/bin/theme"
 menu=$(env HOME="$H" XDG_CONFIG_HOME="$H/.config" bash -c 'eval "$(sed -n "/^gray_options() {/,/^}/p" "$1")"; gray_options' _ "$HERE/bin/debsway-menu" | paste -sd' ')
 check "...and with no theme command: the dark colors" grep -q "colors.background=000000" <<<"$menu"
+
+# ---- incognito: the theme as one checked word, Firefox's look to match
+line=$(grep -F 'unexpected theme' "$HERE/bin/incognito-session")
+check "incognito's session refuses a theme other than light or dark" not bash -c 'die() { exit 1; }; theme="dark;id"; eval "$1"' _ "$line"
+check "...and takes light" bash -c 'die() { exit 1; }; theme=light; eval "$1"' _ "$line"
+mkdir -p "$T/ip"
+( base=$T/ip theme=light; mkdir -p "$base/profile"; : >"$base/profile/user.js"
+  eval "$(sed -n '/^# Downloads go to memory too/,/^} >>"\$base\/profile\/user.js"/p' "$HERE/bin/incognito-session")" ) 2>/dev/null
+check "...light: Firefox's light look" grep -q 'firefox-compact-light@mozilla.org' "$T/ip/profile/user.js"
+check "incognito hands over the theme, dark when none was chosen" python3 -I -c '
+import sys; s = open(sys.argv[1]).read()
+assert "case $theme in light | dark) ;; *) theme=dark ;; esac" in s
+assert "\"$audio_arg\" \"$theme\" \"$@\"" in s' "$HERE/bin/incognito"
 
 # ---- the part, and the menu's line
 check "the part is in the base, after foot's and mako's" bash -c '. "$1/packages.sh"; p=" ${PARTS[*]} "; [[ $p == *" mako foot-config wallpaper theme "* ]]' _ "$HERE"

@@ -18,15 +18,16 @@ noabs=/usr/local/libexec/debsway-no-abstract-sockets
 [ -x "$noabs" ] || die "$noabs is missing. Run: bash ~/debsway/parts/incognito.sh"
 
 [ "$(id -un)" = incognito ] || die "this runs as the user incognito; use the incognito command."
-[ $# -ge 3 ] || die "usage: incognito-session RUNTIME_DIR WAYLAND_DISPLAY AUDIO [URL...]"
-host_rt=$1 host_wl=$2 audio=$3
-shift 3
+[ $# -ge 4 ] || die "usage: incognito-session RUNTIME_DIR WAYLAND_DISPLAY AUDIO THEME [URL...]"
+host_rt=$1 host_wl=$2 audio=$3 theme=$4
+shift 4
 
 # These come from the user who called us, so nothing else is accepted
 [[ $host_rt =~ ^/run/user/[0-9]+$ ]] || die "unexpected runtime folder."
 [[ $host_wl =~ ^[A-Za-z0-9._-]+$ ]] || die "unexpected Wayland display name."
 [ -S "$host_rt/$host_wl" ] || die "can't reach the Wayland socket."
 [[ $audio == - || $audio == incognito-audio.fifo ]] || die "unexpected sound pipe name."
+[[ $theme == light || $theme == dark ]] || die "unexpected theme."
 if [ "$audio" != - ]; then
     [ -p "$host_rt/$audio" ] || audio=-
     for c in pipewire wireplumber pipewire-pulse; do
@@ -64,6 +65,13 @@ cp /usr/local/share/debsway/incognito-user.js "$base/profile/user.js"
     echo 'user_pref("browser.download.folderList", 2);'
     echo "user_pref(\"browser.download.dir\", \"$base/tmp\");"
     echo 'user_pref("browser.download.useDownloadDir", true);'
+    # light or dark (bin/theme): Firefox's own look (websites are told light
+    # anyway: fingerprinting resistance)
+    if [ "$theme" = light ]; then
+        echo 'user_pref("extensions.activeThemeID", "firefox-compact-light@mozilla.org");'
+    else
+        echo 'user_pref("extensions.activeThemeID", "firefox-compact-dark@mozilla.org");'
+    fi
 } >>"$base/profile/user.js"
 
 # Its own sound server. The only sink it has writes into the pipe; there

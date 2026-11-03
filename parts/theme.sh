@@ -3,8 +3,10 @@
 # default and looks as debsway always has; "theme light" (or the debsway
 # menu's Theme line) switches to warm light backgrounds and dark text: the
 # bar, the plain background with no wallpaper, foot, the debsway menu and its
-# lists, nmtui, the launcher, the power menu, notifications and the lock
-# screen. The text console (tmux) stays dark. The colors are
+# lists, nmtui, the launcher, the power menu, notifications, the lock
+# screen, GTK apps (Mousepad, Thunar...), and the sandboxed Firefox and
+# incognito at their next start: their own look, and websites that offer a
+# dark or light version. The text console (tmux) stays dark. The colors are
 # data/themes/dark and data/themes/light.
 # Usage: bash theme.sh [--remove]
 # status: bin:theme
@@ -20,11 +22,14 @@ if [ "${1:-}" = --remove ]; then
     remove_snippet theme
     remove_bin theme
     rm -rf "$THEMES"
+    apt_purge
     note "debsway's colors are dark again; your choice in ~/.config/debsway/theme stays."
     exit
 fi
 
 say "Light or dark (theme)"
+# gsettings: tells libadwaita apps light or dark (GTK 3 ones read settings.ini)
+apt_install libglib2.0-bin
 install_bin theme
 mkdir -p "$THEMES"
 install -m 0644 "$DEBSWAY_DIR/data/themes/dark" "$DEBSWAY_DIR/data/themes/light" "$THEMES/"

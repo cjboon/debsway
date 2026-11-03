@@ -30,7 +30,11 @@ it is where many browser attacks happen), sound (default yes), whether it is
 your default browser, so links from other programs open in it (default yes),
 and uBlock Origin's mode: medium (default: other sites' scripts blocked too;
 you allow sites with `ublock-allow`) or standard (ads, trackers and malware
-sites blocked, sites work). It also sets up Firefox's
+sites blocked, sites work). It follows debsway's light or dark theme
+(`theme`), and a JPEG or PNG in `~/Pictures/debsway/firefox` replaces the fox
+behind its New Tab page: your `firefox` command hands it a checked copy, which
+only the `firefox` user can read, at each start, so it never sees your
+pictures folder. It also sets up Firefox's
 hardening and `incognito` ([firefox.md](firefox.md)), and the profiles made
 with `extras/firefox-profiles/new-profile.sh` each get a user like it.
 

@@ -10,7 +10,9 @@
 #   theme apply           write the current theme's colors again
 # Switching writes the bar's colors and the plain background (no wallpaper)
 # in a sway snippet, foot's [colors], mako's colors and the launcher's
-# (Super+d), then reloads sway. Windows open now keep their colors until they
+# (Super+d), GTK apps' light or dark (settings.ini, and the color-scheme
+# setting libadwaita apps read), then reloads sway. The sandboxed Firefox and
+# incognito are told at their next start (bin/firefox, bin/incognito). Windows open now keep their colors until they
 # open again. The text console (tmux) stays dark. Only debsway's own files are
 # changed: a foot.ini or mako config you wrote yourself is left alone.
 # The colors are data/themes/dark and light, read strictly: NAME=colour lines
@@ -77,6 +79,28 @@ foot_colors() {
     printf 'selection-foreground=%s\nselection-background=%s\n' "${C[FOOT_SEL_FG]}" "${C[FOOT_SEL_BG]}"
 }
 
+# gtk LIGHT|DARK: GTK 3 and 4 apps (Mousepad, Thunar...) prefer that: one line
+# in each settings.ini, the rest kept; and the desktop's color-scheme
+# setting, which libadwaita apps read (when gsettings is there)
+gtk() {
+    local dark=false f d
+    [ "$1" = dark ] && dark=true
+    for d in gtk-3.0 gtk-4.0; do
+        f=${XDG_CONFIG_HOME:-$HOME/.config}/$d/settings.ini
+        mkdir -p "${f%/*}"
+        [ -f "$f" ] || printf '[Settings]\n' >"$f"
+        grep -q '^\[Settings\]' "$f" || printf '\n[Settings]\n' >>"$f"
+        if grep -q '^gtk-application-prefer-dark-theme=' "$f"; then
+            sed -i "s/^gtk-application-prefer-dark-theme=.*/gtk-application-prefer-dark-theme=$dark/" "$f"
+        else
+            sed -i "/^\[Settings\]/a gtk-application-prefer-dark-theme=$dark" "$f"
+        fi
+    done
+    if command -v gsettings >/dev/null; then
+        gsettings set org.gnome.desktop.interface color-scheme "prefer-$1" 2>/dev/null || true
+    fi
+}
+
 # apply: the current theme's colors into debsway's files, then sway reloads
 apply() {
     local t tmp
@@ -104,6 +128,7 @@ apply() {
     if [ -f "$SWAY_CONF" ]; then
         sed -i -E "s/^(set \\\$menu wmenu-run -f 'monospace 12') -N [0-9a-f]{6} -n [0-9a-f]{6} -M [0-9a-f]{6} -m [0-9a-f]{6} -S [0-9a-f]{6} -s [0-9a-f]{6}\$/\\1 -N ${C[WMENU_BG]} -n ${C[WMENU_TEXT]} -M ${C[WMENU_BG]} -m ${C[WMENU_TEXT]} -S ${C[WMENU_TEXT]} -s ${C[WMENU_BG]}/" "$SWAY_CONF"
     fi
+    gtk "$t"
     if [ -n "${SWAYSOCK:-}" ]; then swaymsg -q reload 2>/dev/null || true; fi
 }
 
