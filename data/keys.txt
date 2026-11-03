@@ -2,7 +2,7 @@
   ──────────────────────────────────────────────────────────────────
   Press Esc to close this; arrows and Space scroll.
   Open it again any time: Super+?, click debsway > Help in the bar, or type  keys.
-  (The debsway menu: arrows and Enter, or click. Esc closes every screen of it.)
+  (The debsway menu: arrows and Enter, or click; Space flips a switch. Esc closes every screen.)
   Lines for things you have not installed are left out; add them with debsway --apps.
   It is also the file ~/KEYS.txt.
   The key every sway shortcut starts with: keys --mod alt, or keys --mod super.

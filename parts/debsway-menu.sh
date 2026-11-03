@@ -48,7 +48,13 @@ install_bin keys
 install_bin sway-status
 mkdir -p "${KEYS%/*}"
 install -m 0644 "$DEBSWAY_DIR/data/keys.txt" "$KEYS"
-# An earlier version put a window rule here; the rule now lives in install-base.sh (the popups snippet)
-remove_snippet debsway-menu
+# Super+m, as a click on "debsway" in the bar: again closes it. Here, not in
+# install-base.sh, so update.sh brings it to an install made before it (an
+# earlier version's window rule in this snippet now lives in install-base.sh's
+# popups snippet)
+put_snippet debsway-menu <<'EOF'
+# The debsway menu on Super+m (debsway parts/debsway-menu.sh)
+bindsym $mod+m exec ~/.local/bin/sway-status --menu
+EOF
 note "Click \"debsway\" in the bar: Help, Install apps, Update, Status."
 note "In a terminal: debsway --help, debsway --update, debsway --apps (man debsway)."

@@ -156,10 +156,12 @@ if __name__ == "__main__":
         "status-esc": ["\x1b[A", "\r", "\x1b"],
         "resize": [("resize", 40, 120), "q"],
         "toggle-wifi": ["j", "j", "j", "j", "j", "\r", "\x1b"],
+        "space-wifi": ["j", "j", "j", "j", "j", " ", "\x1b"],
         "click-mic": [click_on("Microphone"), "\x1b"],
         "early-resize": [("early", 40, 120), "q"],
         "q": ["q"],
         "sway-terminal": ["j", "\r"],
+        "sway-space-terminal": ["j", " ", "\x1b"],
         "sway-click-terminal": [click_on("Terminal")],
         "sway-browser": [click_on("Web browser")],
         "sway-editor": [click_on("Text editor")],
@@ -201,6 +203,9 @@ menu sway-terminal
 check "inside sway the menu has Terminal, after Help" grep -q 'DREWALL Help|Terminal|Install apps|Update|Status' <<<"$out"
 # shellcheck disable=SC2016  # the inner shell expands its own variables
 check "...which opens foot through sway, and the menu closes" bash -c 'grep -qx "swaymsg exec foot" "$1" && grep -q "STATUS 0" <<<"$2"' _ "$T/ran" "$out"
+: >"$T/ran"
+menu sway-space-terminal
+check "Space on an entry that isn't a switch opens nothing" not grep -q "swaymsg exec" "$T/ran"
 menu sway-click-terminal
 check "...also with a click" grep -qx 'swaymsg exec foot' "$T/ran"
 check "no browser or editor installed: no lines for them" not grep -qE '^DREWAPPS.*(Web browser|Text editor)' <<<"$out"
@@ -335,6 +340,10 @@ check "choosing Wi-Fi flips it" grep -qx 'radios wifi toggle' "$T/ran"
 check "...the entry shows the new state" grep -q 'Wi-Fi: off' "$T/screen"
 check "...and the menu stays open until Esc" grep -q 'STATUS 0' <<<"$out"
 check "Bluetooth is not listed when the computer has none" not grep -q 'Bluetooth' "$T/screen"
+: >"$T/ran"; echo on >"$T/radio-wifi"
+menu space-wifi
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+check "Space flips a switch too" bash -c 'grep -qx "radios wifi toggle" "$1" && grep -q "Wi-Fi: off" "$2"' _ "$T/ran" "$T/screen"
 echo off >"$T/radio-mic"
 menu click-mic
 check "a click on Microphone flips it too" grep -qx 'radios mic toggle' "$T/ran"
@@ -547,7 +556,9 @@ check "...pressed again while it's open: closes it, opens nothing" \
     bash -c 'grep -qx -- "-q \[app_id=\"debsway-run\"\] kill" "$1/sway" && [ ! -e "$1/menu-ran" ]' _ "$T/oc"
 rm -f "$T/oc/open" "$T/oc/xdg/sway-status.pid"
 # shellcheck disable=SC2016  # $mod is sway's, not the shell's
-check "sway binds Super+m to it" grep -qx 'bindsym $mod+m exec ~/.local/bin/sway-status --menu' "$HERE/install-base.sh"
+check "sway binds Super+m to it, in the part's snippet (update.sh re-runs a part, never install-base.sh)" bash -c '
+    grep -qx "bindsym \$mod+m exec ~/.local/bin/sway-status --menu" "$1/parts/debsway-menu.sh" && grep -qx "put_snippet debsway-menu <<.EOF." "$1/parts/debsway-menu.sh" &&
+    ! grep -q "sway-status --menu" "$1/install-base.sh"' _ "$HERE"
 check "the cheat sheet lists Super+m" grep -q 'Super+m .*debsway menu' "$HERE/data/keys.txt"
 # sway restarts swaybar on every reload, and swaybar stops the status script's
 # whole process group: a window started in it would be killed mid-way

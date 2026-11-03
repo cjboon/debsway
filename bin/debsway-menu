@@ -351,7 +351,7 @@ draw() {
             printf '\e[%d;%dH %-*s ' "$y" "$left" $((width - 2)) "${items[i]}"
         fi
     done
-    printf '\e[%d;%dH\e[2marrows and Enter, or click. Esc closes.\e[0m' $((first_row + n + 1)) "$left"
+    printf '\e[%d;%dH\e[2mEnter or click; Space switches; Esc closes\e[0m' $((first_row + n + 1)) "$left"
 }
 
 # run_choice: runs the chosen entry in this window
@@ -472,6 +472,9 @@ while :; do
     read_key
     case $KEY in
         enter) run_choice ;;
+        # Space flips a switch (Wi-Fi, Bluetooth, microphone, webcam, theme);
+        # on anything else it does nothing, so it never opens a program
+        space) case ${ids[sel]} in wifi | bluetooth | mic | camera | theme) run_choice ;; esac ;;
         down | j) sel=$(((sel + 1) % n)) ;;
         up | k) sel=$(((sel + n - 1) % n)) ;;
         wheeldown) sel=$(((sel + 1) % n)) ;;
