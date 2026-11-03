@@ -529,6 +529,14 @@ else
 fi
 
 # --------------------------------------------------------------------
+section "debsway's repository on a computer (parts/debsway-repo.sh), with a pretend sudo"
+if out=$(bash tools/test-debsway-repo.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") repository part checks"
+else
+    bad "repository part checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
+
+# --------------------------------------------------------------------
 section "debsway from wherever it is (not only ~/debsway)"
 if out=$(bash tools/test-location.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") location checks"

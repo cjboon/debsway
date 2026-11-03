@@ -137,6 +137,12 @@ DOT_APPLIEDPRIVACY="dot1.applied-privacy.net 146.255.56.98 2a02:1b8:10:234::2"
 # make the key and turn this on.
 DEBSWAY_SIGNING_FPR=
 
+# debsway's own apt repository (parts/debsway-repo.sh): where it is served
+# from, https:// or an .onion address. Its packages are signed with the key
+# above (tools/make-apt-repo.sh), so the server needn't be trusted. Empty:
+# not set up yet, and the part changes nothing.
+DEBSWAY_REPO_URL=
+
 # The Debian release everything was written and tested on.
 # checked: 2026-10-27
 DEBIAN_RELEASE=trixie

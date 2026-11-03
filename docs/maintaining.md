@@ -121,6 +121,18 @@ is to any web server or mirror (`rsync -a --delete FOLDER/ server:/var/www/debia
 - **Only debsway's packages** go in (`debsway` and `debsway-*`); the script
   refuses anything else.
 
+On a debsway computer, `debsway part debsway-repo` adds it, once `pins.sh`
+names both the key (`DEBSWAY_SIGNING_FPR`) and the address
+(`DEBSWAY_REPO_URL`, https:// or an .onion address); until then it changes
+nothing. The key comes from the copy's own `data/debsway-signing-key.asc`,
+only if it is exactly the pinned one, and is trusted for that repository
+alone (`Signed-By`). An apt pin lets only the package `debsway` come from it,
+so even someone with your key or the server couldn't replace a Debian package
+or add another (`tools/test-debsway-repo.sh` checks the pin with Debian's own
+apt). unattended-upgrades then installs debsway's updates like Debian's. It
+is not in the base list yet: add it to `PARTS` in `packages.sh` once the
+repository is live.
+
 ## Other scripts
 
 - `prep/setup-sudo.sh USER` (as root): installs sudo and adds USER to the

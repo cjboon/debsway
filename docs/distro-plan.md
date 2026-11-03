@@ -202,10 +202,14 @@ Started: `tools/make-apt-repo.sh` makes and signs the repository on your own
 computer (with `apt-ftparchive` and gpg, which Debian has, instead of
 reprepro), only for debsway's packages, good for 14 days; Debian's own apt
 takes it, and refuses it signed with another key, past its Valid-Until or
-with a changed package list (`tools/test-apt-repo.sh`). Still to do: the
-keyring package, the part that adds the repository on a debsway computer
-(pinned key, and an apt pin so it can only bring debsway's packages), and
-update.sh through apt. They wait for the key (Phase 0) and an address.
+with a changed package list (`tools/test-apt-repo.sh`). `parts/debsway-repo.sh`
+adds it on a debsway computer: the pinned key only, and an apt pin so it can
+bring nothing but the debsway package (checked with real apt). It changes
+nothing until pins.sh names the key and the address. Still to do: re-running
+the parts whose files changed after apt upgrades the package (update.sh does
+it from git today), and adding the part to the base list once the repository
+is live. A separate keyring package isn't needed: the key comes with debsway
+itself, checked against the pin.
 
 
 - **The archive tool:** `reprepro` builds a Debian archive (the `dists/`
