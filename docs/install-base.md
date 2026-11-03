@@ -70,6 +70,7 @@ checked with `sway -C` before it's kept.
 | `sysctl-hardening.sh` | (none) | Kernel and network settings in the spirit of Kicksecure (`data/sysctl-hardening.conf`): kernel addresses hidden, only your own child programs can be traced, no kexec, SysRq limited, stricter file and network defaults. Applies now and at every boot. See [Kernel hardening](#kernel-hardening) |
 | `module-blacklist.sh` | (none) | Blocks rare network protocols, old filesystems and FireWire from loading (`data/module-blacklist.conf`) |
 | `boot-hardening.sh` | (none) | Adds Kicksecure's boot parameters to GRUB (`slab_nomerge init_on_alloc=1 init_on_free=1 page_alloc.shuffle=1 randomize_kstack_offset=on vsyscall=none debugfs=off`); applies after a reboot |
+| `grub-colors.sh` | (none) | GRUB's boot menu in white on red, the chosen entry yellow (`/etc/grub.d/06_debsway_colors`); colours only |
 | `ufw.sh` | ufw | Firewall: blocks everything incoming, allows outgoing |
 | `power-profiles-daemon.sh` | power-profiles-daemon | `powerprofilesctl set power-saver \| balanced \| performance` (skips itself if tlp is installed) |
 | `network-manager.sh` | network-manager, wpasupplicant, wireless-regdb, polkitd | Moves the Wi-Fi from the installer or wifi.sh into NetworkManager; `nmtui` (in debsway's white-on-black colors, like the install list; your own `NEWT_COLORS` wins) to switch networks |
@@ -105,6 +106,9 @@ checked against this Debian:
   skipped with a note) and one reboot. If the system ever doesn't start,
   press `e` on the GRUB entry, delete the parameters from the line that
   starts with `linux`, boot, then run `bash parts/boot-hardening.sh --remove`.
+- **`grub-colors.sh`**: only the boot menu's colours; what boots doesn't
+  change. If `update-grub` can't build the menu with them, they are taken
+  out again. Undo with `bash parts/grub-colors.sh --remove`.
 - **`module-blacklist.sh`**: `dccp`, `sctp`, `rds`, `tipc`, `ax25`, `netrom`,
   `rose`; the old filesystems `cramfs`, `freevxfs`, `jffs2`, `hfs`, `affs`,
   `bfs`, `befs`, `efs`, `qnx4`, `qnx6`, `sysv`, `minix`, `omfs`, `hpfs`,

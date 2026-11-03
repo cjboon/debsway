@@ -157,6 +157,11 @@ fi
 
 # --------------------------------------------------------------------
 section "The claude command (sandboxed Claude Code), with a pretend sudo"
+if out=$(bash tools/test-grub-colors.sh 2>&1); then
+    ok "$(grep -c '^  ok' <<<"$out") GRUB colour checks"
+else
+    bad "GRUB colour checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+fi
 if out=$(bash tools/test-claude.sh 2>&1); then
     ok "$(grep -c '^  ok' <<<"$out") claude checks"
 else
