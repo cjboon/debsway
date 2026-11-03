@@ -193,7 +193,7 @@ chmod u+w "$stage/boot/grub/grub.cfg" "$stage/isolinux/menu.cfg" "$stage/isolinu
 grub_add_entry "$stage/boot/grub/grub.cfg" || die "The image's GRUB menu isn't as expected (a new Debian release?); nothing was built."
 isolinux_edit "$stage/isolinux/menu.cfg" "$stage/isolinux/$second" || die "The image's BIOS menu isn't as expected; nothing was built."
 isolinux_entry >"$stage/isolinux/wren.cfg"
-(cd "$stage" && find wren-install Wren Linux -type f | sed 's|^|./|') >"$work/added"
+(cd "$stage" && find wren-install wren -type f | sed 's|^|./|') >"$work/added"
 mapfile -t added <"$work/added"
 md5_update "$stage/md5sum.txt" "$stage" ./boot/grub/grub.cfg ./isolinux/menu.cfg "./isolinux/$second" ./isolinux/wren.cfg "${added[@]}"
 note "\"Automatic install with Wren Linux\" is the first entry, and the default, in both menus."
