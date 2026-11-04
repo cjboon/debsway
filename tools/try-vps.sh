@@ -22,9 +22,11 @@ not_root
 VM=wren-vps-test
 PORT=2240
 WORK=${XDG_DATA_HOME:-$HOME/.local/share}/wren/try-vps
-MOCK=$WREN_DIR/vendor/mockvps-kvm/mockvps-kvm.sh
+# The mockvps-kvm command its extra installs: the copy it points at may be the
+# Wren Linux package's, and the vendored script runs only as that command
+MOCK=$HOME/.local/bin/mockvps-kvm
 KEY=$HOME/.ssh/${VM}_id
-mock() { bash "$MOCK" --name "$VM" --port "$PORT" --workdir "$WORK" "$@"; }
+mock() { "$MOCK" --name "$VM" --port "$PORT" --workdir "$WORK" "$@"; }
 vm_ssh() { ssh -o IdentitiesOnly=yes -o HostKeyAlias="$VM" -o StrictHostKeyChecking=accept-new -i "$KEY" -p "$PORT" vps@127.0.0.1 "$@"; }
 
 # provision CLIENT-KEY: what runs as root in the VM: setup-vps.sh, as it is
@@ -69,7 +71,7 @@ esac
 
 [ -e /dev/kvm ] || die "No /dev/kvm: KVM is off in the BIOS, or this is a VM itself (docs/bios.md)."
 # mockvps-kvm needs its extra first (QEMU, and its command): it refuses to run without
-[ -e "$HOME/.local/bin/mockvps-kvm" ] || die "First set up the VM tool, once: wrenctl install mockvps-kvm   (then run this again)"
+[ -x "$MOCK" ] || die "First set up the VM tool, once: wrenctl install mockvps-kvm   (then run this again)"
 mkdir -p "$WORK"
 chmod 700 "$WORK"
 say "The onion client key for the test (kept in ~/.config/wren/vps/try-vps.key)"

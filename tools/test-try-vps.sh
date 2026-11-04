@@ -26,6 +26,8 @@ check "the VM's SSH and site only on this computer's loopback (never -k, no othe
     ! grep -qE -- "(^|[[:space:]])(-k|--ip)([[:space:]]|$)" "$1" && grep -q "vps@127.0.0.1" "$1"' _ "$HERE/tools/try-vps.sh"
 check "without the mockvps-kvm extra it says to set that up first" bash -c '
     [ ! -e /dev/kvm ] && exit 0; out=$(HOME=$1 bash "$2/tools/try-vps.sh" 2>&1); grep -q "wrenctl install mockvps-kvm" <<<"$out"' _ "$T/home" "$HERE"
+check "...and runs the VM through that command (the vendored script refuses to run directly)" grep -q '^MOCK=$HOME/.local/bin/mockvps-kvm$' "$HERE/tools/try-vps.sh"
+check "the extra doesn't chmod a script it can't change (the package's copy is root's)" grep -q '^\[ -x "\$SCRIPT" \] || chmod +x "\$SCRIPT"$' "$HERE/extras/mockvps-kvm.sh"
 check "it confirms the change from a second login, as you would" grep -q 'wren-vps --confirm' "$HERE/tools/try-vps.sh"
 
 [ "$fails" -eq 0 ]

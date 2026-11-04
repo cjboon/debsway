@@ -45,7 +45,8 @@ if [ -e "$CMD" ] && [ "$(readlink -- "$CMD")" != "$SCRIPT" ]; then
     die "$CMD already exists and isn't Wren Linux's; leaving it."
 fi
 ln -sfn "$SCRIPT" "$CMD"
-chmod +x "$SCRIPT"
+# (the Wren Linux package's copy is root's, and executable already)
+[ -x "$SCRIPT" ] || chmod +x "$SCRIPT"
 
 cat <<'EOF'
 
