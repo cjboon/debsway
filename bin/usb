@@ -176,7 +176,7 @@ mount_it() {
 }
 
 cmd_mount() {
-    local dev o out
+    local dev o out u
     dev=$(pick "${1:-}" mount)
     if [ "${FST[$dev]}" = crypto_LUKS ]; then
         o=$(opened "$dev")
@@ -186,10 +186,16 @@ cmd_mount() {
             o=${out##* as }
             o=${o%.}
             [[ $o =~ ^/dev/[a-z0-9/_-]+$ ]] || die "unlocked, but can't tell as what: $(shown "$out")"
-            # what was unlocked is a new device, with its own file system
+            # what was unlocked is a new device, with its own file system. udev
+            # reads that file system a moment later; and lsblk names the device
+            # /dev/mapper/NAME, not the /dev/dm-N udisksctl says: so wait, look
+            # again, and take the stick's unlocked child, whatever its name
+            if command -v udevadm >/dev/null; then udevadm settle -t 5 2>/dev/null || true; fi
             ALL=() STICKS=()
             devices
             for p in "${ALL[@]}"; do [ -n "${FST[$p]}" ] && is_stick "$p" && STICKS+=("$p"); done
+            u=$(opened "$dev")
+            if [ -n "$u" ]; then o=$u; fi
         fi
         dev=$o
         [ -n "${FST[$dev]:-}" ] || die "$dev was unlocked but holds no file system that can be mounted"

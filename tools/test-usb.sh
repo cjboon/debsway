@@ -30,6 +30,7 @@ case "\$1" in
 esac
 PRETEND
 printf '#!/bin/sh\necho "sudo $*" >>"%s/calls"\n' "$T" >"$T/fake/sudo"
+printf '#!/bin/sh\nexit 0\n' >"$T/fake/udevadm"
 chmod +x "$T/fake/"*
 ME=$(id -u)
 nvme='PATH="/dev/nvme0n1" TYPE="disk" FSTYPE="" SIZE="477G" PKNAME="" MOUNTPOINT="" LABEL="" HOTPLUG="0" RM="0" TRAN="nvme"
@@ -99,21 +100,22 @@ stick exfat /srv/x
 answer y mount
 check "...nor a root mount outside /media, /run/media, /mnt" bash -c '! grep -q umount "$1"' _ "$T/calls"
 
-# encrypted: unlocked, then the file system in it mounted; unmount locks it
+# encrypted: unlocked, then the file system in it mounted; unmount locks it.
+# udisksctl says "as /dev/dm-3", but lsblk -p lists it as /dev/mapper/NAME
 stick crypto_LUKS ''
 {
     cat "$T/lsblk.out"
-    echo 'PATH="/dev/dm-3" TYPE="crypt" FSTYPE="ext4" SIZE="29G" PKNAME="/dev/sda1" MOUNTPOINT="" LABEL="" HOTPLUG="0" RM="0" TRAN=""'
+    echo 'PATH="/dev/mapper/luks-1b2c" TYPE="crypt" FSTYPE="ext4" SIZE="29G" PKNAME="/dev/sda1" MOUNTPOINT="" LABEL="" HOTPLUG="0" RM="0" TRAN=""'
 } >"$T/lsblk.unlocked"
 run
 check "an encrypted stick: listed as locked" grep -q "encrypted .*locked" "$T/out"
 run mount
 check "...usb mount unlocks it, then mounts what is in it" \
-    bash -c 'grep -qx "udisksctl unlock -b /dev/sda1" "$1" && grep -qx "udisksctl mount -b /dev/dm-3 -o nosuid,nodev,noexec" "$1"' _ "$T/calls"
+    bash -c 'grep -qx "udisksctl unlock -b /dev/sda1" "$1" && grep -qx "udisksctl mount -b /dev/mapper/luks-1b2c -o nosuid,nodev,noexec" "$1"' _ "$T/calls"
 sed 's|PKNAME="/dev/sda1" MOUNTPOINT=""|PKNAME="/dev/sda1" MOUNTPOINT="/media/me/S"|' "$T/lsblk.unlocked" >"$T/lsblk.out"
 run unmount
 check "...usb unmount: unmounts, locks, switches off, in that order" \
-    test "$(grep -oE "^udisksctl [a-z-]+ -b [^ ]+" "$T/calls" | paste -sd,)" = "udisksctl unmount -b /dev/dm-3,udisksctl lock -b /dev/sda1,udisksctl power-off -b /dev/sda"
+    test "$(grep -oE "^udisksctl [a-z-]+ -b [^ ]+" "$T/calls" | paste -sd,)" = "udisksctl unmount -b /dev/mapper/luks-1b2c,udisksctl lock -b /dev/sda1,udisksctl power-off -b /dev/sda"
 
 # two sticks: say which
 stick vfat ''
