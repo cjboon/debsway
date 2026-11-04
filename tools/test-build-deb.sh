@@ -65,9 +65,9 @@ check "...and the list of extras links to no page it left out" bash -c '! grep -
 out=$(cd "$S" && HOME=$T/pkghome bash test.sh --offline 2>&1)
 check "wrenctl --test works there, without the tests of each piece" bash -c '! grep -qE "tools/test-|No such file|has no article|link to" <<<"$1" && grep -qE "^[0-9]+ ok, " <<<"$1"' _ "$out"
 check "...executable where git says so, and only there" bash -c '
-    cd "$1" && git -C "$2" ls-tree -r HEAD | awk "\$1 == \"100755\" { sub(/^[^\t]*\t/, \"\"); print }" | sort >"$3/x-git"
+    cd "$1" && git -C "$2" ls-tree -r HEAD | awk "\$1 == \"100755\" { sub(/^[^\t]*\t/, \"\"); print }" | grep -vE "$4" | sort >"$3/x-git"
     find . -type f -perm -u+x | sed "s|^\./||" | sort >"$3/x-pkg"
-    cmp "$3/x-git" "$3/x-pkg"' _ "$S" "$T/src" "$T"
+    cmp "$3/x-git" "$3/x-pkg"' _ "$S" "$T/src" "$T" "$DEVONLY"
 check "the Wren Linux command in /usr/bin, the same as bin/wrenctl" cmp "$T/root/usr/bin/wrenctl" "$S/bin/wrenctl"
 check "its man page" bash -c 'zcat "$1" | grep -q "^.TH WRENCTL 1"' _ "$T/root/usr/share/man/man1/wrenctl.1.gz"
 check "its Tab completion where bash-completion looks" cmp "$T/root/usr/share/bash-completion/completions/wrenctl" "$S/data/wrenctl-completion.bash"

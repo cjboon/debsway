@@ -95,7 +95,8 @@ find "$R" -type d -exec chmod 0755 {} +
 find "$R" -type f -exec chmod 0644 {} +
 chmod 0755 "$R/usr/bin/wrenctl"
 while IFS= read -r f; do
-    chmod 0755 "$SHARE/$f"
+    # (what was left out above has no marks to fix)
+    [ ! -e "$SHARE/$f" ] || chmod 0755 "$SHARE/$f"
 done < <(g ls-tree -r "$commit" | awk '$1 == "100755" { sub(/^[^\t]*\t/, ""); print }' | grep -vx -e '.github/.*' -e CLAUDE.md || true)
 
 mkdir -p "$R/DEBIAN"

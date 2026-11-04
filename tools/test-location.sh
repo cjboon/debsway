@@ -17,13 +17,15 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 
 # 1. No script code (comments aside) names ~/wren or $HOME/wren, except
 # the commands' last fallback and the two whose job is to copy Wren Linux there
-# (start.sh, and the install stick's first-login question); advice to clone a
+# (start.sh, and the install stick's first-login question), and wren-dev's copy
+# to work on, ~/wren-linux; advice to clone a
 # new copy there is fine
 cd "$HERE" || exit 1
 mapfile -t files < <(git ls-files 'bin/*' 'lib/*' 'parts/*' 'extras/*' '*.sh' 'data/*.sh' 'data/*.bash' | grep -vx -e start.sh -e test.sh -e data/install-iso-first-login.sh -e 'tools/.*')
 # shellcheck disable=SC2088  # a literal ~, as scripts would write it
 found=$(grep -nE '~/wren|\$HOME/wren|\$\{HOME\}/wren' "${files[@]}" | grep -vE '^[^:]+:[0-9]+:\s*#' |
-    grep -vxE '[^:]+:[0-9]+:    DIR=\$HOME/wren' | grep -v 'get it again: git clone')
+    grep -vxE '[^:]+:[0-9]+:    DIR=\$HOME/wren' | grep -v 'get it again: git clone' |
+    grep -vx 'extras/wren-dev.sh:[0-9]*:DEV=\$HOME/wren-linux')
 check "no script assumes ~/wren${found:+: $(head -3 <<<"$found" | cut -c1-120 | paste -sd'|')}" test -z "$found"
 check "...the commands that look for it say where in one way (WREN_DIR, the root-owned copy, ~/wren)" bash -c '
     for f in bin/wrenctl bin/wren-menu bin/tails-usb; do
