@@ -15,6 +15,8 @@ wren-key sign-repo FOLDER DEB...   a signed apt repository of Wren Linux's packa
 wren-key renew BACKUP       two more years for the signing subkey, from the backup
 ```
 
+This extra is only in a git copy of Wren Linux, not the package (`wrenctl install wren-dev` gets one). Where the package is installed, run its `wrenctl` lines as `WREN_DIR=~/wren-linux wrenctl ...`.
+
 For the computer you publish Wren Linux from. Every Wren Linux computer checks its
 updates against this one key (`update.sh` for commits, apt for the package),
 so whoever has it could put anything on all of them, as root. It is made in
