@@ -149,6 +149,7 @@ check "your own commits stop a plain update, with a message" grep -q 'both chang
 
 # What is merged is the commit the signature check looked at, not whatever the
 # name @{upstream} means by then
+# shellcheck disable=SC2016  # the pattern is the script's own text, $ included
 check "update.sh merges the commit it checked, by its id" bash -c 'grep -q "g merge --ff-only --quiet \"\$upstream\"" "$1" && ! grep -q "merge --ff-only.*@{upstream}" "$1"' _ "$HERE/update.sh"
 
 # Every command a script installs is one of its files: a script that installs

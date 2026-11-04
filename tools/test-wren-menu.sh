@@ -560,9 +560,12 @@ PY
     check "...and q does go on" grep -qx 'q True' <<<"$intro"
     # what it promises is what the base does ("nothing that isn't listed here")
     text=$(WREN_ASSUME_YES=1 bash "$HERE/prep/intro.sh" </dev/null 2>/dev/null)
+    # shellcheck disable=SC2016  # the inner shell expands its own variables
     check "the introduction lists encrypted DNS, the private home, what it removes, tmux and the clock" bash -c '
         for w in Unbound "umask 077" avahi tmux NTP; do grep -q "$w" <<<"$1" || { echo "$w"; exit 1; }; done' _ "$text"
+    # shellcheck disable=SC2016  # the inner shell expands its own variables
     check "...and doesn't list what are extras now (sound, screenshots, emoji) as the base" bash -c '! sed "/Before any of that/,\$d" <<<"$1" | grep -qiE "\bsound\b|screenshots|emoji"' _ "$text"
+    # shellcheck disable=SC2016  # the inner shell expands its own variables
     check "...and asks for the extras first, not at the end" bash -c '! grep -q "At the end, offer" <<<"$1" && ! grep -q "if you$" <<<"$1"' _ "$text"
 fi
 nm=$(NEWT_COLORS='root=red,blue' WREN_NMTUI="$T/fake/nmtui" bash "$HERE/bin/nmtui")

@@ -5,7 +5,7 @@
 # package's copy (read-only, no git) sends you here. In a temp home, with a pretend
 # sudo and dpkg-query (its packages "already installed") and a pretend server in a
 # temp folder. Run by test.sh, or:  bash tools/test-wren-dev.sh
-# shellcheck disable=SC2016  # the pretend programs expand their own variables
+# shellcheck disable=SC2016,SC2119,SC2120  # the pretend programs expand their own variables; run passes on options when given some
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
