@@ -30,6 +30,7 @@ for word in 'Brightness keys' 'Volume keys' 'Print  ' 'claude-pull' 'nmtui' 'pow
     check "...without $word" not grep -q "$word" <<<"$out"
 done
 check "no marker lines are left in it" not grep -q '^@' <<<"$out"
+check "it names commands that work on a stick install too (no ~/wren there)" not grep -q '~/wren' "$HERE/data/keys.txt" "$HERE/data/keys-console.txt"
 
 have brightness volume
 out=$(keys --text)

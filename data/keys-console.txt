@@ -51,8 +51,8 @@
 
   FROM A TERMINAL
     keys                   this page
-    bash ~/wren/status.sh          what is installed
-    bash ~/wren/install-extras.sh  add programs
+    wrenctl --status               what is installed
+    wrenctl --apps                 add programs
 @if nmtui
     nmtui                  pick a Wi-Fi network (or Alt+w)
 @end

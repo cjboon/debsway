@@ -106,8 +106,8 @@
 
   FROM A TERMINAL
     keys                   this page
-    bash ~/wren/status.sh          what is installed
-    bash ~/wren/install-extras.sh  add programs (or one: extras/NAME.sh)
+    wrenctl --status               what is installed
+    wrenctl --apps                 add programs (or one: extras/NAME.sh)
     display-scale          text too small on a sharp screen? makes it bigger
 @if claude
     claude                 Claude Code as its own user, in ~/projects/NAME
