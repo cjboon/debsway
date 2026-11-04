@@ -26,12 +26,15 @@ check "...and reads no .vimrc or .exrc from the folder vim starts in" grep -qx '
 
 # vim itself, if the full vim is here: the vimrc loads cleanly, light or dark with the theme
 if command -v vim.basic >/dev/null; then
-    bg() { HOME=$T/vh vim.basic -u "$V" -i NONE -N -es -c 'echo &background' -c 'qall!' </dev/null 2>&1 | tr -d '\r\n '; }
+    # (vim -es prints no :echo, so the value goes through a file; an error in the
+    # vimrc doesn't stop it, so what vim said counts too)
+    vv() { rm -f "$T/vv"; out=$(HOME=$T/vh vim.basic -u "$V" -i NONE -N -es -c "call writefile([string(&$1)], '$T/vv')" -c 'qall!' </dev/null 2>&1); [ -z "$out" ] && tr -d "'" <"$T/vv"; }
+    bg() { vv background; }
     mkdir -p "$T/vh/.config/wren"
     check "vim reads it without an error, dark without a theme" test "$(bg)" = dark
     echo light >"$T/vh/.config/wren/theme"
     check "...light in Wren Linux's light theme" test "$(bg)" = light
-    check "...modelines off in vim itself" test "$(HOME=$T/vh vim.basic -u "$V" -i NONE -N -es -c 'echo &modeline' -c 'qall!' </dev/null 2>&1 | tr -d '\r\n ')" = 0
+    check "...modelines off in vim itself" test "$(vv modeline)" = 0
 else
     echo "  ok    skipped running vim: the full vim isn't installed here"
 fi
