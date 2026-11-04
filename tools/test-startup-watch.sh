@@ -95,4 +95,52 @@ check "...and accept is never passwordless (no sudoers rule for it)" not grep -q
 check "the bar notifies when a change appears, and a click shows it" bash -c '
     grep -q "Your startup files changed" "$1" && grep -q "sudo wren-watch diff" "$1"' _ "$HERE/bin/sway-status"
 
+# Root reads these files (sudo wren-watch diff, accept, its timer), and a program
+# running as you can plant anything in them: no link may lead it to a root-only
+# file, or the signing key
+ww accept >/dev/null
+echo ROOTONLY >"$T/rootonly"
+ln -s "$T/rootonly" "$H/.local/bin/planted"
+ww check-all >/dev/null
+out=$(ww diff)
+check "diff: a planted link is named, with where it points" grep -qF '.local/bin/planted is a link to' <<<"$out"
+check "...and what it points at is never shown" not grep -q ROOTONLY <<<"$out"
+rm "$H/.local/bin/planted"
+ww accept >/dev/null
+printf 'old\n' >"$H/.local/bin/changed"
+ww accept >/dev/null
+rm "$H/.local/bin/changed"
+ww check-all >/dev/null
+check "diff: a file that went shows its old lines as removed" grep -q '^-old$' <<<"$(ww diff)"
+ww accept >/dev/null
+printf 'brand new\n' >"$H/.local/bin/fresh"
+ww check-all >/dev/null
+check "diff: a new file shows its lines as added" grep -q '^+brand new$' <<<"$(ww diff)"
+rm "$H/.local/bin/fresh"
+mkfifo "$H/.local/bin/apipe"
+ww check-all >/dev/null
+check "diff: a pipe planted there doesn't hang it" bash -c 'HOME=$1 timeout 10 bash "$2" diff >/dev/null 2>&1' _ "$H" "$W"
+rm "$H/.local/bin/apipe"
+ww accept >/dev/null
+# a link further up the path: ~/.ssh pointing at root's
+mkdir -p "$T/rootssh"
+echo ROOTCONFIG >"$T/rootssh/config"
+ln -s "$T/rootssh" "$H/.ssh"
+out=$(ww manifest)
+check "a link on the way to a watched file: noticed" grep -qE '^linked .* \.ssh/config$' <<<"$out"
+check "...nothing behind it is read" not grep -qE '^file .* \.ssh/config$' <<<"$out"
+ww accept >/dev/null
+check "...nor copied into root's record" test ! -e "$T/state/$ME/copies/.ssh/config"
+rm "$H/.ssh"
+mkdir -p "$T/otherbin"
+echo x >"$T/otherbin/tool"
+mv "$H/.config/autostart" "$T/autostart.real"
+ln -s "$T/otherbin" "$H/.config/autostart"
+out=$(ww manifest)
+check "a watched folder that is itself a link: not walked" not grep -q 'autostart/tool' <<<"$out"
+rm "$H/.config/autostart"
+mv "$T/autostart.real" "$H/.config/autostart"
+check "root reads your live files as you, never as root" bash -c '
+    grep -q "setpriv --reuid=" "$1" && ! grep -qE "diff .*\"\\\$home/\\\$rel\"" "$1"' _ "$W"
+
 [ "$fails" -eq 0 ]

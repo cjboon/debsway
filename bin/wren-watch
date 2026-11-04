@@ -38,7 +38,18 @@ FILES = [".profile", ".bash_profile", ".bash_login", ".bashrc", ".bash_logout", 
 DIRS = [".config/sway", ".config/autostart", ".config/systemd/user", ".config/environment.d",
         ".local/bin", ".config/mako", ".local/share/applications", ".config/wren/on-lock.d"]
 out = []
+# through_link REL: a link on the way to it (~/.ssh pointing at root'"'"'s, say).
+# Root reads these files, so what is behind one is neither read nor copied.
+def through_link(rel):
+    q = home
+    for part in rel.split("/")[:-1]:
+        q = os.path.join(q, part)
+        if os.path.islink(q):
+            return True
+    return False
 def entry(rel):
+    if through_link(rel):
+        out.append(("linked", "0", "0", "-", rel)); return
     p = os.path.join(home, rel)
     try:
         st = os.lstat(p)
@@ -78,6 +89,8 @@ for rel in FILES:
     entry(rel)
 for d in DIRS:
     top = os.path.join(home, d)
+    if through_link(d):
+        entry(d); continue
     try:
         if not stat.S_ISDIR(os.lstat(top).st_mode):
             entry(d); continue
@@ -105,6 +118,19 @@ home_of() {
     getent passwd "$1" | cut -d: -f6
 }
 user_ok() { [[ $1 =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] && [ -n "$(home_of "$1")" ]; }
+
+# as_user USER COMMAND...: COMMAND with USER's rights, not root's. A program
+# running as USER can plant a link in those files, to a root-only file or the
+# signing key: as USER, it reads only what USER may read anyway
+as_user() {
+    local u=$1
+    shift
+    if [ "$(id -u)" -eq 0 ]; then
+        setpriv --reuid="$u" --regid="$(id -g "$u")" --clear-groups --no-new-privs "$@"
+    else
+        "$@"
+    fi
+}
 
 # check USER: compare, and say what changed in RUN/USER (readable by USER only)
 check() {
@@ -207,8 +233,15 @@ case $cmd in
         home=$(home_of "$user")
         [ -f "$RUN/$user" ] || { echo "Nothing changed."; exit 0; }
         while IFS= read -r rel; do
-            if [ -f "$STATE/$user/copies/$rel" ] || [ -f "$home/$rel" ]; then
-                diff -u -N --label "before: ~/$rel" --label "now: ~/$rel" "$STATE/$user/copies/$rel" "$home/$rel" 2>/dev/null || true
+            # (the record's copy is root's; the file as it is now is read as you)
+            if as_user "$user" test -L "$home/$rel"; then
+                # shellcheck disable=SC2088  # a literal ~, as wren-watch lists the files
+                printf '~/%s is a link to %q (not followed)\n' "$rel" "$(as_user "$user" readlink -- "$home/$rel")"
+            elif as_user "$user" test -f "$home/$rel" && as_user "$user" test -r "$home/$rel"; then
+                as_user "$user" cat -- "$home/$rel" |
+                    diff -u -N --label "before: ~/$rel" --label "now: ~/$rel" "$STATE/$user/copies/$rel" - 2>/dev/null || true
+            elif [ -f "$STATE/$user/copies/$rel" ]; then
+                diff -u --label "before: ~/$rel" --label "now: ~/$rel (gone)" "$STATE/$user/copies/$rel" /dev/null 2>/dev/null || true
             else
                 # shellcheck disable=SC2088  # a literal ~, as wren-watch lists the files
                 printf '~/%s (not a text file, or gone)\n' "$rel"

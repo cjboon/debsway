@@ -24,8 +24,10 @@ boot and every 15 minutes, following no link and reading regular files only,
 and writes what changed where you can read it but not change it. The bar then
 shows "startup changed", with a notification; a click shows the list and the
 changes. `sudo wren-watch accept` takes them as yours, with your password, so
-a program running as you can't accept its own change without it. `wrenctl
-install`, `part`, `remove` and `update` take what their own run changed as Wren
+a program running as you can't accept its own change without it. `sudo
+wren-watch diff` reads your files as they are now with your rights, not root's,
+and follows no link, so a link planted there can't show it a root-only file.
+`wrenctl install`, `part`, `remove` and `update` take what their own run changed as Wren
 Linux's, except a file that had changed before the run, which is left for you.
 
 ## LIMITS
