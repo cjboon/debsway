@@ -179,7 +179,7 @@ fi
 # console) but not for the GitHub login, which needs a browser that isn't
 # running yet: log in later with  gh auth login
 if [ -s "$picked" ]; then
-    WREN_SETUP_GH=1 WREN_GH_LOGIN=0 bash "$WREN_DIR/install-extras.sh" --install "$picked" ||
+    WREN_SETUP_GH=1 bash "$WREN_DIR/install-extras.sh" --install "$picked" ||
         warn "Some extras didn't install; the message above says which."
 else
     note "No extras chosen. Pick some any time with: wrenctl --apps"

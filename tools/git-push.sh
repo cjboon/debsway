@@ -74,7 +74,7 @@ g cat-file -e HEAD:data/wren-signing-key.asc 2>/dev/null || die "The commit has 
 note "The newest commit is signed by Wren Linux's key: $fpr"
 
 ask "Push these to $(g remote get-url origin)?" n || { note "Nothing was pushed. They stay here, signed."; exit 0; }
-g push --quiet origin main || die "The push didn't go through. If it was about your login: gh auth login, then gh auth setup-git"
+g push --quiet origin main || die "The push didn't go through. If it was about your login, or your email (GH007): bash $WREN_DIR/git-init.sh"
 note "Pushed. To install it on this computer:"
 note "  rm -f /tmp/wren-linux_*.deb"
 note "  bash $WREN_DIR/tools/build-deb.sh --out /tmp"

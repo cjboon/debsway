@@ -18,6 +18,8 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 }
 export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t HOME=$T/home
 mkdir -p "$HOME"
+git config --global user.name t
+git config --global user.email t@t
 
 # The server: this checkout's files, then one more commit; it points at itself
 mkdir "$T/W"
@@ -33,7 +35,8 @@ SECOND=$(git -C "$T/W" rev-parse HEAD)
 git clone -q --bare "$T/W" "$T/O.git"
 # stick COMMIT DIR: what an install stick holds of that commit (git archive)
 stick() { rm -rf "$2"; mkdir -p "$2"; git -C "$T/W" archive "$1" | tar -C "$2" -xf -; }
-gi() { bash "$1/git-init.sh" 2>&1; }
+# (its questions answered from a file: none, so each takes its default)
+gi() { WREN_TEST_ANSWERS=/dev/null bash "$1/git-init.sh" 2>&1; }
 
 stick "$FIRST" "$T/a"
 out=$(gi "$T/a")
@@ -78,38 +81,119 @@ fi
 
 check "update.sh, in a copy that isn't a checkout yet, says to run git-init.sh" bash -c '
     stick() { :; }; out=$(cd "$1" && bash update.sh 2>&1); grep -q "git-init.sh" <<<"$out"' _ "$T/e"
-# Pushing needs a GitHub login: offered, on a checkout too; never a push
+# ---- your name and email, and how git logs in to push; never a push
 L=$T/login
 mkdir -p "$L"
 stick "$SECOND" "$T/l"; gi "$T/l" >/dev/null
 git -C "$T/l" remote set-url origin https://github.com/someone/wren-linux.git
-# a pretend gh: logged in while $L/in exists; writes down everything it is asked
+# a pretend gh: logged in while $L/in exists; a pretend wget: GitHub's public
+# profile of "someone" while $L/api exists. Both write down what they are asked.
 cat >"$L/gh" <<EOF
 #!/bin/sh
 echo "gh \$*" >>"$L/calls"
 case "\$1 \$2" in
     "auth status") [ -e "$L/in" ] ;;
     "auth login") : >"$L/in" ;;
+    "auth logout") rm -f "$L/in" ;;
 esac
 EOF
-chmod +x "$L/gh"
-li() { : >"$L/calls"; printf '%s\n' "$1" >"$L/answers"; WREN_GH=${2:-$L/gh} WREN_TEST_ANSWERS=$L/answers bash "$T/l/git-init.sh" 2>&1; }
-out=$(li n)
-check "a checkout with no GitHub login: it offers one, and no is no" bash -c '
-    grep -q "Log in to GitHub" <<<"$1" && ! grep -q "auth login" "$2" && grep -q "gh auth login" <<<"$1"' _ "$out" "$L/calls"
-li y >/dev/null
-check "...yes logs in, and lets git use that login" bash -c '
-    grep -qx "gh auth login --hostname github.com --git-protocol https" "$1" && grep -qx "gh auth setup-git" "$1"' _ "$L/calls"
-out=$(li y)
-check "...logged in already: it asks nothing" bash -c '! grep -q "Log in to GitHub" <<<"$1" && ! grep -q "auth login" "$2"' _ "$out" "$L/calls"
-rm -f "$L/in"
-out=$(li y "$L/nothing")
-check "...no gh: it says how to get it" grep -q 'wrenctl install git' <<<"$out"
-check "...it never pushes" bash -c '! grep -qE "(^|[[:space:]])(g|git( -C [^ ]+)?) push" "$1"' _ "$HERE/git-init.sh"
-git -C "$T/l" remote set-url origin "file://$T/O.git"
-out=$(li y)
-check "...a server that isn't GitHub: no offer" bash -c '! grep -q "Log in to GitHub" <<<"$1" && ! grep -q "auth" "$2"' _ "$out" "$L/calls"
+cat >"$L/wget" <<EOF
+#!/bin/sh
+echo "wget \$*" >>"$L/calls"
+[ -e "$L/api" ] || exit 4
+printf '{\n  "login": "someone",\n  "id": 4242,\n  "node_id": "U_x",\n  "followers": 7\n}\n'
+EOF
+chmod +x "$L/gh" "$L/wget"
+# li DIR ANSWER...: git-init.sh (DIR "-": this copy, $T/l), answering in turn
+li() {
+    local d=$1
+    shift
+    : >"$L/calls"
+    printf '%s\n' "$@" >"$L/answers"
+    if [ "$d" = - ]; then
+        WREN_GH=${GHP:-$L/gh} WREN_WGET=$L/wget WREN_TEST_ANSWERS=$L/answers bash "$T/l/git-init.sh" 2>&1
+    else
+        WREN_GH=${GHP:-$L/gh} WREN_WGET=$L/wget WREN_TEST_ANSWERS=$L/answers bash "$T/l/git-init.sh" "$d" 2>&1
+    fi
+}
+helper() { git config --global --get-all "credential.https://$1.helper" | paste -sd'|'; }
 
+out=$(li - n n token)
+check "login: it says how it is now, and offers token, memory, gh and skip" bash -c '
+    grep -q "Now: git asks for a user name and password" <<<"$1" && grep -q "token / memory / gh / skip" <<<"$1"' _ "$out"
+check "...token: no helper but git's own, your GitHub user name from the address" bash -c '
+    [ "$(git config --global --get-all credential.https://github.com.helper | wc -l)" = 1 ] && [ -z "$(git config --global credential.https://github.com.helper)" ] &&
+    [ "$(git config --global credential.https://github.com.username)" = someone ]'
+check "...it says how to make a token for just this repository, and how to paste it" bash -c '
+    grep -q "settings/personal-access-tokens/new" <<<"$1" && grep -q "this one (someone/wren-linux)" <<<"$1" && grep -q "Contents, then Read and write" <<<"$1" && grep -q "shows nothing as you paste" <<<"$1"' _ "$out"
+check "...and gh logs in to nothing" bash -c '! grep -q "auth login" "$1"' _ "$L/calls"
+out=$(li - n n n)
+check "run again: it says a token is pasted each time, and no is no" bash -c 'grep -q "Now: you paste a token at each push" <<<"$1" && [ "$(helper github.com)" = "" ]' _ "$out"
+li - n n y memory >/dev/null
+check "memory: the token kept in memory for an hour" test "$(helper github.com)" = "|cache --timeout=3600"
+: >"$L/in"
+li - n n y gh >/dev/null
+check "gh: logs in through gh, and lets git use that login" bash -c '
+    grep -qx "gh auth login --hostname github.com --git-protocol https" "$1" && grep -qx "gh auth setup-git" "$1"' _ "$L/calls"
+git config --global --replace-all credential.https://github.com.helper '!/usr/bin/gh auth git-credential'
+out=$(li - n n y token y)
+check "from gh to a token: it says gh's login was in plain text, and logs gh out (y)" bash -c '
+    grep -q "Now: GitHub.s gh login, saved in plain text" <<<"$1" && grep -qx "gh auth logout --hostname github.com" "$2" && [ "$(helper github.com)" = "" ]' _ "$out" "$L/calls"
+out=$(li - n n y skip)
+check "skip: nothing changes" bash -c 'grep -q "Left as it was" <<<"$1" && [ "$(helper github.com)" = "" ]' _ "$out"
+out=$(GHP=$L/nothing li - n n y token)
+check "no gh: it isn't offered" bash -c '! grep -q "token / memory / gh" <<<"$1" && grep -q "token / memory / skip" <<<"$1"' _ "$out"
+git config --global credential.helper store
+out=$(li - n n token y)
+check "git's store helper: a warning that it keeps passwords in plain text, asked again, and stopped (y)" bash -c '
+    grep -q "plain text (~/.git-credentials)" <<<"$1" && grep -q "How should git log in" <<<"$1" && ! git config --global credential.helper' _ "$out"
+
+# The no-reply address: GitHub refuses pushes that carry an email kept private
+echo "# mine" >>"$T/l/README.md"
+git -C "$T/l" -c commit.gpgsign=false commit -q -am "not pushed yet"
+: >"$L/api"
+out=$(li - n y "" n)
+check "no-reply: offered for GitHub, looked up from the public profile of the address's user" bash -c '
+    grep -q "GH007" <<<"$1" && grep -qF "https://api.github.com/users/someone" "$2" &&
+    [ "$(git config --global user.email)" = 4242+someone@users.noreply.github.com ]' _ "$out" "$L/calls"
+check "...the commit not pushed yet with the old address: it says how to change it, empty ones too" bash -c '
+    grep -q "1 commits not pushed yet still carry t@t" <<<"$1" && grep -q -- "--reset-author --allow-empty" <<<"$1"' _ "$out"
+out=$(li - n n)
+check "...with the no-reply address: not offered again" bash -c '! grep -q GH007 <<<"$1"' _ "$out"
+git config --global user.email t@t
+rm -f "$L/api"
+out=$(li - n y "" n)
+check "...offline: nothing changes, and it says where the address is" bash -c '
+    [ "$(git config --global user.email)" = t@t ] && grep -q "settings/emails" <<<"$1"' _ "$out"
+out=$(li - n y "not/a user" n)
+check "...a name that isn't a GitHub user name: refused, nothing looked up" bash -c '
+    grep -q "isn.t a GitHub user name" <<<"$1" && ! grep -q wget "$2"' _ "$out" "$L/calls"
+
+# Your name and email, asked when they aren't set (Enter keeps what is set)
+mv "$HOME/.gitconfig" "$T/gitconfig"
+mkdir -p "$T/any"
+git -C "$T/any" init -q
+out=$(li "$T/any" "Jo Doe" "jo@example.org")
+check "any repository: name and email asked when unset" bash -c '
+    [ "$(git config --global user.name)" = "Jo Doe" ] && [ "$(git config --global user.email)" = jo@example.org ]'
+check "...no server: no login to set, and nothing about GitHub" bash -c 'grep -q "has no server" <<<"$1" && ! grep -q GH007 <<<"$1"' _ "$out"
+li "$T/any" y "" "jo2@example.org" >/dev/null
+check "...changed when you say so; Enter keeps the name" bash -c '
+    [ "$(git config --global user.name)" = "Jo Doe" ] && [ "$(git config --global user.email)" = jo2@example.org ]'
+git -C "$T/any" remote add origin https://git.example.org:8443/me/x.git
+out=$(li "$T/any/" n token)
+check "...another https server: the token set for that server alone, no user name guessed" bash -c '
+    [ -z "$(git config --global credential.https://git.example.org:8443.helper)" ] && git config --global --get-all credential.https://git.example.org:8443.helper >/dev/null &&
+    ! git config --global credential.https://git.example.org:8443.username && grep -q "Make an access token on git.example.org:8443" <<<"$1" && ! grep -q "token / memory / gh" <<<"$1"' _ "$out"
+git -C "$T/any" remote set-url origin git@example.org:me/x.git
+out=$(li "$T/any" n)
+check "...over ssh: nothing to set" bash -c 'grep -q "over ssh" <<<"$1" && ! grep -q "How should git log in" <<<"$1"' _ "$out"
+out=$(li "$T/nothere")
+check "...a folder that isn't a repository: refused" grep -q "isn't a git repository" <<<"$out"
+mv "$T/gitconfig" "$HOME/.gitconfig"
+check "it never pushes" bash -c '! grep -qE "(^|[[:space:]])(g|git( -C [^ ]+)?) push" "$1"' _ "$HERE/git-init.sh"
+check "the git extra asks no name, email or login during an install: it points to git-init.sh" bash -c '
+    ! grep -qE "user\.(name|email)|auth login" "$1/extras/git.sh" && grep -q "git-init.sh" "$1/extras/git.sh" && ! grep -q WREN_GH_LOGIN "$1/install-base.sh"' _ "$HERE"
 check "the README's way back to GitHub is git-init.sh" grep -q 'bash ~/wren/git-init.sh' "$HERE/README.md"
 
 [ "$fails" -eq 0 ]
