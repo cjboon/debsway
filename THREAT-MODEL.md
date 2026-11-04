@@ -11,7 +11,7 @@ this page to decide what else you need.
   when the Firefox you run as yourself (`firefox-esr`) needs a restart to use
   its fixed version (not the sandboxed `firefox`, its profiles or
   `incognito`, which run as other users: reopen those after an update). Packages from
-  Mullvad's and Anthropic's apt repositories are updated the same way. The
+  Mullvad's, Anthropic's, Signal's and the Tor Project's apt repositories are updated the same way. The
   apps downloaded straight from their makers (the Feather, SimpleX and Tuta
   AppImages, Sparrow's .deb) are not: run their script again, or let
   `test.sh` tell you when a newer release is out.

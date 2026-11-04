@@ -527,7 +527,7 @@ gen_password() {
 }
 
 # Password precedence: env VM_PASSWORD > stored file > new random.
-# Stored with %q so odd characters survive being sourced back.
+# Stored as a plain VM_PASSWORD=value line, read back without sourcing it.
 setup_credentials() {
   mkdir -p "$WORKDIR" "$CRED_DIR"
   chmod 700 "$CRED_DIR"

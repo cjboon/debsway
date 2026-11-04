@@ -238,8 +238,9 @@ even when the content is encrypted. Without extra steps they see:
   connection and doesn't send its name, so networks can't easily recognise it
   from place to place.
 - Wi-Fi sign-in pages are on the network itself; they don't work while
-  secure DNS is on: switch it off in the Wren menu (Secure DNS), sign in,
-  and switch it on again.
+  secure DNS is on: the Wren menu's Wi-Fi sign-in line opens a window for them,
+  with secure DNS off while it is open. Or switch it off in the menu (Secure
+  DNS), sign in, and switch it on again.
 - A phone's hotspot or USB tethering is often safer than unknown Wi-Fi.
 
 ### DNS
