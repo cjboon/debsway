@@ -28,6 +28,8 @@ check "without the mockvps-kvm extra it says to set that up first" bash -c '
     [ ! -e /dev/kvm ] && exit 0; out=$(HOME=$1 bash "$2/tools/try-vps.sh" 2>&1); grep -q "wrenctl install mockvps-kvm" <<<"$out"' _ "$T/home" "$HERE"
 check "...and runs the VM through that command (the vendored script refuses to run directly)" grep -q '^MOCK=$HOME/.local/bin/mockvps-kvm$' "$HERE/tools/try-vps.sh"
 check "the extra doesn't chmod a script it can't change (the package's copy is root's)" grep -q '^\[ -x "\$SCRIPT" \] || chmod +x "\$SCRIPT"$' "$HERE/extras/mockvps-kvm.sh"
+check "the VM counts as there by its disk, and one switched off is started first (--status succeeds without one)" bash -c '
+    grep -qF "if [ -f \"\$WORK/\$VM.qcow2\" ]; then" "$1" && grep -qF "grep -q '"'"'Running (pid'"'"'" "$1" && grep -q "mock --start" "$1"' _ "$HERE/tools/try-vps.sh"
 check "it confirms the change from a second login, as you would" grep -q 'wren-vps --confirm' "$HERE/tools/try-vps.sh"
 
 # The mockvps-kvm extra: its command may point at another Wren Linux copy's

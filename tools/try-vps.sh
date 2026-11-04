@@ -79,8 +79,14 @@ client=$(client_key)
 provision "$client" >"$WORK/provision.sh"
 printf '#!/bin/bash\nset -e\nwren-vps --confirm\nwren-vps --status\n' >"$WORK/confirm.sh"
 say "A test VPS: $VM (SSH on 127.0.0.1:$PORT only)"
-if mock --status >/dev/null 2>&1; then
-    note "It is there already: running setup-vps.sh on it again."
+# (--status says "Not running." and succeeds when there is no VM at all, so
+# the VM is there when its disk is)
+if [ -f "$WORK/$VM.qcow2" ]; then
+    if ! mock --status 2>&1 | grep -q 'Running (pid'; then
+        note "It is there, switched off: starting it."
+        mock --start
+    fi
+    note "Running setup-vps.sh on it again."
     mock --provision-only --provision "$WORK/provision.sh"
 else
     mock --yes --provision "$WORK/provision.sh"
