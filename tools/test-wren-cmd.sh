@@ -142,6 +142,17 @@ broken=$(cd "$HERE" && git ls-files -co --exclude-standard -- bin data docs extr
 check "no command, package or host name was split by the rename${broken:+: $(head -3 <<<"$broken" | cut -c1-90 | paste -sd'|')}" test -z "$broken"
 check "the man page is named after the command" grep -q '^wrenctl \\- ' "$HERE/data/wrenctl.1"
 
+# The first-time guide names what is really there: a newcomer can't work around a mistake
+G=$HERE/docs/first-time.md
+missing=$(grep -oE 'wrenctl --[a-z]+' "$G" | sort -u | while read -r _ o; do bash "$CMD" --help | grep -q -- "^  $o\b" || echo "$o"; done)
+check "the first-time guide's wrenctl options are all in the help${missing:+: $missing}" test -z "$missing"
+missing=$(grep -oE '^\| `[a-z-]+` \|' "$G" | tr -d '|` ' | while read -r e; do [ -f "$HERE/extras/$e.sh" ] || echo "$e"; done)
+check "...the extras it suggests exist${missing:+: $missing}" test -z "$missing"
+check "...its links lead somewhere" bash -c 'cd "$1/docs" && grep -oE "\]\([^)#]+" first-time.md | sed "s/](//" | grep -v "^http" | while read -r l; do [ -e "$l" ] || { echo "$l"; exit 1; }; done' _ "$HERE"
+check "...the keys it gives are on the cheat sheet" bash -c 'for k in "Super+Enter" "Super+d" "Super+Shift+q" "Super+Escape" "Super+m"; do grep -qF "$k" "$1" || exit 1; done' _ "$HERE/data/keys.txt"
+check "the README sends newcomers to it, and to SECURITY.md" bash -c 'grep -q "(docs/first-time.md)" "$1" && grep -q "(SECURITY.md)" "$1"' _ "$HERE/README.md"
+check "SECURITY.md has the contact, and the key pins.sh pins" bash -c '. "$1/pins.sh"; [ -n "$WREN_SIGNING_FPR" ] && grep -qF "$WREN_SIGNING_FPR" "$1/SECURITY.md" && grep -q "wrenlinux@tutamail.com" "$1/SECURITY.md"' _ "$HERE"
+
 # the help text and the man page say the same
 help_opts=$(bash "$CMD" --help | grep -o '^  --[a-z]*' | tr -d ' ' | sort -u)
 man_opts=$(sed -n 's/^\.B \\-\\-\([a-z]*\)$/--\1/p' "$HERE/data/wrenctl.1" | sort -u)

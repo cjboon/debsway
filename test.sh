@@ -333,6 +333,7 @@ dev_test update-signed "update.sh: only what Wren Linux's own key signed, with t
 if [ -n "${WREN_SIGNING_FPR:-}" ]; then
     if key_ok data/wren-signing-key.asc "$WREN_SIGNING_FPR"; then
         ok "data/wren-signing-key.asc is exactly the pinned key, and can sign"
+        grep -qF "$WREN_SIGNING_FPR" SECURITY.md || bad "SECURITY.md doesn't name the pinned key, $WREN_SIGNING_FPR"
     else
         bad "data/wren-signing-key.asc isn't exactly the key WREN_SIGNING_FPR in pins.sh, or it has expired"
     fi

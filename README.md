@@ -10,6 +10,9 @@ automount are optional extras you pick right after you agree to the install
 (nothing is checked for you). No desktop environment, display manager, tray
 or settings app: one compositor and plain text configs.
 
+**New here? Start with the [first-time guide](docs/first-time.md).** To report a
+security problem, or check Wren Linux's signing key, see [SECURITY.md](SECURITY.md).
+
 Wren Linux is based on Debian; it is not affiliated with or endorsed by the
 Debian project. (It was called debsway until November 2026.)
 
@@ -64,8 +67,8 @@ sudo mount -L WREN /mnt && bash /mnt/wren/start.sh
 
 3. Log out and log in on tty1: sway starts. Super+? shows every key (also
    `keys` in a terminal, or the file `~/KEYS.txt`).
-4. `install-base.sh` ends with a list of optional programs: arrow keys and
-   the space bar check the ones you want. Add more later with
+4. `install-base.sh` starts with a list of optional programs, and installs them
+   at its end: arrow keys and the space bar check the ones you want. Add more later with
    `bash install-extras.sh`, or one directly: `wrenctl install keepassxc`.
 
 `bash status.sh` (Status in the Wren menu) shows what's set up. It starts
@@ -77,7 +80,7 @@ updates, the sandboxed browser and encrypted DNS, each [x] done, [~] partly or
 
 ```
 wren/
-├── README.md, THREAT-MODEL.md, LICENSE (MIT)
+├── README.md, THREAT-MODEL.md, SECURITY.md, LICENSE (MIT)
 ├── start.sh                 from the stick on a fresh install: copies Wren Linux home, unmounts, wifi.sh if needed, install-base.sh
 ├── install-base.sh          the core desktop: explains and asks, packages, sway, bar, every part, then the extras list
 ├── install-extras.sh        pick optional programs from a list (install-base.sh ends with it)
@@ -317,6 +320,7 @@ that is set up.
 ## More
 
 - [docs/wifi.md](docs/wifi.md): `wifi.sh`, and how the packages on the stick are checked
+- [docs/first-time.md](docs/first-time.md): your first install and first day, step by step
 - [docs/install-base.md](docs/install-base.md): what `install-base.sh` sets up, and every part
 - [docs/extras.md](docs/extras.md): the optional apps, Firefox with its hardening and `incognito`, Firefox profiles
 - [docs/extras/](docs/extras/README.md): one page per extra: its commands, what it is, what it doesn't protect against, and every step to install it by hand (`wrenctl manual NAME` prints them)
