@@ -1,0 +1,19 @@
+#!/bin/sh
+# wren-lock: written by Wren Linux parts/swaylock.sh
+# Locks the screen (swaylock, in the theme's color), and then runs every
+# program in ~/.config/wren/on-lock.d, each for at most 10 seconds: the vault
+# closes its folder, KeePassXC locks its databases. The screen is locked
+# first, so nothing stays on it while they run. Super+Escape, the power menu's
+# Lock and the lid lock with it; the idle lock and the lock before sleep
+# (bin/wren-idle) run the same programs just before they lock.
+command -v swaylock >/dev/null || { echo "wren-lock: swaylock isn't installed (bash parts/swaylock.sh)." >&2; exit 1; }
+# the same as LOCK_CMD in lib/sway.sh (test.sh checks); -f returns once it is locked
+if ! pgrep -x -u "$(id -u)" swaylock >/dev/null; then
+    # shellcheck disable=SC2046  # one word: a checked color
+    swaylock -f -c $(~/.local/bin/theme get LOCK 2>/dev/null || echo 000000)
+fi
+hooks=${XDG_CONFIG_HOME:-$HOME/.config}/wren/on-lock.d
+for h in "$hooks"/*; do
+    [ -x "$h" ] && timeout 10 "$h"
+done
+exit 0

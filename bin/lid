@@ -12,8 +12,12 @@ panels() {
 
 case ${1:-} in
     close)
-        # the same as LOCK_CMD in lib/sway.sh (test.sh checks); -f returns once it is locked
-        if command -v swaylock >/dev/null && ! pgrep -x swaylock >/dev/null; then
+        # wren-lock: locks, then runs the on-lock programs (vault, KeePassXC);
+        # without it, the same as LOCK_CMD in lib/sway.sh (test.sh checks); -f
+        # returns once it is locked
+        if [ -x "$HOME/.local/bin/wren-lock" ]; then
+            "$HOME/.local/bin/wren-lock"
+        elif command -v swaylock >/dev/null && ! pgrep -x swaylock >/dev/null; then
             # shellcheck disable=SC2046  # one word: a checked color (no inner quotes: sway's copy can't have them)
             swaylock -f -c $(~/.local/bin/theme get LOCK 2>/dev/null || echo 000000)
         fi

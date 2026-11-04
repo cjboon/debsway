@@ -9,8 +9,11 @@ choice=$(printf '%s\n' Lock Suspend "Log out" Reboot "Power off" |
     wmenu -p "Power:" -f 'monospace 12' -N "$bg" -n "$fg" -M "$bg" -m "$fg" -S "$fg" -s "$bg") || exit 0
 # shellcheck disable=SC2046  # the lock color: one word, checked (no inner quotes: sway's copy can't have them)
 case $choice in
-    # the same as LOCK_CMD in lib/sway.sh (test.sh checks)
-    Lock) exec swaylock -f -c $(~/.local/bin/theme get LOCK 2>/dev/null || echo 000000) ;;
+    # wren-lock: locks, then runs the on-lock programs (vault, KeePassXC);
+    # without it, the same as LOCK_CMD in lib/sway.sh (test.sh checks)
+    Lock)
+        if [ -x "$HOME/.local/bin/wren-lock" ]; then exec "$HOME/.local/bin/wren-lock"; fi
+        exec swaylock -f -c $(~/.local/bin/theme get LOCK 2>/dev/null || echo 000000) ;;
     Suspend) exec systemctl suspend ;;
     "Log out") exec swaymsg exit ;;
     Reboot) exec systemctl reboot ;;

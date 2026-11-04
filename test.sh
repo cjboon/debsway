@@ -127,7 +127,7 @@ for f in data/sysctl-hardening.conf data/module-blacklist.conf data/foot.ini dat
     [ -f "$f" ] || bad "a part needs $f"
 done
 # bin/powermenu, bin/wren-idle and bin/lid can't source lib/sway.sh, so their lock command is a copy
-for f in bin/powermenu bin/wren-idle bin/lid; do
+for f in bin/powermenu bin/wren-idle bin/lid bin/wren-lock; do
     grep -qF "$LOCK_CMD" "$f" || bad "$f's lock command differs from LOCK_CMD in lib/sway.sh"
 done
 # The pop-up windows (key sheet, Wi-Fi, timer, the Wren menu) are all as
@@ -337,6 +337,7 @@ dev_test hardware-wallet "Hardware wallets (extras/hardware-wallet.sh): the udev
 dev_test sudo-timeout "sudo remembers your password for 60 seconds (parts/sudo-timeout.sh)" "sudo timeout checks"
 dev_test sandbox-dns "The sandboxes' DNS only to this computer's resolver (parts/sandbox-dns.sh), with a pretend nft" "sandbox DNS checks"
 dev_test startup-watch "The startup watch (bin/wren-watch, extras/startup-watch.sh) in a pretend home" "startup watch checks"
+dev_test wren-lock "Every lock runs the on-lock programs (bin/wren-lock), with a pretend swaylock" "wren-lock checks"
 
 # --------------------------------------------------------------------
 dev_test update-signed "update.sh: only what Wren Linux's own key signed, with throwaway keys" "signed update checks"
