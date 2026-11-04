@@ -12,12 +12,21 @@ if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 SCRIPT="$WREN_DIR/vendor/mockvps-kvm/mockvps-kvm.sh"
-# Where earlier versions of Wren Linux kept it
-OLD_SCRIPT="$WREN_DIR/extras/mockvps-kvm/mockvps-kvm.sh"
 CMD="$HOME/.local/bin/mockvps-kvm"
+# ours_link: the command is a link to a Wren Linux copy's script (this one, the
+# package's in /usr/share/wren, or another; an earlier version's place too):
+# that copy has extras/mockvps-kvm.sh beside it
+ours_link() {
+    local t
+    t=$(readlink -- "$CMD") || return 1
+    case $t in
+        */vendor/mockvps-kvm/mockvps-kvm.sh | */extras/mockvps-kvm/mockvps-kvm.sh) [ -f "${t%/*/*/*}/extras/mockvps-kvm.sh" ] ;;
+        *) return 1 ;;
+    esac
+}
 
 if [ "${1:-}" = --remove ]; then
-    case $(readlink -- "$CMD") in "$SCRIPT" | "$OLD_SCRIPT") rm -f "$CMD" ;; esac
+    if ours_link; then rm -f "$CMD"; fi
     note "Removed the mockvps-kvm command. VMs you made are untouched;"
     note "remove one first with: mockvps-kvm --uninstall   (add -n NAME for others)"
     # QEMU goes too, unless Whonix or another script needs it
@@ -42,10 +51,7 @@ elif ! id -nG | grep -qw kvm; then
 fi
 
 mkdir -p "$(dirname -- "$CMD")"
-if [ -e "$CMD" ] || [ -L "$CMD" ]; then
-    if [ "$(readlink -- "$CMD")" = "$OLD_SCRIPT" ]; then rm -f "$CMD"; fi
-fi
-if [ -e "$CMD" ] && [ "$(readlink -- "$CMD")" != "$SCRIPT" ]; then
+if { [ -e "$CMD" ] || [ -L "$CMD" ]; } && ! ours_link; then
     die "$CMD already exists and isn't Wren Linux's; leaving it."
 fi
 ln -sfn "$SCRIPT" "$CMD"

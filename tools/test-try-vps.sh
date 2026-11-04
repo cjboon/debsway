@@ -30,4 +30,37 @@ check "...and runs the VM through that command (the vendored script refuses to r
 check "the extra doesn't chmod a script it can't change (the package's copy is root's)" grep -q '^\[ -x "\$SCRIPT" \] || chmod +x "\$SCRIPT"$' "$HERE/extras/mockvps-kvm.sh"
 check "it confirms the change from a second login, as you would" grep -q 'wren-vps --confirm' "$HERE/tools/try-vps.sh"
 
+# The mockvps-kvm extra: its command may point at another Wren Linux copy's
+# script (the package's, after an update): that is its own, and is pointed at
+# this copy; a file of yours is left alone
+if [ -e /dev/kvm ]; then
+    mkdir -p "$T/fake" "$T/mh/.local/bin" "$T/pkg/vendor/mockvps-kvm" "$T/pkg/extras"
+    : >"$T/pkg/vendor/mockvps-kvm/mockvps-kvm.sh"; : >"$T/pkg/extras/mockvps-kvm.sh"
+    printf '#!/bin/sh\n[ "$1" = -v ] && exit 0\nexit 0\n' >"$T/fake/sudo"
+    printf '#!/bin/sh\ncase "$*" in *Status*) echo "install ok installed" ;; *Depends*) echo "qemu-system-x86, qemu-utils, wget, cpio, gzip, openssh-client, gpgv, debian-archive-keyring, socat, iproute2" ;; esac\n' >"$T/fake/dpkg-query"
+    chmod +x "$T/fake/"*
+    MR=$T/mr
+    mkdir -p "$MR/extras" "$MR/lib" "$MR/vendor/mockvps-kvm"
+    sed 's|^export PATH=.*|export PATH="$MV_TEST_PATH"|' "$HERE/lib.sh" >"$MR/lib.sh"
+    for f in pins.sh packages.sh data bin docs; do ln -s "$HERE/$f" "$MR/$f"; done
+    for f in "$HERE"/lib/*; do ln -s "$f" "$MR/lib/${f##*/}"; done
+    cp "$HERE/extras/mockvps-kvm.sh" "$MR/extras/"
+    cp "$HERE/vendor/mockvps-kvm/mockvps-kvm.sh" "$MR/vendor/mockvps-kvm/"
+    mk() { MV_TEST_PATH="$T/fake:$PATH" HOME=$T/mh bash "$MR/extras/mockvps-kvm.sh" >/dev/null 2>&1; }
+    ln -sfn "$T/pkg/vendor/mockvps-kvm/mockvps-kvm.sh" "$T/mh/.local/bin/mockvps-kvm"
+    mk
+    check "mockvps-kvm extra: a command pointing at another Wren Linux copy (the package's) is its own: pointed at this copy" \
+        test "$(readlink "$T/mh/.local/bin/mockvps-kvm")" = "$MR/vendor/mockvps-kvm/mockvps-kvm.sh"
+    mkdir -p "$T/pkg/extras/mockvps-kvm"; : >"$T/pkg/extras/mockvps-kvm/mockvps-kvm.sh"
+    ln -sfn "$T/pkg/extras/mockvps-kvm/mockvps-kvm.sh" "$T/mh/.local/bin/mockvps-kvm"
+    mk
+    check "...and one at a Wren Linux copy's old place too" test "$(readlink "$T/mh/.local/bin/mockvps-kvm")" = "$MR/vendor/mockvps-kvm/mockvps-kvm.sh"
+    rm -f "$T/mh/.local/bin/mockvps-kvm"; printf '#!/bin/sh\necho mine\n' >"$T/mh/.local/bin/mockvps-kvm"
+    mk; rc=$?
+    check "...a file of yours by that name: refused, and left as it was" bash -c '[ "$1" -ne 0 ] && grep -qx "echo mine" "$2"' _ "$rc" "$T/mh/.local/bin/mockvps-kvm"
+    rm -f "$T/mh/.local/bin/mockvps-kvm"; ln -s /bin/true "$T/mh/.local/bin/mockvps-kvm"
+    mk; rc=$?
+    check "...and so is a link to anything else" bash -c '[ "$1" -ne 0 ] && [ "$(readlink "$2")" = /bin/true ]' _ "$rc" "$T/mh/.local/bin/mockvps-kvm"
+fi
+
 [ "$fails" -eq 0 ]
