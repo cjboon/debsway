@@ -165,6 +165,21 @@ With the extras:
   encrypts its own, except that throwaway sign-in window. Your user may
   switch it without a password, so a program running as you could too.
 
+- **A sudo password that was seen or logged**, with the security-key extra
+  and its `--sudo` (`extras/security-key.sh`): sudo then also needs a touch
+  of your hardware key, which never gives its secret out. A sudo that is
+  still remembered (sudo keeps it a few minutes, in the terminal it was typed
+  in) needs no touch, and a program in that terminal can use it. Lose every
+  registered key and sudo is closed to you (the extra's page says how to get
+  back in).
+- **Logins phished or taken from the computer**, for sites and SSH servers
+  that take a security key: the key signs only for the site it was registered
+  with, and only when touched.
+- **Coins spent behind your back**, with a hardware wallet
+  (`extras/hardware-wallet.sh`): the device shows what it signs on its own
+  screen and signs only when you agree there. It doesn't protect the
+  recovery words, a fake device, or an address you don't check on its screen.
+
 ## What it doesn't protect against
 
 - **A local network with public addresses.** The firewall rules that keep sandbox
