@@ -95,6 +95,7 @@ mkdir -p "$S/home/vm" "$S/home/.config/claude-vm" "$S/bin"
 sed -e "s|/home/claude-vm|$S/home|g" -e "s|\"/home/\$me\"|\"$S/home\"|" \
     -e "s|/etc/wren/claude-vm-ports|$S/ports|" \
     -e "s|/usr/local/libexec/claude-vm-mockvps-kvm|$S/bin/mockvps|" \
+    -e "s|/usr/local/libexec/claude-vm-net-check|$S/bin/net-check|" \
     -e "s|^export PATH=.*|export PATH=$S/bin:\$PATH|" \
     "$HERE/bin/claude-vm-session" >"$S/claude-vm-session"
 # shellcheck disable=SC2016  # expanded by the pretend id, not here
@@ -255,5 +256,43 @@ check "...removing an account: user and port first, then the firewall" bash -c '
     sed -n "/^remove_account() {/,/^}/p" "$1" | grep -qx "    set_port \"\$1\""' _ "$c"
 check "...each account has its own sudo rule, checked by visudo" bash -c '
     grep -q "ACCOUNT_SUDOERS=/etc/sudoers.d/wren-claude-vm-\$1" "$1" && sed -n "/^sudoers_rule() {/,/^}/p" "$1" | grep -q "visudo -cf"' _ "$c"
+
+# ---- sudo in the VM, and what keeps it there
+P=$HERE/data/claude-vm-provision.sh
+check "the guest's user has sudo without a password, in a rule checked by visudo" bash -c 'grep -q "ALL=(ALL:ALL) NOPASSWD: ALL" "$1" && grep -q "visudo -cf /etc/sudoers.d/90-wren-agent" "$1"' _ "$P"
+check "no such rule on this computer: only your one command as claude-vm" bash -c '! grep -q "ALL=(ALL:ALL)" "$1"' _ "$HERE/extras/claude-vm.sh"
+check "QEMU runs under its syscall filter" bash -c 'grep -q "export QEMU_SANDBOX=on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny" "$1" && grep -q -- "-sandbox \"\$QEMU_SANDBOX\"" "$2"' _ "$HERE/bin/claude-vm-session" "$HERE/vendor/mockvps-kvm/mockvps-kvm.sh"
+if command -v qemu-system-x86_64 >/dev/null; then
+    q=$(sed -n 's/^export QEMU_SANDBOX=//p' "$HERE/bin/claude-vm-session")
+    timeout 2 qemu-system-x86_64 -sandbox "$q" -machine none -nodefaults -display none -S >/dev/null 2>&1
+    check "...QEMU here takes those settings" test "$?" = 124
+fi
+NS_PATH=/usr/sbin:/sbin:/usr/bin:/bin
+if PATH=$NS_PATH command -v nft >/dev/null && unshare -rn true 2>/dev/null; then
+    TN=$(mktemp -d)
+    sed 's/meta skuid "claude-vm"/meta skuid 0/' "$HERE/data/claude-vm-firewall.nft" >"$TN/fw.nft"
+    nc() { PATH=$NS_PATH unshare -rn bash -c 'ip link set lo up; [ "$1" = none ] || nft -f "$1" || exit 8; bash "$2"' _ "$1" "$HERE/bin/claude-vm-net-check"; echo $?; }
+    check "the net check, the firewall there: go" test "$(nc "$TN/fw.nft")" = 0
+    check "...no firewall: stop" test "$(nc none)" = 1
+    rm -rf "$TN"
+fi
+check "the session stops if the net check says no, before the VM starts" bash -c '
+    a=$(grep -n "\"\$NETCHECK\"; then" "$1" | cut -d: -f1); b=$(grep -n "mockvps --start" "$1" | cut -d: -f1); [ -n "$a" ] && [ "$a" -lt "$b" ]' _ "$HERE/bin/claude-vm-session"
+check "both ssh commands forward nothing and ignore config files" bash -c '[ "$(grep -c "ssh \"\${SSH_SAFE\[@\]}\"" "$1")" = 2 ] && grep -q "ForwardAgent=no" "$1" && grep -q "ClearAllForwardings=yes" "$1" && grep -q -- "-F /dev/null" "$1"' _ "$HERE/bin/claude-vm-session"
+check "pubkey checks what the guest says before showing it" grep -q "ssh-ed25519" "$HERE/bin/claude-vm-session"
+check "a clean snapshot after install and rebuild" test "$(grep -c '^        clean_snapshot$' "$HERE/bin/claude-vm-session")" = 2
+check "reset asks first, and no answer changes nothing" bash -c 'grep -q "Nothing was changed" "$1" && grep -q "\[y/N\]" "$1"' _ "$HERE/bin/claude-vm"
+# A commit message with a terminal escape in it, through the real claude-pull
+GP=$(mktemp -d)
+( export HOME=$GP GIT_CONFIG_NOSYSTEM=1
+  git config --global user.name t; git config --global user.email t@e; git config --global init.defaultBranch main; git config --global commit.gpgsign false
+  git init -q --bare "$GP/s.git"; git clone -q "$GP/s.git" "$GP/a" 2>/dev/null
+  cd "$GP/a" && git commit -q --allow-empty -m first && git push -q origin main
+  git clone -q "$GP/s.git" "$GP/b" 2>/dev/null
+  git commit -q --allow-empty -m "$(printf 'evil\033]52;c;x\007done')" && git push -q origin main
+  cd "$GP/b" && bash "$HERE/bin/claude-pull" </dev/null >"$GP/out" 2>&1 )
+check "claude-pull shows the commit" grep -q 'evil' "$GP/out"
+check "...without the terminal escape in its message" bash -c '! LC_ALL=C grep -q "$(printf "\033")" "$1"' _ "$GP/out"
+rm -rf "$GP"
 
 [ "$fails" -eq 0 ]

@@ -206,6 +206,11 @@ With the extras:
   users off your network know IPv4's private ranges and give those users no IPv6.
   On a network where computers have public IPv4 addresses (some universities and
   offices), a sandbox user can still reach them: nothing marks them as local.
+- **The agent in `claude-vm`, with root in its VM.** It has sudo without a password
+  there, on purpose. What holds it is the VM, QEMU's syscall filter, a firewall
+  checked at every start, and an ssh login that forwards nothing. A bug in QEMU or
+  KVM could still get out, and it reaches the internet, so nothing private belongs
+  in the VM. Read what it pushes.
 - **Anything running as you.** If you run a malicious program, or an
   attack escapes the browser, it can read all your files, every Firefox
   profile's logins and your wallets (except those kept in the wallet sandbox,

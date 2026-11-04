@@ -16,7 +16,8 @@ if [ -z "$(git rev-list 'HEAD..@{upstream}')" ]; then
     echo "Up to date: nothing new on GitHub."
     exit 0
 fi
-git --no-pager log --stat --format='%n%C(yellow)%h%Creset %s%n%b' 'HEAD..@{upstream}'
+# (without control characters: a commit message from the VM could steer your terminal)
+git --no-pager log --stat --format='%n%h %s%n%b' 'HEAD..@{upstream}' | LC_ALL=C tr -d '\000-\010\013-\037\177'
 echo
 echo "Every changed line: git diff HEAD..@{upstream}"
 read -rp "Bring these in? [y/N] " answer

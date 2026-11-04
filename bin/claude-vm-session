@@ -50,23 +50,35 @@ export SSH_HOST_IP=127.0.0.1
 export SSH_HOST_PORT=$port
 export WORKDIR=$HOME/vm
 export WEB_TUNNEL=0
+# QEMU's own syscall filter: the guest has root, so a bug in QEMU is what it would
+# aim for, and this limits what that process could then do (libvirt's usual set)
+export QEMU_SANDBOX=on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny
 
 MOCKVPS=/usr/local/libexec/claude-vm-mockvps-kvm
+NETCHECK=/usr/local/libexec/claude-vm-net-check
 PROVISION=$HOME/.config/claude-vm/provision.sh
 KEY_FILE=$HOME/.ssh/${VM_NAME}_id
 
 die() { printf 'claude-vm-session: %s\n' "$*" >&2; exit 1; }
 mockvps() { [ -x "$MOCKVPS" ] || die "the VM engine is missing ($MOCKVPS); run extras/claude-vm.sh again."; "$MOCKVPS" "$@"; }
 
+# The guest has root, so what answers on its port isn't to be trusted: nothing of
+# ours goes to it but the login, whatever a config file says.
+SSH_SAFE=(-F /dev/null -o ForwardAgent=no -o ForwardX11=no -o ClearAllForwardings=yes -o PermitLocalCommand=no)
+
 # Non-interactive, key-only ssh into the guest, independent of ~/.ssh/config.
 guest_ssh() {
-    ssh -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new \
+    ssh "${SSH_SAFE[@]}" -o BatchMode=yes -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new \
         -o HostKeyAlias="$VM_NAME" -o IdentitiesOnly=yes -o LogLevel=ERROR \
         -i "$KEY_FILE" -p "$SSH_HOST_PORT" "$VM_USER@$SSH_HOST_IP" "$@"
 }
 
 ensure_up() {
     is_installed || die "no VM yet. Set it up first: wrenctl install claude-vm${setup_arg}"
+    # The firewall is what keeps a guest with root off your network: seen from here
+    if [ -x "$NETCHECK" ] && ! "$NETCHECK"; then
+        die "the firewall that keeps the VM off your network isn't active, so the VM wasn't started. Run: sudo systemctl restart wren-claude-vm-firewall"
+    fi
     if ! mockvps --status 2>/dev/null | grep -q Running; then
         # Say why the window is quiet: mockvps's own steps ("==> Waiting for
         # SSH"...) and errors, but not the summary it ends with
@@ -81,7 +93,7 @@ ensure_up() {
 # The disk is kept, so unpushed work is still there next time.
 session_then_stop() {
     local rc=0
-    ssh -t -o StrictHostKeyChecking=accept-new -o HostKeyAlias="$VM_NAME" \
+    ssh "${SSH_SAFE[@]}" -t -o StrictHostKeyChecking=accept-new -o HostKeyAlias="$VM_NAME" \
         -o IdentitiesOnly=yes -i "$KEY_FILE" -p "$SSH_HOST_PORT" "$VM_USER@$SSH_HOST_IP" "$1" || rc=$?
     if [ "$(guest_ssh 'who | wc -l' 2>/dev/null || echo 1)" = 0 ]; then
         echo "Powering the VM off."
@@ -91,6 +103,13 @@ session_then_stop() {
 }
 
 is_installed() { [ -s "$WORKDIR/$VM_NAME.qcow2" ]; }
+
+# clean_snapshot: the state to go back to, taken with the VM off, in the disk file
+# on this side: root in the guest can't reach it. Before your Claude login.
+clean_snapshot() {
+    mockvps --stop >/dev/null 2>&1 || true
+    qemu-img snapshot -c clean "$WORKDIR/$VM_NAME.qcow2" || echo "claude-vm-session: couldn't take the clean snapshot; claude-vm reset won't work." >&2
+}
 
 case "${1:-connect}" in
     connect)
@@ -106,7 +125,10 @@ case "${1:-connect}" in
     stop)   mockvps --stop ;;
     pubkey)
         ensure_up
-        guest_ssh 'cat ~/.ssh/id_ed25519.pub'
+        # From the guest, so checked before it reaches your terminal
+        key=$(guest_ssh 'cat ~/.ssh/id_ed25519.pub' | head -c 1024) || true
+        [[ $key =~ ^ssh-ed25519\ [A-Za-z0-9+/=]+(\ [!-~]+)?$ ]] || die "that doesn't look like an ssh key, so it isn't shown."
+        printf '%s\n' "$key"
         ;;
     install)
         # First build: the real user triggers this from extras/claude-vm.sh.
@@ -119,12 +141,21 @@ case "${1:-connect}" in
         fi
         [ -f "$PROVISION" ] || die "the provisioning script is missing ($PROVISION); run extras/claude-vm.sh again."
         PROVISION_FILES="$PROVISION" mockvps --yes
+        clean_snapshot
         ;;
     rebuild)
         [ -f "$PROVISION" ] || die "the provisioning script is missing ($PROVISION); run extras/claude-vm.sh again."
         mockvps --uninstall --yes >/dev/null 2>&1 || true
         PROVISION_FILES="$PROVISION" mockvps --yes
+        clean_snapshot
+        ;;
+    reset)
+        is_installed || die "no VM yet. Set it up first: wrenctl install claude-vm${setup_arg}"
+        mockvps --stop >/dev/null 2>&1 || true
+        qemu-img snapshot -a clean "$WORKDIR/$VM_NAME.qcow2" ||
+            die "this VM has no clean snapshot (it was built before they existed): claude-vm rebuild makes one."
+        echo "The VM is back to how it was built."
         ;;
     uninstall) mockvps --uninstall --yes ;;
-    *) die "unknown subcommand '$1' (connect, shell, status, stop, pubkey, install, rebuild, uninstall)." ;;
+    *) die "unknown subcommand '$1' (connect, shell, status, stop, pubkey, install, rebuild, reset, uninstall)." ;;
 esac

@@ -93,7 +93,7 @@ for f in bin/claude bin/claude-session bin/claude-unsandboxed bin/git data/claud
     [ -f "$f" ] || bad "extras/claude-code.sh needs $f"
 done
 # extras/claude-vm.sh installs these (plus the bundled vendor/mockvps-kvm)
-for f in bin/claude-vm bin/claude-vm-session data/claude-vm-firewall.nft data/claude-vm-provision.sh vendor/mockvps-kvm/mockvps-kvm.sh; do
+for f in bin/claude-vm bin/claude-vm-session bin/claude-vm-net-check data/claude-vm-firewall.nft data/claude-vm-provision.sh vendor/mockvps-kvm/mockvps-kvm.sh; do
     [ -f "$f" ] || bad "extras/claude-vm.sh needs $f"
 done
 # Whonix: --remove asks about the disks before it removes the VMs, and an install

@@ -1,0 +1,16 @@
+#!/bin/bash
+# claude-vm-net-check: written by Wren Linux extras/claude-vm.sh
+# Run by bin/claude-vm-session, as the VM's user, so it sees what QEMU would see.
+# The guest has root, so this firewall is what keeps it off your network, and a
+# service saying "active" isn't enough: a "flush ruleset" empties the firewall and
+# leaves it active. A closed port on this computer says "refused"; only the rule's
+# admin-prohibited says "no route".
+#   exit 0  the firewall refuses this user
+#   exit 1  it doesn't
+set -euo pipefail
+exec python3 -I -c '
+import errno, socket, sys
+with socket.socket() as s:
+    s.settimeout(5)
+    sys.exit(0 if s.connect_ex(("127.0.0.1", 9)) == errno.EHOSTUNREACH else 1)
+'

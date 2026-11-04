@@ -81,6 +81,13 @@ if [ ! -e "$home/.claude.json" ]; then
     chmod 600 "$home/.claude.json"
 fi
 
+# sudo without a password, in this guest only. That is safe because of where it
+# is: nothing of yours is in here, and the wall is the VM, not this rule.
+log "sudo without a password for $VM_USER, in this VM"
+printf '%s ALL=(ALL:ALL) NOPASSWD: ALL\n' "$VM_USER" >/etc/sudoers.d/90-wren-agent
+chmod 0440 /etc/sudoers.d/90-wren-agent
+visudo -cf /etc/sudoers.d/90-wren-agent >/dev/null || { rm -f /etc/sudoers.d/90-wren-agent; echo "the sudo rule didn't pass visudo" >&2; exit 1; }
+
 log "Setting up $VM_USER (projects folder, git identity, ssh key, CLAUDE.md)"
 run() { runuser -u "$VM_USER" -- "$@"; }
 run mkdir -p "$home/projects" "$home/.claude"
@@ -111,8 +118,9 @@ from the person's real computer.
   but nothing on their computer or local network: no localhost services of
   theirs, no router, no printers. A refused connection to a `192.168.x.x` or
   `localhost` address of theirs is that boundary, not a bug.
-- You have git, ssh, ripgrep, jq, shellcheck and python3 with venv. You may
-  install more with `sudo apt-get install` (you have sudo IN THIS VM only).
+- You have git, ssh, ripgrep, jq, shellcheck and python3 with venv. You have
+  sudo without a password, IN THIS VM only: install what you need, and test
+  real installs here. The person can put the VM back to its clean state.
 - Your git identity is Claude <noreply@anthropic.com> and your ssh key is
   `~/.ssh/id_ed25519`, made here, never theirs.
 - **How your work reaches them:** commit and push to the git host (run the

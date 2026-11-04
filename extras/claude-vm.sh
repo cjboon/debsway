@@ -37,7 +37,7 @@
 # Usage: bash claude-vm.sh [--remove | --manual | --account NAME | --remove-account NAME]
 # summary: Claude Code in a disposable VM (no shared folder)
 # security: most
-# files: bin/no-abstract-sockets lib/claude-accounts.sh
+# files: bin/no-abstract-sockets lib/claude-accounts.sh bin/claude-vm-net-check
 # status: bin:claude-vm file:/usr/local/libexec/claude-vm-session
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$WREN_DIR/lib/claude-accounts.sh"
@@ -226,6 +226,7 @@ if [ "${1:-}" = --remove ]; then
     sudo systemctl disable --now wren-claude-vm-firewall.service >/dev/null 2>&1 || true
     sudo nft delete table inet wren_claude_vm 2>/dev/null || true
     sudo rm -f "$SUDOERS" "$SESSION" "$MOCKVPS" "$FIREWALL" "$UNIT"
+    sudo rm -f /usr/local/libexec/claude-vm-net-check
     remove_no_abstract
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
     sudo rmdir /usr/local/libexec /etc/wren 2>/dev/null || true
@@ -281,6 +282,7 @@ sudo install -d -o root -g root -m 0755 /usr/local/libexec
 # can run it. It looks at its own location, so the wren-only reminder in it
 # stays quiet here.
 sudo install -o root -g root -m 0755 "$WREN_DIR/vendor/mockvps-kvm/mockvps-kvm.sh" "$MOCKVPS"
+sudo install -o root -g root -m 0755 "$WREN_DIR/bin/claude-vm-net-check" /usr/local/libexec/claude-vm-net-check
 sudo install -o root -g root -m 0755 "$WREN_DIR/bin/claude-vm-session" "$SESSION"
 install_no_abstract
 

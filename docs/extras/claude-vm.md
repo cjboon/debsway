@@ -15,6 +15,7 @@ claude-vm shell        a plain shell in the VM
 claude-vm status | stop
 claude-vm pubkey       the VM's ssh public key (add it on your git host)
 claude-vm rebuild      throw the VM away and build a fresh one
+claude-vm reset        back to how it was built (faster than rebuild; asks first)
 claude-pull            in your copy of a repository: shows what the agent pushed, brings it in on y
 claude-vm --account NAME [shell|status|stop|pubkey|rebuild]   the same, for that account's VM
 ```
@@ -44,6 +45,8 @@ space (several GB) and memory while it runs.
 ## LIMITS
 
 - Updates install themselves in a VM built since this was added: Debian's and Claude Code's. An older VM needs `claude-vm rebuild`, or `sudo apt update && sudo apt upgrade` in `claude-vm shell`.
+- The agent has sudo without a password in the VM, so treat everything in it as under its control, including what the VM tells you. A VM built before this has no such rule and no clean snapshot: `claude-vm rebuild` adds both, and deletes what isn't pushed.
+- QEMU runs under its own syscall filter, and the VM won't start unless the firewall is active, and an ssh login that forwards nothing. Its terminal output still reaches your terminal.
 - A bug in QEMU or KVM could reach this computer; a VM is a stronger wall than a user, not a perfect one.
 - It reaches the internet, so what it reads can leave the VM.
 - Treat what it pushes as untrusted until you have read it (`claude-pull` shows it first).
@@ -79,6 +82,7 @@ sudo systemctl enable --now wren-claude-vm-firewall.service
 # The VM engine, the session script, and the no-abstract-sockets wrapper, as root's files
 sudo install -d -o root -g root -m 0755 /usr/local/libexec
 sudo install -o root -g root -m 0755 @WREN_DIR@/vendor/mockvps-kvm/mockvps-kvm.sh /usr/local/libexec/claude-vm-mockvps-kvm
+sudo install -o root -g root -m 0755 @WREN_DIR@/bin/claude-vm-net-check /usr/local/libexec/claude-vm-net-check
 sudo install -o root -g root -m 0755 @WREN_DIR@/bin/claude-vm-session /usr/local/libexec/claude-vm-session
 sudo install -o root -g root -m 0755 @WREN_DIR@/bin/no-abstract-sockets /usr/local/libexec/wren-no-abstract-sockets
 
@@ -152,7 +156,7 @@ sudo rm /etc/systemd/system/wren-claude-vm-firewall.service /etc/wren/claude-vm.
 sudo systemctl daemon-reload
 # The sudo rule and root's scripts (the no-abstract-sockets wrapper only if
 # incognito, claude-code and the Firefox sandbox don't use it)
-sudo rm /etc/sudoers.d/wren-claude-vm /usr/local/libexec/claude-vm-session /usr/local/libexec/claude-vm-mockvps-kvm
+sudo rm /etc/sudoers.d/wren-claude-vm /usr/local/libexec/claude-vm-session /usr/local/libexec/claude-vm-net-check /usr/local/libexec/claude-vm-mockvps-kvm
 sudo rm /usr/local/libexec/wren-no-abstract-sockets
 # The user, its home and the VM in it
 sudo pkill -KILL -u claude-vm

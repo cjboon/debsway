@@ -881,6 +881,8 @@ define_cmd() {
   QQA+=(-serial "file:$log")
   QQA+=(-monitor "unix:$MONITOR_SOCK,server,nowait")
   QQA+=(-pidfile "$PIDFILE")
+  # Wren Linux: QEMU's own syscall filter, when the caller asks for it (claude-vm)
+  [[ -z "${QEMU_SANDBOX:-}" ]] || QQA+=(-sandbox "$QEMU_SANDBOX")
 }
 
 port_in_use() {

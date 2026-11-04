@@ -10,6 +10,7 @@
 #   claude-vm status     is the VM running?
 #   claude-vm stop       power the VM off
 #   claude-vm pubkey     the VM's ssh public key (add it on your git host)
+#   claude-vm reset      back to how it was built (faster than rebuild; asks first)
 #   claude-vm rebuild    throw the VM away and build a fresh one
 #   claude-vm --account NAME [COMMAND]   another account's VM (its own Claude
 #                        login and memories); set up with extras/claude-vm.sh --account NAME
@@ -44,9 +45,9 @@ fi
 
 cmd=${1:-connect}
 case "$cmd" in
-    connect | shell | status | stop | pubkey | rebuild) ;;
+    connect | shell | status | stop | pubkey | rebuild | reset) ;;
     -h | --help)
-        sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'
+        sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
         exit 0 ;;
     *) die "unknown command '$1'. Try: claude-vm --help" ;;
 esac
@@ -65,6 +66,12 @@ if [ -n "$account" ]; then
 fi
 sudo -n -u "$AGENT" -l "$SESSION" >/dev/null 2>&1 ||
     die "the VM sandbox isn't set up. Run: wrenctl install claude-vm"
+
+if [ "$cmd" = reset ]; then
+    printf 'This deletes everything in the VM since it was built, unpushed work and your Claude login too. Go on? [y/N] '
+    IFS= read -r a || a=
+    [[ $a =~ ^[Yy] ]] || { echo "Nothing was changed."; exit 0; }
+fi
 
 if [ -n "${CLAUDE_VM_HOLD:-}" ]; then
     rc=0
