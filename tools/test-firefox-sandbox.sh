@@ -348,7 +348,7 @@ check "it takes over the old Firefox extra's marker after installing its own (Fi
 remove=$(sed -n '/^if \[ "${1:-}" = --remove \]/,/^fi$/p' "$X")
 rorder() { python3 -I -c 'import sys; s = sys.argv[1]; assert s.index(sys.argv[2]) < s.index(sys.argv[3])' "$remove" "$1" "$2"; }
 check "--remove asks about incognito first (its firewall and wayland-restrict decisions depend on it)" \
-    rorder 'ask "Remove incognito (the throwaway Firefox) too?" y' 'remove_bin wayland-restrict'
+    rorder 'ask "Remove incognito (the throwaway Firefox) too?" y' 'remove_wayland_restrict'
 check "--remove takes out the hardening, unless incognito stays" \
     grep -qF 'bash "$WREN_DIR/parts/firefox-hardening.sh" --remove' <<<"$remove"
 check "--remove takes out the packages it installed" grep -qx '    apt_purge' <<<"$remove"
