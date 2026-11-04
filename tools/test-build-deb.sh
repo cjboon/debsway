@@ -55,7 +55,15 @@ S=$T/root/usr/share/wren
 check "Wren Linux is in /usr/share/wren" test -f "$S/lib.sh"
 check "...what was committed, not what was only in the folder" test ! -e "$S/UNCOMMITTED.txt"
 check "...without the project's own CI and notes" bash -c '[ ! -e "$1/.github" ] && [ ! -e "$1/CLAUDE.md" ]' _ "$S"
-check "...every committed file" test "$(git -C "$T/src" ls-files | grep -cvE '^(\.github/|\.gitignore$|CLAUDE\.md$)')" = "$(cd "$S" && find . -type f | wc -l)"
+DEVONLY='^(\.github/|\.gitignore$|CLAUDE\.md$|tools/|docs/maintaining\.md$|docs/distro-plan\.md$|extras/signing-key\.sh$|docs/extras/signing-key\.md$|bin/wren-key$|bin/wren-key-gpg$|bin/wren-signer$|data/wren-key\.1$|data/signer-firewall\.nft$)'
+check "...every committed file but what only someone working on Wren Linux uses" test "$(git -C "$T/src" ls-files | grep -cvE "$DEVONLY")" = "$(cd "$S" && find . -type f | wc -l)"
+check "...no tests or build tools, no maintainer's documents" bash -c '[ ! -e "$1/tools" ] && [ ! -e "$1/docs/maintaining.md" ] && [ ! -e "$1/docs/distro-plan.md" ]' _ "$S"
+check "...no signing key tools (their sudo rule and user are for the publisher only)" bash -c '
+    for f in extras/signing-key.sh bin/wren-key bin/wren-key-gpg bin/wren-signer data/signer-firewall.nft; do [ ! -e "$1/$f" ] || exit 1; done' _ "$S"
+check "...but the key every computer checks updates with, and wren-dev to get the rest" bash -c '[ -f "$1/lib/update.sh" ] && [ -f "$1/extras/wren-dev.sh" ] && [ -f "$1/data/wren-signing-key.asc" ] || [ ! -f "$2/data/wren-signing-key.asc" ]' _ "$S" "$HERE"
+check "...and the list of extras links to no page it left out" bash -c '! grep -q "(signing-key.md)" "$1/docs/extras/README.md"' _ "$S"
+out=$(cd "$S" && HOME=$T/pkghome bash test.sh --offline 2>&1)
+check "wrenctl --test works there, without the tests of each piece" bash -c '! grep -qE "tools/test-|No such file|has no article|link to" <<<"$1" && grep -qE "^[0-9]+ ok, " <<<"$1"' _ "$out"
 check "...executable where git says so, and only there" bash -c '
     cd "$1" && git -C "$2" ls-tree -r HEAD | awk "\$1 == \"100755\" { sub(/^[^\t]*\t/, \"\"); print }" | sort >"$3/x-git"
     find . -type f -perm -u+x | sed "s|^\./||" | sort >"$3/x-pkg"

@@ -95,7 +95,7 @@ wren/
 ├── prep/                    intro.sh (what the base install does, and the question);
 │                            before a reinstall: fetch-offline-debs.sh, fetch-tor-browser.sh;
 │                            setup-sudo.sh (run as root if the installer left sudo out)
-├── tools/                   for working on Wren Linux: pack-usb.sh, tests
+├── tools/                   for working on Wren Linux, in a git copy only: pack-usb.sh, tests
 ├── vendor/mockvps-kvm/      the mockvps-kvm project, with its own README and license
 ├── docs/                    the longer guides
 ├── .github/workflows/       shellcheck and test.sh --offline on every push
@@ -319,8 +319,8 @@ that is set up.
 - [docs/extras.md](docs/extras.md): the optional apps, Firefox with its hardening and `incognito`, Firefox profiles
 - [docs/extras/](docs/extras/README.md): one page per extra: its commands, what it is, what it doesn't protect against, and every step to install it by hand (`wrenctl manual NAME` prints them)
 - [docs/opsec.md](docs/opsec.md): operations security in general: laptops, USB drives, networks, passwords, encryption, private communication, physical security, and what to do when something goes wrong
-- [docs/maintaining.md](docs/maintaining.md): `test.sh`, `pins.sh`, shellcheck, the other scripts
-- [docs/distro-plan.md](docs/distro-plan.md): the plan from these scripts to a Debian-based distribution: a package, a signed apt repository, a website, an installer image
+- [docs/maintaining.md](docs/maintaining.md) (in a git copy; `wrenctl install wren-dev` gets one): `test.sh`, `pins.sh`, shellcheck, the other scripts
+- [docs/distro-plan.md](docs/distro-plan.md) (in a git copy too): the plan from these scripts to a Debian-based distribution: a package, a signed apt repository, a website, an installer image
 - [THREAT-MODEL.md](THREAT-MODEL.md): what this protects against, and what it doesn't
 
 ## Removing things

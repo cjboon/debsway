@@ -29,6 +29,17 @@ meh() { printf '  \033[33mWARN\033[0m  %s\n' "$*"; n_warn=$((n_warn + 1)); }
 bad() { printf '  \033[31mFAIL\033[0m  %s\n' "$*"; n_fail=$((n_fail + 1)); }
 section() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 online() { ! $OFFLINE; }
+# The tests of each piece (tools/test-NAME.sh) are in a git copy, not the package's
+# (wrenctl install wren-dev gets one); without them, the checks below still run
+dev_test() { # NAME SECTION LABEL
+    [ -f "tools/test-$1.sh" ] || return 0
+    section "$2"
+    if out=$(bash "tools/test-$1.sh" 2>&1); then
+        ok "$(grep -c '^  ok' <<<"$out") $3"
+    else
+        bad "$3: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
+    fi
+}
 
 cd "$WREN_DIR" || exit 1
 mapfile -t SCRIPTS < <(find . -path ./.git -prune -o -path ./ignore -prune -o -path ./offline -prune -o \
@@ -136,337 +147,126 @@ for name in "${wanted[@]}"; do
 done
 
 # --------------------------------------------------------------------
-section "Package markers (apt_install / apt_purge), simulated"
-if out=$(bash tools/test-apt-markers.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") marker checks"
-else
-    bad "package marker checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test apt-markers "Package markers (apt_install / apt_purge), simulated" "marker checks"
 
 # --------------------------------------------------------------------
-section "Bridge chooser (Tor Browser, Whonix, OnionShare, apt over Tor), scripted"
-if out=$(bash tools/test-bridges.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") bridge checks"
-else
-    bad "bridge checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test bridges "Bridge chooser (Tor Browser, Whonix, OnionShare, apt over Tor), scripted" "bridge checks"
 
 # --------------------------------------------------------------------
-section "Timers, alarms and the clock format (bin/timer), with pretend systemd"
-if out=$(bash tools/test-timer.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") timer checks"
-else
-    bad "timer checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test timer "Timers, alarms and the clock format (bin/timer), with pretend systemd" "timer checks"
 
 # --------------------------------------------------------------------
-section "The claude command (sandboxed Claude Code), with a pretend sudo"
-if out=$(bash tools/test-home-private.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") private home checks"
-else
-    bad "private home checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
-if out=$(bash tools/test-command-hints.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") command hint checks"
-else
-    bad "command hint checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
-if out=$(bash tools/test-wifi-signin.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") Wi-Fi sign-in and Firefox DNS checks"
-else
-    bad "Wi-Fi sign-in and Firefox DNS checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
-if out=$(bash tools/test-grub-colors.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") GRUB colour checks"
-else
-    bad "GRUB colour checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
-if out=$(bash tools/test-claude.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") claude checks"
-else
-    bad "claude checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test home-private "Your home folder, closed to other users" "private home checks"
+dev_test command-hints "Hints for commands that are not installed" "command hint checks"
+dev_test wifi-signin "The Wi-Fi sign-in window and Firefox's own DNS" "Wi-Fi sign-in and Firefox DNS checks"
+dev_test grub-colors "GRUB's colours" "GRUB colour checks"
+dev_test claude "The claude command and the sandboxed Claude Code, with a pretend sudo" "claude checks"
 
 # --------------------------------------------------------------------
-section "The claude-vm command (Claude Code in a VM), with a pretend sudo"
-if out=$(bash tools/test-claude-vm.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") claude-vm checks"
-else
-    bad "claude-vm checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test claude-vm "The claude-vm command (Claude Code in a VM), with a pretend sudo" "claude-vm checks"
 
 # --------------------------------------------------------------------
-section "The git guard for ~/projects (bin/git), with real git"
-if out=$(bash tools/test-git-guard.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") git guard checks"
-else
-    bad "git guard checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test git-guard "The git guard for ~/projects (bin/git), with real git" "git guard checks"
 
 # --------------------------------------------------------------------
-section "Sandbox users and X11's abstract socket (bin/no-abstract-sockets), with Landlock"
-if out=$(bash tools/test-no-abstract.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") no-abstract-sockets checks"
-else
-    bad "no-abstract-sockets checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test no-abstract "Sandbox users and X11's abstract socket (bin/no-abstract-sockets), with Landlock" "no-abstract-sockets checks"
 
 # --------------------------------------------------------------------
-section "Signature checks (lib/appimage.sh), with throwaway keys"
-if out=$(bash tools/test-signatures.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") signature checks"
-else
-    bad "signature checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test signatures "Signature checks (lib/appimage.sh), with throwaway keys" "signature checks"
 
 # --------------------------------------------------------------------
-section "Your onion site (extras/onion-site.sh): command, session, offline VM settings, Tor"
-if out=$(bash tools/test-onion-site.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") onion site checks"
-else
-    bad "onion site checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test onion-site "Your onion site (extras/onion-site.sh): command, session, offline VM settings, Tor" "onion site checks"
 
 # --------------------------------------------------------------------
-section "yt-dlp as its own user (extras/yt-dlp.sh): the command, the session, what it installs"
-if out=$(bash tools/test-yt-dlp.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") yt-dlp checks"
-else
-    bad "yt-dlp checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test yt-dlp "yt-dlp as its own user (extras/yt-dlp.sh): the command, the session, what it installs" "yt-dlp checks"
 
 # --------------------------------------------------------------------
-section "Screen sharpness (bin/display-scale): EDID sizes, the notice, VM screens"
-if out=$(bash tools/test-display-scale.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") display-scale checks"
-else
-    bad "display-scale checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test display-scale "Screen sharpness (bin/display-scale): EDID sizes, the notice, VM screens" "display-scale checks"
 
 # --------------------------------------------------------------------
-section "The install ISO (prep/make-install-iso.sh): answers, boot menus, disk choice"
-if out=$(bash tools/test-install-iso.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") install ISO checks"
-else
-    bad "install ISO checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test install-iso "The install ISO (prep/make-install-iso.sh): answers, boot menus, disk choice" "install ISO checks"
 
 # --------------------------------------------------------------------
-section "The webcam switch (bin/wren-camera, extras/webcam.sh), on a pretend /sys"
-if out=$(bash tools/test-webcam.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") webcam checks"
-else
-    bad "webcam checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test webcam "The webcam switch (bin/wren-camera, extras/webcam.sh), on a pretend /sys" "webcam checks"
 
 # --------------------------------------------------------------------
-section "Tails on a USB stick (lib/tails.sh): release file, which disks, writing"
-if out=$(bash tools/test-tails-usb.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") Tails stick checks"
-else
-    bad "Tails stick checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test tails-usb "Tails on a USB stick (lib/tails.sh): release file, which disks, writing" "Tails stick checks"
 
 # --------------------------------------------------------------------
-section "What backups leave out (extras/backup.sh), in a pretend home"
-if out=$(bash tools/test-backup.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") backup checks"
-else
-    bad "backup checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test backup "What backups leave out (extras/backup.sh), in a pretend home" "backup checks"
 
 # --------------------------------------------------------------------
-section "Who keeps the system tor service on (lib/tor.sh), on a pretend /etc"
-if out=$(bash tools/test-tor-service.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") tor service checks"
-else
-    bad "tor service checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test tor-service "Who keeps the system tor service on (lib/tor.sh), on a pretend /etc" "tor service checks"
 
 # --------------------------------------------------------------------
-section "The clock: NTP and the time zone (parts/clock.sh), with a pretend timedatectl"
-if out=$(bash tools/test-clock.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") clock checks"
-else
-    bad "clock checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test clock "The clock: NTP and the time zone (parts/clock.sh), with a pretend timedatectl" "clock checks"
 
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
-section "The live image's extras (parts/no-live-extras.sh), with pretend apt"
-if out=$(bash tools/test-live-extras.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") live extras checks"
-else
-    bad "live extras checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test live-extras "The live image's extras (parts/no-live-extras.sh), with pretend apt" "live extras checks"
 
 # --------------------------------------------------------------------
-section "Mousepad's look (extras/mousepad.sh), with a pretend gsettings"
-if out=$(bash tools/test-mousepad.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") Mousepad checks"
-else
-    bad "Mousepad checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test mousepad "Mousepad's look (extras/mousepad.sh), with a pretend gsettings" "Mousepad checks"
 
 # --------------------------------------------------------------------
-section "The extras' pages and --manual (docs/extras/, print_manual), with a pretend sudo"
-if out=$(bash tools/test-manual.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") manual install checks"
-else
-    bad "manual install checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test manual "The extras' pages and --manual (docs/extras/, print_manual), with a pretend sudo" "manual install checks"
 
 # --------------------------------------------------------------------
-section "Claude Code as you (extras/claude-regular.sh), next to the sandboxed one"
-if out=$(bash tools/test-regular-extras.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") regular extras checks"
-else
-    bad "regular extras checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test regular-extras "Claude Code as you (extras/claude-regular.sh), next to the sandboxed one" "regular extras checks"
 
 # --------------------------------------------------------------------
-section "Autologin on tty1 (extras/autologin.sh), with a pretend sudo"
-if out=$(bash tools/test-autologin.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") autologin checks"
-else
-    bad "autologin checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test autologin "Autologin on tty1 (extras/autologin.sh), with a pretend sudo" "autologin checks"
 
 # --------------------------------------------------------------------
-section "The vault (bin/vault, extras/vault.sh), with a pretend gocryptfs"
-if out=$(bash tools/test-vault.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") vault checks"
-else
-    bad "vault checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test vault "The vault (bin/vault, extras/vault.sh), with a pretend gocryptfs" "vault checks"
 
 # --------------------------------------------------------------------
-section "Signal (extras/signal.sh): the pinned key, no setuid sandbox helper"
-if out=$(bash tools/test-signal.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") Signal checks"
-else
-    bad "Signal checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test signal "Signal (extras/signal.sh): the pinned key, no setuid sandbox helper" "Signal checks"
 
 # --------------------------------------------------------------------
-section "opencode in a VM (extras/opencode-vm.sh): the command, the session, the guest's install"
-if out=$(bash tools/test-opencode-vm.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") opencode-vm checks"
-else
-    bad "opencode-vm checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test opencode-vm "opencode in a VM (extras/opencode-vm.sh): the command, the session, the guest's install" "opencode-vm checks"
 
 # --------------------------------------------------------------------
-section "Signing keys of added apt repositories: checked and renewed"
-if out=$(bash tools/test-apt-keys.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") apt key checks"
-else
-    bad "apt key checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test apt-keys "Signing keys of added apt repositories: checked and renewed" "apt key checks"
 
 # --------------------------------------------------------------------
-section "webtunnel for the system tor: the Tor Project's repository, lyrebird only"
-if out=$(bash tools/test-webtunnel.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") webtunnel checks"
-else
-    bad "webtunnel checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test webtunnel "webtunnel for the system tor: the Tor Project's repository, lyrebird only" "webtunnel checks"
 
 # --------------------------------------------------------------------
-section "console-font in a terminal window (foot's text size)"
-if out=$(bash tools/test-console-font.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") console-font checks"
-else
-    bad "console-font checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test console-font "console-font in a terminal window (foot's text size)" "console-font checks"
 
 # --------------------------------------------------------------------
-section "The usb command, with pretend lsblk, udisksctl and sudo"
-if out=$(bash tools/test-usb.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") usb checks"
-else
-    bad "usb checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test usb "The usb command, with pretend lsblk, udisksctl and sudo" "usb checks"
 
 # --------------------------------------------------------------------
-section "Your wallpaper (bin/wallpaper) and Debian's collections (extras/wallpapers.sh)"
-if out=$(bash tools/test-wallpaper.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") wallpaper checks"
-else
-    bad "wallpaper checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test wallpaper "Your wallpaper (bin/wallpaper) and Debian's collections (extras/wallpapers.sh)" "wallpaper checks"
 
 # --------------------------------------------------------------------
-section "Light or dark (bin/theme, data/themes), in a temp home with pretend swaymsg and makoctl"
-if out=$(bash tools/test-theme.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") theme checks"
-else
-    bad "theme checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test theme "Light or dark (bin/theme, data/themes), in a temp home with pretend swaymsg and makoctl" "theme checks"
 
 # --------------------------------------------------------------------
-section "vim with colors (extras/vim.sh, data/vimrc), in a temp home"
-if out=$(bash tools/test-vim.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") vim checks"
-else
-    bad "vim checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test vim "vim with colors (extras/vim.sh, data/vimrc), in a temp home" "vim checks"
 
 # --------------------------------------------------------------------
-section "w3m keeps cookies only while it is open (bin/w3m), with a pretend w3m"
-if out=$(bash tools/test-w3m.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") w3m checks"
-else
-    bad "w3m checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test w3m "w3m keeps cookies only while it is open (bin/w3m), with a pretend w3m" "w3m checks"
 
 # --------------------------------------------------------------------
-section "status.sh's screen lock line, with and without swaylock"
-if out=$(bash tools/test-status.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") status checks"
-else
-    bad "status checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test status "status.sh's screen lock line, with and without swaylock" "status checks"
 
 # --------------------------------------------------------------------
-section "The whonix command (bin/whonix), with a pretend virsh"
-if out=$(bash tools/test-whonix-cmd.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") whonix command checks"
-else
-    bad "whonix command checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test whonix-cmd "The whonix command (bin/whonix), with a pretend virsh" "whonix command checks"
 
 # --------------------------------------------------------------------
-section "wifi.sh's network scan never hangs, with a pretend iw"
-if out=$(bash tools/test-wifi-scan.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") Wi-Fi scan checks"
-else
-    bad "Wi-Fi scan checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test wifi-scan "wifi.sh's network scan never hangs, with a pretend iw" "Wi-Fi scan checks"
 
 # --------------------------------------------------------------------
-section "The sshd settings check (lib/net.sh), with sample sshd -T output"
-if out=$(bash tools/test-sshd-check.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") sshd settings checks"
-else
-    bad "sshd settings checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test sshd-check "The sshd settings check (lib/net.sh), with sample sshd -T output" "sshd settings checks"
 
 # --------------------------------------------------------------------
-section "Old package lists are refused (lib/offline.sh), with a pretend clock"
-if out=$(bash tools/test-offline-fresh.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") offline freshness checks"
-else
-    bad "offline freshness checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test offline-fresh "Old package lists are refused (lib/offline.sh), with a pretend clock" "offline freshness checks"
 
 # --------------------------------------------------------------------
-section "The media sandbox (bin/media-sandbox), with a pretend bubblewrap"
-if out=$(bash tools/test-media-sandbox.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") media sandbox checks"
-else
-    bad "media sandbox checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test media-sandbox "The media sandbox (bin/media-sandbox), with a pretend bubblewrap" "media sandbox checks"
 
 # --------------------------------------------------------------------
 section "Status lines: one extra's marker must not be another script's package"
@@ -502,76 +302,32 @@ done
 [ "$shared" = 0 ] && ok "no extra's status line names a file or command a base part sets up"
 
 # --------------------------------------------------------------------
-section "update.sh: which scripts to rerun, with a pretend server"
-if out=$(bash tools/test-update.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") update checks"
-else
-    bad "update checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test update "update.sh: which scripts to rerun, with a pretend server" "update checks"
 
 # --------------------------------------------------------------------
-section "The Wren Linux package (tools/build-deb.sh), unpacked in a temp folder"
-if out=$(bash tools/test-build-deb.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") package checks"
-else
-    bad "package checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test wren-dev "A git copy to work on (extras/wren-dev.sh), from a pretend server" "wren-dev checks"
+dev_test build-deb "The Wren Linux package (tools/build-deb.sh), unpacked in a temp folder" "package checks"
 
 # --------------------------------------------------------------------
-section "The signed apt repository (tools/make-apt-repo.sh), with apt as you"
-if out=$(bash tools/test-apt-repo.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") repository checks"
-else
-    bad "repository checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test apt-repo "The signed apt repository (tools/make-apt-repo.sh), with apt as you" "repository checks"
 
 # --------------------------------------------------------------------
-section "Wren Linux's repository on a computer (parts/wren-repo.sh), with a pretend sudo"
-if out=$(bash tools/test-wren-repo.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") repository part checks"
-else
-    bad "repository part checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test wren-repo "Wren Linux's repository on a computer (parts/wren-repo.sh), with a pretend sudo" "repository part checks"
 
 # --------------------------------------------------------------------
-section "Wren Linux from wherever it is (not only ~/wren)"
-if out=$(bash tools/test-location.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") location checks"
-else
-    bad "location checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test location "Wren Linux from wherever it is (not only ~/wren)" "location checks"
 
 # --------------------------------------------------------------------
-section "update.sh in the Wren Linux package's copy (no git), with a pretend upgrade"
-if out=$(bash tools/test-update-package.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") package update checks"
-else
-    bad "package update checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test update-package "update.sh in the Wren Linux package's copy (no git), with a pretend upgrade" "package update checks"
 
 # --------------------------------------------------------------------
-section "The signing key (extras/signing-key.sh, wren-key), with a pretend sudo"
-if out=$(bash tools/test-signing-key.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") signing key checks"
-else
-    bad "signing key checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test signing-key "The signing key (extras/signing-key.sh, wren-key), with a pretend sudo" "signing key checks"
 
 # --------------------------------------------------------------------
-section "git-init.sh: a copy from a stick, connected to what was published"
-if out=$(bash tools/test-git-init.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") git-init checks"
-else
-    bad "git-init checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test git-init "git-init.sh: a copy from a stick, connected to what was published" "git-init checks"
 
 # --------------------------------------------------------------------
-section "update.sh: only what Wren Linux's own key signed, with throwaway keys"
-if out=$(bash tools/test-update-signed.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") signed update checks"
-else
-    bad "signed update checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test update-signed "update.sh: only what Wren Linux's own key signed, with throwaway keys" "signed update checks"
 if [ -n "${WREN_SIGNING_FPR:-}" ]; then
     if key_ok data/wren-signing-key.asc "$WREN_SIGNING_FPR"; then
         ok "data/wren-signing-key.asc is exactly the pinned key, and can sign"
@@ -581,140 +337,55 @@ if [ -n "${WREN_SIGNING_FPR:-}" ]; then
 fi
 
 # --------------------------------------------------------------------
-section "The Wren menu in the bar (bin/wren-menu), with a pretend wmenu and foot"
-if out=$(bash tools/test-wren-menu.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") Wren menu checks"
-else
-    bad "Wren menu checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test wren-menu "The Wren menu in the bar (bin/wren-menu), with a pretend wmenu and foot" "Wren menu checks"
 
 # --------------------------------------------------------------------
-section "The Super+d launcher line (lib/sway.sh), on pretend sway configs"
-if out=$(bash tools/test-launcher.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") launcher checks"
-else
-    bad "launcher checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test launcher "The Super+d launcher line (lib/sway.sh), on pretend sway configs" "launcher checks"
 
 # --------------------------------------------------------------------
-section "The Wren Linux command and its man page (bin/wrenctl, data/wrenctl.1)"
-if out=$(bash tools/test-wren-cmd.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") Wren Linux command checks"
-else
-    bad "Wren Linux command checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test wren-cmd "The Wren Linux command and its man page (bin/wrenctl, data/wrenctl.1)" "Wren Linux command checks"
 
 # --------------------------------------------------------------------
-section "The fade before the screen locks (bin/dim-warning), with a pretend brightnessctl"
-if out=$(bash tools/test-dim.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") dim checks"
-else
-    bad "dim checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test dim "The fade before the screen locks (bin/dim-warning), with a pretend brightnessctl" "dim checks"
 
 # --------------------------------------------------------------------
-section "Hardware-only parts (lib/core.sh), on a pretend /sys"
-if out=$(bash tools/test-hardware.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") hardware checks"
-else
-    bad "hardware checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test hardware "Hardware-only parts (lib/core.sh), on a pretend /sys" "hardware checks"
 
 # --------------------------------------------------------------------
-section "Choosing extras first and installing them after the base"
-if out=$(bash tools/test-extras-flow.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") extras flow checks"
-else
-    bad "extras flow checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test extras-flow "Choosing extras first and installing them after the base" "extras flow checks"
 
 # --------------------------------------------------------------------
-section "mpv's one-time note when there is no sound"
-if out=$(bash tools/test-mpv-notice.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") mpv notice checks"
-else
-    bad "mpv notice checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test mpv-notice "mpv's one-time note when there is no sound" "mpv notice checks"
 
 # --------------------------------------------------------------------
-section "The key cheat sheet shows only what is installed (bin/keys)"
-if out=$(bash tools/test-keys.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") cheat sheet checks"
-else
-    bad "cheat sheet checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test keys "The key cheat sheet shows only what is installed (bin/keys)" "cheat sheet checks"
 
 # --------------------------------------------------------------------
-section "wifi.sh --remove (lib/net.sh), on a pretend /etc"
-if out=$(bash tools/test-wifi-remove.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") wifi remove checks"
-else
-    bad "wifi remove checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test wifi-remove "wifi.sh --remove (lib/net.sh), on a pretend /etc" "wifi remove checks"
 
 # --------------------------------------------------------------------
-section "Wi-Fi, Bluetooth and microphone switches (bin/radios), with pretend rfkill and wpctl"
-if out=$(bash tools/test-radios.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") radio switch checks"
-else
-    bad "radio switch checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test radios "Wi-Fi, Bluetooth and microphone switches (bin/radios), with pretend rfkill and wpctl" "radio switch checks"
 
 # --------------------------------------------------------------------
-section "Console-only: the autostart swap, the tmux bar and its clicks"
-if out=$(bash tools/test-console.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") console-only checks"
-else
-    bad "console-only checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test console "Console-only: the autostart swap, the tmux bar and its clicks" "console-only checks"
 
 # --------------------------------------------------------------------
-section "Bluetooth's start-off setting and the new extras"
-if out=$(bash tools/test-bluetooth-conf.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") bluetooth setup checks"
-else
-    bad "bluetooth setup checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test bluetooth-conf "Bluetooth's start-off setting and the new extras" "bluetooth setup checks"
 
 # --------------------------------------------------------------------
-section "The sandboxed Firefox (bin/firefox), with pretend sudo and setfacl"
-if out=$(bash tools/test-firefox-sandbox.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") sandboxed Firefox checks"
-else
-    bad "sandboxed Firefox checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test firefox-sandbox "The sandboxed Firefox (bin/firefox), with pretend sudo and setfacl" "sandboxed Firefox checks"
 
 # --------------------------------------------------------------------
-section "Firefox's policies.json (bin/ublock-allow): uBlock, DNS-over-HTTPS off"
-if out=$(bash tools/test-firefox-policy.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") Firefox policy checks"
-else
-    bad "Firefox policy checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test firefox-policy "Firefox's policies.json (bin/ublock-allow): uBlock, DNS-over-HTTPS off" "Firefox policy checks"
 
 # --------------------------------------------------------------------
-section "Encrypted DNS (parts/secure-dns.sh): resolvers, Unbound's settings, the firewall rule, the switch"
-if out=$(bash tools/test-secure-dns.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") secure DNS checks"
-else
-    bad "secure DNS checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test secure-dns "Encrypted DNS (parts/secure-dns.sh): resolvers, Unbound's settings, the firewall rule, the switch" "secure DNS checks"
 
 # --------------------------------------------------------------------
-section "The lid that doesn't suspend (extras/lid-awake.sh, bin/lid), with a pretend sway"
-if out=$(bash tools/test-lid.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") lid checks"
-else
-    bad "lid checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test lid "The lid that doesn't suspend (extras/lid-awake.sh, bin/lid), with a pretend sway" "lid checks"
 
 # --------------------------------------------------------------------
-section "Firefox profiles with a user of their own (new-profile.sh), with pretend sudo"
-if out=$(bash tools/test-profile-users.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") profile user checks"
-else
-    bad "profile user checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
+dev_test profile-users "Firefox profiles with a user of their own (new-profile.sh), with pretend sudo" "profile user checks"
 
 # --------------------------------------------------------------------
 section "Pinned keys and versions (pins.sh): checked by hand within a year?"

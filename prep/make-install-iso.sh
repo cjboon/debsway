@@ -177,8 +177,8 @@ if [ -n "$scripts" ]; then cp -R "$scripts" "$stage/wren-install/scripts"; note 
 # Browser, Whonix), but not the installers themselves: late.sh puts it in
 # ~/.local/share/wren/offline, where Wren Linux looks when its own folder is
 # read-only
-git -C "$WREN_DIR" rev-parse --verify --quiet HEAD >/dev/null ||
-    die "Couldn't take Wren Linux's last commit (is $WREN_DIR a git checkout?)."
+git -C "$WREN_DIR" rev-parse --verify --quiet HEAD >/dev/null && [ -f "$WREN_DIR/tools/build-deb.sh" ] ||
+    die "This needs a git copy of Wren Linux, and $WREN_DIR isn't one. Get one (wrenctl install wren-dev) and run this from it."
 bash "$WREN_DIR/tools/build-deb.sh" --commit HEAD --out "$stage/wren-install" >"$work/deb.out" 2>&1 ||
     { cat "$work/deb.out" >&2; die "Couldn't build the Wren Linux package."; }
 deb=$(head -1 "$work/deb.out")
