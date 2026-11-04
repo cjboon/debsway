@@ -226,7 +226,7 @@ if [ "$1" = --pager ]; then
     settle
     pager
 fi
-[ "$1" = --tui ] || { echo "usage: wrenctl-menu [--tui | --pager FILE]" >&2; exit 2; }
+[ "$1" = --tui ] || { echo "usage: wren-menu [--tui | --pager FILE]" >&2; exit 2; }
 
 # ---- the menu ----
 # ids say what an entry does; items are what it shows. Wi-Fi, Bluetooth and

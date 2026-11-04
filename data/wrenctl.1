@@ -1,8 +1,8 @@
 .TH WRENCTL 1 "wren" "wren" "User Commands"
 .SH NAME
-Wren Linux \- set up, update and use the Wren Linux desktop
+wrenctl \- set up, update and use the Wren Linux desktop
 .SH SYNOPSIS
-.B Wren Linux
+.B wrenctl
 .RI [ OPTION ]
 .SH DESCRIPTION
 Wren Linux is a set of shell scripts that turn a bare Debian 13 install into a
@@ -14,7 +14,7 @@ starts them.
 Every option works without its dashes too:
 .B wrenctl install vim
 is
-.BR "Wren Linux \-\-install vim" .
+.BR "wrenctl \-\-install vim" .
 .PP
 With no option it opens the menu: a window on a sway screen, or right in the
 terminal on a text console or over ssh. With no terminal at all it shows the
@@ -29,7 +29,7 @@ Arrow keys and Enter choose, or click; Esc closes every screen of it.
 Without sway it opens in the terminal it was started from, the same menu
 with the keys (no mouse on a text console).
 Clicking
-.B Wren Linux
+.B wrenctl
 at the left of the status bar opens the same menu.
 .TP
 .B \-\-update
@@ -144,7 +144,7 @@ Show the short help.
 .I /usr/share/wren
 The Wren Linux folder as the Wren Linux package installs it, owned by root, so no
 program running as you can change the scripts that
-.B Wren Linux
+.B wrenctl
 runs with sudo.
 When it is there it is used, unless
 .B WREN_DIR

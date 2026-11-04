@@ -129,7 +129,7 @@ executable bit.
    copies the last commit and `offline/` (not your `ignore/` folder),
    labels the stick `WREN` (it asks) and adds a `START-HERE.txt` you can
    read on another computer. The label is what lets one line find the stick
-   on the new system. Or copy the whole `wrenctl` folder yourself and label
+   on the new system. Or copy the whole Wren Linux folder yourself and label
    the stick yourself (`fatlabel /dev/sdX1 WREN` for FAT,
    `e2label /dev/sdX1 WREN` for ext4).
 

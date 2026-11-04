@@ -98,7 +98,7 @@ th light >/dev/null
 check "...Mousepad's Wren Linux scheme follows: wren-light" grep -qx "gsettings set org.xfce.mousepad.preferences.view color-scheme wren-light" "$T/calls"
 echo "'oblivion'" >"$T/mousepad-scheme"
 th light >/dev/null
-check "...a scheme you chose yourself stays" not grep -q "mousepad.preferences.view color-scheme Wren Linux" "$T/calls"
+check "...a scheme you chose yourself stays" not grep -q "mousepad.preferences.view color-scheme wren-light" "$T/calls"
 rm -f "$T/mousepad-scheme"
 printf '[Settings]\ngtk-font-name=Mine 11\n' >"$H/.config/gtk-3.0/settings.ini"
 th light

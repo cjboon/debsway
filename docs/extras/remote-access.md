@@ -7,7 +7,7 @@ wrenctl install remote-access                     set it up, repair it, see the 
 wrenctl remove remote-access                      take it out (deletes the onion address for good; asks first)
 wrenctl manual remote-access                      print the manual steps below
 
-ssh Wren Linux        on the other computer, once it has the client key and ~/.ssh/config lines
+ssh wren        on the other computer, once it has the client key and ~/.ssh/config lines
 ```
 
 ssh into this computer from another one over a Tor onion service, with no
@@ -117,8 +117,8 @@ echo 'ADDRESS:descriptor:x25519:PRIVATE' | sudo tee /var/lib/tor/onion_auth/wren
 echo 'ClientOnionAuthDir /var/lib/tor/onion_auth' | sudo tee -a /etc/tor/torrc
 sudo systemctl restart tor@default
 # ssh through tor's SOCKS port
-printf '%s\n' 'Host Wren Linux' '    HostName ADDRESS.onion' '    User YOU' '    ProxyCommand nc -X 5 -x 127.0.0.1:9050 %h %p' >>~/.ssh/config
-ssh Wren Linux
+printf '%s\n' 'Host wren' '    HostName ADDRESS.onion' '    User YOU' '    ProxyCommand nc -X 5 -x 127.0.0.1:9050 %h %p' >>~/.ssh/config
+ssh wren
 ```
 
 To undo (this computer's onion address is gone for good):

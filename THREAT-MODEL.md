@@ -37,7 +37,7 @@ this page to decide what else you need.
   (`parts/random-mac.sh`).
 - **Your network seeing which packages you install**, if you chose to
   download through Tor (`parts/apt-tor.sh`, with a bridge if you need one).
-- **A tampered wrenctl update**, once Wren Linux's signing key is pinned
+- **A tampered Wren Linux update**, once Wren Linux's signing key is pinned
   (`WREN_SIGNING_FPR` in `pins.sh`, the key in
   `data/wren-signing-key.asc`). `update.sh` runs what it brings in with
   sudo, so whoever could change what GitHub serves (a taken-over account, or

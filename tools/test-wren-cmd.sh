@@ -134,6 +134,14 @@ check "nothing after the name" test -z "$(comp wrenctl install vim '')"
 check "the part installs the completion where bash-completion looks" \
     grep -q '"$WREN_DIR/data/wrenctl-completion.bash" "$COMPLETION"' "$HERE/parts/wren-menu.sh"
 
+# What the rename to "Wren Linux" must not touch: a command, a package and a host
+# name are one word. Written as ERE, in pieces, so this file doesn't match itself.
+W='Wren'' Linux'
+broken=$(cd "$HERE" && git ls-files -co --exclude-standard -- bin data docs extras lib parts prep tools '*.sh' '*.md' 2>/dev/null | grep -vx -e data/alarm.wav -e tools/test-wren-cmd.sh |
+    tr '\n' '\0' | xargs -0 grep -nIE "(ssh|Host|apt install|WREN_DIR=[^ ]+|\.BR|\.B) \"?$W|^$W \\\\-|^$W \\(\\\$version|usage: wrenctl-|color-scheme $W|run \"wren\"|whole .wrenctl. folder|tampered wrenctl|package .wrenctl.|The package .wrenctl" 2>/dev/null)
+check "no command, package or host name was split by the rename${broken:+: $(head -3 <<<"$broken" | cut -c1-90 | paste -sd'|')}" test -z "$broken"
+check "the man page is named after the command" grep -q '^wrenctl \\- ' "$HERE/data/wrenctl.1"
+
 # the help text and the man page say the same
 help_opts=$(bash "$CMD" --help | grep -o '^  --[a-z]*' | tr -d ' ' | sort -u)
 man_opts=$(sed -n 's/^\.B \\-\\-\([a-z]*\)$/--\1/p' "$HERE/data/wrenctl.1" | sort -u)

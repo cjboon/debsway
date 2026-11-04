@@ -203,7 +203,7 @@ if [ "$first_run" = 1 ] && [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${WREN_NO_SWAY
     sleep 5
     # This login's PATH was set before ~/.local/bin existed (~/.profile adds it
     # only if it is there), and sway and everything started from it inherit
-    # PATH: without this, the commands Wren Linux installs there (Wren Linux, whonix,
+    # PATH: without this, the commands Wren Linux installs there (wrenctl, whonix,
     # onion-site...) aren't found until you log out and in again
     case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac
     # the console-only extra may have been picked: then it is tmux that starts

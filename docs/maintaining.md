@@ -98,7 +98,7 @@ date and its id. `tools/test-build-deb.sh` checks it.
   `wrenctl part NAME`, `wrenctl install NAME`, `bash /usr/share/wren/install-base.sh`.
 - **Why:** with the scripts root's, a program running as you can no longer
   change one and wait for you to run it with sudo. The `wrenctl` command uses
-  `/usr/share/wren` whenever it is there (`WREN_DIR=~/wren Wren Linux ...`
+  `/usr/share/wren` whenever it is there (`WREN_DIR=~/wren wrenctl ...`
   uses your own copy instead).
 - **The same file every time:** every date in it is the commit's, so two builds
   of one commit are the same, byte for byte; the build prints the SHA-256.
@@ -132,7 +132,7 @@ is to any web server or mirror (`rsync -a --delete FOLDER/ server:/var/www/debia
 - **Nor serve an old one for long:** `InRelease` is good for 14 days
   (`--valid-days N`, 1 to 90), after which apt refuses the repository. Sign it
   again within that time, even when nothing changed.
-- **Only Wren Linux's packages** go in (`wrenctl` and `wren-*`); the script
+- **Only Wren Linux's packages** go in (`wren-linux` and `wren-*`); the script
   refuses anything else.
 
 On a Wren Linux computer, `wrenctl part wren-repo` adds it, once `pins.sh`
@@ -140,7 +140,7 @@ names both the key (`WREN_SIGNING_FPR`) and the address
 (`WREN_REPO_URL`, https:// or an .onion address); until then it changes
 nothing. The key comes from the copy's own `data/wren-signing-key.asc`,
 only if it is exactly the pinned one, and is trusted for that repository
-alone (`Signed-By`). An apt pin lets only the package `wrenctl` come from it,
+alone (`Signed-By`). An apt pin lets only the package `wren-linux` come from it,
 so even someone with your key or the server couldn't replace a Debian package
 or add another (`tools/test-wren-repo.sh` checks the pin with Debian's own
 apt). unattended-upgrades then installs Wren Linux's updates like Debian's. It

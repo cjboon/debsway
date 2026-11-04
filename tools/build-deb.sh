@@ -73,7 +73,7 @@ mkdir -p "$DOC"
     sed 's/^$/./; s/^/ /' "$SHARE/LICENSE"
 } >"$DOC/copyright"
 {
-    echo "Wren Linux ($version) unstable; urgency=medium"
+    echo "wren-linux ($version) unstable; urgency=medium"
     echo
     echo "  * Built from commit $commit."
     echo
@@ -109,7 +109,7 @@ Description: small, privacy-minded sway desktop for Debian, as plain scripts
  DNS, and sandboxes for the browser, coding assistants and media. It is shell
  scripts you can read; this package puts them, root-owned, in
  /usr/share/wren, with the wrenctl command. Installing it changes nothing
- else: run "wren" to set up the desktop and its optional programs.
+ else: run "wrenctl" to set up the desktop and its optional programs.
 EOF
 (cd "$R" && find . -path ./DEBIAN -prune -o -type f -print0 | sort -z | xargs -0 md5sum | sed 's|  \./|  |') >"$R/DEBIAN/md5sums"
 chmod 0755 "$R/DEBIAN"

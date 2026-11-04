@@ -174,7 +174,7 @@ Build with Debian's own tools: `debhelper` (`dh`), `dpkg-buildpackage`, and
 `lintian` to check the result. A `debian/` folder in the repository holds:
 
 - `control`:
-  - The package `wrenctl`, Architecture `all` (scripts only).
+  - The package `wren-linux`, Architecture `all` (scripts only).
   - Depends on what every part needs before it runs: bash, sudo, git (for
     now), python3, acl, nftables.
   - The rest stays installed by the parts as now, with apt markers.

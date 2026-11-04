@@ -54,4 +54,4 @@ printf '%s\n' "# Written by Wren Linux parts/wren-repo.sh" "Types: deb" "URIs: $
     $SUDO tee "$LIST" >/dev/null
 allow_unattended_updates wren-linux "$host"
 note "From now on apt takes Wren Linux from $WREN_REPO_URL, signed by that key, and nothing else."
-note "Install it with: sudo apt update && sudo apt install Wren Linux"
+note "Install it with: sudo apt update && sudo apt install wren-linux"

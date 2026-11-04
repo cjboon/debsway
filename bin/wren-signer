@@ -33,7 +33,7 @@ die() { printf 'wren-signer: %s\n' "$*" >&2; exit 1; }
 
 [ "$(id -un)" = wren-signer ] ||
     die "this runs as the user wren-signer; use wren-key."
-[ $# -ge 1 ] || die "usage: wrenctl-signer new NAME EMAIL | sign | clearsign | detach-sign | public | fingerprint | expires | renew"
+[ $# -ge 1 ] || die "usage: wren-signer new NAME EMAIL | sign | clearsign | detach-sign | public | fingerprint | expires | renew"
 cmd=$1
 shift
 

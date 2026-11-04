@@ -241,7 +241,7 @@ pin() {
 
 renew() {
     local backup=${1:-} pass dir
-    [ -n "$backup" ] && [ -f "$backup" ] || die "usage: wrenctl-key renew BACKUP (the wren-signing-key-backup.asc on your stick)"
+    [ -n "$backup" ] && [ -f "$backup" ] || die "usage: wren-key renew BACKUP (the wren-signing-key-backup.asc on your stick)"
     dir=$(cd "$(dirname -- "$backup")" && pwd)
     [ -w "$dir" ] || die "$dir isn't writable: the renewed backup goes next to the old one."
     HIDE=1 answer pass "The backup's passphrase:"
@@ -259,7 +259,7 @@ renew() {
 }
 
 sign_repo() {
-    [ $# -ge 2 ] || die "usage: wrenctl-key sign-repo FOLDER DEB..."
+    [ $# -ge 2 ] || die "usage: wren-key sign-repo FOLDER DEB..."
     local out=$1
     shift
     expiry_warning
@@ -274,7 +274,7 @@ case ${1:-} in
     renew) renew "${2:-}" ;;
     sign-repo) shift; sign_repo "$@" ;;
     public | fingerprint | clearsign | detach-sign)
-        [ $# -eq 1 ] || die "usage: wrenctl-key $1"
+        [ $# -eq 1 ] || die "usage: wren-key $1"
         [ "$1" = public ] || [ "$1" = fingerprint ] || expiry_warning
         signer "$1" ;;
     -h | --help | help) sed -n '2,/^set /{ /^set /d; s/^# \{0,1\}//; p }' "$0" ;;

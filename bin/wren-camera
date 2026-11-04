@@ -73,5 +73,5 @@ case ${1:-} in
         if [ -f "$USB/$n/authorized" ] && has_video "$USB/$n"; then echo 0 >"$USB/$n/authorized"; fi ;;
     on) set_all 1 ;;
     off) set_all 0 ;;
-    *) die "usage: wrenctl-camera on|off|status (added DEVICE: for udev)" ;;
+    *) die "usage: wren-camera on|off|status (added DEVICE: for udev)" ;;
 esac

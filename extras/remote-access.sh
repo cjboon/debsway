@@ -253,18 +253,18 @@ if $show_client; then
 
     then add this to ~/.ssh/config there:
 
-      Host Wren Linux
+      Host wren
         HostName $onion
         User $USER
         ProxyCommand nc -X 5 -x 127.0.0.1:9050 %h %p
 
-    and connect with:  ssh Wren Linux
+    and connect with:  ssh wren
     (The first connection through Tor can take a few seconds.)
 EOF
 else
     cat <<EOF
 
-    Connect from a computer set up with its client key:  ssh Wren Linux
+    Connect from a computer set up with its client key:  ssh wren
     (Run this again to authorize another computer.)
 EOF
 fi
