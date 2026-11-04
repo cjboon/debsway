@@ -73,7 +73,7 @@ checked with `sway -C` before it's kept.
 | `sysctl-hardening.sh` | (none) | Kernel and network settings in the spirit of Kicksecure (`data/sysctl-hardening.conf`): kernel addresses hidden, only your own child programs can be traced, no kexec, SysRq limited, stricter file and network defaults. Applies now and at every boot. See [Kernel hardening](#kernel-hardening) |
 | `module-blacklist.sh` | (none) | Blocks rare network protocols, old filesystems and FireWire from loading (`data/module-blacklist.conf`) |
 | `boot-hardening.sh` | (none) | Adds Kicksecure's boot parameters to GRUB (`slab_nomerge init_on_alloc=1 init_on_free=1 page_alloc.shuffle=1 randomize_kstack_offset=on vsyscall=none debugfs=off`); applies after a reboot |
-| `grub-colors.sh` | (none) | GRUB's boot menu in white on red, the chosen entry yellow (`/etc/grub.d/06_wren_colors`); colours only |
+| `grub-colors.sh` | (none) | GRUB's boot menu: a red box with white text, the chosen entry yellow, black around it (`/etc/grub.d/06_wren_colors`); colours only |
 | `ufw.sh` | ufw | Firewall: blocks everything incoming, allows outgoing |
 | `power-profiles-daemon.sh` | power-profiles-daemon | `powerprofilesctl set power-saver \| balanced \| performance` (skips itself if tlp is installed) |
 | `network-manager.sh` | network-manager, wpasupplicant, wireless-regdb, polkitd | Moves the Wi-Fi from the installer or wifi.sh into NetworkManager; `nmtui` (in Wren Linux's white-on-black colors, like the install list; your own `NEWT_COLORS` wins) to switch networks |
