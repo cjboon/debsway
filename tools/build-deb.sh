@@ -9,7 +9,8 @@
 # (every date is the commit's), so anyone can check a published package
 # against the source: build it again and compare the SHA-256.
 #   bash tools/build-deb.sh [--commit REV] [--version VERSION] [--out FOLDER]
-# Defaults: HEAD; a version from the commit's date and id (0~gitYYYYMMDD.ID);
+# Defaults: HEAD; a version from the commit's time and id (0~gitYYYYMMDDHHMMSS.ID),
+# so a later commit always sorts higher;
 # the current folder. Needs dpkg-deb and git only; lintian checks the result if
 # it is installed. Changes nothing outside FOLDER and a temp folder.
 set -euo pipefail
@@ -33,7 +34,7 @@ commit=$(g rev-parse --verify --quiet "$rev^{commit}") || die "no commit $rev he
 SOURCE_DATE_EPOCH=$(g log -1 --format=%ct "$commit")
 export SOURCE_DATE_EPOCH
 if [ -z "$version" ]; then
-    version="0~git$(date -u -d "@$SOURCE_DATE_EPOCH" +%Y%m%d).$(g rev-parse --short=10 "$commit")"
+    version="0~git$(date -u -d "@$SOURCE_DATE_EPOCH" +%Y%m%d%H%M%S).$(g rev-parse --short=10 "$commit")"
 fi
 [[ $version =~ ^[0-9][A-Za-z0-9.+~-]*$ ]] || die "a Debian version starts with a digit and has only letters, digits and . + ~ -: $version"
 maint=$(g log -1 --format='%an <%ae>' "$commit")

@@ -93,7 +93,7 @@ the new key is brought in by hand.
 `bash tools/build-deb.sh` builds `wren-linux_VERSION_all.deb` from a commit
 (`--commit REV`, by default HEAD; never from files that aren't committed).
 `--version` sets the version; without it the version is `0~git`, the commit's
-date and its id. `tools/test-build-deb.sh` checks it.
+time and its id, so a later commit always has a higher version. `tools/test-build-deb.sh` checks it.
 
 - **What it installs:** the scripts in `/usr/share/wren`, owned by root and
   writable by no one else; the `wrenctl` command in `/usr/bin`; its man page and

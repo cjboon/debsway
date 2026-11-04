@@ -34,7 +34,20 @@ check "two builds of one commit are the same file, byte for byte" cmp "$D" "$T/b
 check "...and it says the SHA-256 to compare" grep -qx "SHA-256: $(sha256sum "$D" | cut -d' ' -f1)" <<<"$outa"
 mkdir "$T/c"
 bash "$B" --out "$T/c" >/dev/null 2>&1
-check "without --version: 0~git, the commit's date and id" bash -c 'ls "$1" | grep -qxE "wren-linux_0~git[0-9]{8}\.[0-9a-f]{10}_all\.deb"' _ "$T/c"
+check "without --version: 0~git, the commit's time and id" bash -c 'ls "$1" | grep -qxE "wren-linux_0~git[0-9]{14}\.[0-9a-f]{10}_all\.deb"' _ "$T/c"
+# Later commits sort higher, whatever their ids: apt called a newer commit of the
+# same day a downgrade when its id happened to sort lower, and wouldn't have upgraded
+v_of() { dpkg-deb -f "$1"/wren-linux_*_all.deb Version; }
+newer=true
+for n in 1 2 3 4 5 6; do
+    GIT_COMMITTER_DATE="$(date -u -d "2030-01-01 12:00:0$n")" git -C "$T/src" -c user.name=t -c user.email=t@t commit -q --allow-empty -m "later $n"
+    rm -rf "$T/v"; mkdir "$T/v"; bash "$B" --out "$T/v" >/dev/null 2>&1
+    now=$(v_of "$T/v")
+    if [ -n "${before:-}" ] && ! dpkg --compare-versions "$now" gt "$before"; then newer=false; fi
+    before=$now
+done
+git -C "$T/src" reset -q --soft HEAD~6
+check "...a later commit always has a higher version, the same day too" "$newer"
 check "a version that isn't one is refused" bash -c '! bash "$1" --out "$2" --version "1 0;x" 2>/dev/null' _ "$B" "$T/c"
 
 f() { dpkg-deb -f "$D" "$1"; }
