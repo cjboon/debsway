@@ -124,7 +124,7 @@ DOT_APPLIEDPRIVACY="dot1.applied-privacy.net 146.255.56.98 2a02:1b8:10:234::2"
 # already have, never with what comes in. Empty: changes come in unchecked, as
 # GitHub serves them, and update.sh says so. docs/maintaining.md says how to
 # make the key and turn this on.
-WREN_SIGNING_FPR=
+WREN_SIGNING_FPR=DE09E9B9E9565B2BDA9D5FF5F0F19D6CEF465DC5
 
 # Wren Linux's own apt repository (parts/wren-repo.sh): where it is served
 # from, https:// or an .onion address. Its packages are signed with the key
