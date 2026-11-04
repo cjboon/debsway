@@ -6,7 +6,10 @@
 # This sets up the backup place and a "backup" command.
 # For backups that run without you (a timer, a script), the config can hold
 # a command that prints the password, e.g. one that asks a password manager;
-# the password itself is never written down.
+# the password itself is never written down. At login it says when the last
+# backup is 30 days old or more (backup remind): in sway a notification, on a
+# text console a line.
+# files: lib/sway.sh
 # Usage: bash backup.sh [--remove | --manual]
 # summary: Encrypted backups of your home folder (restic)
 # security: most
@@ -14,6 +17,10 @@
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
+RC=$HOME/.bashrc
+RC_BEGIN='# >>> Wren Linux backup reminder >>>'
+RC_END='# <<< Wren Linux backup reminder <<<'
+rc_take_out() { [ -f "$RC" ] && sed -i "\\|^$RC_BEGIN\$|,\\|^$RC_END\$|d" "$RC"; return 0; }
 
 CONF_DIR="$HOME/.config/wren"
 CONF="$CONF_DIR/backup.conf"
@@ -21,6 +28,8 @@ EXCLUDES="$CONF_DIR/backup-excludes"
 
 if [ "${1:-}" = --remove ]; then
     remove_bin backup
+    remove_snippet backup-reminder
+    rc_take_out
     rm -f "$CONF" "$EXCLUDES"
     apt_purge restic
     note "Your backups themselves are left where they are."
@@ -91,7 +100,16 @@ write_excludes() {
 write_excludes "$EXCLUDES"
 
 install_bin backup
+# At login: a word when the last backup is 30 days old or more
+put_snippet backup-reminder <<'EOF'
+# Says so at login when the last backup is 30 days old or more (Wren Linux extras/backup.sh)
+exec ~/.local/bin/backup remind
+EOF
+rc_take_out
+# shellcheck disable=SC2016  # written into ~/.bashrc as it is, expanded there
+printf '%s\n' "$RC_BEGIN" '[ -n "${WAYLAND_DISPLAY:-}" ] || [ ! -x ~/.local/bin/backup ] || ~/.local/bin/backup remind' "$RC_END" >>"$RC"
 note "Backups go to: $repo"
+note "At login it reminds you when the last backup is 30 days old. Unplug the drive after each one."
 note "Left out (edit to change): $EXCLUDES"
 
 cat <<'EOF'

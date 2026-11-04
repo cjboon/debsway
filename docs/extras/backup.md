@@ -7,7 +7,8 @@ wrenctl install backup                     set it up (asks where backups go, and
 wrenctl remove backup                      remove it (the backups themselves stay)
 wrenctl manual backup                      print the manual steps below
 
-backup                         back up your home folder now
+backup                         back up your home folder now (then unplug the drive)
+backup remind                  a word if the last backup is 30 days old (it runs at login)
 backup snapshots               list your backups
 backup ls latest               the files in the newest backup
 backup restore latest --target ~/restored [--include ~/.electrum]
@@ -25,6 +26,10 @@ backup stores only what changed since the last. Caches, the Trash, VM disks
 and Wren Linux's offline downloads are left out (`~/.config/wren/backup-excludes`,
 yours to edit). The `backup` command (`bin/backup`) runs restic on your
 backup; restored files keep their full path, e.g. `~/restored/home/you/.electrum`.
+At every login it says so when the last backup is 30 days old or more (a
+notification in sway, a line on a text console). Unplug the drive after each
+backup: one that stays plugged in goes with whatever deletes or encrypts your
+files.
 
 ## LIMITS
 
@@ -58,13 +63,19 @@ printf '%s\n' "$HOME/.cache" "$HOME/.local/share/Trash" "$HOME/.local/share/libv
 # The backup command
 install -D -m 0755 @WREN_DIR@/bin/backup ~/.local/bin/backup
 backup
+# Then unplug the drive. At login, a word when the last backup is 30 days old:
+# in sway (~/.config/sway/config.d is read by Wren Linux's sway config)
+printf '%s\n' 'exec ~/.local/bin/backup remind' >~/.config/sway/config.d/backup-reminder.conf
+# and on a text console
+printf '%s\n' '[ -n "${WAYLAND_DISPLAY:-}" ] || ~/.local/bin/backup remind' >>~/.bashrc
 ```
 
 To undo (your backups themselves stay where they are):
 
 ```
 # The command and its settings
-rm ~/.local/bin/backup ~/.config/wren/backup.conf ~/.config/wren/backup-excludes
+rm ~/.local/bin/backup ~/.config/wren/backup.conf ~/.config/wren/backup-excludes ~/.config/sway/config.d/backup-reminder.conf
+# and take the "backup remind" line out of ~/.bashrc
 # restic
 sudo apt purge restic
 ```

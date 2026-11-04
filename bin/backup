@@ -2,8 +2,29 @@
 # backup: written by Wren Linux extras/backup.sh
 #   backup            back up your home folder now
 #   backup ARGS...    any restic command, on your backup (e.g. backup snapshots)
+#   backup remind     at login: a word if the last backup is 30 days old or more
 # Without a PASSWORD_COMMAND in the config, restic asks for the password.
+# A backup is insurance only while nothing on this computer can reach it: a
+# drive left plugged in goes with whatever deletes or encrypts your files, so
+# unplug it after each backup.
 conf="$HOME/.config/wren/backup.conf"
+LAST=${XDG_STATE_HOME:-$HOME/.local/state}/wren/backup-last
+DAYS=30
+if [ "${1:-}" = remind ]; then
+    [ -f "$conf" ] || exit 0
+    last=$(cat "$LAST" 2>/dev/null)
+    case $last in '' | *[!0-9]*) last=0 ;; esac
+    days=$((($(date +%s) - last) / 86400))
+    [ "$days" -ge "$DAYS" ] || exit 0
+    if [ "$last" = 0 ]; then when="No backup has been made here yet"; else when="Your last backup was $days days ago"; fi
+    msg="$when. Plug the backup drive in, run: backup, then unplug it again (a drive left plugged in can be wiped along with this computer)."
+    if [ -n "${WAYLAND_DISPLAY:-}" ] && command -v notify-send >/dev/null; then
+        notify-send -a wren "Time for a backup" "$msg" 2>/dev/null || printf '%s\n' "$msg" >&2
+    else
+        printf '\n%s\n\n' "$msg" >&2
+    fi
+    exit 0
+fi
 [ -f "$conf" ] || { echo "Not set up. Run: wrenctl install backup" >&2; exit 1; }
 repo=$(sed -n 's/^BACKUP_REPO=//p' "$conf")
 cmd=$(sed -n 's/^PASSWORD_COMMAND=//p' "$conf")
@@ -14,6 +35,9 @@ fi
 export RESTIC_REPOSITORY="$repo"
 if [ -n "$cmd" ]; then export RESTIC_PASSWORD_COMMAND="$cmd"; fi
 if [ $# -eq 0 ]; then
-    exec restic backup --exclude-caches --exclude-file="$HOME/.config/wren/backup-excludes" "$HOME"
+    restic backup --exclude-caches --exclude-file="$HOME/.config/wren/backup-excludes" "$HOME" || exit
+    mkdir -p "${LAST%/*}" && date +%s >"$LAST"
+    echo "Done. Unplug the backup drive now: then nothing on this computer can reach it."
+    exit 0
 fi
 exec restic "$@"
