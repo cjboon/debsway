@@ -26,7 +26,7 @@ export FLOW_TEST_PATH="$T/fake:$PATH"
 mkdir -p "$T/fake" "$D/data"
 cp "$HERE"/lib/*.sh "$D/lib/"
 for n in alpha beta gamma delta; do
-    printf '#!/bin/bash\n# summary: the %s extra\n# status: file:%s/nowhere-%s\necho "%s${1:+ $1} $WREN_SETUP_GH" >>"%s/ran"\n[ "%s" != "$FAIL_ON" ]\n' "$n" "$T" "$n" "$n" "$T" "$n" >"$D/extras/$n.sh"
+    printf '#!/bin/bash\n# summary: the %s extra\n# status: file:%s/nowhere-%s\necho "%s${1:+ $1} $WREN_TEST_FLAG" >>"%s/ran"\n[ "%s" != "$FAIL_ON" ]\n' "$n" "$T" "$n" "$n" "$T" "$n" >"$D/extras/$n.sh"
 done
 # their groups: gamma most secure, alpha least, beta somewhat, delta has no line (somewhat)
 sed -i 's/^# summary: the gamma extra$/&\n# security: most/' "$D/extras/gamma.sh"
@@ -168,10 +168,10 @@ check "...and installs nothing" test ! -s "$T/ran"
 # --install installs exactly the names in the file, in order, and nothing else
 printf 'gamma\nalpha\n' >"$T/picked"
 : >"$T/ran"
-WREN_SETUP_GH=1 run --install "$T/picked" >/dev/null
+WREN_TEST_FLAG=1 run --install "$T/picked" >/dev/null
 check "--install runs the picked extras in the order picked" test "$(paste -sd, "$T/ran")" = "gamma 1,alpha 1"
 check "...and not the others" not grep -q beta "$T/ran"
-check "...passing the environment on (git's setup flag)" grep -q 'alpha 1' "$T/ran"
+check "...passing the environment on" grep -q 'alpha 1' "$T/ran"
 
 # an empty file or a blank line installs nothing
 : >"$T/ran"; : >"$T/picked"

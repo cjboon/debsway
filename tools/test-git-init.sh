@@ -194,6 +194,8 @@ mv "$T/gitconfig" "$HOME/.gitconfig"
 check "it never pushes" bash -c '! grep -qE "(^|[[:space:]])(g|git( -C [^ ]+)?) push" "$1"' _ "$HERE/git-init.sh"
 check "the git extra asks no name, email or login during an install: it points to git-init.sh" bash -c '
     ! grep -qE "user\.(name|email)|auth login" "$1/extras/git.sh" && grep -q "git-init.sh" "$1/extras/git.sh" && ! grep -q WREN_GH_LOGIN "$1/install-base.sh"' _ "$HERE"
+check "...and installs no gh: it isn't in its packages, its status line or install-base.sh" bash -c '
+    ! grep -qE "apt_install .*\bgh\b|apt:gh" "$1/extras/git.sh" && ! grep -q WREN_SETUP_GH "$1/install-base.sh"' _ "$HERE"
 check "the README's way back to GitHub is git-init.sh" grep -q 'bash ~/wren/git-init.sh' "$HERE/README.md"
 
 [ "$fails" -eq 0 ]

@@ -1,25 +1,28 @@
-# git and gh (`extras/git.sh`)
+# git (`extras/git.sh`)
 
 ## SYNOPSIS
 
 ```
-wrenctl install git                     install git (it asks about gh)
-wrenctl remove git                      remove git and gh (~/.gitconfig and ~/.config/gh stay)
+wrenctl install git                     install git
+wrenctl remove git                      remove git (~/.gitconfig stays)
 wrenctl manual git                      print the manual steps below
 
 git clone URL / git status / git commit -a / git push
 wrenctl git [DIR]                       your name, email and push login (DIR, or the repository you are in)
 ```
 
-git keeps the history of a folder of files, and gh is GitHub's command line
-tool; both come from Debian. The script installs git, offers gh, and makes
+git keeps the history of a folder of files; it comes from Debian. GitHub's
+command line tool, gh, isn't installed: git needs only a token to push, and
+pull requests, issues and the like are on GitHub's site, in the browser. The
+script installs git and makes
 `main` the first branch of new repositories. It asks nothing else: your name
 and email on commits, and how git logs in to push, are `git-init.sh`'s, run
 when you want them (`wrenctl git`). It asks for your name and email (and, for GitHub, offers
 your no-reply address, looked up from your public profile, since GitHub
 refuses pushes that carry an email you keep private), then how git logs in
 over https: a token you paste at each push (nothing saved), the same kept in
-memory for an hour, or gh's login through a web page (saved in plain text).
+memory for an hour, or, if you installed gh yourself, gh's login through a
+web page (saved in plain text).
 `wrenctl git DIR`, or `wrenctl git` inside a repository, does this for any
 repository of yours, on any server.
 
@@ -28,13 +31,13 @@ repository of yours, on any server.
 - A repository you clone can hold scripts and build files: read what you download before you run it.
 - Your name and email on a commit are no proof of who made it.
 - Anything you push to a public site is public, and history keeps it after you delete the file.
-- Anything running as you can read gh's GitHub login in `~/.config/gh`, if you chose it. A token kept in memory can be read by a program of yours in that hour; one pasted at each push is in no file, but in whatever you copy it from.
+- Anything running as you can read gh's GitHub login in `~/.config/gh`, if you installed gh and chose it. A token kept in memory can be read by a program of yours in that hour; one pasted at each push is in no file, but in whatever you copy it from.
 
 ## MANUAL INSTALL
 
 ```
-# git (add gh for GitHub's command line tool)
-sudo apt install --no-install-recommends git gh
+# git
+sudo apt install --no-install-recommends git
 # New repositories start on a branch called main
 git config --global init.defaultBranch main
 ```
@@ -52,19 +55,17 @@ git config --global --replace-all credential.https://github.com.helper ''
 git config --global credential.https://github.com.username NAME
 # ...or kept in memory for an hour after you paste it:
 git config --global --add credential.https://github.com.helper 'cache --timeout=3600'
-# ...or gh's login instead (saved in plain text in ~/.config/gh)
+# ...or, with gh installed by you, its login instead (saved in plain text in
+# ~/.config/gh)
 gh auth login --hostname github.com --git-protocol https
 gh auth setup-git
 ```
 
-To undo (your settings stay in `~/.gitconfig` and `~/.config/gh`):
+To undo (your settings stay in `~/.gitconfig`):
 
 ```
-# Log out of GitHub first, if you logged in
-gh auth logout
-# gh; git is marked "automatic" instead of purged, since other programs can
-# need it: autoremove takes it out only if nothing does
-sudo apt purge gh
+# git is marked "automatic" instead of purged, since other programs can need
+# it: autoremove takes it out only if nothing does
 sudo apt-mark auto git
 sudo apt autoremove --purge
 ```

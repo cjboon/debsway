@@ -175,11 +175,9 @@ fi
 
 # The extras picked at the start (nothing was checked for you). They go in
 # after the base: they need sway's config and the parts to be in place.
-# git still asks for your commit name and email (just typing, fine on the
-# console) but not for the GitHub login, which needs a browser that isn't
-# running yet: log in later with  gh auth login
+# (git asks nothing: your name, email and login are wrenctl git's, later)
 if [ -s "$picked" ]; then
-    WREN_SETUP_GH=1 bash "$WREN_DIR/install-extras.sh" --install "$picked" ||
+    bash "$WREN_DIR/install-extras.sh" --install "$picked" ||
         warn "Some extras didn't install; the message above says which."
 else
     note "No extras chosen. Pick some any time with: wrenctl --apps"

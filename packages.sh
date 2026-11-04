@@ -2,7 +2,7 @@
 # packages.sh: what install-base.sh installs; status.sh and test.sh read it too.
 
 # The core: sway and a terminal. Apps people may not want are in extras/
-# (Firefox, git and gh, KeePassXC, Claude Code, ...).
+# (Firefox, git, KeePassXC, Claude Code, ...).
 # gpg: checks the signatures of everything Wren Linux downloads
 # age: encrypts a file to a password or a key (age -p file > file.age)
 # diceware: makes passphrases from random words (diceware -n 6)

@@ -255,8 +255,8 @@ bash ~/wren/git-init.sh
 It first asks your name and email for commits (on GitHub, it offers your
 no-reply address, since GitHub refuses pushes that carry an email you keep
 private), and at the end how git logs in to push from here: a token you paste
-at each push (nothing saved), the same kept in memory for an hour, or gh's
-login (saved in plain text). It never pushes by itself, and `wrenctl git`
+at each push (nothing saved), the same kept in memory for an hour, or, with
+GitHub's gh installed by you, its login (saved in plain text). It never pushes by itself, and `wrenctl git`
 does the same for any repository of yours (`wrenctl git DIR`, or run inside
 it). It finds the published commit whose files are exactly yours and sets your
 copy there, so `bash ~/wren/update.sh` then shows and brings in what came

@@ -1,26 +1,26 @@
 #!/bin/bash
-# git, and optionally the GitHub command line tool (gh), from Debian. Your
-# name and email on commits, and how git logs in to push, are git-init.sh's:
-# it asks when you run it, not during an install.
+# git, from Debian. Your name and email on commits, and how git logs in to
+# push, are wrenctl git's (git-init.sh): it asks when you run it, not during
+# an install. GitHub's gh isn't installed: git needs no more than a token to
+# push, and pull requests and the like are on GitHub's site (wrenctl git still
+# offers gh's login if you install gh yourself).
 # Usage: bash git.sh [--remove | --manual]
-# summary: git, and optionally GitHub's gh
+# summary: git, the version control system
 # security: some
-# status: apt:git apt:gh
+# status: apt:git
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 if [ "${1:-}" = --remove ]; then
-    apt_purge gh git
-    note "Your settings stay in ~/.gitconfig and ~/.config/gh."
+    apt_purge git
+    note "Your settings stay in ~/.gitconfig."
     exit
 fi
 
 say "Installing git"
-pkgs=(git)
-if auto_or_ask WREN_SETUP_GH "Also install gh, GitHub's command line tool?" n; then pkgs+=(gh); fi
-apt_install "${pkgs[@]}"
+apt_install git
 
 git config --global init.defaultBranch main
-note "Your name and email on commits, and how git logs in to push (a token, or gh):"
+note "Your name and email on commits, and how git logs in to push (a token):"
 note "  wrenctl git        (in a repository of yours, or: wrenctl git DIR)"
