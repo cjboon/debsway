@@ -185,14 +185,36 @@ check "the sudo rule allows exactly on and off" grep -qF 'NOPASSWD: %s on, %s of
 check "...checked by visudo before it is installed" grep -q 'sudo visudo -cf "$rule"' "$HERE/parts/secure-dns.sh"
 check "...or, if you chose so, on alone without a password (off then asks for it)" bash -c '
     grep -qF "NOPASSWD: %s on\\n" "$1" && grep -q "Switching secure DNS off: ask for your password?" "$1"' _ "$HERE/parts/secure-dns.sh"
-# off when only on is allowed without a password: it asks, in a terminal; never without one
-printf '#!/bin/sh\necho "sudo $*" >>"%s/calls"\ncase "$*" in "-n -l "*" off") exit 1 ;; esac\n' "$W" >"$W/fake/sudo"
+# off when only on is allowed without a password: it asks, in a terminal; never
+# without one. This sudo does as the real one does for someone in the sudo group:
+# -l lists the command (it may run, with a password), -n refuses to run it
+cat >"$W/fake/sudo" <<FAKE
+#!/bin/sh
+echo "sudo \$*" >>"$W/calls"
+case "\$*" in
+    "-n -l "*) exit 0 ;;
+    "-n $W/switch off") echo "sudo: a password is required" >&2; exit 1 ;;
+esac
+FAKE
 : >"$W/calls"
-sdc off </dev/null 2>/dev/null
-check "strict: off with no terminal to ask on: refused, nothing switched" bash -c '! grep -qE "^sudo (-n )?$1 off$" "$2"' _ "$W/switch" "$W/calls"
+out=$(sdc off </dev/null 2>&1) && rc=0 || rc=$?
+check "strict: off with no terminal to ask on: refused, it says why, nothing switched" bash -c '
+    [ "$1" != 0 ] && grep -q "asks for your password" <<<"$2" && ! grep -qx "sudo $3 off" "$4"' _ "$rc" "$out" "$W/switch" "$W/calls"
 : >"$W/calls"
-script -qec "bash -c 'WREN_RESOLV_CONF=$W/etc/resolv.conf PATH=$W/fake:\$PATH bash $W/secure-dns off'" /dev/null >/dev/null 2>&1
-check "...in a terminal: off through sudo with the password" grep -qx "sudo $W/switch off" "$W/calls"
+script -qec "bash -c 'WREN_RESOLV_CONF=$W/etc/resolv.conf PATH=$W/fake:\$PATH bash $W/secure-dns off'" "$W/typescript" >/dev/null 2>&1
+check "...in a terminal: off through sudo, asking for the password" grep -qx "sudo $W/switch off" "$W/calls"
+check "...and sudo's refusal isn't what you see" bash -c '! grep -q "a password is required" "$1"' _ "$W/typescript"
+# what goes wrong in the switch itself is shown, and doesn't ask for a password
+cat >"$W/fake/sudo" <<FAKE
+#!/bin/sh
+echo "sudo \$*" >>"$W/calls"
+echo "secure-dns: Unbound didn't start" >&2
+exit 1
+FAKE
+: >"$W/calls"
+out=$(sdc on </dev/null 2>&1) && rc=0 || rc=$?
+check "the switch fails: its own message, and its status, no password asked" bash -c '
+    [ "$1" = 1 ] && grep -q "Unbound didn.t start" <<<"$2" && [ "$(grep -c . "$3")" = 1 ]' _ "$rc" "$out" "$W/calls"
 printf '#!/bin/sh\necho "sudo $*" >>"%s/calls"\n' "$W" >"$W/fake/sudo"
 # the bar: "dns OFF" while it is set up and off, nothing while on or not set up
 : >"$W/switch-exe" && chmod +x "$W/switch-exe"
