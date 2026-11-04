@@ -261,13 +261,13 @@ unset WREN_MENU_BROWSERS WREN_MENU_EDITORS
 # File manager, Password manager, Mail, Claude, Back up now and the Vault switch,
 # each only when installed
 check "nothing else installed: none of them" not grep -qE '^DREWMORE.*(File manager|Password manager|Mail|Claude|Back up|Vault)' <<<"$out"
-for a in thunar keepassxc tuta signal-desktop simplex claude claude-regular opencode-vm; do printf '#!/bin/sh\n' >"$T/apps/$a"; chmod +x "$T/apps/$a"; done
+for a in thunar keepassxc tuta signal-desktop simplex claude opencode-vm; do printf '#!/bin/sh\n' >"$T/apps/$a"; chmod +x "$T/apps/$a"; done
 printf '#!/bin/sh\necho "backup $*" >>"%s/ran"\n' "$T" >"$T/apps/backup"
 # a pretend vault: open while $T/vault-open exists
 # shellcheck disable=SC2016  # the inner shell expands its own variables
 printf '#!/bin/sh\necho "vault $*" >>"%s/ran"\ncase "$1" in status) [ -e "%s/vault-open" ] && echo "open in x" || echo closed ;; open) : >"%s/vault-open" ;; close) rm -f "%s/vault-open" ;; esac\n' "$T" "$T" "$T" "$T" >"$T/apps/vault"
 chmod +x "$T/apps/backup" "$T/apps/vault"
-export WREN_MENU_APPS="$T/apps/thunar $T/apps/keepassxc $T/apps/tuta $T/apps/signal-desktop $T/apps/simplex $T/apps/claude-vm $T/apps/claude $T/apps/claude-regular $T/apps/opencode-vm $T/apps/vault $T/apps/backup"
+export WREN_MENU_APPS="$T/apps/thunar $T/apps/keepassxc $T/apps/tuta $T/apps/signal-desktop $T/apps/simplex $T/apps/claude $T/apps/opencode-vm $T/apps/vault $T/apps/backup"
 menu sway-files
 check "all installed: File manager, Password manager, Mail, Signal, SimpleX, Claude, Back up now, in that order" \
     grep -q '^DREWMORE File manager|Password manager|Mail|Signal|SimpleX|Claude|opencode|Back up now|Install apps|Vault: closed' <<<"$out"
@@ -283,13 +283,7 @@ check "SimpleX opens SimpleX Chat" grep -qx "swaymsg exec $T/apps/simplex" "$T/r
 menu sway-opencode
 check "opencode opens opencode-vm (which opens its own window)" grep -qx "swaymsg exec $T/apps/opencode-vm" "$T/ran"
 menu sway-claude
-check "Claude: the sandboxed claude, in a window in ~/projects (where it must start)" grep -qx "swaymsg exec foot --title=Claude -D $T/home/projects $T/apps/claude" "$T/ran"
-printf '#!/bin/sh\n' >"$T/apps/claude-vm"; chmod +x "$T/apps/claude-vm"
-menu sway-claude
-check "...claude-vm first, when it's there (it opens its own window)" grep -qx "swaymsg exec $T/apps/claude-vm" "$T/ran"
-rm "$T/apps/claude-vm" "$T/apps/claude"
-menu sway-claude
-check "...else claude-regular, in a window in your home" grep -qx "swaymsg exec foot --title=Claude -D $T/home $T/apps/claude-regular" "$T/ran"
+check "Claude: the claude command, in a window, in your home (it asks which, and goes where it must)" grep -qx "swaymsg exec foot --title=Claude -D $T/home $T/apps/claude" "$T/ran"
 rm -f "$T/vault-open"
 menu vault-closed
 # shellcheck disable=SC2016  # the inner shell expands its own variables

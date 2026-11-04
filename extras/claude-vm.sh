@@ -219,6 +219,7 @@ if [ "${1:-}" = --remove ]; then
     AGENT=claude-vm AGENT_HOME=/home/claude-vm
     sudo rm -f "$CLAUDE_VM_PORTS"
     remove_bin claude-vm
+    remove_claude_chooser
     # claude-pull is shared with extras/claude-code.sh; keep it if that
     # sandbox is still set up (its session wrapper is the tell)
     [ -e /usr/local/libexec/claude-session ] || remove_bin claude-pull
@@ -286,6 +287,7 @@ install_no_abstract
 install_provision
 sudoers_rule "$SUDOERS"
 install_bin claude-vm
+install_bin claude
 # How you bring the agent's pushed work into your own copy, after reviewing
 # it. Shared with extras/claude-code.sh, which installs the same command.
 install_bin claude-pull
@@ -294,6 +296,7 @@ build_vm
 
 cat <<EOF
 
+    claude                 Claude Code, asking which if you have set up more than one
     claude-vm              Claude Code inside the disposable VM (boots it; powers it off when you exit)
     claude-vm shell        a plain shell in the VM
     claude-vm status       is the VM running?

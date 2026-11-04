@@ -44,7 +44,7 @@
 # summary: Claude Code, sandboxed in its own user
 # security: most
 # files: bin/no-abstract-sockets lib/claude-accounts.sh
-# status: bin:claude bin:claude-unsandboxed bin:git file:/usr/local/libexec/claude-session
+# status: bin:claude-sandbox bin:claude-unsandboxed bin:git file:/usr/local/libexec/claude-session
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$WREN_DIR/lib/claude-repo.sh"
 . "$WREN_DIR/lib/claude-accounts.sh"
@@ -238,8 +238,9 @@ if [ "${1:-}" = --remove ]; then
     mapfile -t accounts < <(claude_account_users | cut -d: -f1)
     for u in "${accounts[@]}"; do remove_account "${u#"$CLAUDE_ACCOUNT_PREFIX"}"; done
     AGENT=claude-agent AGENT_HOME=/home/claude-agent PROJECTS=$HOME/projects
-    remove_bin claude
+    remove_bin claude-sandbox
     remove_bin claude-unsandboxed
+    remove_claude_chooser
     # claude-pull is shared with extras/claude-vm.sh; keep it if that sandbox
     # is still set up (its session wrapper is the tell)
     [ -e /usr/local/libexec/claude-vm-session ] || remove_bin claude-pull
@@ -308,6 +309,7 @@ sudo install -d -o root -g root -m 0755 /usr/local/libexec
 sudo install -o root -g root -m 0755 "$WREN_DIR/bin/claude-session" "$SESSION"
 install_no_abstract
 sudoers_rule "$SUDOERS"
+install_bin claude-sandbox
 install_bin claude
 install_bin claude-unsandboxed
 install_bin claude-pull
@@ -315,13 +317,16 @@ install_bin git
 
 cat <<EOF
 
-    claude                 Claude Code as $AGENT. Run it from a folder in
+    claude                 Claude Code, asking which if you have set up more than one
+    claude-sandbox         Claude Code as $AGENT. Run it from a folder in
                            ~/projects: cd ~/projects/NAME   (mkdir for a new one)
     claude-unsandboxed     Claude Code as you, with all your files
     claude-pull            in your own copy of a repository: shows what
                            Claude pushed to GitHub, brings it in if you say y
 
-    The first time, claude shows a login link: open it in your browser. Its
+    The first time, it shows sign-in links. The sandboxed Firefox can't finish
+    the one that comes back to this computer (localhost): if it says it can't
+    connect, open the link printed in the terminal, and paste the code it gives. Its
     login and settings live in $AGENT_HOME, apart from your own ~/.claude.
     It has its own ssh key and git identity (Claude, noreply@anthropic.com),
     none of yours. Its tools: git, ssh, ripgrep, jq, shellcheck, python venv;

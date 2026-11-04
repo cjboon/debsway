@@ -33,6 +33,7 @@
 # files: data/claude-regular-settings.json lib/claude-settings.py
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$WREN_DIR/lib/claude-repo.sh"
+. "$WREN_DIR/lib/claude-accounts.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
@@ -108,6 +109,7 @@ if [ "${1:-}" = --remove ]; then
         remove_account "${n%-first.json}"
     done
     remove_bin claude-regular
+    remove_claude_chooser
     if [ -f "$STATE" ]; then merge remove && note "Took Wren Linux's settings out of $SETTINGS; yours stay."; fi
     # claude-code itself stays while the sandboxed claude needs it
     apt_purge claude-code
@@ -123,14 +125,17 @@ say "Installing Claude Code"
 # git and ripgrep: what it uses day to day; python3: the settings merge
 apt_install claude-code bubblewrap socat git ripgrep python3
 install_bin claude-regular
+install_bin claude
 
 say "Claude Code's settings"
 merge add || die "Couldn't write $SETTINGS; nothing of yours was changed."
 note "Its sandbox is on, and it is kept from your keys, passwords and wallets ($SETTINGS)."
 
 if [ -e "$CLAUDE_SANDBOX_MARK" ]; then
-    note "Run it with: claude-regular   (claude is the sandboxed one, as its own user)"
+    note "Run it with: claude-regular   (claude asks which one, and starts the sandboxed one on Enter)"
 else
     note "Run it with: claude   (or claude-regular), in the folder of your project"
 fi
-note "The first time, it shows a login link: open it in your browser."
+note "The first time, it shows sign-in links. The sandboxed Firefox can't finish the one that"
+note "comes back to this computer (localhost): if it says it can't connect, open the link"
+note "printed in the terminal, and paste the code it gives you."

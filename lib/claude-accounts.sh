@@ -83,3 +83,12 @@ claude_vm_firewall_text() {
         fi
     done <"$1"
 }
+
+# remove_claude_chooser: the claude command goes with the last way it can start
+remove_claude_chooser() {
+    local c
+    for c in claude-vm claude-sandbox claude-regular; do
+        [ ! -e "$BIN/$c" ] || return 0
+    done
+    remove_bin claude
+}

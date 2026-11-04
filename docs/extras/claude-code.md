@@ -9,15 +9,16 @@ wrenctl manual claude-code                          print the manual steps below
 wrenctl install claude-code --account NAME          another account, apart from the first
 wrenctl install claude-code --remove-account NAME   remove it (asks before deleting its user)
 
-cd ~/projects/NAME && claude     Claude Code as claude-agent, in that folder
-cd ~/projects-NAME/X && claude --account NAME   the other account, in its own folder
+claude                           Claude Code; asks which if you set up more than one (Enter: the most walled off)
+cd ~/projects/NAME && claude-sandbox   Claude Code as claude-agent, in that folder
+cd ~/projects-NAME/X && claude-sandbox --account NAME   the other account, in its own folder
 claude-unsandboxed               Claude Code as you, with all your files
 claude-pull                      in your copy of a repository: shows what Claude pushed, brings it in on y
 ```
 
 Claude Code, Anthropic's coding assistant for the terminal, from Anthropic's
 signed apt repository (its key must be exactly `ANTHROPIC_FPR` in `pins.sh`;
-unattended-upgrades installs its updates). `claude` runs it as its own user,
+unattended-upgrades installs its updates). `claude-sandbox` (or `claude`) runs it as its own user,
 `claude-agent`, which has no password and no login and can't read your home
 folder, keys, passwords or browser profiles. It works in `~/projects`, which
 you share with it through ACLs. Your user may run exactly one thing as it,
@@ -38,6 +39,7 @@ one's included.
 
 ## LIMITS
 
+- Signing in: the sandboxed Firefox can't finish the link that comes back to this computer (`localhost`); its firewall is what stops it. Open the link printed in the terminal instead and paste the code it gives you. `firefox-esr` works too, but runs as you.
 - It shares your kernel: a kernel bug could let it out of its user.
 - It reaches the internet, so what it reads in `~/projects` can leave this computer.
 - Treat what it leaves in `~/projects` as untrusted before you run it; the git guard checks git's own files, not the code.
@@ -109,7 +111,7 @@ sudo install -o root -g root -m 0440 /tmp/wren-claude /etc/sudoers.d/wren-claude
 rm /tmp/wren-claude
 
 # The commands, and the git guard for ~/projects
-for c in claude claude-unsandboxed claude-pull git; do install -D -m 0755 @WREN_DIR@/bin/$c ~/.local/bin/$c; done
+for c in claude claude-sandbox claude-unsandboxed claude-pull git; do install -D -m 0755 @WREN_DIR@/bin/$c ~/.local/bin/$c; done
 
 # Its public key, to add on GitHub (a deploy key on one repository is the narrowest)
 sudo cat /home/claude-agent/.ssh/id_ed25519.pub

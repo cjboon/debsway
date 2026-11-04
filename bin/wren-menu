@@ -261,7 +261,7 @@ text_editor() {
 }
 # app NAME...: the first of these commands that is installed, from APPS (where
 # Wren Linux and Debian put them; WREN_MENU_APPS: a test's own list)
-APPS=${WREN_MENU_APPS-/usr/bin/thunar /usr/bin/keepassxc $HOME/.local/bin/tuta /usr/bin/signal-desktop $HOME/.local/bin/simplex $HOME/.local/bin/claude-vm $HOME/.local/bin/claude $HOME/.local/bin/claude-regular $HOME/.local/bin/opencode-vm $HOME/.local/bin/vault $HOME/.local/bin/backup $HOME/.local/bin/theme $HOME/.local/bin/secure-dns /usr/local/bin/wifi-signin}
+APPS=${WREN_MENU_APPS-/usr/bin/thunar /usr/bin/keepassxc $HOME/.local/bin/tuta /usr/bin/signal-desktop $HOME/.local/bin/simplex $HOME/.local/bin/claude $HOME/.local/bin/opencode-vm $HOME/.local/bin/vault $HOME/.local/bin/backup $HOME/.local/bin/theme $HOME/.local/bin/secure-dns /usr/local/bin/wifi-signin}
 app() {
     local want c
     for want; do
@@ -269,16 +269,11 @@ app() {
     done
     return 0
 }
-# claude_cmd: Claude Code in a window of its own: claude-vm opens its own;
-# the sandboxed claude must start in ~/projects, claude-regular in your home
+# claude_cmd: Claude Code in a window of its own (claude asks which, if more than one)
 claude_cmd() {
     local c
-    c=$(app claude-vm claude claude-regular)
-    case ${c##*/} in
-        claude-vm) echo "$c" ;;
-        claude) echo "foot --title=Claude -D $HOME/projects $c" ;;
-        claude-regular) echo "foot --title=Claude -D $HOME $c" ;;
-    esac
+    c=$(app claude)
+    [ -z "$c" ] || echo "foot --title=Claude -D $HOME $c"
 }
 if [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null; then
     ids+=(terminal)

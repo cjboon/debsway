@@ -18,6 +18,8 @@ command_not_found_handle() {
             done
         done
     fi
+    # (claude comes with any of the three; this one is the place to start)
+    if [ "$1" = claude ]; then script=claude-vm.sh; fi
     if [ -n "$script" ]; then
         printf '%s: not installed. Wren Linux installs it with:\n    wrenctl install %s\n(or the Wren menu: Install apps)\n' \
             "$1" "${script%.sh}" >&2

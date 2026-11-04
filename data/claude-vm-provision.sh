@@ -74,6 +74,12 @@ printf '%s\n' 'Unattended-Upgrade::Origins-Pattern:: "site=downloads.claude.ai";
 # The guest's working user (the Debian installer made it with uid 1000).
 home=$(getent passwd "$VM_USER" | cut -d: -f6)
 [ -n "$home" ] || die "guest user $VM_USER not found"
+# Claude Code's theme follows the terminal's
+if [ ! -e "$home/.claude.json" ]; then
+    printf '{\n  "theme": "auto"\n}\n' >"$home/.claude.json"
+    chown "$VM_USER:$VM_USER" "$home/.claude.json"
+    chmod 600 "$home/.claude.json"
+fi
 
 log "Setting up $VM_USER (projects folder, git identity, ssh key, CLAUDE.md)"
 run() { runuser -u "$VM_USER" -- "$@"; }

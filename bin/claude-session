@@ -18,6 +18,23 @@ cd -- "$dir" 2>/dev/null || { echo "claude-session: can't enter $dir" >&2; exit 
 
 export HOME=$home PATH=$home/.local/bin:/usr/local/bin:/usr/bin:/bin
 export LANG=${LANG:-C.UTF-8}
+# Claude Code's theme follows the terminal's, unless one was chosen already
+seed_theme() { # CONFIG-FILE
+    python3 -I - "$1" 2>/dev/null <<'PY' || true
+import json, os, sys
+p = sys.argv[1]
+try:
+    d = json.load(open(p))
+except FileNotFoundError:
+    d = {}
+if isinstance(d, dict) and "theme" not in d:
+    d["theme"] = "auto"
+    with os.fdopen(os.open(p + ".wren-new", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w") as f:
+        json.dump(d, f, indent=2)
+    os.replace(p + ".wren-new", p)
+PY
+}
+seed_theme "$HOME/.claude.json"
 # Without a way to reach XWayland's abstract socket, which any user can connect to
 noabs=/usr/local/libexec/wren-no-abstract-sockets
 [ -x "$noabs" ] || { echo "claude-session: $noabs is missing. Run: bash extras/claude-code.sh" >&2; exit 1; }

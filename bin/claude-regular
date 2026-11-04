@@ -19,4 +19,21 @@ if [ -n "$account" ]; then
         die "the account $account isn't set up. Run: wrenctl install claude-regular --account $account"
     export CLAUDE_CONFIG_DIR=$HOME/.claude-$account
 fi
+# Claude Code's theme follows the terminal's, unless one was chosen already
+seed_theme() { # CONFIG-FILE
+    python3 -I - "$1" 2>/dev/null <<'PY' || true
+import json, os, sys
+p = sys.argv[1]
+try:
+    d = json.load(open(p))
+except FileNotFoundError:
+    d = {}
+if isinstance(d, dict) and "theme" not in d:
+    d["theme"] = "auto"
+    with os.fdopen(os.open(p + ".wren-new", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "w") as f:
+        json.dump(d, f, indent=2)
+    os.replace(p + ".wren-new", p)
+PY
+}
+seed_theme "${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json"
 exec /usr/bin/claude "$@"

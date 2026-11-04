@@ -9,6 +9,7 @@ wrenctl manual claude-vm                          print the manual steps below
 wrenctl install claude-vm --account NAME          another account, in a VM of its own
 wrenctl install claude-vm --remove-account NAME   remove it (asks before deleting its user and VM)
 
+claude                 Claude Code; asks which if you set up more than one (Enter: the VM)
 claude-vm              Claude Code inside the VM (boots it; powers it off when you exit)
 claude-vm shell        a plain shell in the VM
 claude-vm status | stop
@@ -96,6 +97,7 @@ rm /tmp/wren-claude-vm
 
 # The commands
 install -D -m 0755 @WREN_DIR@/bin/claude-vm ~/.local/bin/claude-vm
+install -D -m 0755 @WREN_DIR@/bin/claude ~/.local/bin/claude
 install -D -m 0755 @WREN_DIR@/bin/claude-pull ~/.local/bin/claude-pull
 
 # Build the VM (unattended, 10-20 minutes), then show its ssh key for your git host
@@ -142,6 +144,8 @@ To undo:
 ```
 # The commands (keep claude-pull if claude-code is set up)
 rm ~/.local/bin/claude-vm ~/.local/bin/claude-pull
+# (the claude command only if no other Claude Code is set up)
+rm ~/.local/bin/claude
 # The firewall rule
 sudo systemctl disable --now wren-claude-vm-firewall.service
 sudo rm /etc/systemd/system/wren-claude-vm-firewall.service /etc/wren/claude-vm.nft

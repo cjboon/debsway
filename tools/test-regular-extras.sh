@@ -126,7 +126,7 @@ check "...and the claude-regular command" grep -qx 'exec /usr/bin/claude "\$@"' 
 check "...says claude is it, without the sandboxed claude" grep -q 'Run it with: claude ' "$T/out"
 : >"$T/sandbox-mark"
 run claude-regular.sh ''
-check "...with the sandboxed claude, says claude-regular" grep -q 'claude is the sandboxed one' "$T/out"
+check "...with the sandboxed claude, says claude-regular" grep -q 'claude asks which one' "$T/out"
 run claude-regular.sh --remove
 check "--remove: only Wren Linux's settings go" jq_has "$H/.claude/settings.json" 'd == {"permissions": {"deny": ["Read(~/mine)"]}}'
 check "...the command goes, and the repository only if unused" bash -c '[ ! -e "$1/.local/bin/claude-regular" ] && grep -qx remove-repo-if-unused "$2"' _ "$H" "$T/calls"

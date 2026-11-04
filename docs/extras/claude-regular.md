@@ -10,7 +10,7 @@ wrenctl install claude-regular --account NAME          another account (its own 
 wrenctl install claude-regular --remove-account NAME   take it out (asks before deleting its login)
 
 cd ~/code/project && claude-regular   Claude Code as you, in that folder
-claude                                the same, unless extras/claude-code.sh is set up (then claude is the sandboxed one)
+claude                                the same; asks which if you set up more than one
 claude-regular --account NAME         that account, its settings in ~/.claude-NAME
 /sandbox                              inside Claude Code: see or change its sandbox
 ```
@@ -36,6 +36,7 @@ out of `~/.claude`, and the first account's out of `~/.claude-NAME`.
 
 ## LIMITS
 
+- Signing in: the sandboxed Firefox can't finish the link that comes back to this computer (`localhost`); its firewall is what stops it. Open the link printed in the terminal instead and paste the code it gives you. `firefox-esr` works too, but runs as you.
 - It runs as you: anything its sandbox and rules don't name (your documents, other projects) it can read, and what it reads can go to the internet.
 - Claude Code enforces these rules itself; you can turn them off in it (`/sandbox`, `/permissions`), and a bug in it could miss one.
 - A command it can't run in the sandbox may be retried outside it, after asking you: read what you approve.
@@ -62,6 +63,7 @@ sudo apt update
 sudo apt install --no-install-recommends claude-code bubblewrap socat git ripgrep python3
 # The claude-regular command
 install -D -m 0755 @WREN_DIR@/bin/claude-regular ~/.local/bin/claude-regular
+install -D -m 0755 @WREN_DIR@/bin/claude ~/.local/bin/claude
 
 # Its sandbox on, and the rules, merged into your own settings (and what was
 # added remembered, for the undo below)
@@ -88,6 +90,8 @@ python3 -I @WREN_DIR@/lib/claude-settings.py remove ~/.claude/settings.json \
     @WREN_DIR@/data/claude-regular-settings.json ~/.local/state/wren/claude-regular-settings.json
 # The command
 rm ~/.local/bin/claude-regular
+# (the claude command only if no other Claude Code is set up)
+rm ~/.local/bin/claude
 # Only if the sandboxed claude (extras/claude-code.sh) isn't set up: Claude
 # Code, its repository, key and update rule
 sudo apt purge claude-code
