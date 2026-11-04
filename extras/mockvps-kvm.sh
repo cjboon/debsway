@@ -32,9 +32,13 @@ say "Installing QEMU and the tools mockvps-kvm uses"
 # Debian's signed release file. socat: clean shutdowns. iproute2: ss.
 apt_install qemu-system-x86 qemu-utils wget cpio gzip openssh-client \
     gpgv debian-archive-keyring socat iproute2
-if ! id -nG | grep -qw kvm; then
+# (id -nG NAME: your account's groups; plain id -nG: this session's, which
+# take a new group only at the next login)
+if ! id -nG "$(id -un)" | grep -qw kvm; then
     sudo adduser "$(id -un)" kvm >/dev/null
     warn "Added you to the kvm group. Log out and back in once (mockvps-kvm also works until then)."
+elif ! id -nG | grep -qw kvm; then
+    note "You are in the kvm group; it takes effect at your next login (mockvps-kvm also works until then)."
 fi
 
 mkdir -p "$(dirname -- "$CMD")"
