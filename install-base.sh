@@ -206,6 +206,8 @@ if [ "$first_run" = 1 ] && [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${WREN_NO_SWAY
     # PATH: without this, the commands Wren Linux installs there (wrenctl, whonix,
     # onion-site...) aren't found until you log out and in again
     case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac
+    # sway's folder is every terminal's first folder: your home, not Wren Linux's
+    cd "$HOME" || true
     # the console-only extra may have been picked: then it is tmux that starts
     if [ "$(login_mode)" = console ]; then exec tmux new-session -A -s main; fi
     exec env XDG_CURRENT_DESKTOP=sway sway

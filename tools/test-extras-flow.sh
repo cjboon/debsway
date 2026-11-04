@@ -220,4 +220,21 @@ check "...it takes the full build and the add-on out of its marker" grep -q '^ap
 check "...and no longer asks about the add-on" not grep -q 'auto_or_ask' "$k"
 check "nothing else installs the add-on" not grep -rq 'apt_install.*webext-keepassxc-browser' "$HERE/extras" "$HERE/parts" "$HERE/install-base.sh"
 
+# The first run starts sway (or tmux) from your home folder, not from where
+# Wren Linux is (start.sh runs install-base.sh from /usr/share/wren); every
+# terminal opened in sway starts in sway's folder. The block runs on a pretend
+# console (a pty), with a pretend sway and tmux that write down their folder.
+sed -n '/^# First run, on a text console/,/^fi$/p' "$HERE/install-base.sh" >"$T/first-run.sh"
+check "install-base.sh's first-run block is found" grep -q 'exec env XDG_CURRENT_DESKTOP=sway sway' "$T/first-run.sh"
+mkdir -p "$T/fr/home" "$T/fr/share" "$T/fr/bin"
+for p in sway tmux; do printf '#!/bin/sh\necho "%s $(pwd)" >"%s"\n' "$p" "$T/fr/started" >"$T/fr/bin/$p"; chmod +x "$T/fr/bin/$p"; done
+first_run_in() { # MODE: runs the block from $T/fr/share, MODE sway or console
+    rm -f "$T/fr/started"
+    (cd "$T/fr/share" && env -u WAYLAND_DISPLAY -u WREN_NO_SWAY HOME="$T/fr/home" PATH="$T/fr/bin:$PATH" FR_MODE="$1" \
+        script -qec "bash -c 'first_run=1; tty() { echo /dev/tty1; }; sleep() { :; }; note() { :; }; login_mode() { echo \$FR_MODE; }; . $T/first-run.sh'" /dev/null) >/dev/null 2>&1 </dev/null
+    cat "$T/fr/started" 2>/dev/null
+}
+check "first run: sway starts in your home folder" test "$(first_run_in sway)" = "sway $T/fr/home"
+check "...and so does tmux, for the console-only extra" test "$(first_run_in console)" = "tmux $T/fr/home"
+
 [ "$fails" -eq 0 ]
