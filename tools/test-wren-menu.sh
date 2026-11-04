@@ -567,6 +567,12 @@ PY
     check "the introduction says what to press while you read (Space, b, q)" grep -qx 'first True' <<<"$intro"
     check "...and on its last page that q goes on" grep -qx 'end True' <<<"$intro"
     check "...and q does go on" grep -qx 'q True' <<<"$intro"
+    # what it promises is what the base does ("nothing that isn't listed here")
+    text=$(WREN_ASSUME_YES=1 bash "$HERE/prep/intro.sh" </dev/null 2>/dev/null)
+    check "the introduction lists encrypted DNS, the private home, what it removes, tmux and the clock" bash -c '
+        for w in Unbound "umask 077" avahi tmux NTP; do grep -q "$w" <<<"$1" || { echo "$w"; exit 1; }; done' _ "$text"
+    check "...and not what are extras now (sound, screenshots, emoji)" bash -c '! grep -qiE "\bsound\b|screenshots|emoji" <<<"$1"' _ "$text"
+    check "...and asks for the extras first, not at the end" bash -c '! grep -q "At the end, offer" <<<"$1" && ! grep -q "if you$" <<<"$1"' _ "$text"
 fi
 nm=$(NEWT_COLORS='root=red,blue' WREN_NMTUI="$T/fake/nmtui" bash "$HERE/bin/nmtui")
 check "colors you set yourself win" grep -qx 'colors=root=red,blue' <<<"$nm"

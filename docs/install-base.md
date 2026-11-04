@@ -30,7 +30,7 @@
    `timer stop`, clicking the notification or dismissing it ends the ringing (an alarm repeats a gentle bell phrase for up to 5 minutes, to wake you; a timer rings about 20 seconds). `timer clock` chooses whether the bar shows the date (the time is always am/pm)
    (`~/.config/wren/clock`). Timers last until logout or reboot, and a
    laptop that is asleep does not wake for them.
-3. Offers to start sway when you log in on tty1 (a marked block in
+3. Starts sway when you log in on tty1 (a marked block in
    `~/.profile`).
 4. Runs every script in the base list (`PARTS` in `packages.sh`). If one
    fails, the rest still run and it tells you which to re-run. A few only

@@ -19,8 +19,8 @@ It turns this Debian 13 (trixie) system into a small sway desktop. It will:
      download through Tor over https, with a bridge if you need one (the
      default is no).
   2. Write settings in your home folder: ~/.config/sway (your own sway
-     config is kept; one include line is added), ~/.local/bin, and, if you
-     agree, a block in ~/.profile that starts sway when you log in on tty1.
+     config is kept; one include line is added), ~/.local/bin, and a block
+     in ~/.profile that starts sway when you log in on tty1.
   3. Change the system, as root, with one small script per piece:
        - automatic security updates every day
        - a firewall that blocks everything coming in (ufw)
@@ -31,17 +31,27 @@ It turns this Debian 13 (trixie) system into a small sway desktop. It will:
          a list of unused kernel modules that are blocked from loading
        - needrestart, which lists programs still running outdated libraries
          after an update (it never restarts anything itself)
-       - sound, launcher, screen lock, a power menu (Super+Shift+Escape),
-         brightness, screenshots, clipboard, notifications, USB drives
-         (mounted so nothing on them can run), emoji, a readable terminal
-         font and colors, power profiles
-  4. At the end, offer a list of optional programs to pick from. Firefox
-     is one of them, set up with HTTPS-Only Mode, no JavaScript JIT and
-     uBlock Origin blocking other sites' scripts, and it can add a
-     locked-down user called "incognito" with a command, incognito, that
-     opens a throwaway Firefox as that user (a rule in /etc/sudoers.d lets
-     your user run that one command as it). Without a browser from that
-     list you have a text-only web (w3m is on it too).
+       - encrypted DNS: Unbound on this computer asks a resolver over TLS,
+         /etc/resolv.conf points at it and a firewall rule stops other DNS
+         going around it (a switch in the Wren menu turns it off)
+       - your home folder closed to other users (chmod on what is directly
+         in it, umask 077 in ~/.profile, and a sudo rule so that what root
+         installs stays readable)
+       - what Debian's live image adds is removed: avahi, hw-probe, extrepo,
+         telnet, printing unless you say you print, and dkms and mdadm if
+         nothing needs them
+       - the clock kept right over NTP, and a question about your time zone
+       - tmux for text consoles, GRUB's menu in Wren Linux's colors
+       - launcher, screen lock, a power menu (Super+Shift+Escape),
+         brightness, clipboard, notifications, USB drives (mounted so
+         nothing on them can run), a readable terminal font and colors,
+         power profiles
+  4. Before any of that, offer a list of optional programs to pick from, and
+     install what you pick at the end. Sound, screenshots and emoji are
+     there, and so are browsers: without one you have no web browser. Firefox
+     comes as its own locked-down user, with HTTPS-Only Mode, no JavaScript JIT
+     and uBlock Origin, and with incognito, a throwaway Firefox as another such
+     user. w3m is on the list too, for a text-only web.
 
 It needs an internet connection and takes several minutes. Every piece can
 be taken out again with "bash parts/NAME.sh --remove", and the scripts can
