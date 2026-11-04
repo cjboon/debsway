@@ -5,7 +5,7 @@
 #   - programs on this machine that listen on the network, including its
 #     own dev servers on localhost (see the note below)
 #   - your router, printers, other computers, or your phone's hotspot
-# DNS stays open (your resolver is usually the router).
+# DNS goes only to the resolver this computer uses (parts/sandbox-dns.sh).
 #
 # To let it use servers on this machine (its own, and also yours: Tor's
 # proxy, a printing service...), add this line below the "established" one,
@@ -17,6 +17,12 @@ table inet wren_claude
 delete table inet wren_claude
 
 table inet wren_claude {
+    # The resolver this computer uses (Unbound on 127.0.0.1 with secure DNS on, the
+    # network's while it is off), kept up to date by wren-sandbox-dns
+    # (parts/sandbox-dns.sh): DNS goes there only, not to any address
+    set resolvers {
+        type ipv4_addr
+    }
     chain output {
         type filter hook output priority 0; policy accept;
         meta skuid "claude-agent" jump claude
@@ -25,8 +31,8 @@ table inet wren_claude {
     chain claude {
         # Answers to connections that others made to it
         ct state established,related accept
-        udp dport 53 accept
-        tcp dport 53 accept
+        ip daddr @resolvers udp dport 53 accept
+        ip daddr @resolvers tcp dport 53 accept
         # Anything addressed to this computer itself goes out through "lo",
         # whichever of its addresses is used (127.0.0.1, its LAN address, its
         # public IPv4 or IPv6 address), so this catches them all

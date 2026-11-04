@@ -1,0 +1,44 @@
+#!/bin/bash
+# sandbox-dns-update: written by Wren Linux parts/sandbox-dns.sh, installed as
+# /usr/local/libexec/wren-sandbox-dns, run as root (by systemd). Wren Linux's
+# sandbox users (the sandboxed Firefox, incognito, yt-dlp, Claude's own user,
+# the VMs) may send DNS only to the resolver this computer uses, not to any
+# address: their firewall rules take port 53 to the addresses in a set,
+# "resolvers", of their own table. This fills each such set from
+# /etc/resolv.conf: Unbound on 127.0.0.1 while secure DNS is on, the network's
+# resolver while it is off. systemd runs it whenever /etc/resolv.conf changes,
+# and after each sandbox's firewall is loaded (which empties the set).
+# It doesn't stop a hacked sandbox from sending data out (it can reach the
+# internet anyway); it keeps it off whatever else listens on port 53 nearby.
+set -euo pipefail
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+# (a test points these elsewhere)
+RESOLV=${WREN_RESOLV_CONF:-/etc/resolv.conf}
+NFT=${WREN_NFT:-nft}
+
+# The resolver's IPv4 addresses (the sandboxes have no IPv6)
+addrs=()
+while read -r key value _; do
+    [ "$key" = nameserver ] || continue
+    if [[ $value =~ ^([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})$ ]] &&
+        [ "${BASH_REMATCH[1]}" -le 255 ] && [ "${BASH_REMATCH[2]}" -le 255 ] &&
+        [ "${BASH_REMATCH[3]}" -le 255 ] && [ "${BASH_REMATCH[4]}" -le 255 ]; then
+        case " ${addrs[*]} " in *" $value "*) ;; *) addrs+=("$value") ;; esac
+    fi
+done <"$RESOLV" 2>/dev/null || true
+
+# Every Wren Linux table that has a resolvers set, given exactly those
+script=$(mktemp)
+trap 'rm -f "$script"' EXIT
+n=0
+while read -r _ family table; do
+    [[ $family == inet && $table =~ ^wren_[a-z_]+$ ]] || continue
+    "$NFT" list set inet "$table" resolvers >/dev/null 2>&1 || continue
+    echo "flush set inet $table resolvers" >>"$script"
+    if [ ${#addrs[@]} -gt 0 ]; then
+        echo "add element inet $table resolvers { $(IFS=,; echo "${addrs[*]}") }" >>"$script"
+    fi
+    n=$((n + 1))
+done < <("$NFT" list tables 2>/dev/null)
+[ "$n" -gt 0 ] || exit 0
+"$NFT" -f "$script"

@@ -298,7 +298,7 @@ check "no 'open' without a running Firefox" grep -q 'Firefox is not running' "$H
 check "the firewall rule covers the whole sandbox group (firefox and every profile user)" grep -q 'meta skgid "wren-fx" jump firefox' "$HERE/data/firefox-firewall.nft"
 check "it rejects anything addressed to this computer (lo), like incognito's" grep -q 'oifname "lo" reject' "$HERE/data/firefox-firewall.nft"
 check "...and the same private ranges as incognito's" test "$(grep -E '^[[:space:]]+(ip|ip6) daddr|^ +[0-9]' "$HERE/data/firefox-firewall.nft" | tr -s ' ' | md5sum)" = "$(grep -E '^[[:space:]]+(ip|ip6) daddr|^ +[0-9]' "$HERE/data/incognito-firewall.nft" | tr -s ' ' | md5sum)"
-check "DNS stays open" grep -q 'udp dport 53 accept' "$HERE/data/firefox-firewall.nft"
+check "DNS only to this computer's resolver (the set parts/sandbox-dns.sh fills)" grep -q 'ip daddr @resolvers udp dport 53 accept' "$HERE/data/firefox-firewall.nft"
 check "it says how to allow the local network for a while" grep -q 'systemctl stop wren-firefox-firewall' "$HERE/data/firefox-firewall.nft"
 
 # IPv6: a LAN's global addresses can't be told from the internet's by a fixed rule,

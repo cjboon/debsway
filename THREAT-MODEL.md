@@ -182,6 +182,12 @@ With the extras:
 
 ## What it doesn't protect against
 
+- **A hacked sandbox sending data out.** Wren Linux's sandbox users (the
+  sandboxed Firefox, incognito, yt-dlp, Claude's own user, the VMs) reach the
+  internet, so one that is hacked can send out what it can read. Their DNS
+  goes only to the resolver this computer uses (`parts/sandbox-dns.sh`),
+  which keeps them off whatever else listens on port 53 nearby, but not from
+  sending data through that resolver or over the web.
 - **A local network with public addresses.** The firewall rules that keep sandbox
   users off your network know IPv4's private ranges and give those users no IPv6.
   On a network where computers have public IPv4 addresses (some universities and

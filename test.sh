@@ -335,6 +335,7 @@ dev_test try-vps "Trying the VPS setup in a VM (tools/try-vps.sh), without start
 dev_test security-key "Hardware security keys (extras/security-key.sh), with pretend sudo and PAM" "security key checks"
 dev_test hardware-wallet "Hardware wallets (extras/hardware-wallet.sh): the udev rule, for the user at the keyboard only" "hardware wallet checks"
 dev_test sudo-timeout "sudo remembers your password for 60 seconds (parts/sudo-timeout.sh)" "sudo timeout checks"
+dev_test sandbox-dns "The sandboxes' DNS only to this computer's resolver (parts/sandbox-dns.sh), with a pretend nft" "sandbox DNS checks"
 
 # --------------------------------------------------------------------
 dev_test update-signed "update.sh: only what Wren Linux's own key signed, with throwaway keys" "signed update checks"
