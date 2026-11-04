@@ -71,5 +71,6 @@ check "...an unknown setting in it is refused" not pub
 rm -f "$HOME/.config/wren/vps/site.conf"
 check "no server named: refused" not pub
 check "a server name that isn't one is refused" not pub --host 'x;rm -rf /'
+check "...nor one that rsync and git would take for an option" not pub --host -oProxyCommand
 
 [ "$fails" -eq 0 ]

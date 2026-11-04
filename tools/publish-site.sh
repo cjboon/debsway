@@ -42,7 +42,7 @@ if [ -f "$CONF" ]; then
     done <"$CONF"
 fi
 [ -n "$host" ] || die "Which server? --host wren-vps (the name from tools/vps-client.sh ssh-config), or VPS_HOST in $CONF"
-[[ $host =~ ^([a-z][a-z0-9-]{0,30}@)?[A-Za-z0-9.-]+$ ]] || die "\"$host\" isn't an ssh name (wren-vps, or user@address)."
+[[ $host =~ ^([a-z][a-z0-9-]{0,30}@)?[A-Za-z0-9][A-Za-z0-9.-]*$ ]] || die "\"$host\" isn't an ssh name (wren-vps, or user@address)."
 [ -z "$onion" ] || [[ $onion =~ ^[a-z2-7]{56}\.onion$ ]] || die "\"$onion\" isn't an onion address."
 site_dest=${WREN_PUBLISH_SITE:-$host:/srv/wren-site/}
 git_dest=${WREN_PUBLISH_GIT:-$host:/srv/wren-git/wren-linux.git}
