@@ -130,12 +130,19 @@ IFS= read -r -t 10 line <&"${WL[0]}" && [ "$line" = ready ] ||
 # To reach the socket, and to pass through your home folder to ~/Downloads
 # (traverse only: it cannot list or read anything there)
 mkdir -p "$downloads"
+# The sandboxed Firefox may write in ~/Downloads, so a profile's folder there
+# could have been swapped for a link (to ~/.ssh, say): then the rights below
+# would go to the folder it points at. Only a real folder of yours, where it
+# should be (and setfacl -P never follows a link either).
+[ ! -L "$downloads" ] && [ -d "$downloads" ] && [ -O "$downloads" ] &&
+    [ "$(cd -P -- "$downloads" && pwd)" = "$(cd -P -- "$HOME/Downloads" && pwd)${name:+/$name}" ] ||
+    die "$downloads isn't a folder of yours (a link, or someone else's): move it away, and start it again."
 setfacl -m "u:$user:--x" "$rt" "$HOME" "$HOME/Downloads"
 setfacl -m "u:$user:rw-" "$sock"
 if [ -n "$picture" ]; then setfacl -m "u:$user:r--" "$picture"; fi
 # Read, write and enter the downloads folder, for both of you, also for files made later
-setfacl -m "u:$user:rwx" "$downloads"
-setfacl -d -m "u:$user:rwx,u:$(id -un):rwx" "$downloads"
+setfacl -P -m "u:$user:rwx" "$downloads"
+setfacl -P -d -m "u:$user:rwx,u:$(id -un):rwx" "$downloads"
 
 if $audio; then
     rm -f "$fifo"

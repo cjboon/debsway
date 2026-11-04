@@ -46,7 +46,7 @@ check "...with the runtime folder, the restricted socket, no sound, your Downloa
 check "it gave the firefox user the socket and a way through to ~/Downloads, not the whole home" \
     grep -q "setfacl -m u:firefox:--x $T/run $T/home" "$T/calls"
 check "...read and write on ~/Downloads, for both of you, for later files too" \
-    grep -q "setfacl -d -m u:firefox:rwx,u:$(id -un):rwx $T/home/Downloads" "$T/calls"
+    grep -q "setfacl -P -d -m u:firefox:rwx,u:$(id -un):rwx $T/home/Downloads" "$T/calls"
 check "...and took the access back when it ended" grep -q "setfacl -x u:firefox $T/run $T/home" "$T/calls"
 check "~/Downloads exists" test -d "$T/home/Downloads"
 
@@ -71,6 +71,17 @@ check "a second start while it is open opens the address in that Firefox" grep -
 check "...and does not start another" test "$(grep -c 'firefox-session start' "$T/calls")" -eq 1
 wait %2 2>/dev/null
 
+# 2a. a profile's downloads folder swapped for a link (the sandboxed Firefox
+# can write in ~/Downloads): refused, no rights go anywhere
+mkdir -p "$T/home/.ssh"
+rm -rf "$T/home/Downloads/swapped"
+ln -s "$T/home/.ssh" "$T/home/Downloads/swapped"
+: >"$T/calls"
+out=$(fx --no-audio --profile swapped 2>&1)
+check "a profile's downloads folder that is a link (to ~/.ssh, say): refused, no rights given on it" bash -c '
+    grep -q "isn.t a folder of yours" <<<"$1" && ! grep -q "fx-swapped:rwx" "$2"' _ "$out" "$T/calls"
+rm -f "$T/home/Downloads/swapped"
+
 # 2b. a profile with its own user runs next to it, with its own names and downloads folder
 : >"$T/calls"
 FAKE_UP=2 fx --no-audio https://example.org/ >/dev/null 2>&1 &
@@ -78,7 +89,7 @@ sleep 0.6
 fx --no-audio --profile bank
 check "a profile starts as its own user, next to the other Firefox" grep -qF "sudo -n -u fx-bank /usr/local/libexec/firefox-session start $T/run firefox-bank-wayland - $T/home/Downloads/bank dark -" "$T/calls"
 check "...with its own downloads folder, so profiles cannot read each other's files" test -d "$T/home/Downloads/bank"
-check "...and rights only for its own user on it" grep -q "setfacl -m u:fx-bank:rwx $T/home/Downloads/bank" "$T/calls"
+check "...and rights only for its own user on it" grep -q "setfacl -P -m u:fx-bank:rwx $T/home/Downloads/bank" "$T/calls"
 check "...and not the other user's" not grep -q "u:firefox:rwx $T/home/Downloads/bank" "$T/calls"
 # closing the profile takes back only its own user's rights: the Firefox still
 # open next to it keeps its way through your home folder to ~/Downloads
