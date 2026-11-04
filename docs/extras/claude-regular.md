@@ -36,7 +36,7 @@ out of `~/.claude`, and the first account's out of `~/.claude-NAME`.
 
 ## LIMITS
 
-- Signing in: the sandboxed Firefox can't finish the link that comes back to this computer (`localhost`); its firewall is what stops it. Open the link printed in the terminal instead and paste the code it gives you. `firefox-esr` works too, but runs as you.
+- Signing in: the sandboxed Firefox can't finish the link that comes back to this computer (`localhost`); its firewall is what stops it. So `claude-regular` sets `BROWSER` to `claude-open-link`, which doesn't open that link (other links open as usual): open the link printed in the terminal instead and paste the code it gives you. This relies on how Claude Code uses `BROWSER`, which isn't documented; if an update changes it, the failing link opens again and the pasted code still works.
 - It runs as you: anything its sandbox and rules don't name (your documents, other projects) it can read, and what it reads can go to the internet.
 - Claude Code enforces these rules itself; you can turn them off in it (`/sandbox`, `/permissions`), and a bug in it could miss one.
 - A command it can't run in the sandbox may be retried outside it, after asking you: read what you approve.
@@ -63,6 +63,8 @@ sudo apt update
 sudo apt install --no-install-recommends claude-code bubblewrap socat git ripgrep python3
 # The claude-regular command
 install -D -m 0755 @WREN_DIR@/bin/claude-regular ~/.local/bin/claude-regular
+# what it opens links with: it skips the sign-in link that comes back to localhost
+install -D -m 0755 @WREN_DIR@/bin/claude-open-link ~/.local/bin/claude-open-link
 install -D -m 0755 @WREN_DIR@/bin/claude ~/.local/bin/claude
 
 # Its sandbox on, and the rules, merged into your own settings (and what was
@@ -89,7 +91,7 @@ To undo (your Claude login and settings stay in `~/.claude`):
 python3 -I @WREN_DIR@/lib/claude-settings.py remove ~/.claude/settings.json \
     @WREN_DIR@/data/claude-regular-settings.json ~/.local/state/wren/claude-regular-settings.json
 # The command
-rm ~/.local/bin/claude-regular
+rm ~/.local/bin/claude-regular ~/.local/bin/claude-open-link
 # (the claude command only if no other Claude Code is set up)
 rm ~/.local/bin/claude
 # Only if the sandboxed claude (extras/claude-code.sh) isn't set up: Claude

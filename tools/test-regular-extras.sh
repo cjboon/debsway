@@ -166,5 +166,45 @@ runa n -- claude-regular.sh --remove
 check "--remove takes the accounts' settings out too (n: their login stays)" bash -c '
     [ -d "$1/.claude-work" ] && ! grep -q "claude-work" "$1/.claude/settings.json" && ! grep -q "claude/\*\*" "$1/.claude-work/settings.json" 2>/dev/null' _ "$H"
 
+# ---- bin/claude-open-link: Claude Code's BROWSER, which skips the localhost sign-in link
+# (a pretend xdg-open and notify-send first in PATH: nothing opens on this desktop)
+mkdir -p "$T/ob"
+printf '#!/bin/sh\necho "$1" >>"%s"\n' "$T/opened" >"$T/ob/xdg-open"
+printf '#!/bin/sh\necho notified >>"%s"\n' "$T/notified" >"$T/ob/notify-send"
+chmod +x "$T/ob/xdg-open" "$T/ob/notify-send"
+# shellcheck disable=SC2031  # (as above)
+open_link() { # URL: 0 and the URL in $T/opened if it was passed on
+    : >"$T/opened"
+    PATH=$T/ob:$PATH bash "$HERE/bin/claude-open-link" "$1" 2>"$T/oerr" && grep -qxF -- "$1" "$T/opened"
+}
+export T HERE
+export -f open_link
+q='client_id=x&response_type=code&scope=user%3Aprofile&state=abc'
+check "claude-open-link: the sign-in link back to localhost isn't opened" bash -c '
+    ! open_link "$1" && ! [ -s "$2/opened" ] && grep -q "paste the code" "$2/oerr" && [ -s "$2/notified" ]' _ \
+    "https://claude.com/cai/oauth/authorize?code=true&$q&redirect_uri=http%3A%2F%2Flocalhost%3A37679%2Fcallback" "$T"
+check "...nor one from platform.claude.com, nor to 127.0.0.1, in any case" bash -c '
+    ! open_link "$1" && ! open_link "$2"' _ \
+    "https://platform.claude.com/oauth/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A40001%2Fcallback&$q" \
+    "HTTPS://Claude.AI/oauth/authorize?$q&redirect_uri=http%3a%2f%2f127.0.0.1%3a5000%2fcallback"
+check "...the one that gives a code to paste is opened" open_link \
+    "https://claude.com/cai/oauth/authorize?code=true&$q&redirect_uri=https%3A%2F%2Fplatform.claude.com%2Foauth%2Fcode%2Fcallback"
+check "...other links are opened, a localhost redirect on another site too" bash -c '
+    open_link "$1" && open_link "$2" && open_link "$3" && open_link "$4"' _ \
+    "https://code.claude.com/docs/en/overview" \
+    "https://example.com/oauth/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Fcb" \
+    "https://claude.ai.example.com/oauth/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A1%2Fcallback" \
+    "https://claude.com/x?next=redirect_uri=http%3A%2F%2Flocalhost.example.com%2F"
+check "...no URL, or two: refused" bash -c '! bash "$1" 2>/dev/null && ! bash "$1" a b 2>/dev/null' _ "$HERE/bin/claude-open-link"
+# claude-regular hands it to Claude Code as BROWSER, from the folder it is in itself
+mkdir -p "$T/crb"
+sed 's|exec /usr/bin/claude|echo "BROWSER=${BROWSER:-}"; exit; exec /usr/bin/claude|' "$HERE/bin/claude-regular" >"$T/crb/claude-regular"
+check "claude-regular: no claude-open-link beside it, BROWSER left alone" bash -c '[ "$(HOME=$1 BROWSER=mine bash "$2/claude-regular")" = BROWSER=mine ]' _ "$H" "$T/crb"
+cp "$HERE/bin/claude-open-link" "$T/crb/"
+check "...with it: BROWSER is claude-open-link" bash -c '[ "$(HOME=$1 BROWSER= bash "$2/claude-regular")" = "BROWSER=$2/claude-open-link" ]' _ "$H" "$T/crb"
+run claude-regular.sh ''
+check "claude-regular.sh installs claude-open-link" grep -q 'written by Wren Linux' "$H/.local/bin/claude-open-link"
+runa n -- claude-regular.sh --remove
+check "...and --remove takes it away" test ! -e "$H/.local/bin/claude-open-link"
 
 [ "$fails" -eq 0 ]

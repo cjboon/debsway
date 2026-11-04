@@ -13,6 +13,9 @@
 #    at login (~/.profile, sway, systemd, ~/.local/bin); it may not run sudo.
 #  - These go into your ~/.claude/settings.json next to your own settings
 #    (data/claude-regular-settings.json); --remove takes out only what it added.
+#  - Sign-in: claude-regular sets BROWSER to claude-open-link, which doesn't
+#    open the link that comes back to localhost (the sandboxed Firefox can't
+#    reach it), so you use the one that gives a code to paste.
 # claude-regular runs it; so does claude, unless extras/claude-code.sh is set up
 # (then claude is the sandboxed one).
 # Another account (a second Claude login): --account NAME gives it its own
@@ -29,7 +32,7 @@
 # Usage: bash claude-regular.sh [--remove | --manual | --account NAME | --remove-account NAME]
 # summary: Claude Code as you, with its own sandbox on
 # security: least
-# status: bin:claude-regular
+# status: bin:claude-regular bin:claude-open-link
 # files: data/claude-regular-settings.json lib/claude-settings.py
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$WREN_DIR/lib/claude-repo.sh"
@@ -109,6 +112,7 @@ if [ "${1:-}" = --remove ]; then
         remove_account "${n%-first.json}"
     done
     remove_bin claude-regular
+    remove_bin claude-open-link
     remove_claude_chooser
     if [ -f "$STATE" ]; then merge remove && note "Took Wren Linux's settings out of $SETTINGS; yours stay."; fi
     # claude-code itself stays while the sandboxed claude needs it
@@ -125,6 +129,7 @@ say "Installing Claude Code"
 # git and ripgrep: what it uses day to day; python3: the settings merge
 apt_install claude-code bubblewrap socat git ripgrep python3
 install_bin claude-regular
+install_bin claude-open-link
 install_bin claude
 
 say "Claude Code's settings"
@@ -136,6 +141,6 @@ if [ -e "$CLAUDE_SANDBOX_MARK" ]; then
 else
     note "Run it with: claude   (or claude-regular), in the folder of your project"
 fi
-note "The first time, it shows sign-in links. The sandboxed Firefox can't finish the one that"
-note "comes back to this computer (localhost): if it says it can't connect, open the link"
+note "The first time, it shows sign-in links. The one that comes back to this computer"
+note "(localhost) isn't opened, as the sandboxed Firefox can't finish it: open the link"
 note "printed in the terminal, and paste the code it gives you."

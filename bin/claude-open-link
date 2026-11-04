@@ -1,0 +1,33 @@
+#!/bin/bash
+# claude-open-link URL: written by Wren Linux extras/claude-regular.sh
+# claude-regular sets BROWSER to this, so it is what Claude Code runs to open a
+# link. A sign-in link whose answer comes back to this computer (redirect_uri
+# http://localhost...) is not opened: the sandboxed Firefox can't reach
+# localhost (its firewall), so that page would only fail. Claude Code then
+# shows its other link, which ends in a code to paste. Any other link goes to
+# xdg-open as usual. (Claude Code takes BROWSER and the failed opener as
+# "didn't open"; neither is documented, so an update could change it.)
+set -uo pipefail
+
+url=${1:-}
+[ $# -eq 1 ] && [ -n "$url" ] || { echo "usage: claude-open-link URL" >&2; exit 2; }
+
+# A sign-in link: an Anthropic sign-in page asking for a localhost redirect
+login_link() {
+    local u=${1,,} host
+    [[ $u =~ ^https://([a-z0-9.-]+)/ ]] || return 1
+    host=${BASH_REMATCH[1]}
+    case $host in
+        claude.ai | *.claude.ai | claude.com | *.claude.com | anthropic.com | *.anthropic.com) ;;
+        *) return 1 ;;
+    esac
+    [[ $u =~ [?\&]redirect_uri=http(:|%3a)(/|%2f)(/|%2f)(localhost|127\.0\.0\.1)(:|%3a|/|%2f|\&|$) ]]
+}
+
+if login_link "$url"; then
+    msg="Not opening the sign-in link that comes back to localhost: the sandboxed Firefox can't reach it. Open the other link Claude Code shows, and paste the code it gives you."
+    printf 'claude-open-link: %s\n' "$msg" >&2
+    if command -v notify-send >/dev/null; then notify-send "Claude Code sign-in" "$msg" 2>/dev/null || true; fi
+    exit 1
+fi
+exec xdg-open "$url"

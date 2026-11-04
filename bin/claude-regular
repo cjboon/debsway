@@ -36,4 +36,8 @@ if isinstance(d, dict) and "theme" not in d:
 PY
 }
 seed_theme "${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json"
+# Links it opens go through claude-open-link, which skips the sign-in link the
+# sandboxed Firefox can't finish (Claude Code then shows the one with a code)
+opener=$(dirname -- "${BASH_SOURCE[0]}")/claude-open-link
+if [ -x "$opener" ]; then export BROWSER=$opener; fi
 exec /usr/bin/claude "$@"
