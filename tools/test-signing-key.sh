@@ -109,6 +109,8 @@ check "...and signs with Wren Linux's key only" bash -c '! echo x | "$1/.local/b
 check "pin: pins.sh pins the key" grep -qx "WREN_SIGNING_FPR=$F" "$T/d/pins.sh"
 check "...data/wren-signing-key.asc is exactly that key (as test.sh and update.sh check it)" \
     bash -c '. "$1/lib.sh"; key_ok "$1/data/wren-signing-key.asc" "$2"' _ "$T/d" "$F"
+check "...and what it says to run commits the new key file too (commit -a leaves a new file out: a pin with no key refuses every update)" bash -c '
+    grep -q "add pins.sh data/wren-signing-key.asc" "$1" && ! grep -q "commit -am" "$1"' _ "$HERE/bin/wren-key"
 mkdir -p "$T/u"
 check "update.sh's check takes the signed commit" bash -c '
     cd "$1" && . ./lib.sh && . lib/update.sh && . lib/appimage.sh && WREN_SIGNING_FPR=$2 && update_signed HEAD' _ "$T/d" "$F"

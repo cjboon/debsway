@@ -235,7 +235,9 @@ pin() {
     note "pins.sh: WREN_SIGNING_FPR=$f"
     note "data/wren-signing-key.asc: the public key"
     note "Look at it (git -C $d diff), then commit it, signed, and push:"
-    note "  git -C $d commit -am 'Wren Linux is signed with its own key now'"
+    note "  git -C $d add pins.sh data/wren-signing-key.asc"
+    note "  git -C $d commit -m 'Wren Linux is signed with its own key now'"
+    note "Both files, or computers that update to it refuse every update after it."
     note "From then on every Wren Linux computer that updates past it takes only what this key signed."
 }
 
