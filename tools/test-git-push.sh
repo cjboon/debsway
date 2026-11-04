@@ -49,6 +49,9 @@ chmod +x "$HOME/.local/bin/wren-key"
 # Your copy L, from this checkout's files, and the server O
 mkdir "$T/L"
 (cd "$HERE" && git ls-files -co --exclude-standard | tar -cf - -T -) | tar -C "$T/L" -xf -
+# (as it was before any key: this checkout may pin the real one by now)
+sed -i 's/^WREN_SIGNING_FPR=.*/WREN_SIGNING_FPR=/' "$T/L/pins.sh"
+rm -f "$T/L/data/wren-signing-key.asc"
 git -C "$T/L" init -q -b main && git -C "$T/L" add -A && git -C "$T/L" -c commit.gpgsign=false commit -q -m first
 git clone -q --bare "$T/L" "$T/O.git"
 git -C "$T/L" remote add origin "$T/O.git"
@@ -73,6 +76,7 @@ check "no to the push: nothing goes out" test "$(server)" = "$before"
 check "...and they stay here" grep -q 'stay here' "$T/out"
 
 gp y
+check "...and it says exactly how to install it here" grep -q 'sudo apt install /tmp/wren-linux_\*.deb' "$T/out"
 check "yes: it goes out, already signed, nothing added" bash -c '[ "$(git -C "$2" rev-parse main)" = "$1" ] && ! grep -q "isn.t signed" "$3"' _ "$(head_)" "$T/O.git" "$T/out"
 gp
 check "nothing new: it says so" grep -q 'Nothing to push' "$T/out"
