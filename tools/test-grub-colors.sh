@@ -38,8 +38,8 @@ S=$T/grub.d/06_wren_colors
 
 part "$T/bin:$PATH"
 check "it writes its script after Debian's colours (05_debian_theme), runnable" test -x "$S"
-check "...printing GRUB's four colour settings: white on red, the chosen entry yellow" bash -c '
-    [ "$(sh "$1")" = "$(printf "%s\n" "set color_normal=white/red" "set color_highlight=yellow/red" "set menu_color_normal=white/red" "set menu_color_highlight=yellow/red")" ]' _ "$S"
+check "...the menu's box red with white text, the chosen entry yellow; black around it and on the loading screen" bash -c '
+    [ "$(sh "$1")" = "$(printf "%s\n" "set color_normal=white/black" "set color_highlight=black/white" "set menu_color_normal=white/red" "set menu_color_highlight=yellow/red")" ]' _ "$S"
 if command -v grub-script-check >/dev/null; then
     check "...which GRUB accepts (grub-script-check)" bash -c 'sh "$1" | grub-script-check' _ "$S"
 fi

@@ -1,6 +1,7 @@
 #!/bin/bash
-# GRUB's boot menu in Wren Linux's colours: white text on red, the chosen entry
-# yellow. A small script in /etc/grub.d that update-grub runs (as root, like
+# GRUB's boot menu in Wren Linux's colours: a red box with white text, the chosen
+# entry yellow. color_normal is everything outside the menu, the loading screen
+# too, so that stays black. A small script in /etc/grub.d that update-grub runs (as root, like
 # the others there) when it builds the menu; it comes after Debian's own
 # colours (05_debian_theme), so these win. Colours only: what boots, and how,
 # doesn't change. It needs GRUB.
@@ -26,8 +27,8 @@ fi
 
 say "GRUB's colours"
 printf '%s\n' '#!/bin/sh' '# Written by Wren Linux parts/grub-colors.sh' \
-    "echo 'set color_normal=white/red'" \
-    "echo 'set color_highlight=yellow/red'" \
+    "echo 'set color_normal=white/black'" \
+    "echo 'set color_highlight=black/white'" \
     "echo 'set menu_color_normal=white/red'" \
     "echo 'set menu_color_highlight=yellow/red'" |
     sudo tee "$SCRIPT" >/dev/null
