@@ -179,6 +179,10 @@ With the extras:
   (`extras/hardware-wallet.sh`): the device shows what it signs on its own
   screen and signs only when you agree there. It doesn't protect the
   recovery words, a fake device, or an address you don't check on its screen.
+- **A program that quietly makes itself start at every login**, with the
+  startup watch (`extras/startup-watch.sh`): the files it would change are
+  compared with a record only root can change, and a change shows in the
+  bar. It notices, it doesn't prevent, and it sees only the files it watches.
 
 ## What it doesn't protect against
 

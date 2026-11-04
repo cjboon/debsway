@@ -60,6 +60,7 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 - [A password manager](keepassxc.md)
 - [A keyring that unlocks when you log in](seahorse.md)
 - [Hardware security keys: SSH, website logins and sudo](security-key.md)
+- [A watch on what starts at your login](startup-watch.md)
 - [Encrypted backups of your home folder](backup.md)
 - [An encrypted ~/Vault that locks itself](vault.md)
 

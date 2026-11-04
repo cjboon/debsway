@@ -78,6 +78,38 @@ in_terminal() { [ -t 0 ] && [ -t 1 ] && [ -x "$MENU" ]; }
 cmd=${1:-}
 [ $# -eq 0 ] || shift
 
+# watched SCRIPT ARGS...: runs a Wren Linux script, then takes the startup files
+# its run changed as Wren Linux's (extras/startup-watch.sh), so they don't show
+# as "startup changed". A file that had changed before the run is left out:
+# that change is for you to look at (wren-watch). Exits with the script's status.
+WATCH=${WREN_WATCH_CMD:-/usr/local/bin/wren-watch}
+watched() {
+    local rc=0 before after list pending f
+    if [ ! -x "$WATCH" ]; then bash "$@"; exit; fi
+    before=$(mktemp) after=$(mktemp)
+    "$WATCH" manifest >"$before" 2>/dev/null || true
+    pending=$(cat "${WREN_WATCH_RUN:-/run/wren-watch}/$(id -un)" 2>/dev/null || true)
+    bash "$@" || rc=$?
+    "$WATCH" manifest >"$after" 2>/dev/null || true
+    list=$({ diff <(sort -k5 "$before") <(sort -k5 "$after") || true; } | sed -n 's/^[<>] [^ ]* [^ ]* [^ ]* [^ ]* //p' | sort -u)
+    rm -f "$before" "$after"
+    local take=()
+    while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        if grep -qxF -- "$f" <<<"$pending"; then
+            printf 'wrenctl: ~/%s had changed before this run: not taken as Wren Linux'"'"'s (look: wren-watch)\n' "$f" >&2
+        else
+            take+=("$f")
+        fi
+    done <<<"$list"
+    if [ ${#take[@]} -gt 0 ]; then
+        printf 'wrenctl: taking what this changed in your startup files as Wren Linux'"'"'s (sudo):\n' >&2
+        printf '  ~/%s\n' "${take[@]}" >&2
+        sudo "$WATCH" accept "${take[@]}" >/dev/null || printf 'wrenctl: not taken; they show as "startup changed" until: sudo wren-watch accept\n' >&2
+    fi
+    exit "$rc"
+}
+
 case $cmd in
     "")
         if in_sway; then exec "$MENU"; fi
@@ -87,8 +119,8 @@ case $cmd in
         if in_sway; then exec "$MENU"; fi
         in_terminal || die "the menu needs your sway session or a terminal (and the Wren menu installed: bash $DIR/parts/wren-menu.sh)."
         exec "$MENU" --tui ;;
-    --update | update) need_dir; exec bash "$DIR/update.sh" "$@" ;;
-    --apps | apps) need_dir; exec bash "$DIR/install-extras.sh" "$@" ;;
+    --update | update) need_dir; watched "$DIR/update.sh" "$@" ;;
+    --apps | apps) need_dir; watched "$DIR/install-extras.sh" "$@" ;;
     --status | status) need_dir; exec bash "$DIR/status.sh" "$@" ;;
     --install | install | --remove | remove | --manual | manual)
         # one name; anything after it goes to the script (--account NAME...)
@@ -96,15 +128,16 @@ case $cmd in
         script=$(script_for extras "${1:-}") || exit 1
         shift
         case $cmd in
-            *install) exec bash "$script" "$@" ;;
-            *) exec bash "$script" "--${cmd#--}" "$@" ;;
+            *install) watched "$script" "$@" ;;
+            *manual) exec bash "$script" --manual "$@" ;;
+            *) watched "$script" "--${cmd#--}" "$@" ;;
         esac ;;
     --list | list) need_dir; exec bash "$DIR/install-extras.sh" --list ;;
     --part | part)
         need_dir
         [ $# -le 1 ] || die "one name at a time (wrenctl part NAME)."
         script=$(script_for parts "${1:-}") || exit 1
-        exec bash "$script" ;;
+        watched "$script" ;;
     --git | git)
         need_dir
         [ $# -le 1 ] || die "one folder at a time (wrenctl git [DIR])."

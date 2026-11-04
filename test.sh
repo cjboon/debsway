@@ -336,6 +336,7 @@ dev_test security-key "Hardware security keys (extras/security-key.sh), with pre
 dev_test hardware-wallet "Hardware wallets (extras/hardware-wallet.sh): the udev rule, for the user at the keyboard only" "hardware wallet checks"
 dev_test sudo-timeout "sudo remembers your password for 60 seconds (parts/sudo-timeout.sh)" "sudo timeout checks"
 dev_test sandbox-dns "The sandboxes' DNS only to this computer's resolver (parts/sandbox-dns.sh), with a pretend nft" "sandbox DNS checks"
+dev_test startup-watch "The startup watch (bin/wren-watch, extras/startup-watch.sh) in a pretend home" "startup watch checks"
 
 # --------------------------------------------------------------------
 dev_test update-signed "update.sh: only what Wren Linux's own key signed, with throwaway keys" "signed update checks"

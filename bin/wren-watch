@@ -1,0 +1,240 @@
+#!/bin/bash
+# wren-watch: written by Wren Linux extras/startup-watch.sh, installed as
+# /usr/local/bin/wren-watch (root's). Watches the files a program running as
+# you would change to start again at every login (your shell's startup files,
+# sway's config, autostart, systemd user units, ~/.local/bin, ...): their
+# fingerprints are kept by root, in /var/lib/wren-watch, where nothing running
+# as you can change them, and a root timer compares them every 15 minutes and
+# at boot. What changed shows in the bar ("startup changed") and here.
+#   wren-watch                    what changed since you last accepted
+#   sudo wren-watch diff          the changes themselves (text files)
+#   sudo wren-watch accept [FILE...]   take them as yours (all, or those files)
+#   wren-watch manifest           (for wrenctl) the fingerprints of yours, now
+#   wren-watch check-all          (for root's timer) compare everyone watched
+# It notices, it doesn't prevent: a program running as you can still change
+# the files; it can't change the record, or keep the bar from showing it
+# (sway-status is in ~/.local/bin, which is watched too).
+set -euo pipefail
+umask 022
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+# (a test points these at folders of its own)
+STATE=${WREN_WATCH_STATE:-/var/lib/wren-watch}
+RUN=${WREN_WATCH_RUN:-/run/wren-watch}
+
+die() { printf 'wren-watch: %s\n' "$*" >&2; exit 1; }
+
+# MANIFEST HOME [COPIES]: one line per watched thing under HOME, "KIND MODE
+# SIZE HASH PATH" (PATH relative to HOME, last), without following any link,
+# reading regular files only and at most 64 MB of each; with COPIES, a copy of
+# every text file up to 256 kB goes there, for diff
+MANIFEST='
+import hashlib, os, stat, sys
+home = sys.argv[1]
+copies = sys.argv[2] if len(sys.argv) > 2 else ""
+FILES = [".profile", ".bash_profile", ".bash_login", ".bashrc", ".bash_logout", ".pam_environment",
+         ".xprofile", ".xsessionrc", ".zshrc", ".zprofile", ".zshenv", ".gitconfig", ".config/git/config",
+         ".config/mimeapps.list", ".ssh/rc", ".ssh/config", ".ssh/authorized_keys",
+         ".gnupg/gpg-agent.conf", ".gnupg/gpg.conf"]
+DIRS = [".config/sway", ".config/autostart", ".config/systemd/user", ".config/environment.d",
+        ".local/bin", ".config/mako", ".local/share/applications", ".config/wren/on-lock.d"]
+out = []
+def entry(rel):
+    p = os.path.join(home, rel)
+    try:
+        st = os.lstat(p)
+    except FileNotFoundError:
+        return
+    mode = "%o" % stat.S_IMODE(st.st_mode)
+    if stat.S_ISLNK(st.st_mode):
+        out.append(("link", mode, "0", hashlib.sha256(os.readlink(p).encode("utf-8", "surrogateescape")).hexdigest(), rel))
+    elif stat.S_ISREG(st.st_mode):
+        h = hashlib.sha256()
+        try:
+            fd = os.open(p, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        except OSError:
+            out.append(("file", mode, str(st.st_size), "unreadable", rel)); return
+        with os.fdopen(fd, "rb") as f:
+            if not stat.S_ISREG(os.fstat(f.fileno()).st_mode):
+                return
+            left, data = 64 << 20, b""
+            while left > 0:
+                b = f.read(min(1 << 20, left))
+                if not b:
+                    break
+                h.update(b); left -= len(b)
+                if copies and len(data) <= 256 << 10:
+                    data += b
+        out.append(("file", mode, str(st.st_size), h.hexdigest(), rel))
+        if copies and len(data) <= 256 << 10 and b"\0" not in data:
+            dest = os.path.join(copies, rel)
+            os.makedirs(os.path.dirname(dest), mode=0o700, exist_ok=True)
+            with open(os.open(dest, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), "wb") as c:
+                c.write(data)
+    elif stat.S_ISDIR(st.st_mode):
+        out.append(("dir", mode, "0", "-", rel))
+    else:
+        out.append(("other", mode, "0", "-", rel))
+for rel in FILES:
+    entry(rel)
+for d in DIRS:
+    top = os.path.join(home, d)
+    try:
+        if not stat.S_ISDIR(os.lstat(top).st_mode):
+            entry(d); continue
+    except FileNotFoundError:
+        continue
+    entry(d)
+    for root, dirs, files in os.walk(top):
+        dirs.sort()
+        for name in sorted(dirs + files):
+            rel = os.path.relpath(os.path.join(root, name), home)
+            if "\n" in rel:
+                out.append(("odd", "0", "0", "-", repr(rel))); continue
+            entry(rel)
+for kind, mode, size, h, rel in out:
+    print(kind, mode, size, h, rel)
+'
+manifest() { python3 -I -c "$MANIFEST" "$@"; }
+# changed OLD NEW: the paths whose line differs, one each
+# (diff says 1 when there are differences: that is what is looked for)
+changed() { { diff <(sort -k5 "$1") <(sort -k5 "$2") || true; } | sed -n 's/^[<>] [^ ]* [^ ]* [^ ]* [^ ]* //p' | sort -u; }
+
+# (a test gives its own pretend home; never with root's real record)
+home_of() {
+    if [ -n "${WREN_WATCH_STATE:-}" ] && [ -n "${WREN_WATCH_HOME:-}" ]; then echo "$WREN_WATCH_HOME"; return; fi
+    getent passwd "$1" | cut -d: -f6
+}
+user_ok() { [[ $1 =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] && [ -n "$(home_of "$1")" ]; }
+
+# check USER: compare, and say what changed in RUN/USER (readable by USER only)
+check() {
+    local user=$1 home now list
+    user_ok "$user" || return 0
+    [ -f "$STATE/$user/manifest" ] || return 0
+    home=$(home_of "$user")
+    now=$(mktemp)
+    manifest "$home" >"$now"
+    list=$(changed "$STATE/$user/manifest" "$now")
+    rm -f "$now"
+    install -d -m 0755 "$RUN"
+    if [ -n "$list" ]; then
+        printf '%s\n' "$list" >"$RUN/$user.new"
+        chmod 0640 "$RUN/$user.new"
+        [ -n "${WREN_WATCH_STATE:-}" ] || chgrp "$(id -gn "$user")" "$RUN/$user.new"
+        mv "$RUN/$user.new" "$RUN/$user"
+    else
+        rm -f "$RUN/$user"
+    fi
+}
+
+# accept USER [PATH...]: the record as the files are now (all, or those paths)
+accept() {
+    local user=$1 home now keep
+    shift
+    home=$(home_of "$user")
+    install -d -m 0700 "$STATE" "$STATE/$user"
+    now=$(mktemp)
+    if [ $# -eq 0 ]; then
+        rm -rf "$STATE/$user/copies.new"
+        manifest "$home" "$STATE/$user/copies.new" >"$now"
+        rm -rf "$STATE/$user/copies" && mv "$STATE/$user/copies.new" "$STATE/$user/copies" 2>/dev/null || true
+        mv "$now" "$STATE/$user/manifest"
+    else
+        # only those paths take their new line; the rest keep the old one
+        keep=$(mktemp)
+        rm -rf "$STATE/$user/copies.part"
+        manifest "$home" "$STATE/$user/copies.part" >"$now"
+        # the copies too: only those paths' (for diff, the others stay as they were)
+        local p
+        for p in "$@"; do
+            rm -f "$STATE/$user/copies/$p"
+            if [ -f "$STATE/$user/copies.part/$p" ]; then
+                install -D -m 0600 "$STATE/$user/copies.part/$p" "$STATE/$user/copies/$p"
+            fi
+        done
+        rm -rf "$STATE/$user/copies.part"
+        python3 -I - "$STATE/$user/manifest" "$now" "$@" >"$keep" <<'PY'
+import sys
+old_file, new_file, *paths = sys.argv[1:]
+want = set(paths)
+def lines(f):
+    d = {}
+    try:
+        for l in open(f, encoding="utf-8", errors="surrogateescape"):
+            parts = l.rstrip("\n").split(" ", 4)
+            if len(parts) == 5:
+                d[parts[4]] = l.rstrip("\n")
+    except FileNotFoundError:
+        pass
+    return d
+old, new = lines(old_file), lines(new_file)
+for p in sorted(set(old) | set(new)):
+    src = new if p in want else old
+    if p in src:
+        print(src[p])
+PY
+        mv "$keep" "$STATE/$user/manifest"
+        rm -f "$now"
+    fi
+    chmod 0600 "$STATE/$user/manifest"
+    check "$user"
+}
+
+me() {
+    if [ "$(id -u)" -eq 0 ]; then
+        [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != root ] || die "run it through sudo, as yourself: sudo wren-watch ${1:-accept}"
+        echo "$SUDO_USER"
+    else
+        id -un
+    fi
+}
+
+cmd=${1:-}
+[ $# -eq 0 ] || shift
+case $cmd in
+    "" | status)
+        user=$(me status)
+        if [ ! -f "$RUN/$user" ]; then
+            echo "Nothing changed in your startup files since you last accepted."
+            exit 0
+        fi
+        echo "Changed since you last accepted (if it wasn't you or Wren Linux, something running as you did it):"
+        sed 's/^/  ~\//' "$RUN/$user"
+        echo "See the changes: sudo wren-watch diff    Take them as yours: sudo wren-watch accept" ;;
+    diff)
+        [ "$(id -u)" -eq 0 ] || [ -n "${WREN_WATCH_STATE:-}" ] || die "it needs root's copies: sudo wren-watch diff"
+        user=$(me diff)
+        home=$(home_of "$user")
+        [ -f "$RUN/$user" ] || { echo "Nothing changed."; exit 0; }
+        while IFS= read -r rel; do
+            if [ -f "$STATE/$user/copies/$rel" ] || [ -f "$home/$rel" ]; then
+                diff -u -N --label "before: ~/$rel" --label "now: ~/$rel" "$STATE/$user/copies/$rel" "$home/$rel" 2>/dev/null || true
+            else
+                # shellcheck disable=SC2088  # a literal ~, as wren-watch lists the files
+                printf '~/%s (not a text file, or gone)\n' "$rel"
+            fi
+        done <"$RUN/$user" ;;
+    accept)
+        [ "$(id -u)" -eq 0 ] || [ -n "${WREN_WATCH_STATE:-}" ] || die "it changes root's record: sudo wren-watch accept"
+        user=$(me accept)
+        home=$(home_of "$user")
+        paths=()
+        for a in "$@"; do
+            a=${a#"$home"/}
+            a=${a#\~/}
+            [[ $a != /* && $a != *..* ]] || die "\"$a\": a file in your home, please (as wren-watch lists it)."
+            paths+=("$a")
+        done
+        accept "$user" "${paths[@]}"
+        echo "Accepted. The record is your startup files as they are now${paths[*]:+ (${paths[*]})}." ;;
+    manifest) manifest "$HOME" ;;
+    check-all)
+        [ "$(id -u)" -eq 0 ] || [ -n "${WREN_WATCH_STATE:-}" ] || die "that is root's timer's."
+        for d in "$STATE"/*/; do
+            [ -d "$d" ] || continue
+            u=${d%/}; u=${u##*/}
+            check "$u"
+        done ;;
+    -h | --help) sed -n '2,/^set -euo/{ /^set -euo/d; s/^# \{0,1\}//; p }' "$0" ;;
+    *) die "usage: wren-watch [status | diff | accept [FILE...] | manifest | check-all]" ;;
+esac
