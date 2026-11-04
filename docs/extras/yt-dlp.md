@@ -21,7 +21,9 @@ updates it, checked the same way. YouTube's own JavaScript, which yt-dlp has
 to run, runs in Debian's QuickJS, and ffmpeg joins video and sound. Files go
 one way: yt-dlp writes into a folder of its own for each run, and the
 `yt-dlp` command (`bin/yt-dlp`) copies them into `~/Downloads` as you
-afterwards. A firewall rule (`data/yt-dlp-firewall.nft`) keeps `ytdlp` off
+afterwards, regular files only, following no link on either side and never
+writing over or through anything already there (the sandboxed Firefox can
+write in `~/Downloads` too). A firewall rule (`data/yt-dlp-firewall.nft`) keeps `ytdlp` off
 your router, printers and this computer's services. yt-dlp's config files are
 ignored, so give options on the command line.
 

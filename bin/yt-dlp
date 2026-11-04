@@ -29,27 +29,61 @@ id=$(od -An -N12 -tx1 /dev/urandom | tr -d ' \n')
 "$SUDO" -n -u ytdlp "$SESSION" "$id" "$@"
 rc=$?
 
-# free NAME: NAME, or "NAME (2).ext" and so on if NAME is taken
-free() {
-    local f=$1 base ext n=2
-    [ -e "$f" ] || [ -L "$f" ] || { printf '%s' "$f"; return; }
-    base=${f%.*} ext=.${f##*.}
-    [[ ${f##*/} == *.* ]] || { base=$f ext=; }
-    while [ -e "$base ($n)$ext" ] || [ -L "$base ($n)$ext" ]; do n=$((n + 1)); done
-    printf '%s' "$base ($n)$ext"
-}
+# copy_out RUN DEST REL: RUN/REL into DEST/REL (or "NAME (2).ext" and so on
+# if that is taken), and prints where. Both sides are walked a folder at a
+# time without following links, and the copy is made with O_EXCL|O_NOFOLLOW:
+# the sandbox users can write in ~/Downloads (the sandboxed Firefox) and in
+# RUN (ytdlp), and a link put in the way, even at the last moment, would
+# otherwise send your user's copy into one of your folders (~/.config/autostart,
+# say), or bring one of your files out. Such a file isn't copied.
+COPY_OUT='
+import os, sys
+run, dest, rel = sys.argv[1:4]
+parts = rel.split("/")
+if any(p in ("", ".", "..") for p in parts):
+    sys.exit("odd name: " + rel)
+D = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+src = os.open(run, D)
+for p in parts[:-1]:
+    src = os.open(p, D, dir_fd=src)
+inp = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW, dir_fd=src)
+out = os.open(dest, os.O_RDONLY | os.O_DIRECTORY)
+for p in parts[:-1]:
+    try:
+        os.mkdir(p, 0o777, dir_fd=out)
+    except FileExistsError:
+        pass
+    out = os.open(p, D, dir_fd=out)
+name = parts[-1]
+base, dot, ext = name.rpartition(".")
+if not base:
+    base, dot, ext = name, "", ""
+n = 1
+while True:
+    cand = name if n == 1 else "%s (%d)%s%s" % (base, n, dot, ext)
+    try:
+        fd = os.open(cand, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o666, dir_fd=out)
+        break
+    except FileExistsError:
+        n += 1
+while True:
+    b = os.read(inp, 1 << 20)
+    if not b:
+        break
+    os.write(fd, b)
+os.close(fd)
+print(os.path.join(dest, *parts[:-1], cand))
+'
 
 run=$OUT/$id
 copied=0 failed=0
 if [ -d "$run" ]; then
     # Regular files only: a link (to one of your files, say) is left behind, and
-    # so are unfinished downloads. cp -P: should a file be swapped for a link
-    # meanwhile, the link is copied as a link, not the file it points to.
+    # so are unfinished downloads; copy_out follows no link on either side.
     while IFS= read -r -d '' f; do
         rel=${f#"$run"/}
         case $rel in *.part | *.ytdl | *.part-Frag*) continue ;; esac
-        target=$(free "$dest/$rel")
-        if mkdir -p "${target%/*}" && cp -P --no-preserve=all -- "$f" "$target"; then
+        if python3 -I -c "$COPY_OUT" "$run" "$dest" "$rel" >/dev/null 2>&1; then
             copied=$((copied + 1))
         else
             failed=$((failed + 1))

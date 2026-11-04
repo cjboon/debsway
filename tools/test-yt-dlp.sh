@@ -57,8 +57,30 @@ check "a file you already have isn't overwritten: the new one is \"video (2).mp4
     bash -c '[ "$(cat "$1/video.mp4")" = video ] && [ -f "$1/video (2).mp4" ] && [ -f "$1/sub/b (2).webm" ]' _ "$T/home/Downloads"
 RC=3 yt URL >/dev/null 2>&1
 check "yt-dlp's exit status is passed on" test $? = 3
-check "copies are made with cp -P (a file swapped for a link meanwhile stays a link)" \
-    grep -q 'cp -P --no-preserve=all -- "$f" "$target"' "$HERE/bin/yt-dlp"
+# Links put in the way by a sandbox user (the sandboxed Firefox can write in
+# ~/Downloads, ytdlp in its run's folder): the copy follows none of them
+mkdir -p "$T/home/.config/autostart"
+rm -rf "$T/home/Downloads/sub"
+ln -s "$T/home/.config/autostart" "$T/home/Downloads/sub"
+yt URL >/dev/null 2>&1
+check "a folder in ~/Downloads that is a link (to ~/.config/autostart, say): nothing is written through it" \
+    bash -c '[ -z "$(ls -A "$1")" ] && ls "$2"/*/sub/b.webm' _ "$T/home/.config/autostart" "$T/out"
+rm -f "$T/home/Downloads/sub"; chmod -R u+rwx "$T/out"; rm -rf "${T:?}/out/"*
+mkdir -p "$T/home/Downloads/sub"
+cat >"$T/copy.py" <<'PY'
+import re, sys
+s = open(sys.argv[1]).read()
+print(re.search(r"^COPY_OUT='(.*?)^'$", s, re.S | re.M).group(1))
+PY
+python3 -I "$T/copy.py" "$HERE/bin/yt-dlp" >"$T/copy-out.py"
+mkdir -p "$T/run/d"; echo new >"$T/run/d/v.mp4"; mkdir -p "$T/dl/d"
+ln -s "$T/home/.config/autostart/x.desktop" "$T/dl/d/v.mp4"
+python3 -I "$T/copy-out.py" "$T/run" "$T/dl" d/v.mp4 >/dev/null
+check "...a link at the very name it was going to write (put there at the last moment): skipped, the copy is \"v (2).mp4\"" \
+    bash -c '[ ! -e "$1/x.desktop" ] && [ "$(cat "$2/d/v (2).mp4")" = new ]' _ "$T/home/.config/autostart" "$T/dl"
+rm -rf "$T/run/d"; ln -s "$T/home" "$T/run/d"
+check "...a folder of the run swapped for a link to your home: not followed, nothing of yours comes out" \
+    bash -c '! python3 -I "$1" "$2/run" "$2/dl" d/secret 2>/dev/null && ! grep -rqs "my secret" "$2/dl"' _ "$T/copy-out.py" "$T"
 # a file that can't be copied: the run's folder (and what is in it) is kept
 cat >"$T/session-unreadable" <<EOF
 #!/bin/bash
