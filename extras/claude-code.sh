@@ -119,7 +119,7 @@ setup_agent() {
     if ! sudo test -e "$AGENT_HOME/.ssh/known_hosts"; then
         local hosts known
         if command -v python3 >/dev/null &&
-            hosts=$(curl -fsS --max-time 20 https://api.github.com/meta 2>/dev/null |
+            hosts=$(wget -qO- --timeout=20 https://api.github.com/meta 2>/dev/null |
                 python3 -c 'import json,sys; [print("github.com " + k) for k in json.load(sys.stdin)["ssh_keys"]]' 2>/dev/null) &&
             [ -n "$hosts" ]; then
             known=$(mktemp)

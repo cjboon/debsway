@@ -43,6 +43,8 @@ check "the projects folder itself is allowed" grep -q "claude-session $(cd "$T/h
 run "$T/home/other" --version
 check "--version works from anywhere" grep -q "claude-session $(cd "$T/home/projects" && pwd -P) --version" "$T/calls"
 check "claude-session refuses anyone but claude-agent" bash -c "! bash '$HERE/bin/claude-session' '$T' 2>/dev/null"
+check "the GitHub host keys come with wget, which Wren Linux has (curl isn't installed)" bash -c '
+    ! grep -q "curl " "$1" && ! grep -q "curl " "$2" && grep -q "api.github.com/meta" "$1"' _ "$HERE/extras/claude-code.sh" "$HERE/docs/extras/claude-code.md"
 check "claude-unsandboxed runs the real thing as you" grep -q 'exec /usr/bin/claude "\$@"' "$HERE/bin/claude-unsandboxed"
 
 # ---- Another account

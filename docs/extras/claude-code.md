@@ -75,7 +75,7 @@ printf '[user]\n\tname = Claude\n\temail = noreply@anthropic.com\n[init]\n\tdefa
 # Its own ssh key (no passphrase: it uses it by itself), and GitHub's host keys
 sudo install -d -o claude-agent -g claude-agent -m 0700 /home/claude-agent/.ssh
 sudo -u claude-agent -H bash -c 'cd && ssh-keygen -q -t ed25519 -N "" -C "claude-agent@$(hostname)" -f .ssh/id_ed25519'
-curl -fsS https://api.github.com/meta | python3 -c 'import json,sys; [print("github.com " + k) for k in json.load(sys.stdin)["ssh_keys"]]' |
+wget -qO- https://api.github.com/meta | python3 -c 'import json,sys; [print("github.com " + k) for k in json.load(sys.stdin)["ssh_keys"]]' |
     sudo install -o claude-agent -g claude-agent -m 0644 /dev/stdin /home/claude-agent/.ssh/known_hosts
 
 # The firewall rule: claude-agent reaches the internet only, not this
