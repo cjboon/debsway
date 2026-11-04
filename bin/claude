@@ -23,8 +23,9 @@ if [ -n "$account" ]; then
     [[ $account =~ ^[a-z][a-z0-9]{0,14}$ ]] || die "an account name is small letters and digits, a letter first."
 fi
 
-# From a launcher: a window to ask and run in
-if { [ ! -t 0 ] || [ ! -t 1 ]; } && [ -n "${WAYLAND_DISPLAY:-}" ] && [ -z "${CLAUDE_CHOOSER_WINDOW:-}" ] && command -v foot >/dev/null; then
+# From a launcher (Super+d, then claude): a window to ask and run in. Only with
+# no terminal at all: claude --help | grep, from a terminal, stays in it
+if [ ! -t 0 ] && [ ! -t 1 ] && [ -n "${WAYLAND_DISPLAY:-}" ] && [ -z "${CLAUDE_CHOOSER_WINDOW:-}" ] && command -v foot >/dev/null; then
     exec foot --title=Claude env CLAUDE_CHOOSER_WINDOW=1 "$0" ${account:+--account "$account"} "$@"
 fi
 

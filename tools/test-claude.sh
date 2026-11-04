@@ -118,6 +118,21 @@ ch() {
     fi
 }
 ran() { cat "$C/ran" 2>/dev/null; }
+# From a launcher (no terminal, a sway session): it opens a window and runs in
+# that; from a terminal, with its output piped, it stays where it is
+mkdir -p "$C/fake"
+printf '#!/bin/sh\necho "foot $*" >"%s/foot-ran"\n' "$C" >"$C/fake/foot"
+chmod +x "$C/fake/foot"
+cp "$C/claude-regular" "$C/home/.local/bin/"
+rm -f "$C/foot-ran"
+(cd "$C/elsewhere" && env -u CLAUDE_CHOOSER_WINDOW WAYLAND_DISPLAY=wayland-9 PATH="$C/fake:$PATH" HOME="$C/home" WREN_PASSWD="$C/passwd" \
+    bash "$HERE/bin/claude" </dev/null >/dev/null 2>&1)
+check "claude from a launcher (Super+d): it opens a foot window and runs in it" \
+    bash -c 'grep -q "^foot --title=Claude env CLAUDE_CHOOSER_WINDOW=1 .*/bin/claude" "$1"' _ "$C/foot-ran"
+rm -f "$C/foot-ran" "$C/ran"
+(cd "$C/elsewhere" && env -u CLAUDE_CHOOSER_WINDOW WAYLAND_DISPLAY=wayland-9 PATH="$C/fake:$PATH" HOME="$C/home" WREN_PASSWD="$C/passwd" \
+    script -qec "bash $HERE/bin/claude --help | cat" /dev/null >/dev/null 2>&1)
+check "...but claude --help | cat in a terminal stays there, no window" bash -c '[ ! -e "$1/foot-ran" ] && [[ $(cat "$1/ran") == "claude-regular --help in "* ]]' _ "$C"
 have
 ch no-terminal
 check "claude with nothing set up: it says how" grep -q 'wrenctl install claude-vm' "$C/out"
