@@ -330,6 +330,7 @@ dev_test git-init "git-init.sh: a copy from a stick, connected to what was publi
 dev_test site "The website (site/, tools/build-site.sh): plain HTML, no script, built from a signed commit" "website checks"
 dev_test setup-vps "The VPS setup (tools/setup-vps.sh), with a pretend root folder" "VPS setup checks"
 dev_test vps-client "Your side of the VPS (tools/vps-client.sh): keys, Tor client file, ssh entry" "VPS client checks"
+dev_test publish-site "Publishing the site (tools/publish-site.sh): only a signed commit" "publish checks"
 
 # --------------------------------------------------------------------
 dev_test update-signed "update.sh: only what Wren Linux's own key signed, with throwaway keys" "signed update checks"
