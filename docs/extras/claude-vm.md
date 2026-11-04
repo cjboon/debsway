@@ -42,6 +42,7 @@ space (several GB) and memory while it runs.
 
 ## LIMITS
 
+- Updates install themselves in a VM built since this was added: Debian's and Claude Code's. An older VM needs `claude-vm rebuild`, or `sudo apt update && sudo apt upgrade` in `claude-vm shell`.
 - A bug in QEMU or KVM could reach this computer; a VM is a stronger wall than a user, not a perfect one.
 - It reaches the internet, so what it reads can leave the VM.
 - Treat what it pushes as untrusted until you have read it (`claude-pull` shows it first).

@@ -173,7 +173,7 @@ check "provisioning calls it on the guest's real file" \
 # installs into $T/root instead of /usr/local.
 P=$T/prov
 mkdir -p "$P/bin" "$P/srv" "$P/root" "$P/agent"
-sed -e "s|@OPENCODE_REPO@|owner/opencode|g; s|@VM_USER@|agent|g; s|/usr/local/|$P/root/usr/local/|g" \
+sed -e "s|@OPENCODE_REPO@|owner/opencode|g; s|@VM_USER@|agent|g; s|/usr/local/|$P/root/usr/local/|g; s|/etc/apt/|$P/root/etc/apt/|g" \
     "$HERE/data/opencode-vm-provision.sh" >"$P/provision.sh"
 for c in apt-get chown update-grub; do printf '#!/bin/sh\nexit 0\n' >"$P/bin/$c"; done
 # wget -qO FILE URL: the release list, or the file it names
@@ -202,12 +202,13 @@ release() {
 }
 # asset FILE...: the tarball, holding these files
 asset() { rm -rf "$P/a" && mkdir -p "$P/a" && for f; do printf 'program %s\n' "$f" >"$P/a/$f"; done && tar -czf "$P/srv/asset" -C "$P/a" "$@"; }
-prov() { rm -rf "$P/root" "$P/agent"; mkdir -p "$P/root/usr/local/bin" "$P/root/usr/local/share" "$P/agent"; PATH="$P/bin:$PATH" bash "$P/provision.sh" >"$P/out" 2>&1; }
+prov() { rm -rf "$P/root" "$P/agent"; mkdir -p "$P/root/usr/local/bin" "$P/root/usr/local/share" "$P/root/etc/apt/apt.conf.d" "$P/agent"; PATH="$P/bin:$PATH" bash "$P/provision.sh" >"$P/out" 2>&1; }
 url=https://github.com/owner/opencode/releases/download/v1.2.3/$A
 asset opencode; sum=sha256:$(sha256sum "$P/srv/asset" | cut -d' ' -f1)
 release v1.2.3 true "$url" "$sum"
 prov
 check "provisioning: an immutable release with GitHub's SHA-256 is installed" grep -qx 'program opencode' "$P/root/usr/local/bin/opencode"
+check "...the guest's security updates install themselves" grep -qx 'APT::Periodic::Unattended-Upgrade "1";' "$P/root/etc/apt/apt.conf.d/20auto-upgrades"
 check "...and its version kept" grep -qx v1.2.3 "$P/root/usr/local/share/opencode-version"
 check "...the agent told how its work gets out (AGENTS.md, where opencode reads it)" grep -q 'push to the git host' "$P/agent/.config/opencode/AGENTS.md"
 check "...and given its own ssh key" test -s "$P/agent/.ssh/id_ed25519.pub"

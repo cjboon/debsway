@@ -189,6 +189,8 @@ check "provisioning sets GRUB_TIMEOUT=0 in the guest" \
 check "and leaves GRUB's other settings alone" grep -qx 'GRUB_CMDLINE_LINUX_DEFAULT="quiet"' "$T/grub"
 check "it adds the line when there is none" grep -qx GRUB_TIMEOUT=0 "$T/grub-bare"
 check "then it runs update-grub" grep -qx updated "$T/grub.log"
+check "the guest installs its security updates by itself, Claude Code's too" bash -c '
+    grep -q "unattended-upgrades" "$1" && grep -qF "APT::Periodic::Unattended-Upgrade \"1\";" "$1" && grep -qF "site=downloads.claude.ai" "$1"' _ "$HERE/data/claude-vm-provision.sh"
 check "provisioning calls it on the guest's real file" \
     grep -q '^grub_no_wait /etc/default/grub' "$HERE/data/claude-vm-provision.sh"
 

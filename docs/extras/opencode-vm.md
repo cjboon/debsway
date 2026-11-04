@@ -43,6 +43,7 @@ by pushing to a git host you pull from, after you have read it. It needs KVM.
 
 ## LIMITS
 
+- Debian's updates install themselves in a VM built since this was added; opencode itself doesn't update: `opencode-vm rebuild` gets the newest. An older VM needs a rebuild too.
 - opencode's download is checked against GitHub's own SHA-256, not a signature: a hijacked maintainer account could publish a bad release. The VM is what limits that.
 - What it writes is code from a program you don't control: read the diff before you merge it, and run nothing it wrote before you have.
 - It reaches the internet, and the model provider you choose sees your prompts and the code it reads.

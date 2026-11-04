@@ -64,6 +64,13 @@ log "Installing Claude Code"
 apt-get update
 apt-get install -y --no-install-recommends claude-code
 
+log "Security updates install themselves, in the guest too"
+apt-get -y upgrade
+apt-get install -y --no-install-recommends unattended-upgrades
+printf '%s\n' 'APT::Periodic::Update-Package-Lists "1";' 'APT::Periodic::Unattended-Upgrade "1";' >/etc/apt/apt.conf.d/20auto-upgrades
+# ...and Claude Code's, from Anthropic's repository
+printf '%s\n' 'Unattended-Upgrade::Origins-Pattern:: "site=downloads.claude.ai";' >/etc/apt/apt.conf.d/52wren-claude-code
+
 # The guest's working user (the Debian installer made it with uid 1000).
 home=$(getent passwd "$VM_USER" | cut -d: -f6)
 [ -n "$home" ] || die "guest user $VM_USER not found"

@@ -61,6 +61,11 @@ else:
 PY
 }
 
+log "Security updates install themselves, in the guest too"
+apt-get -y upgrade
+apt-get install -y --no-install-recommends unattended-upgrades
+printf '%s\n' 'APT::Periodic::Update-Package-Lists "1";' 'APT::Periodic::Unattended-Upgrade "1";' >/etc/apt/apt.conf.d/20auto-upgrades
+
 log "The newest opencode release"
 work=$(mktemp -d)
 wget -qO "$work/release.json" "https://api.github.com/repos/$REPO/releases/latest" ||
