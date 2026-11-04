@@ -9,6 +9,7 @@ HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 T=$(mktemp -d)
 trap 'rm -rf "$T"' EXIT
 fails=0
+not() { ! "$@"; }
 check() { # DESCRIPTION CONDITION-COMMAND...
     local what=$1
     shift
@@ -97,5 +98,21 @@ chmod -R a-w "$T/root"
 out=$(HOME="$T/home" bash "$S/update.sh" 2>&1)
 check "wrenctl update from the package's copy: apt brings what is new, and it runs again what that changed" grep -q "installed here as the Wren Linux package" <<<"$out"
 chmod -R u+w "$T/root"
+
+# lintian: remarks are one thing, lintian itself failing another
+LC=$(sed -n '/^lintian_check() {/,/^}/p' "$HERE/tools/build-deb.sh")
+# shellcheck disable=SC2317,SC2329  # lintian is called by the function in LC
+lc_rc() { ( lc_code=$1; lintian() { return "$lc_code"; }; eval "$LC"; lintian_check x 2>&1 ); }
+check "lintian content: nothing more to say" test -z "$(lc_rc 0)"
+check "lintian with remarks: says so" grep -q 'has remarks' <<<"$(lc_rc 1)"
+check "lintian itself failing (a bad option is 25): says the package was NOT checked" bash -c 'grep -q "NOT checked" <<<"$1" && ! grep -q "has remarks" <<<"$1"' _ "$(lc_rc 25)"
+# The option as this lintian takes it: fails here, in the tests, when one is renamed
+if command -v lintian >/dev/null; then
+    opt=$(sed -n 's/^ *lintian \(--[^"]*\) "\$1".*/\1/p' "$HERE/tools/build-deb.sh")
+    # shellcheck disable=SC2086  # the options, as the script has them
+    out=$(lintian $opt /nonexistent.deb 2>&1); rc=$?
+    check "this lintian takes the options build-deb.sh gives it" test "$rc" != 25
+    check "...and doesn't warn that it will stop taking them" not grep -qi 'future release' <<<"$out"
+fi
 
 [ "$fails" -eq 0 ]

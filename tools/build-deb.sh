@@ -133,8 +133,19 @@ deb=$out/wren-linux_${version}_all.deb
 dpkg-deb --root-owner-group -Zxz --build "$R" "$deb" >/dev/null
 echo "$deb"
 sha256sum "$deb" | cut -d' ' -f1 | sed 's/^/SHA-256: /'
+# Remarks (exit 1) are one thing; lintian itself failing, as it would on an option
+# a new version no longer takes, is another: then nothing was checked
+lintian_check() {
+    local rc=0
+    lintian --tag-display-limit 0 "$1" || rc=$?
+    case $rc in
+        0) ;;
+        1) echo "(lintian has remarks: see above)" ;;
+        *) echo "!! lintian itself failed (exit $rc), so this package was NOT checked by it. Has one of its options changed? See tools/build-deb.sh" >&2 ;;
+    esac
+}
 if command -v lintian >/dev/null; then
-    lintian --no-tag-display-limit "$deb" || echo "(lintian has remarks: see above)"
+    lintian_check "$deb"
 else
     echo "(lintian isn't installed, so the package wasn't checked by it: wrenctl install wren-dev)"
 fi
