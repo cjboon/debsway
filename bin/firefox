@@ -17,7 +17,7 @@
 # firefox-esr runs Firefox as you, with all your files and no such rules.
 # - A profile made with new-profile.sh has a user of its own (fx-NAME), its own
 #   downloads folder (~/Downloads/NAME) and runs next to the others:
-#   firefox --profile NAME   (the firefox-NAME command does this)
+#   firefox --profile NAME   (its own command, NAME or firefox-NAME, does this)
 #   firefox [--no-audio] [--profile NAME] [URL...]
 set -euo pipefail
 

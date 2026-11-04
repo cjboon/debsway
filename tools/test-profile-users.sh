@@ -68,16 +68,33 @@ check "it lets your user run the session script as fx-bank" grep -qF "ALL=(fx-ba
 check "...and nothing else (one rule line)" test "$(grep -c NOPASSWD "$T/files/wren-fx-bank")" -eq 1
 
 # a whole profile
-: >"$T/calls"; rm -rf "$T/files"/*; rm -f "$T/home/.local/bin/firefox-bank"
+: >"$T/calls"; rm -rf "$T/files"/*; rm -f "$T/home/.local/bin/firefox-bank" "$T/home/.local/bin/bank"
+# a firefox-bank command from an older version, ours: the new one replaces it
+mkdir -p "$T/home/.local/bin"
+printf '#!/bin/sh\n# Written by Wren Linux extras/firefox-profiles/new-profile.sh\nexec firefox --profile bank\n' >"$T/home/.local/bin/firefox-bank"
 echo fx-bank >"$T/made"
 out=$(run x x 'make_profile bank https://bank.example/ no' 2>&1)
 check "make_profile writes the profile's settings where only root can" test -f "$T/files/bank.conf" && grep -q 'sudo tee /etc/wren/firefox-profiles/bank.conf' "$T/calls"
 check "...the address" grep -qx 'url=https://bank.example/' "$T/files/bank.conf"
 check "...and the JavaScript choice" grep -qx 'fast_js=no' "$T/files/bank.conf"
 check "it allows the session for that user only" test -f "$T/files/wren-fx-bank"
-check "the firefox-bank command runs the sandbox with the profile name" grep -q "firefox --profile bank" "$T/home/.local/bin/firefox-bank"
-check "...and is executable" test -x "$T/home/.local/bin/firefox-bank"
-check "...and is one remove_profile will recognise as ours" grep -q 'Written by Wren Linux extras/firefox-profiles/new-profile.sh' "$T/home/.local/bin/firefox-bank"
+check "the command is the profile's name, bank, and runs the sandbox with that profile" grep -q "firefox --profile bank" "$T/home/.local/bin/bank"
+check "...and is executable" test -x "$T/home/.local/bin/bank"
+check "...and is one remove_profile will recognise as ours" grep -q 'Written by Wren Linux extras/firefox-profiles/new-profile.sh' "$T/home/.local/bin/bank"
+check "...an older firefox-bank of ours is gone: one command per profile" test ! -e "$T/home/.local/bin/firefox-bank"
+check "...it says how to start it" grep -q 'Start it with: bank ' <<<"$out"
+check "cookies are kept unless asked (cookies=keep)" grep -qx 'cookies=keep' "$T/files/bank.conf"
+run x x 'make_profile mailx https://mail.example/ no hidden yes delete' >/dev/null 2>&1
+check "...--delete-cookies writes cookies=delete, in the file only root can write" grep -qx 'cookies=delete' "$T/files/mailx.conf"
+check "...and a cookies value that isn't keep or delete is refused" not run x x 'make_profile crumb https://x.example/ no hidden yes maybe'
+# a name that is a command already (ls) or a shell builtin (cd): firefox-NAME,
+# never a command that would stand in for that program
+: >"$T/calls"
+out_ls=$(run x x 'make_profile ls https://ls.example/ no' 2>&1)
+check "a name that is a program already (ls): its command is firefox-ls, not ls" bash -c '
+    [ -e "$1/firefox-ls" ] && [ ! -e "$1/ls" ] && grep -q "is a command already, so this one is called firefox-ls" <<<"$2"' _ "$T/home/.local/bin" "$out_ls"
+run x x 'make_profile cd https://cd.example/ no' >/dev/null 2>&1
+check "...nor a shell builtin (cd)" bash -c '[ -e "$1/firefox-cd" ] && [ ! -e "$1/cd" ]' _ "$T/home/.local/bin"
 check "it tells where the downloads go" grep -q 'Downloads/bank' <<<"$out"
 : >"$T/calls"
 run x x 'make_profile shop https://shop.example/ yes' >/dev/null 2>&1
@@ -94,6 +111,8 @@ check "...and a sound value that isn't yes or no is refused" not run x x 'make_p
 check "new-profile.sh takes --no-sound, and asks about sound when run without a name" \
     bash -c 'grep -q -- "--no-sound) sound=no" "$1" && grep -q "Sound from this site" "$1" && grep -q "make_profile \"\$name\" \"\$url\" \"\$fast\" \"\$toolbars\" \"\$sound\"" "$1"' _ "$HERE/extras/firefox-profiles/new-profile.sh"
 check "new-profile.sh takes --show-toolbars" grep -q -- '--show-toolbars) toolbars=shown' "$HERE/extras/firefox-profiles/new-profile.sh"
+check "new-profile.sh takes --delete-cookies, and asks about cookies when run without a name" \
+    bash -c 'grep -q -- "--delete-cookies) cookies=delete" "$1" && grep -q "When this profile closes, its cookies" "$1" && grep -q "make_profile .* \"\$cookies\"$" "$1"' _ "$HERE/extras/firefox-profiles/new-profile.sh"
 # the session hides tabs, address bar and bookmarks for a profile, unless toolbars=shown
 FS=$HERE/bin/firefox-session
 check "the session hides the toolbars of a profile with userChrome.css" \
@@ -101,19 +120,35 @@ check "the session hides the toolbars of a profile with userChrome.css" \
 check "...only for a profile, and not when its settings say toolbars=shown" \
     bash -c 'sed -n "/^if \[ -n \"\$tag\" \]; then/,/^fi/p" "$1" | grep -q "if \[ \"\$toolbars\" != shown \]; then"' _ "$FS"
 
+# the session's cookie settings, for the main Firefox and for a profile
+check "the session: delete clears cookies, site data and cache when it closes, not history" bash -c '
+    eval "$(sed -n "/^cookies_on_close() {/,/^}/p" "$1")"; o=$(cookies_on_close delete)
+    grep -q "sanitizeOnShutdown\", true" <<<"$o" && grep -q "cookiesAndStorage\", true" <<<"$o" && grep -q "browsingHistoryAndDownloads\", false" <<<"$o"' _ "$FS"
+check "...keep, or nothing said (older settings): kept" bash -c '
+    eval "$(sed -n "/^cookies_on_close() {/,/^}/p" "$1")"; [ "$(cookies_on_close keep)" = "$(cookies_on_close "")" ] && cookies_on_close keep | grep -q "sanitizeOnShutdown\", false"' _ "$FS"
+check "...a profile takes it from its own settings file" \
+    bash -c 'sed -n "/^if \[ -n \"\$tag\" \]; then/,/^fi/p" "$1" | grep -q "cookies_on_close \"\$(sed -n .s/^cookies=//p. \"\$conf\""' _ "$FS"
+
 # names that cannot be a user are refused before anything happens
 : >"$T/calls"
 for bad in Bank 1bank 'bank_x' abcdefghijklmnopqrstuvwxyzabcdefghij '' esr restart-check session; do
     check "the profile name \"$bad\" is refused" not run x x "make_profile '$bad' https://x.example/ no"
 done
 check "...and nothing was run for them" test ! -s "$T/calls"
-# a firefox-NAME command that someone else wrote is refused before a user is made
+# a command of yours called NAME: firefox-NAME instead; and when that is
+# yours too, refused before a user is made
 mkdir -p "$T/home/.local/bin"
+printf '#!/bin/sh\necho mine\n' >"$T/home/.local/bin/notes"
+echo fx-notes >>"$T/made"
+run x x 'make_profile notes https://notes.example/ no' >/dev/null 2>&1
+check "a command of yours called NAME is left alone: the profile's is firefox-NAME" bash -c '
+    grep -qx "echo mine" "$1/notes" && grep -q "firefox --profile notes" "$1/firefox-notes"' _ "$T/home/.local/bin"
+printf '#!/bin/sh\necho mine\n' >"$T/home/.local/bin/work"
 printf '#!/bin/sh\necho mine\n' >"$T/home/.local/bin/firefox-work"
 : >"$T/calls"
-check "a name whose firefox-NAME command isn't Wren Linux's is refused" not run x x 'make_profile work https://work.example/ no'
+check "...both yours (work, firefox-work): refused" not run x x 'make_profile work https://work.example/ no'
 check "...before any user, rule or settings file is made" test ! -s "$T/calls"
-check "...and that command is left as it was" grep -qx 'echo mine' "$T/home/.local/bin/firefox-work"
+check "...and those commands are left as they were" bash -c 'grep -qx "echo mine" "$1/work" && grep -qx "echo mine" "$1/firefox-work"' _ "$T/home/.local/bin"
 
 # the sandboxed Firefox can't be removed while profiles still run through it
 # (the guard is tested on its own: the extra itself would run the real sudo)
@@ -133,7 +168,7 @@ check "the extra asks it first thing when removing, before any change" \
 : >"$T/calls"; : >"$T/answers"; echo n >"$T/answers"
 echo fx-bank >"$T/made"
 run x x 'remove_profile bank' >/dev/null 2>&1
-check "removing takes away the command" test ! -e "$T/home/.local/bin/firefox-bank"
+check "removing takes away the command" test ! -e "$T/home/.local/bin/bank"
 check "...the permission to run the session" grep -q 'sudo rm -f /etc/sudoers.d/wren-fx-bank' "$T/calls"
 check "...and the settings file" grep -q 'sudo rm -f /etc/wren/firefox-profiles/bank.conf' "$T/calls"
 check "saying no keeps the user and the logins" not grep -q 'userdel' "$T/calls"

@@ -265,7 +265,8 @@ try to reach, even if only the holder of your keys can get in.
 
 `bash extras/firefox-profiles/new-profile.sh` gives a website you stay logged
 into (a bank, email, shopping, a work account) its own Firefox profile
-and a `firefox-NAME` command. See `extras/firefox-profiles/README.md` for why
+and a command named after it (`bank`, or `firefox-bank` when a program has
+that name). See `extras/firefox-profiles/README.md` for why
 that's useful.
 
 ## Firefox (`extras/firefox-sandbox.sh`)

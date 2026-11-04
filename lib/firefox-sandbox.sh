@@ -13,7 +13,8 @@ FX_SESSION=${WREN_FX_SESSION:-/usr/local/libexec/firefox-session}
 FX_CLIENT=${WREN_FX_CLIENT:-/usr/local/bin/firefox}
 
 # fx_profile_name_ok NAME: a name that makes a valid user, fx-NAME (at most 31
-# characters), and a command, firefox-NAME, that isn't one already: firefox-esr
+# characters), and a command, firefox-NAME (when NAME itself is taken:
+# lib/firefox-profiles.sh), that isn't one already: firefox-esr
 # is Firefox itself, and Wren Linux has firefox-restart-check and firefox-session
 fx_profile_name_ok() {
     [[ $1 =~ ^[a-z][a-z0-9-]{0,27}$ ]] || return 1

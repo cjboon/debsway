@@ -12,7 +12,13 @@ It asks for a short name (e.g. `bank`) and the site's address, and makes:
   (`extras/firefox-sandbox.sh`): no password, no login, none of your files,
 - a Firefox profile in that user's home, with its own cookies, logins,
   history and settings, which opens that site when it starts, and
-- a command, `firefox-bank`, that starts it. Super+d finds it too.
+- a command, `bank`, that starts it. Super+d finds it too. When a program is
+  called that already (`git`, `mail`...), the command is `firefox-bank`
+  instead, so it never stands in for that program.
+
+It asks whether to keep the profile's cookies when it closes (keep: you stay
+logged in, the usual reason for a profile) or delete them (logged out each
+time; `--delete-cookies`).
 
 Its window shows only the page: no tabs, address bar or bookmarks bar, and
 links open in the same tab. The keys still work (Alt+Left back, Alt+Right
@@ -38,7 +44,7 @@ see the cookies, logins or stored data of another, so:
   available to every other site.
 
 Each profile runs as its own Firefox, as its own user, so they can be open side by side.
-Pass an address to open it in that profile: `firefox-bank https://mybank.example/statements`.
+Pass an address to open it in that profile: `bank https://mybank.example/statements`.
 
 Good candidates: banking, email, crypto exchanges, shopping, a Google
 or work account, social media. Sites you don't log into don't need one.
@@ -61,7 +67,7 @@ or work account, social media. Sites you don't log into don't need one.
 - **Still shared:** the kernel (a kernel bug could still get out), and your IP
   address. Disk encryption, few extensions and Tor Browser (for anonymity)
   cover the rest; see `THREAT-MODEL.md` in the main folder.
-- **Settings:** the address and the JavaScript choice are in
+- **Settings:** the address and its choices (JavaScript, sound, cookies) are in
   `/etc/wren/firefox-profiles/NAME.conf`, writable only by root, so a hacked
   profile can't change them.
 
@@ -80,7 +86,7 @@ that one profile only.
 ## Removing one
 
 `bash extras/firefox-profiles/new-profile.sh --remove bank` removes the
-`firefox-bank` command, the permission to run it and its settings file, then
+`bank` command (or `firefox-bank`, from an older version), the permission to run it and its settings file, then
 asks whether to delete the profile's logins and its user too. Say no and they
 are kept (the user stays locked) until you remove them. Files it downloaded
 stay in `~/Downloads/bank`.

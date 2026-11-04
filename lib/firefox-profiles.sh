@@ -5,18 +5,46 @@
 # Files written by the scripts here
 OURS='Wren Linux (extras/)?firefox-profiles/[a-z-]+\.sh'
 
-# make_profile NAME URL FAST [TOOLBARS [SOUND]]: a Firefox profile with a locked-down
-# user of its own (fx-NAME), its settings, and the firefox-NAME command.
+# fx_cmd_taken NAME: a command, builtin or keyword is called NAME already.
+# ~/.local/bin comes first in PATH, so a profile's command must never take
+# such a name: it would stand in for that program (git, sudo, ls...).
+fx_cmd_taken() {
+    local d
+    [ -z "$(type -t "$1")" ] || return 0
+    for d in /usr/local/sbin /usr/local/bin /usr/sbin /usr/bin /sbin /bin /usr/local/games /usr/games "$HOME/bin"; do
+        [ ! -e "$d/$1" ] || return 0
+    done
+    return 1
+}
+# fx_profile_cmd NAME: the command that opens the profile NAME: NAME itself
+# (github), or firefox-NAME when NAME is taken or one of yours (not ours) is there
+fx_profile_cmd() {
+    local short=$BIN/$1
+    if [ -e "$short" ]; then
+        if grep -qsE "$OURS" "$short"; then echo "$short"; return; fi
+    elif ! fx_cmd_taken "$1"; then
+        echo "$short"
+        return
+    fi
+    echo "$BIN/firefox-$1"
+}
+
+# make_profile NAME URL FAST [TOOLBARS [SOUND [COOKIES]]]: a Firefox profile with a
+# locked-down user of its own (fx-NAME), its settings, and a command that opens
+# it: NAME, or firefox-NAME when NAME is a command already (fx_profile_cmd).
 # FAST=yes turns the JavaScript JIT back on for this profile only. TOOLBARS is
 # hidden (the default: the window shows only the page) or shown. SOUND is yes
-# (the default) or no. The user is like the sandboxed
+# (the default) or no. COOKIES is keep (the default: you stay logged in) or
+# delete (cookies, site data and the cache go when it closes). The user is like the sandboxed
 # Firefox's (extras/firefox-sandbox.sh): no password, no login, none of your
 # files; only the clipboard and ~/Downloads/NAME are shared with you.
 make_profile() {
-    local name=$1 url=$2 fast=$3 toolbars=${4:-hidden} sound=${5:-yes} cmd="$BIN/firefox-$1" user=fx-$1 conf
+    local name=$1 url=$2 fast=$3 toolbars=${4:-hidden} sound=${5:-yes} cookies=${6:-keep} cmd user=fx-$1 conf
     case $toolbars in hidden | shown) ;; *) die "TOOLBARS is hidden or shown, not \"$toolbars\"." ;; esac
     case $sound in yes | no) ;; *) die "SOUND is yes or no, not \"$sound\"." ;; esac
+    case $cookies in keep | delete) ;; *) die "COOKIES is keep or delete, not \"$cookies\"." ;; esac
     fx_profile_name_ok "$name" || die "\"$name\" can't be a profile name: lowercase letters, digits and dashes, starting with a letter, at most 28 long (and not esr, restart-check or session)."
+    cmd=$(fx_profile_cmd "$name")
     # A firefox-NAME command that isn't ours: stop before any user or rule is made
     if [ -e "$cmd" ] && ! grep -qsE "$OURS" "$cmd"; then
         die "$cmd already exists and isn't Wren Linux's; pick another name. Nothing was changed."
@@ -34,10 +62,10 @@ make_profile() {
     # firefox command, for sound)
     conf="$FX_PROFILE_DIR/$name.conf"
     sudo install -d -o root -g root -m 0755 "$FX_PROFILE_DIR"
-    printf '# Written by Wren Linux extras/firefox-profiles/new-profile.sh\nurl=%s\nfast_js=%s\ntoolbars=%s\nsound=%s\n' "$url" "$fast" "$toolbars" "$sound" |
+    printf '# Written by Wren Linux extras/firefox-profiles/new-profile.sh\nurl=%s\nfast_js=%s\ntoolbars=%s\nsound=%s\ncookies=%s\n' "$url" "$fast" "$toolbars" "$sound" "$cookies" |
         sudo tee "$conf" >/dev/null
     fx_allow_session "$user"
-    note "$name: opens $url$([ "$fast" = yes ] && echo ', fast JavaScript')$([ "$sound" = no ] && echo ', no sound'); runs as $user"
+    note "$name: opens $url$([ "$fast" = yes ] && echo ', fast JavaScript')$([ "$sound" = no ] && echo ', no sound')$([ "$cookies" = delete ] && echo ', cookies deleted when it closes'); runs as $user"
     if [ "$toolbars" = hidden ]; then
         note "Its window shows only the page: no tabs or address bar. Keys still work:"
         note "  Alt+Left back, Alt+Right forward, F5 reload, Ctrl+W close."
@@ -46,39 +74,56 @@ make_profile() {
     mkdir -p "$BIN"
     cat >"$cmd" <<EOF
 #!/bin/sh
-# firefox-$name: $url in its own Firefox profile, as its own locked-down user.
+# ${cmd##*/}: $url in its own Firefox profile, as its own locked-down user.
 # Written by Wren Linux extras/firefox-profiles/new-profile.sh
 exec $FX_CLIENT --profile $name "\$@"
 EOF
     chmod +x "$cmd"
-    note "Start it with: firefox-$name   (Super+d finds it too)"
+    # the other name, from an older version: one command per profile
+    fx_remove_cmd "$name" "$cmd"
+    if [ "$cmd" != "$BIN/$name" ]; then
+        note "\"$name\" is a command already, so this one is called ${cmd##*/}."
+    fi
+    note "Start it with: ${cmd##*/}   (Super+d finds it too)"
     note "Its downloads go to ~/Downloads/$name; it cannot read your files or the other profiles'."
     # Debian's standard ~/.profile adds ~/.local/bin to PATH at login
     grep -qs '\.local/bin' "$HOME/.profile" ||
         warn "$BIN isn't added to your PATH by ~/.profile; start it as $cmd"
 }
 
-# remove_profile NAME: removes firefox-NAME. A profile with a user of its own
-# (made by this version) loses its sudo rule and its settings file, and you are
-# asked whether to delete the logins and the user too; the older kind (a profile
-# in your own Firefox) keeps its profile, as before.
+# fx_remove_cmd NAME [KEEP]: removes the profile's commands that are ours (NAME,
+# firefox-NAME), but KEEP
+fx_remove_cmd() {
+    local c
+    for c in "$BIN/$1" "$BIN/firefox-$1"; do
+        if [ "$c" != "${2:-}" ] && grep -qsE "$OURS" "$c"; then rm -f "$c"; fi
+    done
+}
+
+# remove_profile NAME: removes its command (NAME or firefox-NAME). A profile with
+# a user of its own (made by this version) loses its sudo rule and its settings
+# file, and you are asked whether to delete the logins and the user too; the
+# older kind (a profile in your own Firefox) keeps its profile, as before.
 remove_profile() {
-    local name=$1 cmd="$BIN/firefox-$1" user=fx-$1 sandboxed=false
-    if ! grep -qsE "$OURS" "$cmd"; then
-        note "firefox-$name isn't set up."
+    local name=$1 c cmd='' user=fx-$1 sandboxed=false
+    for c in "$BIN/$name" "$BIN/firefox-$name"; do
+        if grep -qsE "$OURS" "$c"; then cmd=$c; fi
+    done
+    if [ -z "$cmd" ]; then
+        note "The profile $name isn't set up."
         return 0
     fi
     # (decided from the launcher, before it is removed)
     if grep -qs -e 'firefox --profile' "$cmd"; then sandboxed=true; fi
-    rm -f "$cmd"
+    fx_remove_cmd "$name"
     if ! $sandboxed; then
-        note "Removed firefox-$name. The profile and its logins are kept;"
+        note "Removed ${cmd##*/}. The profile and its logins are kept;"
         note "delete it in Firefox at about:profiles if you want it gone."
         return 0
     fi
     fx_disallow_session "$user"
     sudo rm -f "$FX_PROFILE_DIR/$name.conf"
-    note "Removed firefox-$name and the permission to run it."
+    note "Removed ${cmd##*/} and the permission to run it."
     if id "$user" >/dev/null 2>&1; then
         note "Its logins and history are kept in $FX_HOME_ROOT/$name (user $user, locked)."
         if ask "Delete them and the user too?" n; then

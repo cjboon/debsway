@@ -239,13 +239,10 @@ jit_on() {
 if [ -z "$tag" ] && [ "$(sed -n 's/^fast_js=//p' /etc/wren/firefox.conf 2>/dev/null | head -1)" = yes ]; then
     jit_on >>"$profile/user.js"
 fi
-# Cookies, site data and the cache deleted when it closes, when that was
-# chosen at its install (the question's default; an install from before the
-# question keeps them until it is asked; a profile for one site keeps them:
-# that is what it is for). Only those: Firefox's own defaults would take
-# history and downloads too.
-if [ -z "$tag" ] && [ "$(sed -n 's/^cookies=//p' /etc/wren/firefox.conf 2>/dev/null | head -1)" = delete ]; then
-    {
+# Cookies, site data and the cache deleted when it closes (COOKIES delete), or
+# kept. Only those: Firefox's own defaults would take history and downloads too.
+cookies_on_close() { # delete | keep
+    if [ "$1" = delete ]; then
         echo 'user_pref("privacy.sanitize.sanitizeOnShutdown", true);'
         echo 'user_pref("privacy.clearOnShutdown_v2.cookiesAndStorage", true);'
         echo 'user_pref("privacy.clearOnShutdown_v2.cache", true);'
@@ -253,21 +250,29 @@ if [ -z "$tag" ] && [ "$(sed -n 's/^cookies=//p' /etc/wren/firefox.conf 2>/dev/n
         echo 'user_pref("privacy.clearOnShutdown_v2.browsingHistoryAndDownloads", false);'
         echo 'user_pref("privacy.clearOnShutdown_v2.formdata", false);'
         echo 'user_pref("privacy.clearOnShutdown_v2.siteSettings", false);'
-    } >>"$profile/user.js"
-elif [ -z "$tag" ]; then
-    echo 'user_pref("privacy.sanitize.sanitizeOnShutdown", false);' >>"$profile/user.js"
+    else
+        echo 'user_pref("privacy.sanitize.sanitizeOnShutdown", false);'
+    fi
+}
+# The main Firefox: as chosen at its install (the question's default is
+# delete; an install from before the question keeps them until it is asked)
+if [ -z "$tag" ]; then
+    cookies_on_close "$(sed -n 's/^cookies=//p' /etc/wren/firefox.conf 2>/dev/null | head -1)" >>"$profile/user.js"
 fi
-# A profile with its own user: its address and its JavaScript choice are in a file
-# only root can write (/etc/wren/firefox-profiles/NAME.conf)
+# A profile with its own user: its address and its choices are in a file
+# only root can write (/etc/wren/firefox-profiles/NAME.conf). Its cookies are
+# kept unless it says cookies=delete: staying logged in to one site is what
+# most profiles are for.
 if [ -n "$tag" ]; then
     conf=/etc/wren/firefox-profiles/$tag.conf
     [ -r "$conf" ] || die "no settings for the profile $tag ($conf)."
+    cookies_on_close "$(sed -n 's/^cookies=//p' "$conf" | head -1)" >>"$profile/user.js"
     url=$(sed -n 's/^url=//p' "$conf" | head -1)
     fast=$(sed -n 's/^fast_js=//p' "$conf" | head -1)
     toolbars=$(sed -n 's/^toolbars=//p' "$conf" | head -1)
     [[ $url =~ ^https?://[A-Za-z0-9.-]+(:[0-9]+)?(/[A-Za-z0-9._~/?#=%+,@-]*)?$ ]] || die "the address in $conf isn't a plain web address."
     {
-        echo "// The profile $tag: opens $url on start; keeps its cookies and logins."
+        echo "// The profile $tag: opens $url on start; keeps its logins."
         echo 'user_pref("browser.startup.page", 1);'
         echo "user_pref(\"browser.startup.homepage\", \"$url\");"
         if [ "$fast" = yes ]; then jit_on; fi
