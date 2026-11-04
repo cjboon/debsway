@@ -261,7 +261,7 @@ text_editor() {
 }
 # app NAME...: the first of these commands that is installed, from APPS (where
 # Wren Linux and Debian put them; WREN_MENU_APPS: a test's own list)
-APPS=${WREN_MENU_APPS-/usr/bin/thunar /usr/bin/keepassxc $HOME/.local/bin/tuta /usr/bin/signal-desktop $HOME/.local/bin/simplex $HOME/.local/bin/claude $HOME/.local/bin/opencode-vm $HOME/.local/bin/vault $HOME/.local/bin/backup $HOME/.local/bin/theme $HOME/.local/bin/secure-dns /usr/local/bin/wifi-signin}
+APPS=${WREN_MENU_APPS-/usr/bin/thunar /usr/bin/keepassxc /usr/bin/signal-desktop $HOME/.local/bin/simplex $HOME/.local/bin/claude $HOME/.local/bin/opencode-vm $HOME/.local/bin/vault $HOME/.local/bin/backup $HOME/.local/bin/theme $HOME/.local/bin/secure-dns /usr/local/bin/wifi-signin}
 app() {
     local want c
     for want; do
@@ -281,11 +281,10 @@ if [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null; then
     BROWSER=$(web_browser) EDITOR_CMD=$(text_editor)
     if [ -n "$BROWSER" ]; then ids+=(browser); items+=("Web browser"); fi
     if [ -n "$EDITOR_CMD" ]; then ids+=(editor); items+=("Text editor"); fi
-    FILES_CMD=$(app thunar) PASSWORDS_CMD=$(app keepassxc) MAIL_CMD=$(app tuta) CLAUDE_CMD=$(claude_cmd)
+    FILES_CMD=$(app thunar) PASSWORDS_CMD=$(app keepassxc) CLAUDE_CMD=$(claude_cmd)
     SIGNAL_CMD=$(app signal-desktop) SIMPLEX_CMD=$(app simplex) OPENCODE_CMD=$(app opencode-vm)
     if [ -n "$FILES_CMD" ]; then ids+=(files); items+=("File manager"); fi
     if [ -n "$PASSWORDS_CMD" ]; then ids+=(passwords); items+=("Password manager"); fi
-    if [ -n "$MAIL_CMD" ]; then ids+=(mail); items+=(Mail); fi
     if [ -n "$SIGNAL_CMD" ]; then ids+=(signal); items+=(Signal); fi
     if [ -n "$SIMPLEX_CMD" ]; then ids+=(simplex); items+=(SimpleX); fi
     if [ -n "$CLAUDE_CMD" ]; then ids+=(claude); items+=(Claude); fi
@@ -418,7 +417,7 @@ run_choice() {
             case ${ids[sel]} in
                 signin) cmd=$SIGNIN_CMD ;;
                 files) cmd=$FILES_CMD ;; passwords) cmd=$PASSWORDS_CMD ;;
-                mail) cmd=$MAIL_CMD ;; signal) cmd=$SIGNAL_CMD ;;
+                signal) cmd=$SIGNAL_CMD ;;
                 simplex) cmd=$SIMPLEX_CMD ;; claude) cmd=$CLAUDE_CMD ;;
                 opencode) cmd=$OPENCODE_CMD ;;
             esac

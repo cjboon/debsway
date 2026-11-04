@@ -12,7 +12,7 @@ this page to decide what else you need.
   its fixed version (not the sandboxed `firefox`, its profiles or
   `incognito`, which run as other users: reopen those after an update). Packages from
   Mullvad's, Anthropic's, Signal's and the Tor Project's apt repositories are updated the same way. The
-  apps downloaded straight from their makers (the Feather, SimpleX and Tuta
+  apps downloaded straight from their makers (the Feather and SimpleX
   AppImages, Sparrow's .deb) are not: run their script again, or let
   `test.sh` tell you when a newer release is out.
 - **Attacks through websites.** In every Firefox profile (the Firefox

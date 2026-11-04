@@ -292,13 +292,6 @@ else
 fi
 
 # --------------------------------------------------------------------
-section "Tuta Mail (extras/tutamail.sh): only Tuta's signed AppImage, never an older one"
-if out=$(bash tools/test-tutamail.sh 2>&1); then
-    ok "$(grep -c '^  ok' <<<"$out") Tuta Mail checks"
-else
-    bad "Tuta Mail checks: $(grep '  FAIL' <<<"$out" | head -3 | tr -s ' ' | paste -sd';')"
-fi
-
 # --------------------------------------------------------------------
 section "The live image's extras (parts/no-live-extras.sh), with pretend apt"
 if out=$(bash tools/test-live-extras.sh 2>&1); then
@@ -826,14 +819,6 @@ if online; then
     check_key "Tails" "$TAILS_FPR" "$TAILS_KEY_URL"
     check_key "Debian CD" "$DEBIAN_CD_FPR" "$DEBIAN_CD_KEY_URL"
     check_key "yt-dlp" "$YTDLP_FPR" "$YTDLP_KEY_URL"
-    # Tuta signs with openssl: its key in its repository is still the pinned one
-    if wget -qO "$TMP/tuta.pem" "$TUTA_KEY_URL" &&
-        [ "$(openssl pkey -pubin -in "$TMP/tuta.pem" -outform DER 2>/dev/null | sha256sum | cut -d' ' -f1)" = "$TUTA_KEY_SHA256" ]; then
-        ok "Tuta: $TUTA_KEY_SHA256 (SHA-256 of the key)"
-    else
-        bad "Tuta: the key at $TUTA_KEY_URL isn't the pinned one (or isn't there)"
-    fi
-
     # ----------------------------------------------------------------
     section "Newest releases: found, and signed by the pinned key"
     exists() { wget -q --spider "$1"; }
@@ -881,20 +866,6 @@ if online; then
         ok "SimpleX $v: signed hash list"
     else
         bad "SimpleX ${v:-?}: release, hash list or signature not as expected"
-    fi
-
-    # Tuta: the release file names a version and the signature is there (the
-    # AppImage itself is too big to fetch here)
-    v=$(wget -qO- "$TUTA_DESKTOP_URL/latest-linux.yml" | sed -n 's/^version: *\([^ ]*\) *$/\1/p' | head -1)
-    if [[ $v =~ ^[0-9]+(\.[0-9]+)+$ ]] && exists "$TUTA_DESKTOP_URL/linux-sig.bin" &&
-        exists "$TUTA_DESKTOP_URL/tutanota-desktop-linux.AppImage"; then
-        ok "Tuta Mail $v: release file, AppImage and signature (extras/tutamail.sh)"
-        have=$(installed_version tuta)
-        if [ -n "$have" ] && [ "$have" != "$v" ]; then
-            meh "tuta $have is installed, $v is out: wrenctl install tutamail"
-        fi
-    else
-        bad "Tuta Mail ${v:-?}: release file, AppImage or signature not as expected at $TUTA_DESKTOP_URL"
     fi
 
     v=$(latest_github_tag sparrowwallet/sparrow)

@@ -72,17 +72,6 @@ SIMPLEX_KEY_URL=https://keys.openpgp.org/vks/v1/by-fingerprint/BBDF7BDAD1548B168
 SPARROW_FPR=D4D0D3202FC06849A257B38DE94618334C674B40
 SPARROW_KEY_URL=https://keybase.io/craigraw/pgp_keys.asc
 
-# Tuta (extras/tutamail.sh). Tutao GmbH's code-signing key, which signs every
-# desktop installer with openssl (RSA, SHA-512); not a gpg key, so this is the
-# SHA-256 of the key itself (DER). The key file is data/tuta-pub.pem, a copy of
-# tutao-pub.pem in Tuta's repository (unchanged there since 2019-09-09).
-# checked: 2026-11-02  github.com/tutao/tutanota tutao-pub.pem (master and the
-#   release tag) and buildSrc/installerSigner.js; a good signature on
-#   362.261023.2's AppImage, which matches the GitHub release's SHA-256
-TUTA_KEY_SHA256=9566e054634a75f540b64db71b92b040bc77f9a3954d737cb01c4630c1225127
-TUTA_KEY_URL=https://raw.githubusercontent.com/tutao/tutanota/master/tutao-pub.pem
-TUTA_DESKTOP_URL=https://app.tuta.com/desktop
-
 # Signal Desktop's apt repo (extras/signal.sh). Open Whisper Systems'
 # repository key (2017, no expiry date).
 # checked: 2026-11-02  updates.signal.org's keys.asc; keyserver.ubuntu.com; keys.openpgp.org

@@ -187,7 +187,6 @@ if __name__ == "__main__":
         "sway-editor": [click_on("Text editor")],
         "sway-files": [click_on("File manager")],
         "sway-passwords": [click_on("Password manager")],
-        "sway-mail": [click_on("Mail")],
         "sway-signal": [click_on("Signal")],
         "sway-simplex": [click_on("SimpleX")],
         "sway-claude": [click_on("Claude")],
@@ -207,7 +206,7 @@ if __name__ == "__main__":
     print("DREW", "|".join(re.findall(r"(Help|Install apps|Update|Status)", drawn)[:4]))
     print("DREWALL", "|".join(re.findall(r"(Help|Terminal|Install apps|Update|Status)", drawn)[:5]))
     print("DREWAPPS", "|".join(re.findall(r"(Help|Terminal|Web browser|Text editor|Install apps)", drawn)[:5]))
-    print("DREWMORE", "|".join(dict.fromkeys(re.findall(r"(File manager|Password manager|Mail|Signal|SimpleX|Claude|opencode|Back up now|Install apps|Vault: \w+)", drawn))))
+    print("DREWMORE", "|".join(dict.fromkeys(re.findall(r"(File manager|Password manager|Signal|SimpleX|Claude|opencode|Back up now|Install apps|Vault: \w+)", drawn))))
     # where the title "wren" was drawn each time: row;column
     print("TITLES", " ".join("%s;%s" % m for m in re.findall(r"\x1b\[(\d+);(\d+)H\x1b\[1mWren Linux", drawn)))
 PY
@@ -258,24 +257,22 @@ menu sway-browser
 # shellcheck disable=SC2016  # the inner shell expands its own variables
 check "...no editor installed: only Web browser" bash -c 'grep -q "Web browser" <<<"$1" && ! grep -q "Text editor" <<<"$1"' _ "$(grep ^DREWAPPS <<<"$out")"
 unset WREN_MENU_BROWSERS WREN_MENU_EDITORS
-# File manager, Password manager, Mail, Claude, Back up now and the Vault switch,
+# File manager, Password manager, Claude, Back up now and the Vault switch,
 # each only when installed
-check "nothing else installed: none of them" not grep -qE '^DREWMORE.*(File manager|Password manager|Mail|Claude|Back up|Vault)' <<<"$out"
-for a in thunar keepassxc tuta signal-desktop simplex claude opencode-vm; do printf '#!/bin/sh\n' >"$T/apps/$a"; chmod +x "$T/apps/$a"; done
+check "nothing else installed: none of them" not grep -qE '^DREWMORE.*(File manager|Password manager|Claude|Back up|Vault)' <<<"$out"
+for a in thunar keepassxc signal-desktop simplex claude opencode-vm; do printf '#!/bin/sh\n' >"$T/apps/$a"; chmod +x "$T/apps/$a"; done
 printf '#!/bin/sh\necho "backup $*" >>"%s/ran"\n' "$T" >"$T/apps/backup"
 # a pretend vault: open while $T/vault-open exists
 # shellcheck disable=SC2016  # the inner shell expands its own variables
 printf '#!/bin/sh\necho "vault $*" >>"%s/ran"\ncase "$1" in status) [ -e "%s/vault-open" ] && echo "open in x" || echo closed ;; open) : >"%s/vault-open" ;; close) rm -f "%s/vault-open" ;; esac\n' "$T" "$T" "$T" "$T" >"$T/apps/vault"
 chmod +x "$T/apps/backup" "$T/apps/vault"
-export WREN_MENU_APPS="$T/apps/thunar $T/apps/keepassxc $T/apps/tuta $T/apps/signal-desktop $T/apps/simplex $T/apps/claude $T/apps/opencode-vm $T/apps/vault $T/apps/backup"
+export WREN_MENU_APPS="$T/apps/thunar $T/apps/keepassxc $T/apps/signal-desktop $T/apps/simplex $T/apps/claude $T/apps/opencode-vm $T/apps/vault $T/apps/backup"
 menu sway-files
-check "all installed: File manager, Password manager, Mail, Signal, SimpleX, Claude, Back up now, in that order" \
-    grep -q '^DREWMORE File manager|Password manager|Mail|Signal|SimpleX|Claude|opencode|Back up now|Install apps|Vault: closed' <<<"$out"
+check "all installed: File manager, Password manager, Signal, SimpleX, Claude, Back up now, in that order" \
+    grep -q '^DREWMORE File manager|Password manager|Signal|SimpleX|Claude|opencode|Back up now|Install apps|Vault: closed' <<<"$out"
 check "File manager opens Thunar through sway" grep -qx "swaymsg exec $T/apps/thunar" "$T/ran"
 menu sway-passwords
 check "Password manager opens KeePassXC" grep -qx "swaymsg exec $T/apps/keepassxc" "$T/ran"
-menu sway-mail
-check "Mail opens Tuta" grep -qx "swaymsg exec $T/apps/tuta" "$T/ran"
 menu sway-signal
 check "Signal opens Signal Desktop" grep -qx "swaymsg exec $T/apps/signal-desktop" "$T/ran"
 menu sway-simplex

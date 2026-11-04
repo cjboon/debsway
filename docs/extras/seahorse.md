@@ -11,7 +11,7 @@ seahorse            "Passwords and Keys": look at what is stored (or Super+d)
 ```
 
 Programs that need to remember a secret for you, such as a login token for
-`gh`, or Tuta Mail staying logged in, store it in a keyring: an encrypted
+`gh`, store it in a keyring: an encrypted
 store that is unlocked with a password. This installs the GNOME keyring and
 Seahorse ("Passwords and Keys"), from Debian, and adds two lines to
 `/etc/pam.d/login`, so the keyring is unlocked with your login password when

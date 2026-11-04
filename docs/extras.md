@@ -50,7 +50,6 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `feather-wallet.sh` | Feather Monero wallet, the signed official AppImage. Command: `feather` |
 | `signal.sh` | Signal Desktop, from Signal's signed apt repo (updated by unattended-upgrades), linked to your phone's Signal; its sandbox helper isn't setuid root. Command: `signal-desktop`. See [extras/signal.md](extras/signal.md) |
 | `simplex-chat.sh` | SimpleX Chat desktop, the signed official AppImage. Command: `simplex` |
-| `tutamail.sh` | Tuta Mail desktop (Tuta, end-to-end encrypted email), the official AppImage, installed only if it is signed by Tuta's pinned code-signing key and is no older than the one you have. Runs on Wayland with Electron's sandbox on. Command: `tuta`. See [extras/tutamail.md](extras/tutamail.md) |
 | `seahorse.sh` | Seahorse and the GNOME keyring, unlocked by your login password (edits `/etc/pam.d/login`; `--remove` takes the lines out) |
 | `vault.sh` | `~/Vault`, an encrypted folder (gocryptfs) with its own password: `vault open` opens it for an hour (`--for 2h`, `--no-timeout`), and it closes itself when its time is up or the screen locks (idle, before sleep, Super+Escape, the lid). Closed, its key isn't in memory, so a laptop taken while on and locked doesn't give its files away. See [extras/vault.md](extras/vault.md) |
 | `backup.sh` | Encrypted backups of your home folder with restic, and a `backup` command. Prints examples |
@@ -61,19 +60,16 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `mousepad.sh` | Mousepad, a simple graphical text editor (made the default for text files). It also sets its look: white text on black in the terminal's colours with dark menus, DejaVu Sans Mono 14, tabs of 4 spaces, line numbers, matching braces highlighted and a line at column 80 (`data/mousepad.settings`, `data/mousepad-dark.xml`); later runs leave your changes alone unless Wren Linux's settings changed |
 | `file-manager.sh` | Thunar, a light graphical file manager, with Trash and thumbnails (made the default for folders). Prints its keys |
 
-Programs from Mullvad's and Anthropic's apt repositories are updated by
+Programs from Mullvad's, Anthropic's and Signal's apt repositories are updated by
 unattended-upgrades along with Debian's; the apps downloaded straight from
-their makers (the Feather, SimpleX and Tuta AppImages, Sparrow's .deb) are updated
+their makers (the Feather and SimpleX AppImages, Sparrow's .deb) are updated
 by running their script again, and `bash test.sh` tells you when a newer
 release is out.
 
 Downloads from outside Debian are checked against the keys in
 `pins.sh`: the key is fetched into a throwaway keyring and refused
 unless its fingerprint matches, then the release's signed checksum list
-is checked, then the download against that list. Tuta signs its AppImage
-with openssl instead: the key is shipped as `data/tuta-pub.pem`, refused
-unless its SHA-256 is the one pinned, and must have signed the AppImage
-itself. AppImages are unpacked
+is checked, then the download against that list. AppImages are unpacked
 into `~/.local/opt/NAME/`, so no FUSE is needed.
 
 Apps that only run on X11 (Tor Browser, Mullvad Browser, Sparrow,
