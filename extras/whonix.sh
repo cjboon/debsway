@@ -11,7 +11,9 @@
 #                client), so its first connection uses it. Whonix 18
 #                connects to Tor at first boot; if you need a bridge but
 #                have none yet, Tor is kept off until you turn it on.
-#   Workstation: Tor Browser at Safest with JavaScript off.
+#   Workstation: Tor Browser at Safest with JavaScript off, and Feather
+#                (Monero; Feather's build for Tails and Whonix, its signature
+#                checked). Electrum (Bitcoin) comes with Whonix.
 # Nothing is mounted: the images are edited with qemu-img and debugfs.
 #
 # The download (about 1.9 GB) is checked against Whonix's signing key and
@@ -97,12 +99,13 @@ fetch_whonix() {
 
 # ---- editing the images before first boot ----
 
-# image_put IMAGE FILE DEST...: copies each local FILE to DEST (root:root,
-# 0644, directories created) in the image's root filesystem. The qcow2 is
+# image_put IMAGE [--exec] FILE DEST...: copies each local FILE to DEST
+# (root:root, 0644, or 0755 after --exec; directories created) in the image's
+# root filesystem. The qcow2 is
 # turned into a sparse raw file for debugfs, checked with e2fsck, and
 # turned back.
 image_put() {
-    local img=$1 raw="$1.raw" cmds start fs dir src dest bad
+    local img=$1 raw="$1.raw" cmds start fs dir src dest bad mode
     shift
     qemu-img convert -O raw "$img" "$raw"
     start=$(sfdisk -d "$raw" | sed -n 's/.*start= *\([0-9]*\),.*name="primary".*/\1/p')
@@ -110,22 +113,25 @@ image_put() {
     fs="$raw?offset=$((start * 512))"
     cmds=$(mktemp)
     while [ $# -ge 2 ]; do
+        mode=0644
+        if [ "$1" = --exec ]; then mode=0755; shift; fi
         src=$1 dest=$2
         shift 2
         dir=$(dirname -- "$dest")
         if ! debugfs -R "stat $dir" "$fs" 2>/dev/null | grep -q 'Type: directory'; then
             printf 'mkdir %s\nsif %s uid 0\nsif %s gid 0\nsif %s mode 040755\n' "$dir" "$dir" "$dir" "$dir" >>"$cmds"
         fi
-        printf 'rm %s\nwrite %s %s\nsif %s uid 0\nsif %s gid 0\nsif %s mode 0100644\n' \
-            "$dest" "$src" "$dest" "$dest" "$dest" "$dest" >>"$cmds"
-        printf '%s\n' "$src" "$dest" >>"$cmds.check"
+        printf 'rm %s\nwrite %s %s\nsif %s uid 0\nsif %s gid 0\nsif %s mode 0100%s\n' \
+            "$dest" "$src" "$dest" "$dest" "$dest" "$dest" "${mode#0}" >>"$cmds"
+        printf '%s\n' "$src" "$dest" "$mode" >>"$cmds.check"
     done
     debugfs -w -f "$cmds" "$fs" >/dev/null 2>&1 || true
     # debugfs doesn't fail on errors, so read every file back
     bad=
-    while read -r src && read -r dest; do
+    while read -r src && read -r dest && read -r mode; do
         if ! cmp -s "$src" <(debugfs -R "cat $dest" "$fs" 2>/dev/null) ||
-            ! debugfs -R "stat $dest" "$fs" 2>/dev/null | grep -q 'User: *0 *Group: *0'; then
+            ! debugfs -R "stat $dest" "$fs" 2>/dev/null | grep -q 'User: *0 *Group: *0' ||
+            ! debugfs -R "stat $dest" "$fs" 2>/dev/null | grep -q "Mode: *$mode"; then
             bad=$dest
             break
         fi
@@ -142,6 +148,33 @@ image_put() {
     qemu-img convert -O qcow2 -o cluster_size=2M,extended_l2=on "$raw" "$img.new"
     rm -f "$raw"
     mv "$img.new" "$img"
+}
+
+# workstation_feather WORK: Feather's build for Tails and Whonix (no Tor of
+# its own: it uses the Gateway's) into WORK/feather.AppImage, from the hash
+# list signed by Feather's key (FEATHER_FPR in pins.sh), as extras/feather-wallet.sh
+# checks it. Fails, with a warning, rather than stopping the install.
+workstation_feather() {
+    local work=$1 version file files=https://featherwallet.org/files/releases
+    command -v gpg >/dev/null || apt_install gpg
+    version=$(latest_github_tag feather-wallet/feather) || version=
+    if ! [[ $version =~ ^[0-9]+(\.[0-9]+)+$ ]]; then
+        warn "Couldn't find the latest Feather version on GitHub (or it didn't look like one)."
+        return 1
+    fi
+    file=feather-$version-a.AppImage
+    if ! wget -q --show-progress -O "$work/feather-hashes.txt" "$files/hashes-$version.txt" ||
+        ! wget -q --show-progress -O "$work/$file" "$files/linux-appimage-a/$file"; then
+        warn "Downloading Feather $version failed."
+        return 1
+    fi
+    if ! verify_clearsigned "$FEATHER_FPR" "$FEATHER_KEY_URL" "$work/feather-hashes.txt" "$work/feather-sums.txt"; then
+        warn "Feather's hash list isn't signed by Feather's key."
+        return 1
+    fi
+    check_sha256 "$work/feather-sums.txt" "$file" "$work/$file" || return 1
+    mv "$work/$file" "$work/feather.AppImage"
+    FEATHER_VERSION=$version
 }
 
 # Prints "SOURCE DEST" for the file to put in the Gateway, or nothing when
@@ -276,9 +309,21 @@ else
     note "No bridge: the Gateway connects to Tor directly at its first boot."
 fi
 
-say "Workstation Tor Browser"
-image_put "$work/ws.qcow2" "$WREN_DIR/data/tor-browser-safest.js" /usr/local/etc/torbrowser.d/user.js
+say "Workstation: Tor Browser and the wallets"
+ws_files=("$WREN_DIR/data/tor-browser-safest.js" /usr/local/etc/torbrowser.d/user.js)
+if workstation_feather "$work"; then
+    ws_files+=(--exec "$work/feather.AppImage" /usr/local/lib/feather/feather.AppImage
+        --exec "$WREN_DIR/data/whonix-feather" /usr/local/bin/feather
+        "$WREN_DIR/data/whonix-feather.desktop" /usr/local/share/applications/feather.desktop)
+fi
+image_put "$work/ws.qcow2" "${ws_files[@]}"
 note "Its Tor Browser starts at the Safest level with JavaScript off, every time."
+if [ -n "${FEATHER_VERSION:-}" ]; then
+    note "Feather $FEATHER_VERSION (Monero; its signature checked) is in the Workstation's menu, and Electrum (Bitcoin) comes with Whonix."
+    note "Both reach the network only through the Gateway's Tor. Feather tells you when a newer version is out."
+else
+    warn "Whonix is installed without Feather (Electrum, for Bitcoin, comes with Whonix). Feather's guide for Whonix: docs.featherwallet.org"
+fi
 
 say "Setting up the VMs"
 if ! "${VIRSH[@]}" pool-info default >/dev/null 2>&1; then

@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Feather Wallet
+Comment=Monero wallet, over the Gateway's Tor (put here by Wren Linux)
+Exec=/usr/local/bin/feather
+Terminal=false
+Categories=Office;Finance;

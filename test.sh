@@ -256,6 +256,7 @@ dev_test status "status.sh's screen lock line, with and without swaylock" "statu
 
 # --------------------------------------------------------------------
 dev_test whonix-cmd "The whonix command (bin/whonix), with a pretend virsh" "whonix command checks"
+dev_test whonix-feather "Whonix's Workstation: files written into a real disk image, and Feather's download checked" "whonix workstation checks"
 
 # --------------------------------------------------------------------
 dev_test wifi-scan "wifi.sh's network scan never hangs, with a pretend iw" "Wi-Fi scan checks"

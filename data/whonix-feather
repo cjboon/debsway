@@ -1,0 +1,5 @@
+#!/bin/sh
+# Feather in Whonix-Workstation, put there by Wren Linux extras/whonix.sh
+# (Feather's build for Tails and Whonix). The AppImage runs without FUSE: it is
+# unpacked into a temporary folder each time it starts.
+APPIMAGE_EXTRACT_AND_RUN=1 exec /usr/local/lib/feather/feather.AppImage "$@"

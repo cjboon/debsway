@@ -22,14 +22,23 @@ key, pinned in `pins.sh` (`WHONIX_FPR`), and kept in `offline/whonix`. Before
 the first boot, Wren Linux writes into the images, without mounting them (with
 qemu-img and debugfs): a bridge for the Gateway if you need one (obfs4 lines
 you paste, or Snowflake), so its very first connection uses it, or Tor kept
-off until you turn it on; and Tor Browser at Safest with JavaScript off in the
-Workstation (`data/tor-browser-safest.js`).
+off until you turn it on; and in the Workstation, Tor Browser at Safest with
+JavaScript off (`data/tor-browser-safest.js`) and the Feather wallet for Monero:
+Feather's own build for Tails and Whonix, which has no Tor of its own and uses
+the Gateway's, checked against the hash list signed by Feather's key
+(`FEATHER_FPR`), as the Feather extra checks it. Electrum, for Bitcoin, comes
+with Whonix. If Feather can't be downloaded or checked, Whonix is installed
+without it. For wallets, Whonix is the safest choice Wren Linux has: a wallet in
+the Workstation can't reach this computer's files or its real address, even if
+it is hacked.
 
 ## LIMITS
 
 - A bug in KVM or QEMU could reach this computer from a VM.
 - What you type into a site still identifies you if it's about you; Tor hides the address, not the person.
 - `whonix stop` switches off a VM that doesn't shut down in 20 seconds: save your work inside first.
+- Wren Linux doesn't update Feather in the Workstation after the install: Feather says when a newer version is out, and its guide for Whonix (docs.featherwallet.org) shows how to replace it. Whonix updates Electrum with its other packages.
+- Feather inside the Workstation hasn't been tried in a real Whonix VM yet: the files are put in place and checked, but not run there.
 - Whonix's own updates run inside the VMs: update them there.
 
 ## MANUAL INSTALL
@@ -74,6 +83,21 @@ mv Whonix-Gateway-*.qcow2 gw.qcow2 && mv Whonix-Workstation-*.qcow2 ws.qcow2
 # Files to put into the images before their first boot:
 # the Workstation's Tor Browser at Safest, JavaScript off
 cp @WREN_DIR@/data/tor-browser-safest.js user.js
+# Feather, its build for Tails and Whonix (the newest version: the tag in the
+# "Location:" line, e.g. 2.9.1), checked as in: wrenctl manual feather-wallet
+wget --max-redirect=0 -S -O /dev/null https://github.com/feather-wallet/feather/releases/latest 2>&1 | grep -i location
+VER=2.9.1
+wget https://featherwallet.org/files/releases/hashes-$VER.txt https://featherwallet.org/files/releases/linux-appimage-a/feather-$VER-a.AppImage
+mkdir -m 700 fgpg
+wget -O feather.asc @FEATHER_KEY_URL@
+gpg --homedir fgpg --import feather.asc
+# This must say "Good signature" with "Primary key fingerprint"
+# @FEATHER_FPR@. Stop here if not.
+gpg --homedir fgpg --output sums.txt --decrypt hashes-$VER.txt
+# This must print "OK"
+awk -v n="feather-$VER-a.AppImage" '$2 == n || $2 == "*" n { print $1 "  " n }' sums.txt | sha256sum -c
+mv feather-$VER-a.AppImage feather.AppImage
+cp @WREN_DIR@/data/whonix-feather @WREN_DIR@/data/whonix-feather.desktop .
 # A bridge for the Gateway, if you need one, in 50_user.conf: obfs4 lines
 # from bridges.torproject.org (for Snowflake, put "ClientTransportPlugin
 # snowflake exec /usr/bin/snowflake-client" and the Snowflake "Bridge" lines
@@ -81,8 +105,8 @@ cp @WREN_DIR@/data/tor-browser-safest.js user.js
 printf '%s\n' 'UseBridges 1' 'ClientTransportPlugin obfs4 exec /usr/bin/obfs4proxy' \
     'Bridge obfs4 1.2.3.4:443 FINGERPRINT cert=... iat-mode=0' >50_user.conf
 
-# put IMAGE FILE DEST: write FILE into the image's root file system as DEST
-# (root's, mode 0644), checked, without mounting it
+# put IMAGE FILE DEST [MODE]: write FILE into the image's root file system as
+# DEST (root's, mode 0644 or MODE), checked, without mounting it
 put() {
     qemu-img convert -O raw "$1" "$1.raw"
     start=$(sfdisk -d "$1.raw" | sed -n 's/.*start= *\([0-9]*\),.*name="primary".*/\1/p')
@@ -97,7 +121,7 @@ rm $3
 write $2 $3
 sif $3 uid 0
 sif $3 gid 0
-sif $3 mode 0100644
+sif $3 mode 0100${4:-644}
 EOF
     # It must be there, as written, and the file system must check out;
     # if not, the image is left as it was
@@ -110,6 +134,9 @@ EOF
     rm "$1.raw" && mv "$1.new" "$1"
 }
 put ws.qcow2 user.js /usr/local/etc/torbrowser.d/user.js
+put ws.qcow2 feather.AppImage /usr/local/lib/feather/feather.AppImage 755
+put ws.qcow2 whonix-feather /usr/local/bin/feather 755
+put ws.qcow2 whonix-feather.desktop /usr/local/share/applications/feather.desktop
 put gw.qcow2 50_user.conf /usr/local/etc/torrc.d/50_user.conf
 # (each must end without "Couldn't write"; stop here if one does)
 
