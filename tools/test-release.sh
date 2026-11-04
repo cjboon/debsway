@@ -40,6 +40,7 @@ git -C "$R" push -q origin main
 cat >"$R/tools/git-push.sh" <<EOF
 #!/bin/bash
 echo push >>"$T/ran"
+echo "\${WREN_RELEASING:-}" >"$T/releasing"
 [ -z "\${FAIL_PUSH:-}" ] || exit 1
 [ -n "\${DECLINE_PUSH:-}" ] || git -C "$R" push -q origin main
 EOF
@@ -82,6 +83,7 @@ check "...a folder only you can write in, that apt's own user can read" test "$(
 check "...the file readable by apt's own user" test "$(cat "$T/deb-mode")" = 644
 check "...and it is the only package there" test "$(cat "$T/deb-count")" = 1
 check "...the folder goes afterwards" bash -c 'f=${1##* }; [ ! -e "${f%/*}" ]' _ "$sudo_line"
+check "...git-push.sh is told, so it doesn't say to install it by hand" test "$(cat "$T/releasing")" = 1
 check "...wrenctl --update last" test "$(tail -1 "$T/ran")" = "wrenctl --update"
 
 # ---- it stops at the first step that fails
@@ -117,5 +119,7 @@ check "not as root" grep -qx 'not_root' "$HERE/tools/release.sh"
 # ---- the recipe git-push.sh prints
 check "git-push.sh no longer tells you to install from a name in /tmp" not grep -q '/tmp/wren-linux' "$HERE/tools/git-push.sh"
 check "...it names release.sh" grep -q 'tools/release.sh' "$HERE/tools/git-push.sh"
+
+check "...git-push.sh leaves that line out when told" grep -q 'WREN_RELEASING:-}" \] || note "Pushed' "$HERE/tools/git-push.sh"
 
 [ "$fails" -eq 0 ]

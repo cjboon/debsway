@@ -35,7 +35,7 @@ if $local_only; then
     fi
 else
     say "Publishing"
-    bash "$WREN_DIR/tools/git-push.sh" || die "It wasn't published, so nothing was installed."
+    WREN_RELEASING=1 bash "$WREN_DIR/tools/git-push.sh" || die "It wasn't published, so nothing was installed."
     # (saying no to the push isn't a failure to git-push.sh)
     [ "$(g rev-list --count origin/main..HEAD)" = 0 ] ||
         die "Not everything was pushed, so nothing was installed. To try it here without publishing: bash tools/release.sh --local"
