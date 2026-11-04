@@ -391,6 +391,19 @@ EOF
 
 # ---- the never-locked-out switch ----
 armed() { [ -d "$BACKUP" ]; }
+# session: where this login came from ("CLIENT PORT SERVER PORT"), or console.
+# sudo clears SSH_CONNECTION, so it is looked up in the processes above this
+# one, up to the SSH session that started them (root may read their settings).
+session() {
+    if [ -n "${SSH_CONNECTION:-}" ]; then echo "$SSH_CONNECTION"; return; fi
+    local pid=$$ found
+    while [ "${pid:-1}" -gt 1 ]; do
+        found=$(tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null | sed -n 's/^SSH_CONNECTION=//p' | head -n1)
+        if [ -n "$found" ]; then echo "$found"; return; fi
+        pid=$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')
+    done
+    echo console
+}
 # arm: keeps the SSH and firewall files as they are now, and undoes the change
 # in VPS_CONFIRM_MINUTES unless it is confirmed
 arm() {
@@ -398,7 +411,7 @@ arm() {
     mkdir -p "$BACKUP"
     if [ -f "$SSHD_DROP" ]; then cp -p "$SSHD_DROP" "$BACKUP/sshd"; else : >"$BACKUP/sshd.absent"; fi
     if [ -f "$NFT" ]; then cp -p "$NFT" "$BACKUP/nft"; else : >"$BACKUP/nft.absent"; fi
-    printf '%s\n' "${SSH_CONNECTION:-console}" >"$BACKUP/session"
+    session >"$BACKUP/session"
     run systemd-run --quiet --unit=wren-vps-rollback --on-active="${VPS_CONFIRM_MINUTES}min" --timer-property=AccuracySec=5s "$ROLLBACK"
 }
 apply_ssh_firewall() {
@@ -426,9 +439,12 @@ confirm_hint() {
 
 confirm() {
     armed || { note "Nothing is waiting to be confirmed."; exit 0; }
-    local made_in
+    local made_in now
     made_in=$(cat "$BACKUP/session" 2>/dev/null || true)
-    if [ -n "${SSH_CONNECTION:-}" ] && [ "$made_in" = "$SSH_CONNECTION" ]; then
+    now=$(session)
+    if [ "$now" = console ]; then
+        warn "Confirming from the console: that doesn't show SSH still lets you in. Try a new SSH login before you log out."
+    elif [ "$made_in" = "$now" ]; then
         die "This is the session that made the change. Confirm from a NEW login: that proves you can still get in."
     fi
     run systemctl stop wren-vps-rollback.timer
@@ -570,7 +586,7 @@ ssh_public() { # yes | no: port 22 open to the internet or not
     if [ "$1" = no ]; then
         [ "$VPS_ONION_SSH" = yes ] || die "SSH has no onion address here (VPS_ONION_SSH=no): closing port 22 would lock you out."
         # only from a login that came through the onion: proof that it works
-        case ${SSH_CONNECTION:-} in
+        case $(session) in
             "127.0.0.1 "* | "::1 "*) ;;
             *) die "Run this from a login through the SSH onion address (it comes from 127.0.0.1), so you know that way works." ;;
         esac

@@ -156,6 +156,16 @@ printf 'VPS_ADMIN=deploy\nVPS_SSH_KEY=%s\nVPS_ONION_SSH=no\n' "$KEY" >"$T/good.c
 fresh
 env WREN_VPS_ROOT="$R" WREN_VPS_FAKE="$T/calls" bash "$S" --config "$T/good.conf" --yes >/dev/null 2>&1
 check "--config FILE: its settings are used (another user's name)" grep -qx "AllowUsers deploy" "$R/etc/ssh/sshd_config.d/10-wren-vps.conf"
+# sudo clears SSH_CONNECTION: the login's origin is found above it instead
+cat >"$T/session.sh" <<'EOF'
+eval "$(sed -n '/^session() {/,/^}/p' "$1")"
+unset SSH_CONNECTION
+session
+EOF
+out=$(SSH_CONNECTION="127.0.0.1 40000 127.0.0.1 22" bash -c 'env -u SSH_CONNECTION bash "$1" "$2"; true' _ "$T/session.sh" "$S")
+check "under sudo (SSH_CONNECTION cleared), the login's origin is found in the processes above" test "$out" = "127.0.0.1 40000 127.0.0.1 22"
+out=$(env -u SSH_CONNECTION setsid bash "$T/session.sh" "$S" </dev/null)
+check "...and with no SSH login above at all, it is the console" test "$out" = console
 check "every question explains what it is for" bash -c '[ "$(grep -c "ask_value VPS_" "$1")" -ge 6 ] && grep -q "nobody can scan for it" "$1" && grep -q "no password can be guessed" "$1"' _ "$S"
 
 [ "$fails" -eq 0 ]
