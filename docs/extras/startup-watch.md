@@ -16,8 +16,9 @@ A program running as you that wants to start again at every login has to
 change one of a few files: your shell's startup files (`~/.profile`,
 `~/.bashrc`, ...), sway's config, `~/.config/autostart`, systemd user units,
 `~/.local/bin`, mako's config, `.desktop` files and default apps, Wren Linux's
-on-lock programs, `~/.ssh/config`, `rc` and `authorized_keys`, and git's and
-gpg-agent's settings (`wren-watch --help` lists them). This keeps their
+on-lock programs, your list of what opens at login, `~/.ssh/config`, `rc` and
+`authorized_keys`, and git's and gpg-agent's settings (`wren-watch --help` lists
+them). This keeps their
 fingerprints, and a copy of each text file, where nothing running as you can
 change them: root's, in `/var/lib/wren-watch`. A root timer compares them at
 boot and every 15 minutes, following no link and reading regular files only,

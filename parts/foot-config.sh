@@ -3,8 +3,8 @@
 # small), a black background and readable colours (data/foot.ini). It goes
 # to ~/.config/foot/foot.ini, which only affects terminals you open after
 # this. A foot.ini you wrote yourself is kept as foot.ini.bak.
-# A terminal opens on workspace 2 at every login: that one alone, sent there by
-# its own app id (wren-start-terminal); other terminals open where you are.
+# (The terminal that opens on workspace 2 at login is a line in
+# ~/.config/wren/autostart: parts/autostart.sh.)
 # Usage: bash foot-config.sh [--remove]
 # status: file:~/.config/foot/foot.ini
 # files: lib/sway.sh
@@ -22,7 +22,9 @@ if [ "${1:-}" = --remove ]; then
             note "Put your earlier foot.ini back."
         fi
     fi
+    # (an older version's terminal at login, and today's line in your list)
     remove_snippet terminal-start
+    if [ -x "$BIN/wren-autostart" ]; then "$BIN/wren-autostart" remove foot; fi
     apt_purge fonts-dejavu-mono
     exit
 fi
@@ -51,11 +53,5 @@ if [ -x "$BIN/theme" ]; then "$BIN/theme" apply >/dev/null 2>&1 || warn "Couldn'
 foot -C -c "$CONF" || warn "foot reports a problem in $CONF"
 note "Installed $CONF. New terminals use it (Super+Enter)."
 
-say "A terminal on workspace 2 at every login"
-put_snippet terminal-start <<'EOF'
-# A terminal on workspace 2 at login (Wren Linux parts/foot-config.sh): only
-# this one, by its own app id; other terminals open where you are
-assign [app_id="wren-start-terminal"] workspace number 2
-exec foot --app-id=wren-start-terminal
-EOF
-note "From your next login a terminal waits on workspace 2 (Super+2)."
+# An older version's terminal at login: it is a line in your list now
+remove_snippet terminal-start

@@ -44,7 +44,8 @@ mkdir -p ~/.config/wren/on-lock.d
 printf '%s\n' '#!/bin/sh' 'pgrep -x -u "$(id -u)" keepassxc >/dev/null || exit 0' 'exec keepassxc --lock' >~/.config/wren/on-lock.d/keepassxc
 chmod 755 ~/.config/wren/on-lock.d/keepassxc
 # Optional: on workspace 1 at every login
-printf '%s\n' "exec sh -c 'swaymsg -q \"workspace number 1\"; exec keepassxc'" >~/.config/sway/config.d/keepassxc-start.conf
+# (with Wren Linux's parts/autostart.sh; or add the line to the file by hand)
+wren-autostart add 1 keepassxc
 keepassxc
 ```
 
@@ -52,7 +53,8 @@ To undo (your password databases, `.kdbx` files, stay where they are):
 
 ```
 # Remove KeePassXC, its on-lock program and its start at login
-rm -f ~/.config/wren/on-lock.d/keepassxc ~/.config/sway/config.d/keepassxc-start.conf
+rm -f ~/.config/wren/on-lock.d/keepassxc
+wren-autostart remove keepassxc
 sudo apt purge keepassxc-minimal
 sudo apt autoremove --purge
 ```

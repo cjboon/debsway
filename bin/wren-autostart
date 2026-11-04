@@ -1,0 +1,175 @@
+#!/bin/bash
+# wren-autostart: written by Wren Linux parts/autostart.sh
+# What opens when you log in, and on which workspace. It is all in one file,
+# ~/.config/wren/autostart: a line for each program, its workspace (1 to 10) and
+# then the command, as you would type it. Change the file, or use this:
+#   wren-autostart edit             a small screen to change it (the Wren menu:
+#                                   System > Startup programs)
+#   wren-autostart list             what opens where
+#   wren-autostart add 3 firefox    open firefox on workspace 3 (a program already
+#                                   listed moves there)
+#   wren-autostart remove firefox   not any more
+# sway runs it at login (wren-autostart, with no word). It starts each program on
+# its workspace, then shows the workspace of the first one listed. A change counts
+# from your next login.
+set -uo pipefail
+
+FILE=$HOME/.config/wren/autostart
+
+die() { printf 'wren-autostart: %s\n' "$*" >&2; exit 1; }
+
+workspace_ok() { [[ $1 =~ ^([1-9]|10)$ ]]; }
+command_ok() { [ -n "$1" ] && [[ $1 != *[[:cntrl:]]* ]] && [[ $1 != \#* ]]; }
+
+# entries: the file's good lines: LINE-NUMBER, WORKSPACE, COMMAND, tab-separated
+entries() {
+    local n=0 line ws cmd
+    [ -f "$FILE" ] || return 0
+    while IFS= read -r line || [ -n "$line" ]; do
+        n=$((n + 1))
+        [[ $line =~ ^[[:space:]]*([0-9]+)[[:space:]]+(.*[^[:space:]])[[:space:]]*$ ]] || continue
+        # (the checks below use a pattern too, which would replace these)
+        ws=${BASH_REMATCH[1]} cmd=${BASH_REMATCH[2]}
+        if workspace_ok "$ws" && command_ok "$cmd"; then
+            printf '%s\t%s\t%s\n' "$n" "$ws" "$cmd"
+        fi
+    done <"$FILE"
+}
+
+# not_understood: the lines that are neither blank, a comment nor good, to say so
+not_understood() {
+    local n=0 line good
+    [ -f "$FILE" ] || return 0
+    good=$(entries | cut -f1)
+    while IFS= read -r line || [ -n "$line" ]; do
+        n=$((n + 1))
+        [[ $line =~ ^[[:space:]]*(#.*)?$ ]] && continue
+        grep -qx "$n" <<<"$good" || printf '%s\n' "${line//[[:cntrl:]]/?}"
+    done <"$FILE"
+}
+
+list() {
+    local _n ws cmd any=false bad
+    while IFS=$'\t' read -r _n ws cmd; do
+        any=true
+        printf '  workspace %-2s  %s\n' "$ws" "$cmd"
+    done < <(entries)
+    $any || echo "  Nothing opens by itself."
+    bad=$(not_understood)
+    if [ -n "$bad" ]; then
+        echo "  Not understood, so skipped (a workspace from 1 to 10, then the command):"
+        printf '%s\n' "$bad" | sed 's/^/    /'
+    fi
+}
+
+# drop COMMAND: its lines out of the file; the rest stays as it is
+drop() {
+    local n=0 line tmp cmd=$1
+    tmp=$(mktemp)
+    while IFS= read -r line || [ -n "$line" ]; do
+        n=$((n + 1))
+        if [ "$(entries | awk -F'\t' -v n="$n" '$1 == n { print $3 }')" = "$cmd" ]; then continue; fi
+        printf '%s\n' "$line"
+    done <"$FILE" >"$tmp"
+    cat "$tmp" >"$FILE"
+    rm -f "$tmp"
+}
+
+add() {
+    local ws=${1:-}
+    [ $# -ge 2 ] || die "usage: wren-autostart add WORKSPACE COMMAND"
+    shift
+    local cmd="$*"
+    workspace_ok "$ws" || die "a workspace is a number from 1 to 10, not \"$ws\"."
+    command_ok "$cmd" || die "that isn't a command."
+    mkdir -p "${FILE%/*}"
+    touch "$FILE"
+    drop "$cmd"
+    printf '%s %s\n' "$ws" "$cmd" >>"$FILE"
+    # (it is added all the same: it may be installed later)
+    command -v "${cmd%% *}" >/dev/null || printf 'wren-autostart: note: there is no program called %s here yet.\n' "${cmd%% *}" >&2
+}
+
+remove() {
+    [ $# -ge 1 ] || die "usage: wren-autostart remove COMMAND"
+    [ -f "$FILE" ] || return 0
+    drop "$*"
+}
+
+# start: each program on its workspace. sway remembers which workspace a program
+# was started on, also one that takes a while to open its window, so it opens
+# there whatever you are looking at by then. Started through --run, so that sway
+# sees only a line number: nothing in a command can be read as a sway command.
+start() {
+    local n ws _cmd first='' one=false
+    # the one-workspace extra: no keys to reach another, so all open on the one
+    [ ! -f "$HOME/.config/sway/config.d/one-workspace.conf" ] || one=true
+    while IFS=$'\t' read -r n ws _cmd; do
+        if $one; then ws=1; fi
+        [ -n "$first" ] || first=$ws
+        swaymsg -q "workspace number $ws"
+        # shellcheck disable=SC2088  # a literal ~: the shell sway starts expands it
+        swaymsg -q exec "~/.local/bin/wren-autostart --run $n"
+    done < <(entries)
+    [ -z "$first" ] || swaymsg -q "workspace number $first"
+}
+
+# run LINE-NUMBER: the command on that line
+run() {
+    local cmd
+    [[ ${1:-} =~ ^[0-9]{1,6}$ ]] || die "--run takes a line number."
+    cmd=$(entries | awk -F'\t' -v n="$1" '$1 == n { print $3 }')
+    [ -n "$cmd" ] || exit 0
+    exec sh -c "$cmd"
+}
+
+edit() {
+    local input a b c cmds=()
+    while :; do
+        echo
+        echo "What opens when you log in:"
+        mapfile -t cmds < <(entries | cut -f3)
+        if [ ${#cmds[@]} -gt 0 ]; then
+            local i=0 ws
+            while IFS= read -r ws; do
+                printf '  %d) workspace %-2s  %s\n' "$((i + 1))" "$ws" "${cmds[i]}"
+                i=$((i + 1))
+            done < <(entries | cut -f2)
+        else
+            echo "  Nothing opens by itself."
+        fi
+        echo
+        echo "  add 3 firefox    open firefox on workspace 3"
+        echo "  move 1 4         line 1 to workspace 4"
+        echo "  remove 1         line 1 no longer opens"
+        echo "  Enter: done. It counts from your next login. (The file: ${FILE/#$HOME/\~})"
+        IFS= read -r -p "> " input || return 0
+        read -r a b c <<<"$input"
+        case ${a:-} in
+            "" | q | quit | done) return 0 ;;
+            add) if [ -n "${b:-}" ] && [ -n "${c:-}" ]; then (add "$b" "$c"); else echo "For example: add 3 firefox"; fi ;;
+            move | remove)
+                if ! [[ ${b:-} =~ ^[0-9]{1,3}$ ]] || [ "$b" -lt 1 ] || [ "$b" -gt ${#cmds[@]} ]; then
+                    echo "Which line? A number from the list."
+                elif [ "$a" = remove ]; then
+                    remove "${cmds[b - 1]}"
+                elif workspace_ok "${c:-}"; then
+                    add "$c" "${cmds[b - 1]}"
+                else
+                    echo "To which workspace? For example: move 1 4"
+                fi ;;
+            *) echo "Type add, move or remove, as shown; Enter when you are done." ;;
+        esac
+    done
+}
+
+case ${1:-} in
+    "") start ;;
+    --run) run "${2:-}" ;;
+    list) list ;;
+    add) shift; add "$@" ;;
+    remove) shift; remove "$@" ;;
+    edit) edit ;;
+    -h | --help) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//' ;;
+    *) die "usage: wren-autostart [list | edit | add WORKSPACE COMMAND | remove COMMAND]" ;;
+esac

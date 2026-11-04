@@ -48,14 +48,21 @@ check "...and with KeePassXC not running it does nothing" test ! -e "$T/kp-ran"
 printf '#!/bin/sh\nexit 0\n' >"$T/bin/pgrep"
 PATH="$T/bin:$PATH" sh "$H"
 check "...with it running, it asks it to lock" test -e "$T/kp-ran"
-check "yes: KeePassXC opens on workspace 1 at login" grep -qx "exec sh -c 'swaymsg -q \"workspace number 1\"; exec keepassxc'" "$S"
+L=$T/home/.config/wren/autostart
+check "yes: KeePassXC opens on workspace 1 at login, a line in your list" grep -qx '1 keepassxc' "$L"
+check "...and sway starts the list" grep -qx 'exec ~/.local/bin/wren-autostart' "$T/home/.config/sway/config.d/autostart.conf"
 if command -v sway >/dev/null; then
     check "...and sway takes it" bash -c '! grep -q "rejected" <<<"$1"' _ "$out"
 fi
-kp n >/dev/null
-check "no: it doesn't" test ! -e "$S"
+sed -i 's/^1 keepassxc$/3 keepassxc/' "$L"
 kp y >/dev/null
+check "run again: where you moved it stays, it doesn't ask" bash -c 'grep -qx "3 keepassxc" "$1" && ! grep -qx "1 keepassxc" "$1"' _ "$L"
+echo '# old' >"$S"
+kp y >/dev/null
+check "an older version's line in sway's config goes" test ! -e "$S"
 kp y --remove >/dev/null
-check "--remove takes the on-lock program and the start at login out" bash -c '[ ! -e "$1" ] && [ ! -e "$2" ]' _ "$H" "$S"
+check "--remove takes the on-lock program and the start at login out" bash -c '[ ! -e "$1" ] && ! grep -qE "^[0-9]+ keepassxc" "$2"' _ "$H" "$L"
+out=$(kp n)
+check "no: no line for it" bash -c '! grep -qE "^[0-9]+ keepassxc" "$1"' _ "$L"
 
 [ "$fails" -eq 0 ]

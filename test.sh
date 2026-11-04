@@ -340,7 +340,8 @@ dev_test sandbox-dns "The sandboxes' DNS only to this computer's resolver (parts
 dev_test startup-watch "The startup watch (bin/wren-watch, extras/startup-watch.sh) in a pretend home" "startup watch checks"
 dev_test wren-lock "Every lock runs the on-lock programs (bin/wren-lock), with a pretend swaylock" "wren-lock checks"
 dev_test keepassxc "KeePassXC (extras/keepassxc.sh): locked at every lock, on workspace 1 at login" "KeePassXC checks"
-dev_test foot-config "The terminal on workspace 2 at login (parts/foot-config.sh)" "foot config checks"
+dev_test foot-config "The terminal's look (parts/foot-config.sh)" "foot config checks"
+dev_test autostart "What opens at login (bin/wren-autostart)" "autostart checks"
 
 # --------------------------------------------------------------------
 dev_test update-signed "update.sh: only what Wren Linux's own key signed, with throwaway keys" "signed update checks"

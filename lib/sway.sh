@@ -67,6 +67,23 @@ ensure_sway_config() {
     fi
 }
 
+# What opens at login: one file of yours (bin/wren-autostart, parts/autostart.sh).
+# autostart_ensure: the command, sway starting it, and the file if there is none
+AUTOSTART_FILE=$HOME/.config/wren/autostart
+autostart_ensure() {
+    install_bin wren-autostart
+    if [ ! -e "$AUTOSTART_FILE" ]; then
+        mkdir -p "${AUTOSTART_FILE%/*}"
+        install -m 0644 "$WREN_DIR/data/autostart" "$AUTOSTART_FILE"
+    fi
+    if [ ! -f "$SWAY_SNIPPETS/autostart.conf" ]; then
+        put_snippet autostart <<'EOF'
+# What opens at login: ~/.config/wren/autostart (Wren Linux parts/autostart.sh)
+exec ~/.local/bin/wren-autostart
+EOF
+    fi
+}
+
 # sway -C exits 0 even on errors, so look for them in its output
 check_sway_config() {
     local out
