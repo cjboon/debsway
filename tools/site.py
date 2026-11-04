@@ -80,6 +80,37 @@ def page(rel, title, body):
 os.makedirs(out, exist_ok=True)
 shutil.copyfile(os.path.join(pages_dir, "style.css"), os.path.join(out, "style.css"))
 
+
+# Images: PNG only, and only the picture. A drawing program leaves its history,
+# dates with the time zone, and EXIF in text chunks: none of that is copied.
+def clean_png(src, dst):
+    import struct
+    import zlib
+
+    d = open(src, "rb").read()
+    if d[:8] != b"\x89PNG\r\n\x1a\n":
+        fail("%s isn't a PNG" % src)
+    keep, i = [d[:8]], 8
+    while i < len(d):
+        n = struct.unpack(">I", d[i : i + 4])[0]
+        chunk = d[i : i + 12 + n]
+        if len(chunk) != 12 + n or struct.unpack(">I", chunk[-4:])[0] != zlib.crc32(chunk[4:-4]) & 0xFFFFFFFF:
+            fail("%s is damaged" % src)
+        if chunk[4:8] in (b"IHDR", b"PLTE", b"tRNS", b"IDAT", b"IEND"):
+            keep.append(chunk)
+        i += 12 + n
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    with open(dst, "wb") as f:
+        f.write(b"".join(keep))
+
+
+images = os.path.join(pages_dir, "image")
+if os.path.isdir(images):
+    for name in sorted(os.listdir(images)):
+        if not re.fullmatch(r"[a-z0-9-]+\.png", name):
+            fail("image/%s: only PNG files, named in small letters, digits and dashes" % name)
+        clean_png(os.path.join(images, name), os.path.join(out, "image", name))
+
 # The site's own pages
 for name in sorted(os.listdir(os.path.join(pages_dir, "pages"))):
     if not re.fullmatch(r"[a-z0-9-]+\.html", name):

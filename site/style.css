@@ -50,7 +50,8 @@ h2 { font-size: 1.3rem; margin-top: 2rem; }
 .steps li { margin: 0.6rem 0; }
 /* The front page: centered, one column, the same on both sides */
 .home { text-align: center; max-width: 38rem; margin: 0 auto; }
-.home h1 { font-size: 2.6rem; letter-spacing: 0.02em; margin-top: 2.5rem; }
+.home .mascot { display: block; width: 9rem; height: auto; margin: 2rem auto 0; }
+.home h1 { font-size: 2.6rem; letter-spacing: 0.02em; margin-top: 1rem; }
 .home .lead { font-size: 1.3rem; font-style: italic; color: var(--accent); }
 .home p { margin: 1.25rem 0; }
 .home hr {

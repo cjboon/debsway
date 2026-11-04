@@ -41,8 +41,8 @@ cat >"$T/lint.py" <<'PY'
 import html.parser, os, re, sys
 root = sys.argv[1]
 ALLOWED = {"html", "head", "meta", "title", "link", "body", "header", "nav", "main", "footer", "a", "h1", "h2",
-           "p", "ul", "ol", "li", "strong", "code", "pre", "div", "table", "tr", "td", "hr"}
-VOID = {"meta", "link", "hr"}
+           "p", "ul", "ol", "li", "strong", "code", "pre", "div", "table", "tr", "td", "hr", "img"}
+VOID = {"meta", "link", "hr", "img"}
 bad = []
 class P(html.parser.HTMLParser):
     def __init__(self, path):
@@ -61,6 +61,11 @@ class P(html.parser.HTMLParser):
         a = dict(attrs)
         if tag == "link" and (a.get("rel") != "stylesheet" or re.match(r"[a-z]+:", a.get("href", ""))):
             bad.append("%s: a <link> to %s" % (where, a.get("href")))
+        if tag == "img":
+            src = a.get("src", "")
+            if not a.get("alt") or re.match(r"([a-z]+:)?//", src) or not src.endswith(".png") or \
+                    not os.path.exists(os.path.normpath(os.path.join(os.path.dirname(self.path), src))):
+                bad.append("%s: an image that isn't a PNG of the site's own, with its alt text: %s" % (where, src))
         if tag == "a":
             h = a.get("href", "")
             if not re.match(r"(https?:)?//", h) and not h.startswith("#"):
@@ -86,6 +91,26 @@ lint=$(python3 -I "$T/lint.py" "$O")
 check "every page: only plain tags, no script, inline style or event handler, every tag closed, every link leads somewhere${lint:+: $(paste -sd'|' <<<"$lint")}" test -z "$lint"
 check "...not one <script anywhere (this test's own comment holds one: the source browser escaped it)" bash -c '
     ! grep -rqi "<script" "$1" && grep -q "&lt;script&gt;alert(1)&lt;/script&gt;" "$1/source/tools/test-site.sh.html"' _ "$O"
+# Images: only the picture, in what the site serves and in what the download has
+printf '%s\n' 'import struct, sys' 'for p in sys.argv[1:]:' \
+    '    d = open(p, "rb").read(); i = 8' \
+    '    while i < len(d):' \
+    '        n = struct.unpack(">I", d[i:i + 4])[0]; t = d[i + 4:i + 8]' \
+    '        if t not in (b"IHDR", b"PLTE", b"tRNS", b"IDAT", b"IEND"): print(p, t.decode("latin1")); sys.exit(1)' \
+    '        i += 12 + n' >"$T/png.py"
+check "the mascot is on the front page" grep -q '<img class="mascot" src="image/penguin.png"' "$O/index.html"
+check "...every image the site serves, and every one in site/image, is only a picture: no editing history, dates or EXIF" \
+    bash -c 'python3 -I "$1" "$2"/image/*.png "$3"/site/image/*.png' _ "$T/png.py" "$O" "$HERE"
+# an image with a drawing program's metadata: it serves the picture only
+mkdir -p "$T/pages"
+cp -r "$HERE/site/." "$T/pages/"
+python3 -I -c 'import struct,sys,zlib
+p=sys.argv[1]; d=open(p,"rb").read(); t=b"tEXt"; c=b"Comment\0made in GIMP at -08:00"
+ch=struct.pack(">I",len(c))+t+c+struct.pack(">I",zlib.crc32(t+c)&0xffffffff)
+open(p,"wb").write(d[:33]+ch+d[33:])' "$T/pages/image/penguin.png"
+bash "$HERE/tools/build-site.sh" --out "$T/o5" --pages "$T/pages" >/dev/null 2>&1
+check "...one with a drawing program's text in it is served without it" bash -c '
+    grep -q "made in GIMP" "$1/pages/image/penguin.png" && ! grep -q "made in GIMP" "$1/o5/image/penguin.png" && python3 -I "$1/png.py" "$1/o5/image/penguin.png"' _ "$T"
 check "the style sheet loads nothing (no url(), @import or web font)" not grep -qE 'url\(|@import|@font-face' "$O/style.css"
 check "...light, and dark when the system is" bash -c 'grep -q "prefers-color-scheme: dark" "$1" && grep -q "color-scheme: dark" "$1" && grep -q "color-scheme: light" "$1"' _ "$O/style.css"
 check "...every page says it can be either" bash -c '! grep -rL "<meta name=\"color-scheme\" content=\"light dark\">" --include="*.html" "$1" | grep -q .' _ "$O"
