@@ -1,0 +1,2 @@
+- [Whonix webtunnel plan](whonix-webtunnel-plan.md) — owner approved an experimental opt-in; design, update warning and open questions; not started
+- [VM testing and pentest plan](vm-testing-plan.md) — real-install testing in claude-vm, then a pentest in throwaway VMs; agreed order and safety rules
