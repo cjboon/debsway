@@ -158,8 +158,9 @@ repository is live.
 
 `site/` is the website, plain HTML with no JavaScript, and `tools/build-site.sh`
 builds it from one commit, with a browsable copy of every file
-(`bash tools/build-site.sh --out /tmp/site --pages site` to look at changes
-before committing them). `tools/setup-vps.sh` sets up the server,
+(`bash tools/build-site.sh --preview` builds this copy's pages, committed or
+not, into `~/Downloads/wren-site-preview` and opens them in the sandboxed
+Firefox; the server's headers are seen only on the test VM). `tools/setup-vps.sh` sets up the server,
 `tools/publish-site.sh` puts the site and the git mirror on it from a signed
 commit only, and `tools/try-vps.sh` tries it all in a local VM first: see
 [vps.md](vps.md).

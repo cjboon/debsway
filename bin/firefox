@@ -5,7 +5,8 @@
 # a hacked page reaches only that user: not your files, ssh keys or passwords.
 # - Clipboard: shared with your programs while the Firefox window has focus.
 # - Downloads: ~/Downloads is shared both ways. Treat what lands there as
-#   untrusted, and do not run it without looking.
+#   untrusted, and do not run it without looking. A file there can be opened
+#   in it too: firefox file://$HOME/Downloads/page.html
 # - Screen: it gets a restricted Wayland socket (bin/wayland-restrict), not your
 #   real one, so it cannot read the screen, type for you or lock the session.
 # - Sound: its own audio server whose only output is one pipe, which a player of
@@ -100,8 +101,18 @@ case $WAYLAND_DISPLAY in
     */*) die "WAYLAND_DISPLAY should be a plain name like wayland-1." ;;
 esac
 [ -S "$rt/$WAYLAND_DISPLAY" ] || die "can't find your Wayland socket ($rt/$WAYLAND_DISPLAY)."
+# A web address, or a file in this Firefox's own downloads folder (file://,
+# the real path inside it: no .., no link out of it), which it can read anyway
+url_ok() {
+    [[ $1 =~ ^https?://[^[:space:]]+$ ]] && return 0
+    [[ $1 =~ ^file://(/[^[:space:]%]+)$ ]] || return 1
+    local p=${BASH_REMATCH[1]} real top
+    case /$p/ in */../* | */./*) return 1 ;; esac
+    real=$(realpath -e -- "$p" 2>/dev/null) && top=$(realpath -e -- "$HOME/Downloads${name:+/$name}" 2>/dev/null) || return 1
+    [[ $real == "$top"/* ]]
+}
 for a in "$@"; do
-    [[ $a =~ ^https?://[^[:space:]]+$ ]] || die "only http:// and https:// addresses can be opened."
+    url_ok "$a" || die "only http:// and https:// addresses, and files in $HOME/Downloads${name:+/$name}, can be opened."
 done
 SESSION=/usr/local/libexec/firefox-session
 # The one command your user may run as that user (see /etc/sudoers.d)
@@ -199,7 +210,6 @@ setfacl -P -d -m "u:$user:rwx,u:$(id -un):rwx" "$downloads"
 if [ -n "$name" ]; then
     setfacl -P -R -x "u:firefox,d:u:firefox" "$downloads" 2>/dev/null || true
 fi
-
 if $audio; then
     rm -f "$fifo"
     mkfifo -m 600 "$fifo"

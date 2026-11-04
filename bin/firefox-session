@@ -40,11 +40,21 @@ profile=$home/profile
 run=/dev/shm/$user-run
 bus="unix:path=$run/run/bus"
 
-# Only plain web addresses are accepted from the caller
+# Only plain web addresses are accepted from the caller, and files in a
+# downloads folder (file:///home/NAME/Downloads/..., or .../Downloads/PROFILE/...
+# for a profile), the real path inside it: what this user may read anyway
 check_urls() {
-    local a
+    local a p real top
     for a in "$@"; do
-        [[ $a =~ ^https?://[^[:space:]]+$ ]] || die "only http:// and https:// addresses can be opened."
+        [[ $a =~ ^https?://[^[:space:]]+$ ]] && continue
+        if [[ $a =~ ^file://(/home/[a-z_][a-z0-9_-]{0,31}/Downloads${tag:+/$tag})(/[^[:space:]%]+)$ ]]; then
+            top=${BASH_REMATCH[1]} p=${BASH_REMATCH[1]}${BASH_REMATCH[2]}
+            case /$p/ in */../* | */./*) ;; *)
+                real=$(realpath -e -- "$p" 2>/dev/null) && top=$(realpath -e -- "$top" 2>/dev/null) &&
+                    [[ $real == "$top"/* ]] && continue ;;
+            esac
+        fi
+        die "only http:// and https:// addresses, and files in your Downloads folder, can be opened."
     done
 }
 

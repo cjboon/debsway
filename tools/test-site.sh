@@ -156,4 +156,14 @@ if command -v gpg >/dev/null; then
         grep -q "</code>, signed by the key on <a href=\"verify.html\">Verify</a>" "$1/index.html" && grep -q "</code>, signed by the key on <a href=\"../../verify.html\">" "$1/source/docs/bios.md.html"' _ "$T/s2"
 fi
 
+# --preview: into ~/Downloads/wren-site-preview, opened in the sandboxed Firefox
+mkdir -p "$T/ph/Downloads"
+printf '#!/bin/sh\necho "$@" >"%s/opened"\n' "$T" >"$T/pfx"
+chmod +x "$T/pfx"
+HOME=$T/ph WREN_FIREFOX=$T/pfx bash "$W/tools/build-site.sh" --preview >/dev/null 2>&1
+/bin/sleep 1
+check "--preview: the site in ~/Downloads/wren-site-preview, with this copy's pages, opened in the sandboxed Firefox" bash -c '
+    [ -f "$1/ph/Downloads/wren-site-preview/index.html" ] && [ "$(cat "$1/opened")" = "file://$1/ph/Downloads/wren-site-preview/index.html" ]' _ "$T"
+check "...not with --require-signed" not bash "$W/tools/build-site.sh" --preview --require-signed
+
 [ "$fails" -eq 0 ]

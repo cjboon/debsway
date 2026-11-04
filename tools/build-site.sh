@@ -11,7 +11,13 @@
 #    Verify (setup-vps.sh prints it).
 #  - --pages DIR: the pages from DIR instead of the commit's site/ (to try
 #    changes before they are committed; never with --require-signed).
+#  - --preview: the pages as they are in this copy (site/, committed or not),
+#    into ~/Downloads/wren-site-preview (unless --out says otherwise), opened in
+#    the sandboxed Firefox: it may read ~/Downloads, so nothing listens on a
+#    port and no firewall opens. (The server's headers aren't there: look at
+#    those on the test VM, tools/try-vps.sh.)
 # Usage: bash tools/build-site.sh --out DIR [--commit REV] [--onion ADDRESS] [--require-signed] [--pages DIR]
+#        bash tools/build-site.sh --preview [--out DIR]
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$WREN_DIR/lib/appimage.sh"
 . "$WREN_DIR/lib/update.sh"
@@ -20,7 +26,7 @@ not_root
 g() { git -C "$WREN_DIR" "$@"; }
 usage() { die "Usage: bash tools/build-site.sh --out DIR [--commit REV] [--onion ADDRESS] [--require-signed] [--pages DIR]"; }
 
-out='' rev=HEAD onion='' signed=false pages=''
+out='' rev=HEAD onion='' signed=false pages='' preview=false
 while [ $# -gt 0 ]; do
     case $1 in
         --out) out=${2:-}; shift 2 || usage ;;
@@ -28,9 +34,15 @@ while [ $# -gt 0 ]; do
         --onion) onion=${2:-}; shift 2 || usage ;;
         --pages) pages=${2:-}; shift 2 || usage ;;
         --require-signed) signed=true; shift ;;
+        --preview) preview=true; shift ;;
         *) usage ;;
     esac
 done
+if $preview; then
+    $signed && die "--preview shows what isn't committed yet, so not with --require-signed."
+    [ -n "$pages" ] || pages=$WREN_DIR/site
+    [ -n "$out" ] || out=$HOME/Downloads/wren-site-preview
+fi
 [ -n "$out" ] || usage
 # It replaces OUT: only a folder it made before (its mark inside), or none
 if [ -e "$out" ] && [ ! -f "$out/.wren-site" ]; then
@@ -71,3 +83,13 @@ find "$out.new" -type d -exec chmod 0755 {} + && find "$out.new" -type f -exec c
 rm -rf "$out"
 mv "$out.new" "$out"
 note "The site, from commit ${commit:0:12}, is in $out ($(du -sh "$out" | cut -f1))."
+if $preview; then
+    # (a test gives its own pretend firefox)
+    fx=${WREN_FIREFOX:-/usr/local/bin/firefox}
+    if [ -x "$fx" ]; then
+        note "Opening it in the sandboxed Firefox."
+        "$fx" "file://$out/index.html" >/dev/null 2>&1 &
+    else
+        note "Open it in a browser: file://$out/index.html"
+    fi
+fi

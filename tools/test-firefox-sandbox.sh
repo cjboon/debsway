@@ -417,4 +417,29 @@ check "Tab: the profiles after --profile and --remove-profile" bash -c '[ "$(com
 check "...and the options first" test "$(comp firefox --pro | sort | paste -sd' ')" = "--profile --profiles"
 check "the extra installs it where bash-completion looks" grep -q 'bash-completion/completions/firefox' "$HERE/extras/firefox-sandbox.sh"
 
+# ---- a file in the downloads folder may be opened (file://), nothing else of yours ----
+mkdir -p "$T/home/Downloads/bank"
+echo '<p>hi</p>' >"$T/home/Downloads/page.html"
+echo '<p>mine</p>' >"$T/home/notes.html"
+ln -sf "$T/home/notes.html" "$T/home/Downloads/out.html"
+echo '<p>bank</p>' >"$T/home/Downloads/bank/statement.html"
+: >"$T/calls"
+fx --no-audio "file://$T/home/Downloads/page.html" >/dev/null 2>&1
+check "a file in ~/Downloads: opened (file://), it can read that folder anyway" grep -qF "file://$T/home/Downloads/page.html" "$T/calls"
+for bad in "file://$T/home/notes.html" "file://$T/home/Downloads/out.html" "file://$T/home/Downloads/../notes.html" "file://$T/home/Downloads/%2e%2e/notes.html" "file:///etc/passwd"; do
+    : >"$T/calls"
+    check "...but not ${bad#file://"$T"/} (outside it, a link out of it, .. or an escape)" bash -c '! "$@" 2>/dev/null && ! grep -q "firefox-session" "$T/calls"' _ fx --no-audio "$bad"
+done
+: >"$T/calls"
+check "a profile: a file in the main ~/Downloads isn't its to open" not fx --no-audio --profile bank "file://$T/home/Downloads/page.html"
+: >"$T/calls"
+fx --no-audio --profile bank "file://$T/home/Downloads/bank/statement.html" >/dev/null 2>&1
+check "...its own folder's is" grep -qF "file://$T/home/Downloads/bank/statement.html" "$T/calls"
+check "...and the main Firefox's rights, inherited from ~/Downloads, are taken off its folder" \
+    grep -qF "setfacl -P -R -x u:firefox,d:u:firefox $T/home/Downloads/bank" "$T/calls"
+check "the session takes a file only in a downloads folder, and no .., itself too" bash -c '
+    eval "$(sed -n "/^check_urls() {/,/^}/p" "$1")"; die() { exit 1; }; tag=
+    ! (check_urls "file:///etc/passwd") && ! (check_urls "file:///home/me/Downloads/../.ssh/id") && ! (check_urls "file:///home/me/.bashrc") &&
+    tag=bank && ! (check_urls "file:///home/me/Downloads/x.html")' _ "$HERE/bin/firefox-session"
+
 [ "$fails" -eq 0 ]

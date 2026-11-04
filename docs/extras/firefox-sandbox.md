@@ -16,7 +16,8 @@ runs as a different user, `firefox`, with no password, no login and none of
 your files, so a hacked page reaches only that user's own profile
 (`/var/lib/wren-firefox`: your logins, history and bookmarks), not your
 documents, keys or passwords. The clipboard is shared while its window has
-focus, and `~/Downloads` both ways. Its sound goes through a pipe into a
+focus, and `~/Downloads` both ways (a file there opens in it too:
+`firefox file://$HOME/Downloads/page.html`; nothing else of yours does). Its sound goes through a pipe into a
 player of yours, so it can't hear your microphone, and it gets a restricted
 Wayland socket. A firewall rule on its group, `wren-fx`
 (`data/firefox-firewall.nft`), keeps it off your router, printers and this
