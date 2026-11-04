@@ -115,7 +115,7 @@ time and its id, so a later commit always has a higher version. `tools/test-buil
   and `dpkg-deb` with a short script is easier to read and to build the same
   way every time.
 
-On the computer you publish from, `bash tools/release.sh` does it all, stopping at the
+On the computer you publish from, `wren-release` (or `bash tools/release.sh`) does it all, stopping at the
 first step that fails: `git-push.sh`, the package in a new private folder, `sudo apt
 install` of that one file, `wrenctl --update`. `--local` installs the last commit
 without pushing. Don't build into `/tmp` and install by a wildcard: every user can

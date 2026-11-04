@@ -9,6 +9,7 @@
 # The private folder matters: /tmp is open to every user, the sandboxes' too, and
 # apt installs as root, so a name like /tmp/wren-linux_*.deb could also pick up a
 # package a hacked sandbox left there.
+# (wrenctl install wren-dev adds a command for it: wren-release, from any folder)
 # Usage: bash tools/release.sh           publish, then install here
 #        bash tools/release.sh --local   install here only, nothing is pushed (to try
 #                                     the last commit; what isn't committed stays out)

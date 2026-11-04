@@ -29,7 +29,8 @@ esac
 EOF
 chmod +x "$T/bin/"*
 # The server
-mkdir "$T/w" && echo hello >"$T/w/README.md"
+mkdir -p "$T/w/tools" && echo hello >"$T/w/README.md"
+printf 'echo "released: $*"\n' >"$T/w/tools/release.sh"
 git -C "$T/w" init -q -b main && git -C "$T/w" add -A && git -C "$T/w" -c commit.gpgsign=false commit -q -m first
 git clone -q --bare "$T/w" "$T/server.git"
 # Wren Linux as the package has it: no git, no tools; pins.sh names the pretend server
@@ -48,6 +49,17 @@ run
 check "no copy: it is fetched into ~/wren-linux" test "$(git -C "$HOME/wren-linux" rev-parse HEAD)" = "$(git -C "$T/w" rev-parse HEAD)"
 check "...it says the signature wasn't checked while no key is pinned" grep -q 'not checked' "$T/out"
 check "...and nothing else is left in your home" test "$(find "$HOME" -maxdepth 1 -name '.wren-linux*' | wc -l)" = 0
+check "wren-release runs that copy's tools/release.sh, from any folder, with its arguments" bash -c '
+    cd / && [ "$("$1/.local/bin/wren-release" --local)" = "released: --local" ]' _ "$HOME"
+run --remove
+check "...--remove takes it away" test ! -e "$HOME/.local/bin/wren-release"
+printf '#!/bin/sh\necho mine\n' >"$HOME/.local/bin/wren-release"
+run
+check "...a program of yours by that name: left alone, and it says so" bash -c 'grep -qx "echo mine" "$1/.local/bin/wren-release" && grep -q "wren-release is already there" "$2"' _ "$HOME" "$T/out"
+run --remove
+check "...and --remove leaves it too" grep -qx 'echo mine' "$HOME/.local/bin/wren-release"
+rm -f "$HOME/.local/bin/wren-release"
+run
 echo mine >"$HOME/wren-linux/mine.txt"
 run
 check "a copy there: left as it is" bash -c 'grep -q "You have one" "$1" && [ -f "$2/wren-linux/mine.txt" ]' _ "$T/out" "$HOME"

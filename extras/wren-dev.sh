@@ -21,6 +21,7 @@ DEV=$HOME/wren-linux
 if [ "${1:-}" = --remove ]; then
     # (the Claude Code sandbox installs shellcheck too: it stays while that does)
     apt_purge lintian shellcheck git
+    if grep -qs 'written by Wren Linux extras/wren-dev.sh' "$BIN/wren-release"; then rm -f "$BIN/wren-release"; fi
     if [ -d "$DEV/.git" ]; then note "Your copy in $DEV stays: it may hold work of yours."; fi
     exit
 fi
@@ -53,9 +54,23 @@ else
     note "Fetched it into $DEV."
 fi
 
+# Publishing and installing here (tools/release.sh), from any folder. Its own
+# line, not a bin/ file: only this computer has a copy for it to run.
+if [ ! -f "$DEV/tools/release.sh" ]; then
+    :
+elif [ -e "$BIN/wren-release" ] && ! grep -qs 'written by Wren Linux extras/wren-dev.sh' "$BIN/wren-release"; then
+    warn "$BIN/wren-release is already there and isn't Wren Linux's, so it was left alone."
+else
+    mkdir -p "$BIN"
+    printf '#!/bin/bash\n# wren-release: written by Wren Linux extras/wren-dev.sh\nexec bash %q "$@"\n' \
+        "$DEV/tools/release.sh" >"$BIN/wren-release"
+    chmod +x "$BIN/wren-release"
+fi
+
 cat <<EOF2
 
     How to use them, in $DEV:
+      wren-release                   publish, then install here (--local: install only)
       bash test.sh                   every check, shellcheck on every script included
       bash extras/signing-key.sh     the key to sign Wren Linux with, if you publish it
       bash tools/git-push.sh         publish: signs, checks, asks, pushes

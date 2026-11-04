@@ -9,6 +9,7 @@ wrenctl manual wren-dev                      print the manual steps below
 
 bash test.sh                   in ~/wren-linux: every check, shellcheck on every script included
 bash extras/signing-key.sh     the key to sign Wren Linux with, if you publish it
+wren-release                   from any folder: publish, then install here (--local: install only)
 bash tools/git-push.sh         publish: signs, checks, asks, pushes
 bash tools/build-deb.sh        build the package; lintian checks it
 lintian FILE.deb               check any package
@@ -39,6 +40,9 @@ from `@WREN_GIT_URL@`, and checked against Wren Linux's key once one is pinned.
 sudo apt install --no-install-recommends lintian shellcheck git
 # A copy of Wren Linux to work on, unless you have one
 git clone @WREN_GIT_URL@ ~/wren-linux
+# wren-release, to publish and install from any folder
+printf '#!/bin/bash\nexec bash ~/wren-linux/tools/release.sh "$@"\n' >~/.local/bin/wren-release
+chmod +x ~/.local/bin/wren-release
 ```
 
 To undo:
@@ -49,4 +53,5 @@ To undo:
 sudo apt purge lintian
 sudo apt-mark auto shellcheck
 sudo apt autoremove --purge
+rm ~/.local/bin/wren-release
 ```
