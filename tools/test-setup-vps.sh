@@ -67,7 +67,8 @@ check "...the headers: no script, frame or outside resource; no referrer; HSTS; 
     grep -qF "Content-Security-Policy \"default-src '"'"'none'"'"'; style-src '"'"'self'"'"'; img-src '"'"'self'"'"'; base-uri '"'"'none'"'"'; form-action '"'"'none'"'"'; frame-ancestors '"'"'none'"'"'\"" "$1" &&
     grep -q "Referrer-Policy no-referrer" "$1" && grep -q "Strict-Transport-Security" "$1" && grep -qF "Onion-Location \"http://$2{uri}\"" "$1"' _ "$C" "$SITE_ONION"
 check "...the onion site on 127.0.0.1 only, and no log of visitors" bash -c '
-    grep -q "^http://127.0.0.1:8080 {$" "$1" && grep -q "bind 127.0.0.1" "$1" && ! grep -qE "^[[:space:]]*log([[:space:]]|$)" "$1"' _ "$C"
+    grep -q "^http://:8080 {$" "$1" && grep -q "bind 127.0.0.1" "$1" && ! grep -qE "^[[:space:]]*log([[:space:]]|$)" "$1"' _ "$C"
+check "...for any name: Tor Browser asks for the .onion name, and Caddy gives an empty page to a name it does not know" bash -c '! grep -q "^http://127.0.0.1:8080" "$1"' _ "$C"
 check "...the git mirror at /git/, the site from /srv/wren-site" bash -c 'grep -q "handle_path /git/\*" "$1" && grep -q "root \* /srv/wren-site" "$1"' _ "$C"
 H=$R/etc/systemd/system/caddy.service.d/60-wren-vps.conf
 check "...and Caddy itself locked down by systemd" bash -c '

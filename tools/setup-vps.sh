@@ -282,8 +282,10 @@ EOF
     fi
     if [ "$VPS_ONION_SITE" = yes ]; then
         cat <<'EOF'
-# The onion site: Tor brings visitors here (Tor's own encryption, so http)
-http://127.0.0.1:8080 {
+# The onion site: Tor brings visitors here (Tor's own encryption, so http). For
+# any name, as they ask for the .onion one: Caddy answers a name it wasn't told
+# with an empty page. bind keeps it to this computer, where only Tor comes from.
+http://:8080 {
     bind 127.0.0.1
     import wren_files
 }

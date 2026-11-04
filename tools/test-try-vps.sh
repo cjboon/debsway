@@ -30,6 +30,8 @@ check "...and runs the VM through that command (the vendored script refuses to r
 check "the extra doesn't chmod a script it can't change (the package's copy is root's)" grep -q '^\[ -x "\$SCRIPT" \] || chmod +x "\$SCRIPT"$' "$HERE/extras/mockvps-kvm.sh"
 check "the VM counts as there by its disk, and one switched off is started first (--status succeeds without one)" bash -c '
     grep -qF "if [ -f \"\$WORK/\$VM.qcow2\" ]; then" "$1" && grep -qF "grep -q '"'"'Running (pid'"'"'" "$1" && grep -q "mock --start" "$1"' _ "$HERE/tools/try-vps.sh"
+check "the site is forwarded from this computer's loopback, by QEMU: setup-vps.sh's sshd allows no tunnels" bash -c '
+    grep -q "HOST_FORWARDS=127.0.0.1:8080:80" "$1" && grep -q "WEB_TUNNEL=0" "$1" && ! grep -q "SSH tunnel" "$1"' _ "$HERE/tools/try-vps.sh"
 check "it confirms the change from a second login, as you would" grep -q 'wren-vps --confirm' "$HERE/tools/try-vps.sh"
 
 # The mockvps-kvm extra: its command may point at another Wren Linux copy's

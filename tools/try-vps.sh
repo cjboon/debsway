@@ -3,7 +3,7 @@
 # fresh VPS would get it, before any real server meets it. The VM is the
 # bundled vendor/mockvps-kvm: a Debian 13 install of its own, reachable only
 # from this computer (SSH on a loopback port, the site at
-# http://127.0.0.1:8080 through an SSH tunnel). Needs KVM and the
+# http://127.0.0.1:8080, both forwarded by QEMU). Needs KVM and the
 # mockvps-kvm extra (wrenctl install mockvps-kvm, once), and downloads
 # Debian's installer the first time (5-15 minutes).
 #  - The VM's user, vps, becomes setup-vps.sh's user (its SSH key is the one
@@ -26,7 +26,8 @@ WORK=${XDG_DATA_HOME:-$HOME/.local/share}/wren/try-vps
 # Wren Linux package's, and the vendored script runs only as that command
 MOCK=$HOME/.local/bin/mockvps-kvm
 KEY=$HOME/.ssh/${VM}_id
-mock() { "$MOCK" --name "$VM" --port "$PORT" --workdir "$WORK" "$@"; }
+# (the site forwarded by QEMU: setup-vps.sh's sshd allows no tunnels)
+mock() { WEB_TUNNEL=0 HOST_FORWARDS=127.0.0.1:8080:80 "$MOCK" --name "$VM" --port "$PORT" --workdir "$WORK" "$@"; }
 vm_ssh() { ssh -o IdentitiesOnly=yes -o HostKeyAlias="$VM" -o StrictHostKeyChecking=accept-new -i "$KEY" -p "$PORT" vps@127.0.0.1 "$@"; }
 
 # provision CLIENT-KEY: what runs as root in the VM: setup-vps.sh, as it is
