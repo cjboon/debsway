@@ -67,7 +67,10 @@ if ! flock -n 9; then
 fi
 
 sock=$rt/firefox$tag-wayland
-restrict=$(command -v wayland-restrict) || die "wayland-restrict is missing. Run: wrenctl install firefox-sandbox"
+# wayland-restrict is yours, in ~/.local/bin: taken from there, so a link from a
+# program whose PATH leaves that out (Wren Linux's own scripts) still opens
+restrict=$HOME/.local/bin/wayland-restrict
+[ -x "$restrict" ] || restrict=$(command -v wayland-restrict) || die "wayland-restrict is missing. Run: wrenctl install firefox-sandbox"
 command -v setfacl >/dev/null || die "setfacl is missing (package acl)."
 # (firefox-session accepts only /home/NAME/Downloads, or .../Downloads/PROFILE)
 downloads=$HOME/Downloads${name:+/$name}

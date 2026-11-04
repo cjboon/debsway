@@ -50,6 +50,18 @@ check "...read and write on ~/Downloads, for both of you, for later files too" \
 check "...and took the access back when it ended" grep -q "setfacl -x u:firefox $T/run $T/home" "$T/calls"
 check "~/Downloads exists" test -d "$T/home/Downloads"
 
+# 1b. started with a PATH without ~/.local/bin (lib.sh's, so gh from git-init.sh):
+# wayland-restrict is still found there
+mkdir -p "$T/fake-nolocal" "$T/home/.local/bin"
+cp "$T/fake/sudo" "$T/fake/setfacl" "$T/fake-nolocal/"
+cp "$T/fake/wayland-restrict" "$T/home/.local/bin/"
+: >"$T/calls"
+env PATH="$T/fake-nolocal:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" HOME="$T/home" XDG_RUNTIME_DIR="$T/run" WAYLAND_DISPLAY=wayland-1 \
+    bash "$HERE/bin/firefox" --no-audio https://example.org/ >/dev/null 2>&1
+check "a PATH without ~/.local/bin (Wren Linux's scripts): wayland-restrict is found there, it starts" grep -q 'firefox-session start' "$T/calls"
+check "...so do incognito and the media viewer" bash -c 'for f in incognito media-sandbox; do grep -qx "restrict=\$HOME/.local/bin/wayland-restrict" "$1/bin/$f" || exit 1; done' _ "$HERE"
+rm "$T/home/.local/bin/wayland-restrict"
+
 # 2. a link while it is open goes to the running Firefox
 : >"$T/calls"
 FAKE_UP=3 fx --no-audio >/dev/null 2>&1 &

@@ -24,7 +24,10 @@ command -v bwrap >/dev/null || die "bubblewrap isn't installed (bash extras/medi
 [ -n "${WAYLAND_DISPLAY:-}" ] && [ -n "${XDG_RUNTIME_DIR:-}" ] || die "needs your sway session (WAYLAND_DISPLAY and XDG_RUNTIME_DIR)."
 case $WAYLAND_DISPLAY in */*) die "WAYLAND_DISPLAY should be a plain name like wayland-1." ;; esac
 rt=$XDG_RUNTIME_DIR
-restrict=$(command -v wayland-restrict) || die "wayland-restrict is missing. Run: wrenctl install media"
+# wayland-restrict is yours, in ~/.local/bin: taken from there, so a link from a
+# program whose PATH leaves that out (Wren Linux's own scripts) still opens
+restrict=$HOME/.local/bin/wayland-restrict
+[ -x "$restrict" ] || restrict=$(command -v wayland-restrict) || die "wayland-restrict is missing. Run: wrenctl install media"
 sock=$rt/media-sandbox-wayland.$$
 # Dies with this script (its standard input closes); the trap tidies the socket file
 coproc WL { exec "$restrict" "$sock" media-sandbox; }

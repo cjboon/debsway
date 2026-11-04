@@ -35,7 +35,10 @@ case $WAYLAND_DISPLAY in
 esac
 [ -S "$rt/$WAYLAND_DISPLAY" ] || die "can't find your Wayland socket ($rt/$WAYLAND_DISPLAY)."
 sock=$rt/$user-wayland
-restrict=$(command -v wayland-restrict) || die "wayland-restrict is missing. Run: wrenctl part incognito"
+# wayland-restrict is yours, in ~/.local/bin: taken from there, so a link from a
+# program whose PATH leaves that out (Wren Linux's own scripts) still opens
+restrict=$HOME/.local/bin/wayland-restrict
+[ -x "$restrict" ] || restrict=$(command -v wayland-restrict) || die "wayland-restrict is missing. Run: wrenctl part incognito"
 command -v setfacl >/dev/null || die "setfacl is missing (package acl)."
 command -v flock >/dev/null || die "flock is missing (package util-linux)."
 # The one command your user may run as incognito or wifi-signin (see /etc/sudoers.d)
