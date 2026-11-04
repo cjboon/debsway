@@ -1,27 +1,16 @@
-/* Wren Linux's site: system fonts, no images, no web fonts, nothing loaded
-   from elsewhere, so it looks the same in Tor Browser's Safest mode. Light
-   or dark follows the visitor's system (Tor Browser always asks for light). */
+/* Wren Linux's site: system fonts, no web fonts, nothing loaded from
+   elsewhere, so it looks the same in Tor Browser's Safest mode. Dark for
+   everyone (it doesn't ask the visitor's system: one look, and one less
+   thing a site can learn about its visitor). */
 :root {
-    color-scheme: light;
-    --bg: #fbfaf7;
-    --fg: #1d1c1a;
-    --muted: #5c5a55;
-    --line: #dedbd3;
-    --box: #f1efe9;
-    --link: #1f5fa8;
-    --accent: #2f6b3a;
-}
-@media (prefers-color-scheme: dark) {
-    :root {
-        color-scheme: dark;
-        --bg: #15161a;
-        --fg: #e6e4df;
-        --muted: #a5a29b;
-        --line: #33353b;
-        --box: #1e2025;
-        --link: #8cb8ec;
-        --accent: #8fcf98;
-    }
+    color-scheme: dark;
+    --bg: #15161a;
+    --fg: #e6e4df;
+    --muted: #a5a29b;
+    --line: #33353b;
+    --box: #1e2025;
+    --link: #8cb8ec;
+    --accent: #8fcf98;
 }
 * { box-sizing: border-box; }
 html { background: var(--bg); color: var(--fg); }
@@ -29,7 +18,7 @@ body {
     margin: 0 auto;
     max-width: 46rem;
     padding: 1rem 1.25rem 3rem;
-    font: 1.05rem/1.6 system-ui, -apple-system, "Segoe UI", "DejaVu Sans", sans-serif;
+    font: 1.15rem/1.65 system-ui, -apple-system, "Segoe UI", "DejaVu Sans", sans-serif;
 }
 a { color: var(--link); }
 header {
@@ -53,7 +42,9 @@ h2 { font-size: 1.3rem; margin-top: 2rem; }
 .home .mascot { display: block; width: 9rem; height: auto; margin: 2rem auto 0; }
 .home h1 { font-size: 2.6rem; letter-spacing: 0.02em; margin-top: 1rem; }
 .home .lead { font-size: 1.3rem; font-style: italic; color: var(--accent); }
-.home p { margin: 1.25rem 0; }
+.home p { margin: 1.25rem 0; font-size: 1.2rem; line-height: 1.75; }
+.home .small { font-size: 0.95rem; margin-top: 2.5rem; }
+.home .small a { color: var(--muted); }
 .home hr {
     width: 5rem;
     margin: 2rem auto;

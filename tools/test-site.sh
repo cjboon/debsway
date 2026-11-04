@@ -3,7 +3,7 @@
 # commit, it holds no script, no inline style or event handler, nothing loaded
 # from elsewhere, and no link that leads nowhere, so it works in Tor Browser's
 # Safest mode and under the strict Content-Security-Policy setup-vps.sh sends;
-# both themes are there; the fingerprint and git address are pins.sh's; the
+# it is dark for everyone; the fingerprint and git address are pins.sh's; the
 # source browser escapes every file (this one holds <script>alert(1)</script>
 # in this comment, and the site must still hold no script); and with
 # --require-signed only a commit the pinned key signed is built. Changes
@@ -112,8 +112,10 @@ bash "$HERE/tools/build-site.sh" --out "$T/o5" --pages "$T/pages" >/dev/null 2>&
 check "...one with a drawing program's text in it is served without it" bash -c '
     grep -q "made in GIMP" "$1/pages/image/penguin.png" && ! grep -q "made in GIMP" "$1/o5/image/penguin.png" && python3 -I "$1/png.py" "$1/o5/image/penguin.png"' _ "$T"
 check "the style sheet loads nothing (no url(), @import or web font)" not grep -qE 'url\(|@import|@font-face' "$O/style.css"
-check "...light, and dark when the system is" bash -c 'grep -q "prefers-color-scheme: dark" "$1" && grep -q "color-scheme: dark" "$1" && grep -q "color-scheme: light" "$1"' _ "$O/style.css"
-check "...every page says it can be either" bash -c '! grep -rL "<meta name=\"color-scheme\" content=\"light dark\">" --include="*.html" "$1" | grep -q .' _ "$O"
+check "...dark for everyone: it doesn't ask the visitor's system" bash -c 'grep -q "color-scheme: dark" "$1" && ! grep -q "prefers-color-scheme" "$1" && ! grep -q "color-scheme: light" "$1"' _ "$O/style.css"
+check "...every page says so" bash -c '! grep -rL "<meta name=\"color-scheme\" content=\"dark\">" --include="*.html" "$1" | grep -q .' _ "$O"
+check "the front page: one paragraph, and what it doesn't protect against as a small link at the bottom" bash -c '
+    [ "$(sed -n "/<div class=\"home\">/,/<\/div>/p" "$1" | grep -c "^<p>")" = 1 ] && grep -q "<p class=\"small\"><a href=\"source/THREAT-MODEL.md.html\">" "$1"' _ "$O/index.html"
 spaced=$(sed -E 's/(.{4})/\1 /g; s/ $//' <<<"$WREN_SIGNING_FPR")
 check "Verify shows the key pins.sh pins" grep -qF "<code>$spaced</code>" "$O/verify.html"
 check "Install's git address is pins.sh's" grep -qF "git clone $WREN_GIT_URL ~/wren" "$O/install.html"
