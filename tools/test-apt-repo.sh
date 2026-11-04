@@ -51,7 +51,15 @@ chmod 0644 "$T/p/DEBIAN/control" "$T/q/DEBIAN/control"
 dpkg-deb --root-owner-group --build "$T/p" "$T/wren-linux_1.0_all.deb" >/dev/null
 dpkg-deb --root-owner-group --build "$T/q" "$T/openssl_99_all.deb" >/dev/null
 
-M=$HERE/tools/make-apt-repo.sh
+# (a copy with no key pinned, as before any: this checkout may pin the real one by now)
+mkdir -p "$T/m/tools"
+cp "$HERE/tools/make-apt-repo.sh" "$T/m/tools/"
+sed 's/^WREN_SIGNING_FPR=.*/WREN_SIGNING_FPR=/' "$HERE/pins.sh" >"$T/m/pins.sh"
+M=$T/m/tools/make-apt-repo.sh
+sed "s/^WREN_SIGNING_FPR=.*/WREN_SIGNING_FPR=$(printf 'A%.0s' {1..40})/" "$HERE/pins.sh" >"$T/pinned.sh"
+mkdir -p "$T/mp/tools"; cp "$HERE/tools/make-apt-repo.sh" "$T/mp/tools/"; cp "$T/pinned.sh" "$T/mp/pins.sh"
+check "with a key pinned, it refuses to sign with another: every computer would refuse that" bash -c '
+    out=$(bash "$1/tools/make-apt-repo.sh" --key "$(printf "B%.0s" {1..40})" --out "$1/r" "$2" 2>&1); [ $? -ne 0 ] && grep -q "would be refused" <<<"$out"' _ "$T/mp" "$T/wren-linux_1.0_all.deb"
 mk() { bash "$M" --out "$T/repo" "$@" >"$T/mk.out" 2>&1; }
 check "it refuses a package that isn't Wren Linux's" bash -c '! bash "$1" --key "$2" --out "$3/r2" "$3/openssl_99_all.deb"' _ "$M" "$FPIN" "$T"
 check "it refuses a key that isn't a full fingerprint" bash -c '! bash "$1" --key ABCD --out "$2/r2" "$2/wren-linux_1.0_all.deb"' _ "$M" "$T"

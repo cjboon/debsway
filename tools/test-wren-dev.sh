@@ -36,7 +36,8 @@ git clone -q --bare "$T/w" "$T/server.git"
 R=$T/usr/share/wren
 mkdir -p "$R/extras"
 sed 's|^export PATH=.*|export PATH="$DEV_TEST_PATH"|' "$HERE/lib.sh" >"$R/lib.sh"
-sed "s|^WREN_GIT_URL=.*|WREN_GIT_URL=file://$T/server.git|" "$HERE/pins.sh" >"$R/pins.sh"
+# (as before any key: this checkout may pin the real one by now)
+sed -e "s|^WREN_GIT_URL=.*|WREN_GIT_URL=file://$T/server.git|" -e 's/^WREN_SIGNING_FPR=.*/WREN_SIGNING_FPR=/' "$HERE/pins.sh" >"$R/pins.sh"
 for f in packages.sh lib data docs bin; do ln -s "$HERE/$f" "$R/$f"; done
 cp "$HERE/extras/wren-dev.sh" "$R/extras/"
 export DEV_TEST_PATH="$T/bin:$PATH" HOME=$T/home

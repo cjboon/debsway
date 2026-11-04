@@ -22,7 +22,9 @@ mkdir -p "$HOME"
 # The server: this checkout's files, then one more commit; it points at itself
 mkdir "$T/W"
 (cd "$HERE" && git ls-files -co --exclude-standard | tar -cf - -T -) | tar -C "$T/W" -xf -
-sed -i "s|^WREN_GIT_URL=.*|WREN_GIT_URL=file://$T/O.git|" "$T/W/pins.sh"
+# (as before any key: this checkout may pin the real one by now)
+sed -i -e "s|^WREN_GIT_URL=.*|WREN_GIT_URL=file://$T/O.git|" -e 's/^WREN_SIGNING_FPR=.*/WREN_SIGNING_FPR=/' "$T/W/pins.sh"
+rm -f "$T/W/data/wren-signing-key.asc"
 git -C "$T/W" init -q -b main && git -C "$T/W" add -A && git -C "$T/W" -c commit.gpgsign=false commit -q -m first
 FIRST=$(git -C "$T/W" rev-parse HEAD)
 echo "# newer" >>"$T/W/README.md"

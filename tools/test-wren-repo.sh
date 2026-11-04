@@ -52,7 +52,9 @@ KEY=$R/usr/share/keyrings/wren-archive-keyring.asc
 LIST=$R/etc/apt/sources.list.d/wren.sources
 PREF=$R/etc/apt/preferences.d/wren.pref
 
-check "pins.sh has the two lines, empty for now" bash -c 'grep -qx "WREN_SIGNING_FPR=" "$1" && grep -qx "WREN_REPO_URL=" "$1"' _ "$HERE/pins.sh"
+check "pins.sh has the two lines" bash -c 'grep -q "^WREN_SIGNING_FPR=" "$1" && grep -q "^WREN_REPO_URL=" "$1"' _ "$HERE/pins.sh"
+# (as before any key: this checkout may pin the real one by now)
+sed -i -e 's/^WREN_SIGNING_FPR=.*/WREN_SIGNING_FPR=/' -e 's/^WREN_REPO_URL=.*/WREN_REPO_URL=/' "$T/d/pins.sh"
 run
 check "nothing pinned: it changes nothing, and says why" bash -c '[ -z "$(ls -A "$1")" ] && grep -q "isn.t set up yet" "$2"' _ "$R" "$T/out"
 

@@ -24,6 +24,9 @@ mkdir -p "$HOME"
 # The server's working copy W (this checkout's files), the server O, your copy L
 mkdir "$T/W"
 (cd "$HERE" && git ls-files -co --exclude-standard | tar -cf - -T -) | tar -C "$T/W" -xf -
+# (as before any key: this checkout may pin the real one by now)
+sed -i 's/^WREN_SIGNING_FPR=.*/WREN_SIGNING_FPR=/' "$T/W/pins.sh"
+rm -f "$T/W/data/wren-signing-key.asc"
 git -C "$T/W" init -q -b main && git -C "$T/W" add -A && git -C "$T/W" commit -q -m first
 git clone -q --bare "$T/W" "$T/O.git"
 git clone -q "$T/O.git" "$T/L"
