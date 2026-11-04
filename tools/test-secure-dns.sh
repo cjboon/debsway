@@ -183,6 +183,26 @@ check "secure-dns toggle while off: the switch's on, through sudo without a pass
 check "secure-dns status needs no sudo" bash -c '[ "$(sdc status)" = off ] && [ "$(grep -c . "$1")" = 1 ]' _ "$W/calls"
 check "the sudo rule allows exactly on and off" grep -qF 'NOPASSWD: %s on, %s off\n' "$HERE/parts/secure-dns.sh"
 check "...checked by visudo before it is installed" grep -q 'sudo visudo -cf "$rule"' "$HERE/parts/secure-dns.sh"
+check "...or, if you chose so, on alone without a password (off then asks for it)" bash -c '
+    grep -qF "NOPASSWD: %s on\\n" "$1" && grep -q "Switching secure DNS off: ask for your password?" "$1"' _ "$HERE/parts/secure-dns.sh"
+# off when only on is allowed without a password: it asks, in a terminal; never without one
+printf '#!/bin/sh\necho "sudo $*" >>"%s/calls"\ncase "$*" in "-n -l "*" off") exit 1 ;; esac\n' "$W" >"$W/fake/sudo"
+: >"$W/calls"
+sdc off </dev/null 2>/dev/null
+check "strict: off with no terminal to ask on: refused, nothing switched" bash -c '! grep -qE "^sudo (-n )?$1 off$" "$2"' _ "$W/switch" "$W/calls"
+: >"$W/calls"
+script -qec "bash -c 'WREN_RESOLV_CONF=$W/etc/resolv.conf PATH=$W/fake:\$PATH bash $W/secure-dns off'" /dev/null >/dev/null 2>&1
+check "...in a terminal: off through sudo with the password" grep -qx "sudo $W/switch off" "$W/calls"
+printf '#!/bin/sh\necho "sudo $*" >>"%s/calls"\n' "$W" >"$W/fake/sudo"
+# the bar: "dns OFF" while it is set up and off, nothing while on or not set up
+: >"$W/switch-exe" && chmod +x "$W/switch-exe"
+bar() { WREN_RESOLV_CONF=$1 WREN_SECDNS_SWITCH=$2 sh "$HERE/bin/sway-status" --dns; }
+echo "nameserver 192.168.1.1" >"$W/off.conf"
+printf '# Written by Wren Linux parts/secure-dns.sh\nnameserver 127.0.0.1\n' >"$W/on.conf"
+check "the bar: \"dns OFF\" while secure DNS is set up but off" test "$(bar "$W/off.conf" "$W/switch-exe")" = "dns OFF"
+check "...nothing while it is on, or isn't set up" bash -c '[ -z "$(bar "$1" "$2")" ] && [ -z "$(bar "$3" "$4/none")" ]' _ "$W/on.conf" "$W/switch-exe" "$W/off.conf" "$W"
+check "...a notification when it goes off, and a click on it switches it on" bash -c '
+    grep -q "notify-send -a wren -u critical \"Secure DNS is off\"" "$1" && grep -q "secure-dns\" on" "$1"' _ "$HERE/bin/sway-status"
 check "secure DNS is part of the base, after NetworkManager" bash -c '
     . "$1/packages.sh"; [[ " ${PARTS[*]} " == *" network-manager secure-dns "* ]]' _ "$HERE"
 check "a re-run keeps the switch where it was (on only at first, or if it was on)" grep -qF 'if $first || [ "$("$BIN/secure-dns" status)" = on ]; then' "$HERE/parts/secure-dns.sh"

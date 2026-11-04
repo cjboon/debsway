@@ -1,5 +1,6 @@
 #!/bin/sh
-# Status line for swaybar: Wren Linux (click: its menu) | wifi (click: nmtui) | volume (scroll: louder/quieter,
+# Status line for swaybar: Wren Linux (click: its menu) | wifi (click: nmtui) | dns OFF (only while
+# secure DNS is off; click: on) | volume (scroll: louder/quieter,
 # click: mute) | brightness (scroll) | battery (click: time left) | next timer | date
 # (click on the time or a timer: the timer menu; the format is set by `timer clock`)
 # Written by Wren Linux install-base.sh. Each part only shows when this
@@ -83,6 +84,19 @@ battery_time() {
     echo "No battery found"
 }
 
+# dns: "dns OFF" while secure DNS is set up (parts/secure-dns.sh) but off. A
+# program running as you can switch it off as easily as you can, so it shows,
+# and the loop below sends a notification when it goes off. A click switches
+# it on again.
+RESOLV=${WREN_RESOLV_CONF:-/etc/resolv.conf}
+SECDNS_SWITCH=${WREN_SECDNS_SWITCH:-/usr/local/libexec/wren-secure-dns}
+dns() {
+    [ -x "$SECDNS_SWITCH" ] || return 0
+    if [ ! -L "$RESOLV" ] && grep -qsE '^# Written by Wren Linux (parts|extras)/secure-dns\.sh' "$RESOLV"; then return 0; fi
+    echo "dns OFF"
+}
+# --dns: what the bar would show for DNS (for a test)
+if [ "${1:-}" = --dns ]; then dns; exit 0; fi
 # json TEXT: TEXT made safe to put inside a JSON string (a network name can hold quotes)
 json() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
 
@@ -117,8 +131,8 @@ fi
 # each part a click range named like the bar's; then exit
 if [ "${1:-}" = --tmux ]; then
     TMUX_BAR=1
-    printf '#[range=user|menu]wren#[norange]%s%s%s%s%s%s' \
-        "$(block wifi "$(wifi)")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
+    printf '#[range=user|menu]wren#[norange]%s%s%s%s%s%s%s' \
+        "$(block wifi "$(wifi)")" "$(block dns "$(dns)")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
         "$(block bat "$(battery)")" "$(block timer "$(timer_text)")" "$(block date "$(date +"$(clock_format)")")"
     exit 0
 fi
@@ -196,6 +210,9 @@ while read -r event <&3; do
         *'"name":"bright"'*'"button":5,'*) "$HOME/.local/bin/brightness" down ;;
         *'"name":"date"'*'"button":1,'* | *'"name":"timer"'*'"button":1,'*)
             open_or_close wren-timer foot -o colors.alpha=0.85 --app-id=wren-timer "$HOME/.local/bin/timer" ;;
+        *'"name":"dns"'*'"button":1,'*)
+            [ ! -x "$HOME/.local/bin/secure-dns" ] || "$HOME/.local/bin/secure-dns" on >/dev/null 2>&1
+            kill -USR1 $$ 2>/dev/null ;;
         *'"name":"bat"'*'"button":1,'*)
             command -v notify-send >/dev/null &&
                 notify-send -a wren -t 8000 "Battery $(battery | sed 's/^bat //; s/+$//')" "$(battery_time)" ;;
@@ -206,9 +223,16 @@ trap 'kill $reader 2>/dev/null; rm -f "$PIDFILE"' EXIT
 
 echo '{"version":1,"click_events":true}'
 echo '['
+dns_was=
 while :; do
-    printf '[{"name":"menu","full_text":"wren","separator":false,"separator_block_width":0}%s%s%s%s%s%s],\n' \
-        "$(block wifi "$(wifi)")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
+    dns_now=$(dns)
+    if [ -n "$dns_now" ] && [ -z "$dns_was" ] && command -v notify-send >/dev/null; then
+        notify-send -a wren -u critical "Secure DNS is off" \
+            "Lookups go to the network unencrypted. If you didn't switch it off, something running as you did. Click \"dns OFF\" in the bar to switch it on." 2>/dev/null
+    fi
+    dns_was=$dns_now
+    printf '[{"name":"menu","full_text":"wren","separator":false,"separator_block_width":0}%s%s%s%s%s%s%s],\n' \
+        "$(block wifi "$(wifi)")" "$(block dns "$dns_now")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
         "$(block bat "$(battery)")" "$(block timer "$(timer_text)")" "$(block date "$(date +"$(clock_format)")")"
     # wait returns early when SIGUSR1 arrives; the sleep ends by itself
     sleep 5 &

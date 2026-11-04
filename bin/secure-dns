@@ -25,7 +25,13 @@ case $cmd in
     on | off)
         [ -x "$SWITCH" ] || die "it isn't set up. Run: wrenctl part secure-dns"
         rc=0
-        sudo -n "$SWITCH" "$cmd" || rc=$?
+        if [ "$cmd" = off ] && ! sudo -n -l "$SWITCH" off >/dev/null 2>&1; then
+            # parts/secure-dns.sh: you chose that off asks for your password
+            [ -t 0 ] || die "switching it off asks for your password (you chose that): run secure-dns off in a terminal."
+            sudo "$SWITCH" off || rc=$?
+        else
+            sudo -n "$SWITCH" "$cmd" || rc=$?
+        fi
         if [ "$cmd" = on ] && [ "$rc" = 0 ]; then rm -f "$LEFT_OFF"; fi
         exit "$rc" ;;
     login-check)

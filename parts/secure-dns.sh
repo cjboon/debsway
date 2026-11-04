@@ -147,9 +147,22 @@ sudo systemctl daemon-reload
 say "The switch"
 sudo install -d -o root -g root -m 0755 "${SWITCH%/*}"
 sudo install -o root -g root -m 0755 "$WREN_DIR/bin/secure-dns-switch" "$SWITCH"
+# Off without a password, or (your choice) only with it: a program running as
+# you can then no longer switch it off silently (the bar shows it either way)
+STRICT=$HOME/.config/wren/secure-dns-strict
+note "Off sends this computer's lookups to the network unencrypted. Anything running as"
+note "you can switch it off as easily as you can (the bar shows \"dns OFF\" then). With a"
+note "password, it can't do it without you; the Wi-Fi sign-in window and the menu then ask too."
 rule=$(mktemp)
-printf '# Written by Wren Linux parts/secure-dns.sh. %s may switch secure DNS on and off,\n# and nothing else, without a password (the Wren menu does).\n%s ALL=(root) NOPASSWD: %s on, %s off\n' \
-    "$(id -un)" "$(id -un)" "$SWITCH" "$SWITCH" >"$rule"
+if auto_or_ask WREN_SECURE_DNS_STRICT "Switching secure DNS off: ask for your password?" "$([ -e "$STRICT" ] && echo y || echo n)"; then
+    mkdir -p "${STRICT%/*}" && : >"$STRICT"
+    printf '# Written by Wren Linux parts/secure-dns.sh. %s may switch secure DNS on, and\n# nothing else, without a password; off asks for it (sudo %s off).\n%s ALL=(root) NOPASSWD: %s on\n' \
+        "$(id -un)" "$SWITCH" "$(id -un)" "$SWITCH" >"$rule"
+else
+    rm -f "$STRICT"
+    printf '# Written by Wren Linux parts/secure-dns.sh. %s may switch secure DNS on and off,\n# and nothing else, without a password (the Wren menu does).\n%s ALL=(root) NOPASSWD: %s on, %s off\n' \
+        "$(id -un)" "$(id -un)" "$SWITCH" "$SWITCH" >"$rule"
+fi
 # A broken sudoers file locks you out of sudo, so it is checked first
 if ! sudo visudo -cf "$rule" >/dev/null; then
     rm -f "$rule"
