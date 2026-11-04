@@ -10,6 +10,9 @@
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 command -v gpg >/dev/null || { echo "  ok    skipped: gpg isn't installed"; exit 0; }
 T=$(mktemp -d)
+# (gpg never looks in your own ~/.gnupg)
+export GNUPGHOME=$T/.gnupg-default
+mkdir -m 700 "$GNUPGHOME"
 trap 'gpgconf --homedir "$T/gh" --kill all 2>/dev/null; rm -rf "$T"' EXIT
 fails=0
 check() { # DESCRIPTION CONDITION-COMMAND...

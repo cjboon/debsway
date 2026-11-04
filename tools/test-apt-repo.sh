@@ -8,6 +8,9 @@
 # shellcheck disable=SC2016  # the inner shells expand their own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 T=$(mktemp -d)
+# (gpg never looks in your own ~/.gnupg)
+export GNUPGHOME=$T/.gnupg-default
+mkdir -m 700 "$GNUPGHOME"
 trap 'gpgconf --homedir "$T/gh" --kill all 2>/dev/null; rm -rf "$T"' EXIT
 fails=0
 check() { # DESCRIPTION CONDITION-COMMAND...
