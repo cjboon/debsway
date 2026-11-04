@@ -90,6 +90,7 @@ fx --no-audio --profile bank
 check "a profile starts as its own user, next to the other Firefox" grep -qF "sudo -n -u fx-bank /usr/local/libexec/firefox-session start $T/run firefox-bank-wayland - $T/home/Downloads/bank dark -" "$T/calls"
 check "...with its own downloads folder, so profiles cannot read each other's files" test -d "$T/home/Downloads/bank"
 check "...and rights only for its own user on it" grep -q "setfacl -P -m u:fx-bank:rwx $T/home/Downloads/bank" "$T/calls"
+check "...the main Firefox's, inherited from ~/Downloads, taken off its folder and what is in it" grep -qF "setfacl -P -R -x u:firefox,d:u:firefox $T/home/Downloads/bank" "$T/calls"
 check "...and not the other user's" not grep -q "u:firefox:rwx $T/home/Downloads/bank" "$T/calls"
 # closing the profile takes back only its own user's rights: the Firefox still
 # open next to it keeps its way through your home folder to ~/Downloads

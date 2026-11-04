@@ -193,6 +193,12 @@ if [ -n "$picture" ]; then setfacl -m "u:$user:r--" "$picture"; fi
 # Read, write and enter the downloads folder, for both of you, also for files made later
 setfacl -P -m "u:$user:rwx" "$downloads"
 setfacl -P -d -m "u:$user:rwx,u:$(id -un):rwx" "$downloads"
+# A profile's folder is made inside ~/Downloads, whose default rights name the
+# main sandboxed Firefox (firefox), so the folder and what lands in it inherit
+# them: taken off again, so only this profile's user and you can read it
+if [ -n "$name" ]; then
+    setfacl -P -R -x "u:firefox,d:u:firefox" "$downloads" 2>/dev/null || true
+fi
 
 if $audio; then
     rm -f "$fifo"
