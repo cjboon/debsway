@@ -49,7 +49,12 @@ change only when the newest commit carries a good signature from that key
 with throwaway keys). One signed commit on top vouches for everything under
 it, since each commit's id covers the ones before it.
 
-The easy way: `bash extras/signing-key.sh` in a git copy (the package leaves it out; `wrenctl install wren-dev` gets a copy), then `wren-key` with a USB
+To publish, use `bash tools/git-push.sh`: it sets up signing and the pin the first
+time, signs the newest commit if it isn't (with an empty commit on top), checks that
+signature as a computer updating would, and asks before it pushes. Computers with
+the pin refuse an update whose newest commit isn't signed.
+
+The easy way to make the key: `bash extras/signing-key.sh` in a git copy (the package leaves it out; `wrenctl install wren-dev` gets a copy), then `wren-key` with a USB
 stick mounted. Its first run explains and asks, makes the key in two parts
 (a primary key that only certifies, in an encrypted backup on the stick and
 nowhere else; and a signing subkey, kept here by its own user with no network,

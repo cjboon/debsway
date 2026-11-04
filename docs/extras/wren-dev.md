@@ -9,6 +9,7 @@ wrenctl manual wren-dev                      print the manual steps below
 
 bash test.sh                   in ~/wren-linux: every check, shellcheck on every script included
 bash extras/signing-key.sh     the key to sign Wren Linux with, if you publish it
+bash tools/git-push.sh         publish: signs, checks, asks, pushes
 bash tools/build-deb.sh        build the package; lintian checks it
 lintian FILE.deb               check any package
 shellcheck SCRIPT              check one script

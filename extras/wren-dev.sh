@@ -58,6 +58,7 @@ cat <<EOF2
     How to use them, in $DEV:
       bash test.sh                   every check, shellcheck on every script included
       bash extras/signing-key.sh     the key to sign Wren Linux with, if you publish it
+      bash tools/git-push.sh         publish: signs, checks, asks, pushes
       bash tools/build-deb.sh        build the package; lintian checks it
       lintian FILE.deb               check any package
       shellcheck SCRIPT              check one script
