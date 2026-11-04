@@ -118,6 +118,8 @@ Three rough levels, to place yourself:
 
 ### Firmware and boot
 
+[bios.md](bios.md) goes through the settings one by one, with a checklist.
+
 - **Set a firmware (BIOS/UEFI) password** so nobody can change the boot order
   or turn security settings off without it. Write it down somewhere safe; on
   some laptops forgetting it is expensive.

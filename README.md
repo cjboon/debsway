@@ -329,6 +329,7 @@ that is set up.
 - [docs/install-base.md](docs/install-base.md): what `install-base.sh` sets up, and every part
 - [docs/extras.md](docs/extras.md): the optional apps, Firefox with its hardening and `incognito`, Firefox profiles
 - [docs/extras/](docs/extras/README.md): one page per extra: its commands, what it is, what it doesn't protect against, and every step to install it by hand (`wrenctl manual NAME` prints them)
+- [docs/bios.md](docs/bios.md): the BIOS (UEFI firmware) settings for a Wren Linux install, and for security in general, with a checklist
 - [docs/opsec.md](docs/opsec.md): operations security in general: laptops, USB drives, networks, passwords, encryption, private communication, physical security, and what to do when something goes wrong
 - [docs/maintaining.md](docs/maintaining.md) (in a git copy; `wrenctl install wren-dev` gets one): `test.sh`, `pins.sh`, shellcheck, the other scripts
 - [docs/distro-plan.md](docs/distro-plan.md) (in a git copy too): the plan from these scripts to a Debian-based distribution: a package, a signed apt repository, a website, an installer image

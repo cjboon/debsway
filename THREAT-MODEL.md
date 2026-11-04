@@ -199,6 +199,8 @@ With the extras:
 - **Physical tampering.** Someone with the laptop alone for a while
   could install a hardware keylogger or tamper with the boot process.
   Wren Linux doesn't set up Secure Boot measurement or tamper evidence.
+  Firmware settings (a supervisor password, no booting from USB, chassis
+  intrusion detection: `docs/bios.md`) slow this down; they don't stop it.
 - **A program listening through the microphone.** With the sound extra, the
   microphone is muted at every login and stays off until you switch it on
   (`wrenctl --mic on`, or the Wren menu). Wi-Fi and Bluetooth have the same

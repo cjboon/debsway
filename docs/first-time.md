@@ -10,6 +10,9 @@ Wren Linux makes common attacks harder. It doesn't make you anonymous or untouch
 
 ## 1. Install Debian
 
+First, in the computer's BIOS: UEFI only, Secure Boot on, storage mode AHCI.
+[bios.md](bios.md) says how, and what to set after the install.
+
 Get Debian 13's installer from [debian.org](https://www.debian.org/distrib/), and
 choose these when it asks:
 
