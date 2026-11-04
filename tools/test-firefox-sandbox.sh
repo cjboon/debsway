@@ -221,19 +221,20 @@ printf 'fast_js=yes\n' >"$T/fx.conf"
 check "...and the main Firefox's choices aren't a profile's (it keeps its cookies: that is what it is for)" test ! -s "$T/prof/user.js"
 # sound: the main Firefox's choice from its file, a profile's from its own
 sound_of() { # NAME (empty: the main Firefox): what the firefox command decides
-    local name=$1 audio=true
+    local name=$1 audio=true PROFILES=$T/prof
     eval "$(sed -n '/^# sound off when that was the choice/,/|| audio=false$/p' "$HERE/bin/firefox" |
-        sed "s|/etc/wren/firefox.conf|$T/fx.conf|; s|/etc/wren/firefox-profiles/|$T/prof-|")"
+        sed "s|/etc/wren/firefox.conf|$T/fx.conf|")"
     echo "$audio"
 }
+mkdir -p "$T/prof"
 printf 'sound=no\n' >"$T/fx.conf"
-printf 'sound=yes\n' >"$T/prof-bank.conf"
+printf 'sound=yes\n' >"$T/prof/bank.conf"
 check "sound chosen off: the main Firefox starts without sound" test "$(sound_of '')" = false
 check "...but a profile follows its own choice, not the main one's" test "$(sound_of bank)" = true
 printf 'sound=yes\n' >"$T/fx.conf"
-printf 'sound=no\n' >"$T/prof-bank.conf"
+printf 'sound=no\n' >"$T/prof/bank.conf"
 check "...a profile with sound off is silent, the main Firefox not" bash -c '[ "$1" = false ] && [ "$2" = true ]' _ "$(sound_of bank)" "$(sound_of '')"
-rm -f "$T/prof-bank.conf"
+rm -f "$T/prof/bank.conf"
 check "...never asked (no file): with sound" test "$(sound_of bank)" = true
 check "the install asks about cookies (delete or keep, default delete), explained, history and passwords kept" python3 -I -c '
 import sys; s = open(sys.argv[1]).read()
@@ -386,5 +387,33 @@ check "the New Tab page: the fox shown, no shortcuts, weather or search box (no 
              "feeds.topsites\", false" "showWeather\", false" "showSearch\", false"; do
         grep -qF "pref(\"browser.newtabpage.activity-stream.$p" "$1" || exit 1
     done' _ "$HERE/data/firefox-hardening.js"
+
+# ---- profiles from the firefox command: list, make, remove; Tab completion ----
+P=$T/profiles-list
+mkdir -p "$P" "$T/home/.local/bin" "$T/wrendir/extras/firefox-profiles"
+printf 'url=https://bank.example/\nfast_js=no\ntoolbars=hidden\nsound=no\ncookies=keep\n' >"$P/bank.conf"
+printf 'url=https://mail.example/\ncookies=delete\n' >"$P/mail.conf"
+printf '#!/bin/sh\n# Written by Wren Linux extras/firefox-profiles/new-profile.sh\n' >"$T/home/.local/bin/bank"
+lst=$(WREN_FX_PROFILE_DIR=$P fx --profiles 2>&1)
+check "firefox --profiles: each profile, its command, its address and its choices" bash -c '
+    grep -qE "^bank +bank +https://bank.example/, no sound$" <<<"$1" && grep -qE "^mail +\(no command\) +https://mail.example/, cookies deleted on close$" <<<"$1"' _ "$lst"
+mkdir -p "$T/profiles-none"
+check "...none yet: it says how to make one" grep -q 'firefox --new-profile' <<<"$(WREN_FX_PROFILE_DIR=$T/profiles-none fx --profiles 2>&1)"
+printf '#!/bin/sh\n[ "$1" = --dir ] && echo "%s"\n' "$T/wrendir" >"$T/fake/wrenctl"
+printf '#!/bin/sh\nprintf "%%s\\n" "$@" >"%s/np-args"\n' "$T" >"$T/wrendir/extras/firefox-profiles/new-profile.sh"
+chmod +x "$T/fake/wrenctl"
+fx --new-profile github https://github.com --delete-cookies >/dev/null 2>&1
+check "firefox --new-profile NAME URL: new-profile.sh, from where Wren Linux is, with them" test "$(paste -sd' ' "$T/np-args")" = "github https://github.com --delete-cookies"
+fx --new-profile >/dev/null 2>&1
+check "...without them: new-profile.sh asks" test -z "$(cat "$T/np-args")"
+fx --remove-profile bank >/dev/null 2>&1
+check "firefox --remove-profile NAME: new-profile.sh --remove NAME" test "$(paste -sd' ' "$T/np-args")" = "--remove bank"
+check "...without a name: refused" not fx --remove-profile
+export P HERE
+comp() { WREN_FX_PROFILE_DIR=$P bash -c '. "$1"; shift; COMP_WORDS=("$@"); COMP_CWORD=$((${#COMP_WORDS[@]} - 1)); _wren_firefox; printf "%s\n" "${COMPREPLY[@]}"' _ "$HERE/data/firefox-completion.bash" "$@"; }
+export -f comp
+check "Tab: the profiles after --profile and --remove-profile" bash -c '[ "$(comp firefox --profile "" | sort | paste -sd" ")" = "bank mail" ] && [ "$(comp firefox --remove-profile b)" = bank ]' _
+check "...and the options first" test "$(comp firefox --pro | sort | paste -sd' ')" = "--profile --profiles"
+check "the extra installs it where bash-completion looks" grep -q 'bash-completion/completions/firefox' "$HERE/extras/firefox-sandbox.sh"
 
 [ "$fails" -eq 0 ]

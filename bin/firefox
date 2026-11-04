@@ -19,9 +19,59 @@
 #   downloads folder (~/Downloads/NAME) and runs next to the others:
 #   firefox --profile NAME   (its own command, NAME or firefox-NAME, does this)
 #   firefox [--no-audio] [--profile NAME] [URL...]
+# - Profiles, each a Firefox of its own for one site (extras/firefox-profiles):
+#   firefox --profiles                      list them
+#   firefox --new-profile [NAME URL [...]]  make one (asks, without NAME and URL;
+#                                           --fast-js --show-toolbars --no-sound --delete-cookies)
+#   firefox --remove-profile NAME           remove one (asks before deleting its logins)
 set -euo pipefail
 
 die() { printf 'firefox: %s\n' "$*" >&2; exit 1; }
+PROFILES=${WREN_FX_PROFILE_DIR:-/etc/wren/firefox-profiles}
+
+# The profiles: their settings files, which root writes and anyone may read
+list_profiles() {
+    local f name url cmd extra
+    for f in "$PROFILES"/*.conf; do
+        [ -f "$f" ] || continue
+        name=${f##*/}; name=${name%.conf}
+        [[ $name =~ ^[a-z][a-z0-9-]{0,27}$ ]] || continue
+        url=$(sed -n 's/^url=//p' "$f" | head -n1)
+        cmd="(no command)"
+        for c in "$HOME/.local/bin/$name" "$HOME/.local/bin/firefox-$name"; do
+            if grep -qs 'Written by Wren Linux extras/firefox-profiles/new-profile.sh' "$c"; then cmd=${c##*/}; fi
+        done
+        extra=""
+        [ "$(sed -n 's/^fast_js=//p' "$f")" != yes ] || extra+=", fast JavaScript"
+        [ "$(sed -n 's/^sound=//p' "$f")" != no ] || extra+=", no sound"
+        [ "$(sed -n 's/^cookies=//p' "$f")" != delete ] || extra+=", cookies deleted on close"
+        [ "$(sed -n 's/^toolbars=//p' "$f")" != shown ] || extra+=", toolbars"
+        printf '%-16s %-20s %s%s\n' "$name" "$cmd" "$url" "$extra"
+    done
+}
+# new-profile.sh, from where Wren Linux is (wrenctl --dir)
+new_profile() {
+    local dir
+    dir=$(wrenctl --dir 2>/dev/null) || die "wrenctl isn't installed, so new-profile.sh can't be found."
+    [ -f "$dir/extras/firefox-profiles/new-profile.sh" ] || die "$dir has no extras/firefox-profiles/new-profile.sh."
+    exec bash "$dir/extras/firefox-profiles/new-profile.sh" "$@"
+}
+case ${1:-} in
+    --profiles)
+        [ $# -eq 1 ] || die "usage: firefox --profiles"
+        out=$(list_profiles)
+        if [ -z "$out" ]; then
+            echo "No profiles yet. Make one: firefox --new-profile   (or: firefox --new-profile bank https://mybank.example)"
+        else
+            printf '%-16s %-20s %s\n' PROFILE COMMAND ADDRESS
+            printf '%s\n' "$out"
+        fi
+        exit 0 ;;
+    --new-profile) shift; new_profile "$@" ;;
+    --remove-profile)
+        [ $# -eq 2 ] || die "usage: firefox --remove-profile NAME   (firefox --profiles lists them)"
+        new_profile --remove "$2" ;;
+esac
 
 audio=true
 name=
@@ -39,7 +89,7 @@ done
 if [ -z "$name" ]; then user=firefox tag=; else user=fx-$name tag=-$name; fi
 # sound off when that was the choice: at the install for the main Firefox
 # (/etc/wren/firefox.conf), at new-profile.sh for a profile (its own file)
-if [ -z "$name" ]; then choices=/etc/wren/firefox.conf; else choices=/etc/wren/firefox-profiles/$name.conf; fi
+if [ -z "$name" ]; then choices=/etc/wren/firefox.conf; else choices=$PROFILES/$name.conf; fi
 [ "$(sed -n 's/^sound=//p' "$choices" 2>/dev/null | head -1)" != no ] || audio=false
 
 [ "$(id -u)" -ne 0 ] || die "run it as your normal user, not root."

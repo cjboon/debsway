@@ -40,7 +40,7 @@
 # summary: Firefox as its own locked-down user
 # security: most
 # status: file:/usr/local/bin/firefox
-# files: bin/no-abstract-sockets bin/wayland-restrict data/firefox-firewall.nft data/firefox-user.js data/wren-firefox.desktop lib/firefox-sandbox.sh
+# files: bin/no-abstract-sockets bin/wayland-restrict data/firefox-firewall.nft data/firefox-user.js data/wren-firefox.desktop data/firefox-completion.bash lib/firefox-sandbox.sh
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$WREN_DIR/lib/firefox-sandbox.sh"
 # The hardening and incognito it sets up first, then the sandbox itself
@@ -57,6 +57,8 @@ LIMITS=/etc/security/limits.d/50-wren-firefox.conf
 FIREWALL=/etc/wren/firefox.nft
 UNIT=/etc/systemd/system/wren-firefox-firewall.service
 DESKTOP="$HOME/.local/share/applications/wren-firefox.desktop"
+# firefox's Tab completion (its options and the profiles), where bash-completion looks
+COMPLETION="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/firefox"
 
 if [ "${1:-}" = --remove ]; then
     fx_sandbox_unused
@@ -81,7 +83,7 @@ if [ "${1:-}" = --remove ]; then
     sudo rm -rf /dev/shm/firefox-run
     # links open in firefox-esr again
     unset_default_app wren-firefox.desktop
-    rm -f "$DESKTOP"
+    rm -f "$DESKTOP" "$COMPLETION"
     if id "$NAME" >/dev/null 2>&1; then
         sudo pkill -KILL -u "$NAME" 2>/dev/null || true
         sudo userdel "$NAME"
@@ -221,6 +223,7 @@ say "Default browser"
 # Links from other programs go to xdg-open, which asks this list. Only your user's
 # settings change; firefox-esr stays installed and can still be started by name.
 install -D -m 0644 "$WREN_DIR/data/wren-firefox.desktop" "$DESKTOP"
+install -D -m 0644 "$WREN_DIR/data/firefox-completion.bash" "$COMPLETION"
 if [ "$links" = yes ]; then
     set_default_app wren-firefox.desktop x-scheme-handler/http x-scheme-handler/https
     note "Links from other programs now open in the sandboxed Firefox."

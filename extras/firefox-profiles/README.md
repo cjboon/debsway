@@ -3,8 +3,11 @@
 Give a website you stay logged into its own Firefox profile:
 
 ```bash
-bash extras/firefox-profiles/new-profile.sh
+firefox --new-profile        (or: bash extras/firefox-profiles/new-profile.sh)
 ```
+
+`firefox --profiles` lists the profiles you have, and `firefox --remove-profile
+NAME` removes one; Tab completes the options and the profile names.
 
 It asks for a short name (e.g. `bank`) and the site's address, and makes:
 

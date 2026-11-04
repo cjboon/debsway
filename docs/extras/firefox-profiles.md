@@ -3,7 +3,12 @@
 ## SYNOPSIS
 
 ```
-bash ~/wren/extras/firefox-profiles/new-profile.sh                      asks for the name and address
+firefox --profiles                        the profiles there are: command, address, choices
+firefox --new-profile [NAME URL [...]]    make one (asks, without NAME and URL); Tab completes
+firefox --remove-profile NAME             remove one (asks before deleting its logins and user)
+firefox --profile NAME [URL]              open one (its own command, below, does the same)
+
+bash ~/wren/extras/firefox-profiles/new-profile.sh                      the same, by the script: asks for the name and address
 bash ~/wren/extras/firefox-profiles/new-profile.sh NAME URL [--fast-js] [--show-toolbars] [--no-sound] [--delete-cookies]
 bash ~/wren/extras/firefox-profiles/new-profile.sh --remove NAME        asks before deleting its logins and user
 bash ~/wren/extras/firefox-profiles/new-profile.sh --manual             print the manual steps below
