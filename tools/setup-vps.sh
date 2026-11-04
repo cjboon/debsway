@@ -610,6 +610,8 @@ setup() {
 ssh_public() { # yes | no: port 22 open to the internet or not
     [ -f "$CONF" ] || die "Run the setup first (bash setup-vps.sh)."
     load_config "$CONF"
+    # (nothing to ask: what you chose is kept, also what you left empty)
+    WREN_VPS_YES=1
     questions
     if [ "$1" = no ]; then
         [ "$VPS_ONION_SSH" = yes ] || die "SSH has no onion address here (VPS_ONION_SSH=no): closing port 22 would lock you out."

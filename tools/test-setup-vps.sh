@@ -135,6 +135,20 @@ SSH_CONNECTION="127.0.0.1 40001 127.0.0.1 22" vps --confirm >/dev/null
 out=$(SSH_CONNECTION="127.0.0.1 40002 127.0.0.1 22" vps --ssh-public)
 check "--ssh-public opens it again" bash -c 'grep -q "tcp dport 22" "$1" && grep -qx "VPS_SSH_PUBLIC=yes" "$2"' _ "$R/etc/nftables.conf" "$R/etc/wren-vps.conf"
 
+# In a terminal these ask nothing: what you chose is kept, also a domain left empty
+# (its input stays open: at its end, a question would just take the empty answer)
+if command -v script >/dev/null; then
+    SSH_CONNECTION="127.0.0.1 40003 127.0.0.1 22" vps --confirm >/dev/null
+    fresh
+    VPS_SSH_KEY=$KEY VPS_ONION_SSH_CLIENT=$CLIENT vps --yes >/dev/null
+    SSH_CONNECTION="198.51.100.7 1 203.0.113.1 22" vps --confirm >/dev/null
+    SSH_CONNECTION="127.0.0.1 40004 127.0.0.1 22" WREN_VPS_ROOT="$T/root" WREN_VPS_FAKE="$T/calls" \
+        timeout 10 script -qec "bash $S --ssh-onion-only" /dev/null < <(/bin/sleep 12) >"$T/pty" 2>&1
+    rc=$?
+    check "--ssh-onion-only in a terminal asks nothing again: it finishes, with your choices" bash -c '
+        [ "$1" = 0 ] && ! grep -q "tcp dport 22" "$2"' _ "$rc" "$R/etc/nftables.conf"
+fi
+
 # No domain (a test VM), and no SSH onion
 fresh
 out=$(VPS_SSH_KEY=$KEY VPS_ONION_SSH=no vps --yes)
