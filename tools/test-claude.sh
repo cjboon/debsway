@@ -200,4 +200,24 @@ check "...the same in the sandbox, as you and in the VM" bash -c '
     grep -q "seed_theme \"\$HOME/.claude.json\"" "$1/bin/claude-session" && grep -q "seed_theme \"\${CLAUDE_CONFIG_DIR:-\$HOME}/.claude.json\"" "$1/bin/claude-regular" &&
     grep -qF "\"theme\": \"auto\"" "$1/data/claude-vm-provision.sh"' _ "$HERE"
 
+# Before the first sign-in: how to sign in (the sandboxed Firefox can't finish
+# Claude Code's own way), and Enter to go on. Run in a pretend terminal.
+sed -n '/^first_signin_note() {/,/^}/p' "$HERE/bin/claude-regular" >"$T/note.sh"
+printf '. "%s"\nfirst_signin_note "$@"\necho went-on\n' "$T/note.sh" >"$T/note-run.sh"
+mkdir -p "$T/cfg"
+note() { # ARGS...: in a terminal, Enter pressed
+    printf '\n' | env -u ANTHROPIC_API_KEY -u CLAUDE_CODE_OAUTH_TOKEN script -qec "bash $T/note-run.sh $*" /dev/null 2>&1
+}
+out=$(note "$T/cfg")
+check "first sign-in: it says to open the printed link and paste the code, then waits for Enter" bash -c '
+    grep -q "paste the code you get back here" <<<"$1" && grep -q "Press Enter to go on" <<<"$1" && grep -q went-on <<<"$1"' _ "$out"
+check "...not with --version or -p" bash -c '! grep -q "Press Enter" <<<"$1" && ! grep -q "Press Enter" <<<"$2"' _ "$(note "$T/cfg" --version)" "$(note "$T/cfg" -p hi)"
+check "...not with no terminal" bash -c '! bash "$1" "$2" </dev/null 2>&1 | grep -q "Press Enter"' _ "$T/note-run.sh" "$T/cfg"
+echo '{"claudeAiOauth": {}}' >"$T/cfg/.credentials.json"
+check "...not once signed in" bash -c '! grep -q "Press Enter" <<<"$1"' _ "$(note "$T/cfg")"
+check "...the same note in the sandbox and as you, each with its own folder" bash -c '
+    a=$(sed -n "/^first_signin_note() {/,/^}/p" "$1/bin/claude-session"); [ -n "$a" ] && [ "$a" = "$(cat "$2")" ] &&
+    grep -qx "first_signin_note \"\$HOME/.claude\" \"\$@\"" "$1/bin/claude-session" &&
+    grep -qx "first_signin_note \"\${CLAUDE_CONFIG_DIR:-\$HOME/.claude}\" \"\$@\"" "$1/bin/claude-regular"' _ "$HERE" "$T/note.sh"
+
 [ "$fails" -eq 0 ]

@@ -36,7 +36,7 @@ out of `~/.claude`, and the first account's out of `~/.claude-NAME`.
 
 ## LIMITS
 
-- Signing in: the sandboxed Firefox can't finish the link that comes back to this computer (`localhost`); its firewall is what stops it. So `claude-regular` sets `BROWSER` to `claude-open-link`, which doesn't open that link (other links open as usual): open the link printed in the terminal instead and paste the code it gives you. This relies on how Claude Code uses `BROWSER`, which isn't documented; if an update changes it, the failing link opens again and the pasted code still works.
+- Signing in: the sandboxed Firefox can't finish the link that comes back to this computer (`localhost`); its firewall is what stops it. So `claude-regular` sets `BROWSER` to `claude-open-link`, which doesn't open that link (other links open as usual): open the link printed in the terminal instead and paste the code it gives you (it says so before the first sign-in, and waits for Enter). This relies on how Claude Code uses `BROWSER`, which isn't documented; if an update changes it, the failing link opens again and the pasted code still works.
 - It runs as you: anything its sandbox and rules don't name (your documents, other projects) it can read, and what it reads can go to the internet.
 - Claude Code enforces these rules itself; you can turn them off in it (`/sandbox`, `/permissions`), and a bug in it could miss one.
 - A command it can't run in the sandbox may be retried outside it, after asking you: read what you approve.

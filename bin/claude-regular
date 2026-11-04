@@ -36,6 +36,20 @@ if isinstance(d, dict) and "theme" not in d:
 PY
 }
 seed_theme "${CLAUDE_CONFIG_DIR:-$HOME}/.claude.json"
+# Before the first sign-in (no login saved yet), in a terminal: how to sign
+# in, as the sandboxed Firefox can't finish Claude Code's own way
+first_signin_note() { # CONFIG-FOLDER ARGS...
+    local dir=$1
+    shift
+    [ ! -s "$dir/.credentials.json" ] && [ -z "${ANTHROPIC_API_KEY:-}${CLAUDE_CODE_OAUTH_TOKEN:-}" ] || return 0
+    [ -t 0 ] && [ -t 1 ] || return 0
+    case ${1:-} in -v | --version | -h | --help | -p | --print) return 0 ;; esac
+    echo "Signing in to Claude: the sandboxed Firefox's firewall blocks the sign-in"
+    echo "page's way back to this computer, so Claude Code can't finish it there. Open"
+    echo "the link it prints in Firefox, sign in, and paste the code you get back here."
+    read -rp 'Press Enter to go on. ' _ || true
+}
+first_signin_note "${CLAUDE_CONFIG_DIR:-$HOME/.claude}" "$@"
 # Links it opens go through claude-open-link, which skips the sign-in link the
 # sandboxed Firefox can't finish (Claude Code then shows the one with a code)
 opener=$(dirname -- "${BASH_SOURCE[0]}")/claude-open-link

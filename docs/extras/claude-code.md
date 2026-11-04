@@ -39,7 +39,7 @@ one's included.
 
 ## LIMITS
 
-- Signing in: the sandboxed Firefox can't finish the link that comes back to this computer (`localhost`); its firewall is what stops it. Open the link printed in the terminal instead and paste the code it gives you. `firefox-esr` works too, but runs as you.
+- Signing in: the sandboxed Firefox can't finish the link that comes back to this computer (`localhost`); its firewall is what stops it. Open the link printed in the terminal instead and paste the code it gives you (it says so before the first sign-in, and waits for Enter). `firefox-esr` works too, but runs as you.
 - It shares your kernel: a kernel bug could let it out of its user.
 - It reaches the internet, so what it reads in `~/projects` can leave this computer.
 - Treat what it leaves in `~/projects` as untrusted before you run it; the git guard checks git's own files, not the code.
