@@ -47,13 +47,14 @@ mkdir -p "$SHARE"
 # What is committed, nothing else; not the project's own CI and notes, and not what
 # only someone working on Wren Linux uses, which wren-dev's git copy has: the tests
 # and build tools, the plans, and the signing key's tools (with their sudo rule and
-# user). data/wren-signing-key.asc stays: every computer checks updates with it.
+# user), and the website (site/). data/wren-signing-key.asc stays: every computer
+# checks updates with it.
 g archive --format=tar "$commit" | tar -C "$SHARE" -xf -
 rm -rf "$SHARE/.github" "$SHARE/.gitignore" "$SHARE/CLAUDE.md" "$SHARE/tools" \
     "$SHARE/docs/maintaining.md" "$SHARE/docs/distro-plan.md" \
     "$SHARE/extras/signing-key.sh" "$SHARE/docs/extras/signing-key.md" \
     "$SHARE/bin/wren-key" "$SHARE/bin/wren-key-gpg" "$SHARE/bin/wren-signer" \
-    "$SHARE/data/wren-key.1" "$SHARE/data/signer-firewall.nft"
+    "$SHARE/data/wren-key.1" "$SHARE/data/signer-firewall.nft" "$SHARE/site"
 sed -i '/(signing-key\.md)/d' "$SHARE/docs/extras/README.md"
 
 # The command, its man page and its Tab completion where Debian looks for them

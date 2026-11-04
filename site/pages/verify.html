@@ -1,0 +1,13 @@
+Verify Wren Linux
+<h1>Verify</h1>
+<p>Every Wren Linux update is signed by this key. After the install your computer checks it by itself, and refuses anything else. The first download is the one to check by hand.</p>
+
+<p class="fingerprint"><code>@FPR_SPACED@</code></p>
+
+<p><strong>Compare it in two places</strong> that don't depend on each other: this page, <a href="@GITHUB_SECURITY@">SECURITY.md on GitHub</a>@ONION_COMPARE@. Someone who changed one would have to change them all.</p>
+
+<p>In your copy (<code>~/wren</code>, from Install):</p>
+<pre><code>grep '^WREN_SIGNING_FPR=' ~/wren/pins.sh
+gpg --show-keys --with-fingerprint ~/wren/data/wren-signing-key.asc
+git -C ~/wren -c gpg.program=gpg verify-commit HEAD</code></pre>
+<p>The first two must both show the key above. For the third, first import the key (<code>gpg --import ~/wren/data/wren-signing-key.asc</code>); it must say "Good signature" from that key. If anything differs, don't run it: <a href="source/SECURITY.md.html">SECURITY.md</a> says whom to tell.</p>

@@ -327,6 +327,7 @@ dev_test signing-key "The signing key (extras/signing-key.sh, wren-key), with a 
 
 # --------------------------------------------------------------------
 dev_test git-init "git-init.sh: a copy from a stick, connected to what was published" "git-init checks"
+dev_test site "The website (site/, tools/build-site.sh): plain HTML, no script, built from a signed commit" "website checks"
 
 # --------------------------------------------------------------------
 dev_test update-signed "update.sh: only what Wren Linux's own key signed, with throwaway keys" "signed update checks"

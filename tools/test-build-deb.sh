@@ -68,7 +68,7 @@ S=$T/root/usr/share/wren
 check "Wren Linux is in /usr/share/wren" test -f "$S/lib.sh"
 check "...what was committed, not what was only in the folder" test ! -e "$S/UNCOMMITTED.txt"
 check "...without the project's own CI and notes" bash -c '[ ! -e "$1/.github" ] && [ ! -e "$1/CLAUDE.md" ]' _ "$S"
-DEVONLY='^(\.github/|\.gitignore$|CLAUDE\.md$|tools/|docs/maintaining\.md$|docs/distro-plan\.md$|extras/signing-key\.sh$|docs/extras/signing-key\.md$|bin/wren-key$|bin/wren-key-gpg$|bin/wren-signer$|data/wren-key\.1$|data/signer-firewall\.nft$)'
+DEVONLY='^(\.github/|\.gitignore$|CLAUDE\.md$|tools/|docs/maintaining\.md$|docs/distro-plan\.md$|extras/signing-key\.sh$|docs/extras/signing-key\.md$|bin/wren-key$|bin/wren-key-gpg$|bin/wren-signer$|data/wren-key\.1$|data/signer-firewall\.nft$|site/)'
 check "...every committed file but what only someone working on Wren Linux uses" test "$(git -C "$T/src" ls-files | grep -cvE "$DEVONLY")" = "$(cd "$S" && find . -type f | wc -l)"
 check "...no tests or build tools, no maintainer's documents" bash -c '[ ! -e "$1/tools" ] && [ ! -e "$1/docs/maintaining.md" ] && [ ! -e "$1/docs/distro-plan.md" ]' _ "$S"
 check "...no signing key tools (their sudo rule and user are for the publisher only)" bash -c '

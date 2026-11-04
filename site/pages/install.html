@@ -1,0 +1,17 @@
+Install Wren Linux
+<h1>Install</h1>
+<p>About an hour, most of it waiting. You need a computer you can erase, a USB stick, and an internet connection. <strong>This erases the whole disk.</strong></p>
+
+<ol class="steps">
+<li><strong>Set up the BIOS:</strong> UEFI only, Secure Boot on, storage mode AHCI. <a href="source/docs/bios.md.html">The BIOS guide</a> says how.</li>
+<li><strong>Install Debian 13</strong> from <a href="https://www.debian.org/distrib/">debian.org</a>. Leave the root password empty, choose "Guided - use entire disk and set up encrypted LVM" (five or six random words as its passphrase), and tick only "standard system utilities".</li>
+<li><strong>Get Wren Linux</strong>, logged in on the text console:
+<pre><code>sudo apt install git
+git clone @GIT_URL@ ~/wren</code></pre></li>
+<li><strong>Check it</strong> before you run anything: <a href="verify.html">Verify</a> shows how, in three commands.</li>
+<li><strong>Start:</strong>
+<pre><code>bash ~/wren/start.sh</code></pre>
+It explains what it will do, and asks before changing anything.</li>
+</ol>
+
+<p>Step by step, with what to do when something goes wrong: <a href="source/docs/first-time.md.html">the first-time guide</a>.</p>

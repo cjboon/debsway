@@ -1,0 +1,100 @@
+/* Wren Linux's site: system fonts, no images, no web fonts, nothing loaded
+   from elsewhere, so it looks the same in Tor Browser's Safest mode. Light
+   or dark follows the visitor's system (Tor Browser always asks for light). */
+:root {
+    color-scheme: light;
+    --bg: #fbfaf7;
+    --fg: #1d1c1a;
+    --muted: #5c5a55;
+    --line: #dedbd3;
+    --box: #f1efe9;
+    --link: #1f5fa8;
+    --accent: #2f6b3a;
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: dark;
+        --bg: #15161a;
+        --fg: #e6e4df;
+        --muted: #a5a29b;
+        --line: #33353b;
+        --box: #1e2025;
+        --link: #8cb8ec;
+        --accent: #8fcf98;
+    }
+}
+* { box-sizing: border-box; }
+html { background: var(--bg); color: var(--fg); }
+body {
+    margin: 0 auto;
+    max-width: 46rem;
+    padding: 1rem 1.25rem 3rem;
+    font: 1.05rem/1.6 system-ui, -apple-system, "Segoe UI", "DejaVu Sans", sans-serif;
+}
+a { color: var(--link); }
+header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--line);
+}
+header .name { font-weight: 700; font-size: 1.15rem; color: var(--fg); text-decoration: none; }
+nav a { margin-left: 1rem; }
+nav a:first-child { margin-left: 0; }
+h1 { font-size: 2rem; line-height: 1.2; margin: 2rem 0 0.5rem; }
+h2 { font-size: 1.3rem; margin-top: 2rem; }
+.lead { font-size: 1.25rem; color: var(--muted); margin-top: 0; }
+.steps li { margin: 0.6rem 0; }
+/* The front page: centered, one column, the same on both sides */
+.home { text-align: center; max-width: 38rem; margin: 0 auto; }
+.home h1 { font-size: 2.6rem; letter-spacing: 0.02em; margin-top: 2.5rem; }
+.home .lead { font-size: 1.3rem; font-style: italic; color: var(--accent); }
+.home p { margin: 1.25rem 0; }
+.home hr {
+    width: 5rem;
+    margin: 2rem auto;
+    border: 0;
+    border-top: 2px solid var(--accent);
+}
+.go { margin-top: 2rem; }
+.button {
+    display: inline-block;
+    margin: 0 0.5rem 0.5rem 0;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--line);
+    border-radius: 0.4rem;
+    background: var(--box);
+    text-decoration: none;
+    font-weight: 600;
+}
+code, pre { font-family: ui-monospace, "DejaVu Sans Mono", monospace; font-size: 0.92em; }
+pre {
+    background: var(--box);
+    border: 1px solid var(--line);
+    border-radius: 0.4rem;
+    padding: 0.75rem 1rem;
+    overflow-x: auto;
+    line-height: 1.45;
+}
+.fingerprint code {
+    display: block;
+    font-size: 1.05rem;
+    letter-spacing: 0.04em;
+    word-spacing: 0.3em;
+    padding: 0.75rem 1rem;
+    background: var(--box);
+    border: 1px solid var(--line);
+    border-radius: 0.4rem;
+    overflow-wrap: anywhere;
+}
+.files { list-style: none; padding-left: 0; }
+.files li { padding: 0.15rem 0; border-bottom: 1px solid var(--line); }
+.files .dir { font-weight: 600; }
+.path { color: var(--muted); }
+.file pre { font-size: 0.85rem; }
+.log td { padding: 0.15rem 0.75rem 0.15rem 0; vertical-align: top; }
+.log td:first-child { font-family: ui-monospace, "DejaVu Sans Mono", monospace; white-space: nowrap; }
+footer { margin-top: 3rem; padding-top: 0.75rem; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.9rem; }
