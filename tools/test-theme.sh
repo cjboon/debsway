@@ -166,9 +166,9 @@ assert "case $theme in light | dark) ;; *) theme=dark ;; esac" in s
 assert "\"$audio_arg\" \"$theme\" \"$kind\" \"$@\"" in s' "$HERE/bin/incognito"
 
 # ---- the part, and the menu's line
-check "the part is in the base, after foot's and mako's" bash -c '. "$1/packages.sh"; p=" ${PARTS[*]} "; [[ $p == *" mako foot-config wallpaper theme "* ]]' _ "$HERE"
+check "the part is in the base, after foot's and mako's" bash -c '. "$1/packages.sh"; p=" ${PARTS[*]} "; [[ $p == *" mako foot-config autostart wallpaper theme "* ]]' _ "$HERE"
 check "--remove goes back to dark first" python3 -I -c 'import sys; s = open(sys.argv[1]).read(); r = s.index("= --remove ]"); assert s.index("theme\" dark", r) < s.index("remove_bin theme", r)' "$HERE/parts/theme.sh"
 check "foot's part keeps the theme's colors when it writes foot.ini again" grep -q '"$BIN/theme" apply' "$HERE/parts/foot-config.sh"
-check "the Wren menu has a Theme line, inside sway" bash -c 'grep -q "ids+=(theme)" "$1" && grep -q "\"\$THEME_CMD\" toggle" "$1"' _ "$HERE/bin/wren-menu"
+check "the Wren menu has a Theme line, inside sway" bash -c 'grep -q "entry theme \"\" \"\$THEME_CMD\"" "$1" && grep -q "\"\$THEME_CMD\" toggle" "$1"' _ "$HERE/bin/wren-menu"
 
 [ "$fails" -eq 0 ]

@@ -156,5 +156,6 @@ check "it is in the base install" grep -qE '(^|[ (])autostart( |$)' "$HERE/packa
 check "the startup watch watches the list: it starts programs at every login" grep -q '".config/wren/autostart"' "$HERE/bin/wren-watch"
 check "no terminal is started any other way" not grep -q 'wren-start-terminal' "$HERE/parts/foot-config.sh"
 check "KeePassXC offers its line in the list" grep -q 'wren-autostart" add 1 keepassxc' "$HERE/extras/keepassxc.sh"
+check "the menu's Startup programs opens the edit screen" grep -q 'edit' <(grep -A4 '^        autostart)' "$HERE/bin/wren-menu")
 
 [ "$fails" -eq 0 ]

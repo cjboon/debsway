@@ -1,16 +1,17 @@
 #!/bin/bash
 # wren-menu: written by Wren Linux parts/wren-menu.sh
 # The menu behind the "wren" item in the bar. A click opens a black-and-gray
-# terminal in a floating, centered window, with the choices Help, Terminal (Font size on a
-# text console), Web browser, Text editor, File manager, Password manager, Mail,
-# Signal, SimpleX, Claude and opencode (each when installed), Back up now (with the backup extra), Install apps,
-# Update and Status, then the switches: Wi-Fi, Bluetooth, Microphone, Webcam and
-# Vault, when there is one. Arrow keys (or j/k) and Enter choose; so does a
-# click. Esc closes every screen of it, the install list and the pager
-# included. What you choose runs in that same window, and the window closes
-# when it ends (the install and update screens wait for a key first, if they
-# did something you may want to read). The last three need the Wren Linux folder
-# (~/wren, or WREN_DIR); without it only Help shows.
+# terminal in a floating, centered window. Its first screen: Web browser, Password
+# manager, Terminal, then three lists, Switches (Wi-Fi, Bluetooth, Microphone,
+# Webcam, Vault, Secure DNS), Apps (Text editor, File manager, Signal, SimpleX,
+# Claude, opencode) and System (Install apps, Remove apps, Update, Status, Back up
+# now, Startup programs, Theme, Font size on a text console), then Wi-Fi sign-in
+# and Help. Each shows only what is here. Arrow keys (or j/k) and Enter choose; so
+# does a click. Esc goes back from a list, and closes the first screen, the
+# install list and the pager. What you choose runs in that same window, and the
+# window closes when it ends (the install and update screens wait for a key
+# first, if they did something you may want to read). Install, Remove, Update and
+# Status need the Wren Linux folder (~/wren, or WREN_DIR).
 #   wren-menu              open the window
 #   wren-menu --tui        the menu itself, in the terminal you are in
 #   wren-menu --pager FILE show FILE: arrows, Space and b scroll, Esc closes
@@ -229,14 +230,12 @@ fi
 [ "$1" = --tui ] || { echo "usage: wren-menu [--tui | --pager FILE]" >&2; exit 2; }
 
 # ---- the menu ----
-# ids say what an entry does; items are what it shows. Wi-Fi, Bluetooth and
-# the microphone are listed only when this computer has them (bin/radios), with
-# their state; choosing one flips it and the menu stays open.
+# The first screen is short: what you open most, then three lists (Switches,
+# Apps, System), each with only what is here. ids say what an entry does; items
+# are what it shows. Esc, or Back, goes from a list to the first screen.
+# Wi-Fi, Bluetooth and the microphone are listed only when this computer has them
+# (bin/radios), with their state; choosing one flips it and the menu stays open.
 RADIOS=$HOME/.local/bin/radios
-ids=(help)
-items=(Help)
-# A terminal window, as Super+Enter opens: for a mouse, or where the keys don't
-# arrive (sway in a VM's window: the computer's own sway takes Super first)
 # web_browser: the browser links open in (mimeapps.list), or the first one
 # installed; text_editor: Mousepad, if installed. Each prints its command, or nothing.
 # (WREN_MENU_BROWSERS and WREN_MENU_EDITORS: a test's own lists)
@@ -261,7 +260,7 @@ text_editor() {
 }
 # app NAME...: the first of these commands that is installed, from APPS (where
 # Wren Linux and Debian put them; WREN_MENU_APPS: a test's own list)
-APPS=${WREN_MENU_APPS-/usr/bin/thunar /usr/bin/keepassxc /usr/bin/signal-desktop $HOME/.local/bin/simplex $HOME/.local/bin/claude $HOME/.local/bin/opencode-vm $HOME/.local/bin/vault $HOME/.local/bin/backup $HOME/.local/bin/theme $HOME/.local/bin/secure-dns /usr/local/bin/wifi-signin}
+APPS=${WREN_MENU_APPS-/usr/bin/thunar /usr/bin/keepassxc /usr/bin/signal-desktop $HOME/.local/bin/simplex $HOME/.local/bin/claude $HOME/.local/bin/opencode-vm $HOME/.local/bin/vault $HOME/.local/bin/backup $HOME/.local/bin/wren-autostart $HOME/.local/bin/theme $HOME/.local/bin/secure-dns /usr/local/bin/wifi-signin}
 app() {
     local want c
     for want; do
@@ -275,53 +274,97 @@ claude_cmd() {
     c=$(app claude)
     [ -z "$c" ] || echo "foot --title=Claude -D $HOME $c"
 }
+IN_SWAY=
+BROWSER='' EDITOR_CMD='' FILES_CMD='' PASSWORDS_CMD='' CLAUDE_CMD='' SIGNAL_CMD='' SIMPLEX_CMD='' OPENCODE_CMD='' SIGNIN_CMD='' THEME_CMD=''
+# (a terminal window, as Super+Enter opens: for a mouse, or where the keys don't
+# arrive: sway in a VM's window, whose computer's own sway takes Super first)
 if [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null; then
-    ids+=(terminal)
-    items+=(Terminal)
+    IN_SWAY=1
     BROWSER=$(web_browser) EDITOR_CMD=$(text_editor)
-    if [ -n "$BROWSER" ]; then ids+=(browser); items+=("Web browser"); fi
-    if [ -n "$EDITOR_CMD" ]; then ids+=(editor); items+=("Text editor"); fi
     FILES_CMD=$(app thunar) PASSWORDS_CMD=$(app keepassxc) CLAUDE_CMD=$(claude_cmd)
     SIGNAL_CMD=$(app signal-desktop) SIMPLEX_CMD=$(app simplex) OPENCODE_CMD=$(app opencode-vm)
-    if [ -n "$FILES_CMD" ]; then ids+=(files); items+=("File manager"); fi
-    if [ -n "$PASSWORDS_CMD" ]; then ids+=(passwords); items+=("Password manager"); fi
-    if [ -n "$SIGNAL_CMD" ]; then ids+=(signal); items+=(Signal); fi
-    if [ -n "$SIMPLEX_CMD" ]; then ids+=(simplex); items+=(SimpleX); fi
-    if [ -n "$CLAUDE_CMD" ]; then ids+=(claude); items+=(Claude); fi
-    # (opencode-vm opens a window of its own)
-    if [ -n "$OPENCODE_CMD" ]; then ids+=(opencode); items+=(opencode); fi
     # A throwaway window for a Wi-Fi sign-in page (it switches secure DNS off
     # while it is open, and on again after)
     SIGNIN_CMD=$(app wifi-signin)
-    if [ -n "$SIGNIN_CMD" ]; then ids+=(signin); items+=("Wi-Fi sign-in"); fi
 fi
-BACKUP_CMD=$(app backup) VAULT_CMD=$(app vault)
-if [ -n "$BACKUP_CMD" ]; then ids+=(backup); items+=("Back up now"); fi
+BACKUP_CMD=$(app backup) VAULT_CMD=$(app vault) SECDNS_CMD=$(app secure-dns) AUTOSTART_CMD=$(app wren-autostart)
+# The theme (light or dark), inside sway: the console stays dark
+if [ -n "${SWAYSOCK:-}${WAYLAND_DISPLAY:-}" ]; then THEME_CMD=$(app theme); fi
 # Text size, on a text console only (console-only mode): there is no Terminal
 # there, and the menu runs in the console itself
+FONT_CMD=
 if [ -z "${SWAYSOCK:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ] && [ -x "$HOME/.local/bin/console-font" ]; then
-    ids+=(font)
-    items+=("Font size")
+    FONT_CMD=$HOME/.local/bin/console-font
 fi
-if [ -f "$DIR/update.sh" ]; then
-    ids+=(apps remove update status)
-    items+=("Install apps" "Remove apps" Update Status)
-fi
+HAS_UPDATE=
+if [ -f "$DIR/update.sh" ]; then HAS_UPDATE=1; fi
 radio_ids=()
 if [ -x "$RADIOS" ]; then
     mapfile -t radio_ids < <("$RADIOS" list 2>/dev/null | awk '{ print $1 }')
 fi
-fixed=${#ids[@]}
-for r in "${radio_ids[@]}"; do ids+=("$r"); items+=(""); done
-# The vault is a switch too: it shows whether it is open
-if [ -n "$VAULT_CMD" ]; then ids+=(vault); items+=(""); fi
-# So is the theme (light or dark), inside sway: the console stays dark
-THEME_CMD=$(app theme)
-if [ -n "$THEME_CMD" ] && [ -n "${SWAYSOCK:-}${WAYLAND_DISPLAY:-}" ]; then ids+=(theme); items+=(""); fi
-# And secure DNS (parts/secure-dns.sh): off for a Wi-Fi sign-in page, then on again
-SECDNS_CMD=$(app secure-dns)
-if [ -n "$SECDNS_CMD" ]; then ids+=(securedns); items+=(""); fi
-n=${#ids[@]}
+
+# entry ID TEXT [SHOW]: an entry for this screen; with a third argument (a
+# command found above), only if that isn't empty
+entry() {
+    [ $# -lt 3 ] || [ -n "$3" ] || return 0
+    ids+=("$1")
+    items+=("$2")
+}
+# build: the entries of the screen in level
+build() {
+    ids=() items=()
+    case $level in
+        top)
+            entry browser "Web browser" "$BROWSER"
+            entry passwords "Password manager" "$PASSWORDS_CMD"
+            entry terminal Terminal "$IN_SWAY"
+            entry switches Switches "${radio_ids[*]}$VAULT_CMD$SECDNS_CMD"
+            entry apps Apps "$EDITOR_CMD$FILES_CMD$SIGNAL_CMD$SIMPLEX_CMD$CLAUDE_CMD$OPENCODE_CMD"
+            entry system System "$HAS_UPDATE$BACKUP_CMD$AUTOSTART_CMD$THEME_CMD$FONT_CMD"
+            entry signin "Wi-Fi sign-in" "$SIGNIN_CMD"
+            entry help Help ;;
+        switches)
+            local r
+            for r in "${radio_ids[@]}"; do entry "$r" ""; done
+            # (the vault shows whether it is open; secure DNS: off for a Wi-Fi
+            # sign-in page, then on again)
+            entry vault "" "$VAULT_CMD"
+            entry securedns "" "$SECDNS_CMD"
+            entry back Back ;;
+        apps)
+            entry editor "Text editor" "$EDITOR_CMD"
+            entry files "File manager" "$FILES_CMD"
+            entry signal Signal "$SIGNAL_CMD"
+            entry simplex SimpleX "$SIMPLEX_CMD"
+            entry claude Claude "$CLAUDE_CMD"
+            # (opencode-vm opens a window of its own)
+            entry opencode opencode "$OPENCODE_CMD"
+            entry back Back ;;
+        system)
+            entry apps-install "Install apps" "$HAS_UPDATE"
+            entry remove "Remove apps" "$HAS_UPDATE"
+            entry update Update "$HAS_UPDATE"
+            entry status Status "$HAS_UPDATE"
+            entry backup "Back up now" "$BACKUP_CMD"
+            entry autostart "Startup programs" "$AUTOSTART_CMD"
+            entry theme "" "$THEME_CMD"
+            entry font "Font size" "$FONT_CMD"
+            entry back Back ;;
+    esac
+    n=${#ids[@]}
+    refresh_items
+}
+# go LEVEL: to that screen, the cursor on its first entry (or, back on the first
+# screen, on the list you came from)
+go() {
+    local from=$level i
+    level=$1
+    build
+    sel=0
+    for i in "${!ids[@]}"; do
+        if [ "${ids[i]}" = "$from" ]; then sel=$i; fi
+    done
+}
 
 # radio_label NAME: what the entry shows, e.g. "Wi-Fi: on"
 radio_label() {
@@ -349,14 +392,33 @@ radio_label() {
     esac
     printf '%s: %s' "$name" "$state"
 }
+# switches_label: the first screen's line: what matters at a glance, whatever
+# is in the list ("Switches: mic off, camera off, DNS on")
+switches_label() {
+    local r said=''
+    for r in "${radio_ids[@]}"; do
+        case $r in
+            mic) said+=", mic $("$RADIOS" mic status 2>/dev/null)" ;;
+            camera) said+=", camera $("$RADIOS" camera status 2>/dev/null)" ;;
+        esac
+    done
+    if [ -n "$SECDNS_CMD" ]; then said+=", DNS $("$SECDNS_CMD" status 2>/dev/null || echo unknown)"; fi
+    printf 'Switches%s' "${said:+: ${said#, }}"
+}
 refresh_items() {
     local i
-    for ((i = fixed; i < n; i++)); do items[i]=$(radio_label "${ids[i]}"); done
+    for i in "${!ids[@]}"; do
+        case ${ids[i]} in
+            switches) items[i]=$(switches_label) ;;
+            wifi | bluetooth | mic | camera | vault | theme | securedns) items[i]=$(radio_label "${ids[i]}") ;;
+        esac
+    done
 }
-refresh_items
+level=top
 sel=0
-width=38
+width=44
 first_row=1 first_col=1
+build
 
 # draw: the title, the choices (the chosen one reversed), and a hint, centered
 draw() {
@@ -369,7 +431,7 @@ draw() {
     [ "$left" -ge 1 ] || left=1
     first_row=$((top + 2))
     first_col=$left
-    printf '\e[2J\e[%d;%dH\e[1mWren Linux\e[0m' "$top" "$left"
+    printf '\e[2J\e[%d;%dH\e[1mWren Linux%s\e[0m' "$top" "$left" "$([ "$level" = top ] || echo " > ${level^}")"
     for i in "${!items[@]}"; do
         y=$((first_row + i))
         if [ "$i" -eq "$sel" ]; then
@@ -378,13 +440,30 @@ draw() {
             printf '\e[%d;%dH %-*s ' "$y" "$left" $((width - 2)) "${items[i]}"
         fi
     done
-    printf '\e[%d;%dH\e[2mEnter or click; Space switches; Esc closes\e[0m' $((first_row + n + 1)) "$left"
+    if [ "$level" = top ]; then
+        printf '\e[%d;%dH\e[2mEnter or click; Esc closes\e[0m' $((first_row + n + 1)) "$left"
+    else
+        printf '\e[%d;%dH\e[2mEnter or click; Space switches; Esc goes back\e[0m' $((first_row + n + 1)) "$left"
+    fi
 }
 
 # run_choice: runs the chosen entry in this window
 run_choice() {
     local out
     case ${ids[sel]} in
+        switches | apps | system)
+            go "${ids[sel]}"
+            return 0 ;;
+        back)
+            go top
+            return 0 ;;
+        autostart)
+            screen_off
+            printf '\e[2J\e[1;1H'
+            "$AUTOSTART_CMD" edit
+            screen_on
+            settle
+            return 0 ;;
         wifi | bluetooth | mic | camera)
             "$RADIOS" "${ids[sel]}" toggle >/dev/null 2>&1
             refresh_items
@@ -412,7 +491,7 @@ run_choice() {
         browser)
             swaymsg exec "$BROWSER" >/dev/null 2>&1
             exit 0 ;;
-        files | passwords | mail | signal | simplex | claude | opencode | signin)
+        files | passwords | signal | simplex | claude | opencode | signin)
             local cmd
             case ${ids[sel]} in
                 signin) cmd=$SIGNIN_CMD ;;
@@ -454,7 +533,7 @@ run_choice() {
             # for it, then come back to the menu
             screen_off
             printf '\e[2J\e[1;1H'
-            "$HOME/.local/bin/console-font"
+            "$FONT_CMD"
             printf '\nPress Enter to go back. '
             wait_enter
             screen_on
@@ -469,7 +548,7 @@ run_choice() {
             out=$(cd "$DIR" && bash status.sh 2>&1)
             mapfile -t lines <<<"$out"
             pager ;;
-        apps | remove | update)
+        apps-install | remove | update)
             trap - EXIT
             screen_off
             cd "$DIR" || exit 1
@@ -519,7 +598,10 @@ while :; do
         up | k) sel=$(((sel + n - 1) % n)) ;;
         wheeldown) sel=$(((sel + 1) % n)) ;;
         wheelup) sel=$(((sel + n - 1) % n)) ;;
-        esc | q) exit 0 ;;
+        esc | q)
+            # a list goes back to the first screen, which closes
+            [ "$level" != top ] || exit 0
+            go top ;;
         click)
             i=$((CY - first_row))
             if [ "$i" -ge 0 ] && [ "$i" -lt "$n" ] && [ "$CX" -ge "$first_col" ] && [ "$CX" -lt $((first_col + width)) ]; then
