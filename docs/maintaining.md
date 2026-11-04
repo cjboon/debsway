@@ -154,6 +154,16 @@ apt). unattended-upgrades then installs Wren Linux's updates like Debian's. It
 is not in the base list yet: add it to `PARTS` in `packages.sh` once the
 repository is live.
 
+## The website
+
+`site/` is the website, plain HTML with no JavaScript, and `tools/build-site.sh`
+builds it from one commit, with a browsable copy of every file
+(`bash tools/build-site.sh --out /tmp/site --pages site` to look at changes
+before committing them). `tools/setup-vps.sh` sets up the server,
+`tools/publish-site.sh` puts the site and the git mirror on it from a signed
+commit only, and `tools/try-vps.sh` tries it all in a local VM first: see
+[vps.md](vps.md).
+
 ## Other scripts
 
 - `prep/setup-sudo.sh USER` (as root): installs sudo and adds USER to the

@@ -2,7 +2,7 @@
 # setup-vps.sh: sets up a fresh Debian 13 VPS to serve Wren Linux's website
 # (or any static site), the careful way, and can be run again to repair or
 # change it. Copy it to the VPS and run it there as root:
-#     scp tools/setup-vps.sh root@SERVER:   then   ssh root@SERVER bash setup-vps.sh
+#     scp tools/setup-vps.sh root@SERVER:   then   ssh -t root@SERVER bash setup-vps.sh
 # It asks what it needs, explaining each choice, or takes it from a file of
 # VAR=value lines (--config FILE; the variables are below). Afterwards it is
 # installed as  wren-vps  (sudo wren-vps --confirm, --status, ...).

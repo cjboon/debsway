@@ -51,7 +51,7 @@ mkdir -p "$SHARE"
 # checks updates with it.
 g archive --format=tar "$commit" | tar -C "$SHARE" -xf -
 rm -rf "$SHARE/.github" "$SHARE/.gitignore" "$SHARE/CLAUDE.md" "$SHARE/tools" \
-    "$SHARE/docs/maintaining.md" "$SHARE/docs/distro-plan.md" \
+    "$SHARE/docs/maintaining.md" "$SHARE/docs/distro-plan.md" "$SHARE/docs/vps.md" \
     "$SHARE/extras/signing-key.sh" "$SHARE/docs/extras/signing-key.md" \
     "$SHARE/bin/wren-key" "$SHARE/bin/wren-key-gpg" "$SHARE/bin/wren-signer" \
     "$SHARE/data/wren-key.1" "$SHARE/data/signer-firewall.nft" "$SHARE/site"
