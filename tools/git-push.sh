@@ -75,8 +75,4 @@ note "The newest commit is signed by Wren Linux's key: $fpr"
 
 ask "Push these to $(g remote get-url origin)?" n || { note "Nothing was pushed. They stay here, signed."; exit 0; }
 g push --quiet origin main || die "The push didn't go through. If it was about your login, or your email (GH007): wrenctl git $WREN_DIR"
-note "Pushed. To install it on this computer:"
-note "  rm -f /tmp/wren-linux_*.deb"
-note "  bash $WREN_DIR/tools/build-deb.sh --out /tmp"
-note "  sudo apt install /tmp/wren-linux_*.deb"
-note "  wrenctl --update"
+note "Pushed. To install it on this computer: bash $WREN_DIR/tools/release.sh --local"

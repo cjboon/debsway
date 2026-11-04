@@ -76,7 +76,7 @@ check "no to the push: nothing goes out" test "$(server)" = "$before"
 check "...and they stay here" grep -q 'stay here' "$T/out"
 
 gp y
-check "...and it says exactly how to install it here" grep -q 'sudo apt install /tmp/wren-linux_\*.deb' "$T/out"
+check "...and it says exactly how to install it here" grep -q 'tools/release.sh --local' "$T/out"
 check "yes: it goes out, already signed, nothing added" bash -c '[ "$(git -C "$2" rev-parse main)" = "$1" ] && ! grep -q "isn.t signed" "$3"' _ "$(head_)" "$T/O.git" "$T/out"
 gp
 check "nothing new: it says so" grep -q 'Nothing to push' "$T/out"

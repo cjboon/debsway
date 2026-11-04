@@ -115,7 +115,13 @@ time and its id, so a later commit always has a higher version. `tools/test-buil
   and `dpkg-deb` with a short script is easier to read and to build the same
   way every time.
 
-Install it on a computer with `sudo apt install ./wren-linux_VERSION_all.deb`.
+On the computer you publish from, `bash tools/release.sh` does it all, stopping at the
+first step that fails: `git-push.sh`, the package in a new private folder, `sudo apt
+install` of that one file, `wrenctl --update`. `--local` installs the last commit
+without pushing. Don't build into `/tmp` and install by a wildcard: every user can
+write there, the sandboxes' too, and apt installs as root.
+
+Install it on another computer with `sudo apt install ./wren-linux_VERSION_all.deb`.
 apt brings a newer one (the same way, or from the signed apt repository
 below); `wrenctl update` then runs again the parts and extras whose files
 changed, as it does for a git copy. Without git it compares the files with a
