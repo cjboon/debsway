@@ -35,6 +35,8 @@ case \$cmd in
 esac
 EOF
 printf '#!/bin/sh\necho "virt-manager $*" >>"%s/calls"\n' "$T" >"$T/bin/virt-manager"
+# (no notification may reach your desktop: stderr isn't a terminal here, so one is sent)
+printf '#!/bin/sh\necho "notify-send $*" >>"%s/notified"\n' "$T" >"$T/bin/notify-send"
 chmod +x "$T/bin/"*
 w() { PATH="$T/bin:$PATH" WHONIX_STOP_WAIT=1 sh "$HERE/bin/whonix" "$@"; }
 reset() { : >"$T/calls"; rm -f "$T/state/"* "$T/obeys" "$T/broken"; }
@@ -64,6 +66,7 @@ reset
 touch "$T/broken"
 out=$(w start 2>&1) && rc=0 || rc=$?
 check "a start that fails says why, and stops" bash -c '[ "$1" -ne 0 ] && grep -q "couldn.t start Whonix-Gateway: error: Failed to start" <<<"$2"' _ "$rc" "$out"
+check "...in a notification too, when there's no terminal to say it on" grep -q "couldn.t start Whonix-Gateway" "$T/notified"
 check "...without opening an empty window" not grep -q '^virt-manager' "$T/calls"
 
 # Right after installing, without logging out and in
