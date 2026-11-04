@@ -1,0 +1,17 @@
+# Written by Wren Linux extras/hardware-wallet.sh: hardware wallets, for the
+# person at the keyboard only (uaccess: no group, no other user, and none of
+# Wren Linux's sandbox users). Their USB vendor (and product) numbers:
+#   Trezor One 534c:0001; Trezor Model T, Safe 3 and 5 (and their bootloader)
+#   1209:53c1, 1209:53c0; Ledger 2c97 (every model); Coldcard d13e:cc10;
+#   BitBox02 03eb:2403; KeepKey 2b24:0001, 2b24:0002.
+ACTION=="remove", GOTO="wren_hw_wallet_end"
+SUBSYSTEM!="usb|hidraw", GOTO="wren_hw_wallet_end"
+
+ATTRS{idVendor}=="534c", ATTRS{idProduct}=="0001", TAG+="uaccess"
+ATTRS{idVendor}=="1209", ATTRS{idProduct}=="53c0|53c1", TAG+="uaccess"
+ATTRS{idVendor}=="2c97", TAG+="uaccess"
+ATTRS{idVendor}=="d13e", ATTRS{idProduct}=="cc10", TAG+="uaccess"
+ATTRS{idVendor}=="03eb", ATTRS{idProduct}=="2403", TAG+="uaccess"
+ATTRS{idVendor}=="2b24", ATTRS{idProduct}=="0001|0002", TAG+="uaccess"
+
+LABEL="wren_hw_wallet_end"

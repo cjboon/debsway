@@ -68,6 +68,7 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 - [Electrum, a Bitcoin wallet](electrum.md)
 - [Sparrow, a Bitcoin wallet with extra privacy tools](sparrow-wallet.md)
 - [Feather, a Monero wallet](feather-wallet.md)
+- [Hardware wallets over USB](hardware-wallet.md)
 
 ## Messaging and sharing
 
