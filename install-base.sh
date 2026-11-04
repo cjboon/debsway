@@ -150,6 +150,14 @@ else
     profile_autostart sway
     note "Added to $PROFILE. Other ttys (Ctrl+Alt+F2) still give a plain shell."
 fi
+# The first install, on an encrypted disk: tty1 logs you in by itself
+# (extras/autologin.sh). The disk passphrase at boot is the lock then; the
+# screen lock and sudo still ask for your password. Nothing on a disk that
+# isn't encrypted, and not on a later run (you may have taken it out).
+if [ "$first_run" = 1 ]; then
+    bash "$WREN_DIR/extras/autologin.sh" --encrypted-only ||
+        warn "Couldn't set up the login without your password; later: wrenctl install autologin"
+fi
 # On a plain text console (Ctrl+Alt+F2, or tty1 without autostart) say where the keys are
 if ! grep -q '>>> Wren Linux hint' "$PROFILE" 2>/dev/null; then
     cat >>"$PROFILE" <<'EOF'

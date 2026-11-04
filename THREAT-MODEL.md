@@ -209,7 +209,8 @@ With the extras:
   sandbox and deny rules are Claude Code's own: it enforces them, they
   name only some folders, and you can turn them off in it.
 - **Someone at the computer while you're logged in**, with autologin
-  (`extras/autologin.sh`, or the stick's `--autologin`): switching it on
+  (`extras/autologin.sh`, which the base install sets up on an encrypted
+  disk, or the stick's `--autologin`): switching it on
   (and typing the disk passphrase, on an encrypted disk) is enough to be
   you until the screen locks. Without disk encryption, switching it on is
   enough.

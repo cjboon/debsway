@@ -56,6 +56,12 @@ check "a disk that isn't encrypted: it warns" grep -q 'NOT encrypted' "$T/out"
 check "...and Enter (no) changes nothing" test ! -e "$T/written"
 run "$(printf 'part\ndisk')" y
 check "...yes writes the rule" test -s "$T/written"
+run "$(printf 'lvm\ncrypt\npart\ndisk')" '' --encrypted-only
+check "--encrypted-only (install-base's first run) on an encrypted disk: the rule, without asking" bash -c '[ -s "$1" ] && ! grep -q "all the same" "$2"' _ "$T/written" "$T/out"
+run "$(printf 'part\ndisk')" y --encrypted-only
+check "...on a disk that isn't encrypted: nothing, and no question (not even a yes counts)" bash -c '[ ! -e "$1" ] && grep -q "keeps asking for your password" "$2" && ! grep -q "all the same" "$2"' _ "$T/written" "$T/out"
+check "install-base.sh sets it up that way, on its first run only" bash -c '
+    sed -n "/^if \[ \"\$first_run\" = 1 \]; then\$/,/^fi\$/p" "$1" | grep -q "extras/autologin.sh\" --encrypted-only"' _ "$HERE/install-base.sh"
 run '' '' --remove
 check "--remove takes the rule out" grep -qx "rm -f $CONF" "$T/calls"
 run '' '' --manual

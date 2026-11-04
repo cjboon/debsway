@@ -43,6 +43,12 @@
    box, Tab reaches **Install** or **No extras**. `wrenctl --apps` shows it
    again whenever you like; `wrenctl --apps --list` only prints it.
 
+At its first run on an encrypted disk it also sets up the login without your
+password on tty1 (`extras/autologin.sh --encrypted-only`): the disk passphrase
+at boot is the lock then, and the screen lock and sudo still ask for yours.
+On a disk that isn't encrypted it doesn't; `wrenctl remove autologin` takes it
+out, and later runs leave that alone.
+
 An existing sway config is kept; only the include line is added, and the
 bar is only changed if it's still the stock one. Every snippet is
 checked with `sway -C` before it's kept.

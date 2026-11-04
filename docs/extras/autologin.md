@@ -18,6 +18,9 @@ disk passphrase at boot (on an encrypted disk), the screen lock and sudo all
 still ask for theirs, so with an encrypted disk someone holding the laptop
 while it is off still can't get in. On a disk that isn't encrypted the script
 warns that switching the computer on is then enough to be you, and asks first.
+The base install sets it up by itself at its first run on an encrypted disk,
+and not on one that isn't (`--encrypted-only`); `wrenctl remove autologin`
+takes it out, and later runs leave that alone.
 
 ## LIMITS
 

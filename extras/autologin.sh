@@ -6,8 +6,10 @@
 # is encrypted), the screen lock and sudo all still ask for theirs.
 # Without disk encryption, turning the computer on is then enough to be you:
 # the script says so, and asks first.
-# Takes effect at the next boot.
-# Usage: bash autologin.sh [--remove | --manual]
+# Takes effect at the next boot. install-base.sh's first run sets it up on an
+# encrypted disk (--encrypted-only: no question there, nothing on a disk that
+# isn't encrypted).
+# Usage: bash autologin.sh [--remove | --manual | --encrypted-only]
 # summary: Log in on tty1 without the password
 # security: least
 # status: file:/etc/systemd/system/getty@tty1.service.d/50-wren-autologin.conf
@@ -33,12 +35,17 @@ if [ "${1:-}" = --remove ]; then
     exit
 fi
 
+only_encrypted=false
+[ "${1:-}" != --encrypted-only ] || only_encrypted=true
 user=$(id -un)
 autologin_conf "$user" >/dev/null || die "\"$user\" isn't a user name this can set up."
 say "Log in on tty1 without the password"
 if root_encrypted; then
     note "The disk is encrypted: its passphrase still has to be typed at every boot,"
     note "so someone who has the laptop switched off still can't get in."
+elif $only_encrypted; then
+    note "The disk isn't encrypted, so tty1 keeps asking for your password."
+    exit 0
 else
     warn "This disk is NOT encrypted. With autologin, anyone who switches the computer on"
     warn "is logged in as you, with all your files, and could read the disk without it anyway."
