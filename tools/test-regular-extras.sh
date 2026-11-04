@@ -195,6 +195,8 @@ check "...other links are opened, a localhost redirect on another site too" bash
     "https://example.com/oauth/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A8080%2Fcb" \
     "https://claude.ai.example.com/oauth/authorize?redirect_uri=http%3A%2F%2Flocalhost%3A1%2Fcallback" \
     "https://claude.com/x?next=redirect_uri=http%3A%2F%2Flocalhost.example.com%2F"
+check "...a file: or an app's own link isn't opened (xdg-open would hand it to any program)" bash -c '
+    ! open_link "file:///home/me/x.desktop" && ! open_link "steam://run/1" && ! open_link "javascript:alert(1)" && ! [ -s "$1/opened" ]' _ "$T"
 check "...no URL, or two: refused" bash -c '! bash "$1" 2>/dev/null && ! bash "$1" a b 2>/dev/null' _ "$HERE/bin/claude-open-link"
 # claude-regular hands it to Claude Code as BROWSER, from the folder it is in itself
 mkdir -p "$T/crb"

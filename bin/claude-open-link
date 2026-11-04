@@ -4,9 +4,10 @@
 # link. A sign-in link whose answer comes back to this computer (redirect_uri
 # http://localhost...) is not opened: the sandboxed Firefox can't reach
 # localhost (its firewall), so that page would only fail. Claude Code then
-# shows its other link, which ends in a code to paste. Any other link goes to
-# xdg-open as usual. (Claude Code takes BROWSER and the failed opener as
-# "didn't open"; neither is documented, so an update could change it.)
+# shows its other link, which ends in a code to paste. Any other web link
+# goes to xdg-open as usual; other kinds (file:, an app's own) aren't opened.
+# (Claude Code takes BROWSER and the failed opener as "didn't open"; neither
+# is documented, so an update could change it.)
 set -uo pipefail
 
 url=${1:-}
@@ -30,4 +31,7 @@ if login_link "$url"; then
     if command -v notify-send >/dev/null; then notify-send "Claude Code sign-in" "$msg" 2>/dev/null || true; fi
     exit 1
 fi
+# Only web links go on: xdg-open would open a file: or app link with whatever
+# program handles it, outside Claude Code's own sandbox
+[[ $url =~ ^https?://[^[:space:]]+$ ]] || { printf 'claude-open-link: only http:// and https:// links are opened, not %s\n' "${url%%:*}:" >&2; exit 1; }
 exec xdg-open "$url"
