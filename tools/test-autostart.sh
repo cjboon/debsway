@@ -24,11 +24,11 @@ chmod +x "$T/fake/swaymsg"
 wa() { env -u SWAYSOCK HOME="$H" PATH="$T/fake:$PATH" bash "$HERE/bin/wren-autostart" "$@" 2>&1; }
 
 # ---- the file a new install starts with
-check "the file a new install gets opens a terminal on workspace 2, and nothing else" bash -c '
-    [ "$(grep -vE "^(#|$)" "$1")" = "2 foot" ]' _ "$HERE/data/autostart"
+check "the file a new install gets opens a terminal on workspace 1, and nothing else" bash -c '
+    [ "$(grep -vE "^(#|$)" "$1")" = "1 foot" ]' _ "$HERE/data/autostart"
 check "...and says how to change it" grep -q 'System > Startup programs' "$HERE/data/autostart"
 cp "$HERE/data/autostart" "$F"
-check "list says what opens where" grep -qE '^  workspace 2 +foot$' <<<"$(wa list)"
+check "list says what opens where" grep -qE '^  workspace 1 +foot$' <<<"$(wa list)"
 
 # ---- at login
 printf '# a comment\n\n1 keepassxc\n2 foot\n3   firefox --new-window https://example.org/\n' >"$F"
@@ -100,7 +100,7 @@ check "...and nothing is written" not grep -qE '^11 ' "$F"
 check "add with no command is refused" not wa add 3
 wa remove firefox
 check "remove: its line goes" not grep -qx '4 firefox' "$F"
-check "...the others stay" grep -qx '2 foot' "$F"
+check "...the others stay" grep -qx '1 foot' "$F"
 check "removing what isn't listed is no error" wa remove nothing-here
 out=$(wa add 5 no-such-program-here)
 check "a program that isn't there yet: added, and it says so" bash -c 'grep -q "no program called" <<<"$1" && grep -qx "5 no-such-program-here" "$2"' _ "$out" "$F"
@@ -137,7 +137,7 @@ F2=$T/h2/.config/wren/autostart
 S2=$T/h2/.config/sway/config.d
 printf 'bad line of mine\n' >"$T/mine"
 out=$(part)
-check "the part: the list with a terminal on workspace 2" grep -qx '2 foot' "$F2"
+check "the part: the list with a terminal on workspace 1" grep -qx '1 foot' "$F2"
 check "...the command" test -x "$T/h2/.local/bin/wren-autostart"
 check "...sway starts it at login" grep -qx 'exec ~/.local/bin/wren-autostart' "$S2/autostart.conf"
 echo '5 mine' >>"$F2"
@@ -145,7 +145,7 @@ part >/dev/null
 check "run again: your list is left as it is" grep -qx '5 mine' "$F2"
 printf '# old\nexec sh -c x\n' >"$S2/keepassxc-start.conf"
 part >/dev/null
-check "KeePassXC's old line at login moves into the list" grep -qx '1 keepassxc' "$F2"
+check "KeePassXC's old line at login moves into the list" grep -qx '2 keepassxc' "$F2"
 check "...the old line goes" test ! -e "$S2/keepassxc-start.conf"
 part --remove >/dev/null
 check "--remove: sway no longer starts it" test ! -e "$S2/autostart.conf"
@@ -155,7 +155,7 @@ check "...your list stays" test -f "$F2"
 check "it is in the base install" grep -qE '(^|[ (])autostart( |$)' "$HERE/packages.sh"
 check "the startup watch watches the list: it starts programs at every login" grep -q '".config/wren/autostart"' "$HERE/bin/wren-watch"
 check "no terminal is started any other way" not grep -q 'wren-start-terminal' "$HERE/parts/foot-config.sh"
-check "KeePassXC offers its line in the list" grep -q 'wren-autostart" add 1 keepassxc' "$HERE/extras/keepassxc.sh"
+check "KeePassXC offers its line in the list" grep -q 'wren-autostart" add 2 keepassxc' "$HERE/extras/keepassxc.sh"
 check "the menu's Startup programs opens the edit screen" grep -q 'edit' <(grep -A4 '^        autostart)' "$HERE/bin/wren-menu")
 
 [ "$fails" -eq 0 ]

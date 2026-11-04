@@ -2,9 +2,9 @@
 # the workspace (1 to 10), then the command, as you would type it. The screen
 # starts on the first one listed.
 #
-#   1 keepassxc
+#   2 keepassxc
 #   3 firefox
 #
 # Change it here, or in the Wren menu: System > Startup programs. It counts from
 # your next login.
-2 foot
+1 foot

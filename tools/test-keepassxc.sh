@@ -1,7 +1,7 @@
 #!/bin/bash
 # Checks extras/keepassxc.sh with a pretend sudo and apt, in a temp home: the
 # on-lock program that locks KeePassXC's databases at every lock (only when it
-# runs), the start on workspace 1 at login when you say so (and sway takes
+# runs), the start on workspace 2 at login when you say so, asked once (and sway takes
 # it), and --remove taking both out. Nothing outside a temp folder changes.
 # Run by test.sh, or:  bash tools/test-keepassxc.sh
 # shellcheck disable=SC2016  # the inner shells and pretend programs expand their own variables
@@ -49,14 +49,22 @@ printf '#!/bin/sh\nexit 0\n' >"$T/bin/pgrep"
 PATH="$T/bin:$PATH" sh "$H"
 check "...with it running, it asks it to lock" test -e "$T/kp-ran"
 L=$T/home/.config/wren/autostart
-check "yes: KeePassXC opens on workspace 1 at login, a line in your list" grep -qx '1 keepassxc' "$L"
+check "yes: KeePassXC opens on workspace 2 at login, a line in your list" grep -qx '2 keepassxc' "$L"
 check "...and sway starts the list" grep -qx 'exec ~/.local/bin/wren-autostart' "$T/home/.config/sway/config.d/autostart.conf"
 if command -v sway >/dev/null; then
     check "...and sway takes it" bash -c '! grep -q "rejected" <<<"$1"' _ "$out"
 fi
-sed -i 's/^1 keepassxc$/3 keepassxc/' "$L"
+check "...after the terminal, so the screen starts on that" bash -c '[ "$(grep -E "^[0-9]+ " "$1" | head -1)" = "1 foot" ]' _ "$L"
+sed -i 's/^2 keepassxc$/3 keepassxc/' "$L"
+out=$(kp y)
+check "run again: where you moved it stays" bash -c 'grep -qx "3 keepassxc" "$1" && ! grep -qx "2 keepassxc" "$1"' _ "$L"
+check "...and it doesn't ask again" bash -c '! grep -q "Open KeePassXC" <<<"$1"' _ "$out"
+sed -i '/^3 keepassxc$/d' "$L"
+out=$(kp y)
+check "taken out of your list: it stays out, and it doesn't ask" bash -c '! grep -qE "^[0-9]+ keepassxc" "$1" && ! grep -q "Open KeePassXC" <<<"$2"' _ "$L" "$out"
+kp y --remove >/dev/null
 kp y >/dev/null
-check "run again: where you moved it stays, it doesn't ask" bash -c 'grep -qx "3 keepassxc" "$1" && ! grep -qx "1 keepassxc" "$1"' _ "$L"
+check "removed and installed again: it asks again" grep -qx '2 keepassxc' "$L"
 echo '# old' >"$S"
 kp y >/dev/null
 check "an older version's line in sway's config goes" test ! -e "$S"
@@ -64,5 +72,12 @@ kp y --remove >/dev/null
 check "--remove takes the on-lock program and the start at login out" bash -c '[ ! -e "$1" ] && ! grep -qE "^[0-9]+ keepassxc" "$2"' _ "$H" "$L"
 out=$(kp n)
 check "no: no line for it" bash -c '! grep -qE "^[0-9]+ keepassxc" "$1"' _ "$L"
+out=$(kp y)
+check "...and that is remembered: no question, no line" bash -c '! grep -qE "^[0-9]+ keepassxc" "$1" && ! grep -q "Open KeePassXC" <<<"$2"' _ "$L" "$out"
+kp n --remove >/dev/null
+rm -f "$L" "$T/home/.config/wren/keepassxc-start-asked"
+printf '1 keepassxc\n' >"$L"
+out=$(kp y)
+check "already in your list from before this asked once: no question, and it stays where it is" bash -c 'grep -qx "1 keepassxc" "$1" && ! grep -q "Open KeePassXC" <<<"$2"' _ "$L" "$out"
 
 [ "$fails" -eq 0 ]

@@ -1,7 +1,7 @@
 #!/bin/bash
 # What opens when you log in, and on which workspace, all in one file you can
 # change: ~/.config/wren/autostart, a workspace and a command on each line (it
-# starts with a terminal on workspace 2). bin/wren-autostart starts them, and
+# starts with a terminal on workspace 1). bin/wren-autostart starts them, and
 # changes the file for you: the Wren menu's System > Startup programs, or
 # wren-autostart edit. A program's script that offers to open at login
 # (extras/keepassxc.sh) adds its line here too. Your file is never replaced.
@@ -22,7 +22,7 @@ say "What opens at login"
 autostart_ensure
 # KeePassXC had a line of its own in sway's config before this file
 if [ -f "$SWAY_SNIPPETS/keepassxc-start.conf" ]; then
-    "$BIN/wren-autostart" add 1 keepassxc
+    "$BIN/wren-autostart" add 2 keepassxc
     remove_snippet keepassxc-start
 fi
 note "$AUTOSTART_FILE says what opens where:"

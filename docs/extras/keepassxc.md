@@ -20,8 +20,9 @@ auto-type. qtwayland5 lets it run on Wayland. On a computer with the full build
 (`keepassxc-full`, with `webext-keepassxc-browser`), the script switches to the
 minimal one. Whenever the screen locks (Super+Escape, the idle lock, the lid,
 before sleep), it locks its open databases too: an on-lock program,
-`~/.config/wren/on-lock.d/keepassxc`, runs `keepassxc --lock`. It asks whether
-KeePassXC should open on workspace 1 at every login.
+`~/.config/wren/on-lock.d/keepassxc`, runs `keepassxc --lock`. It asks once whether
+KeePassXC should open on workspace 2 at every login; after that your list of what
+opens at login says (`wren-autostart edit`).
 
 ## LIMITS
 
@@ -43,9 +44,9 @@ sudo apt install --no-install-recommends keepassxc-minimal qtwayland5
 mkdir -p ~/.config/wren/on-lock.d
 printf '%s\n' '#!/bin/sh' 'pgrep -x -u "$(id -u)" keepassxc >/dev/null || exit 0' 'exec keepassxc --lock' >~/.config/wren/on-lock.d/keepassxc
 chmod 755 ~/.config/wren/on-lock.d/keepassxc
-# Optional: on workspace 1 at every login
+# Optional: on workspace 2 at every login
 # (with Wren Linux's parts/autostart.sh; or add the line to the file by hand)
-wren-autostart add 1 keepassxc
+wren-autostart add 2 keepassxc
 keepassxc
 ```
 

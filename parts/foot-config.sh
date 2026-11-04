@@ -3,7 +3,7 @@
 # small), a black background and readable colours (data/foot.ini). It goes
 # to ~/.config/foot/foot.ini, which only affects terminals you open after
 # this. A foot.ini you wrote yourself is kept as foot.ini.bak.
-# (The terminal that opens on workspace 2 at login is a line in
+# (The terminal that opens on workspace 1 at login is a line in
 # ~/.config/wren/autostart: parts/autostart.sh.)
 # Usage: bash foot-config.sh [--remove]
 # status: file:~/.config/foot/foot.ini

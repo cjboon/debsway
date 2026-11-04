@@ -10,7 +10,7 @@
 #  - It locks its databases whenever the screen locks (Super+Escape, the idle
 #    lock, the lid, before sleep): an on-lock program,
 #    ~/.config/wren/on-lock.d/keepassxc, runs keepassxc --lock.
-#  - It can open on workspace 1 at every login (it asks): a line in
+#  - It can open on workspace 2 at every login (it asks once): a line in
 #    ~/.config/wren/autostart, where you can move it (parts/autostart.sh).
 # Usage: bash keepassxc.sh [--remove | --manual]
 # summary: KeePassXC password manager (no browser add-on)
@@ -21,9 +21,12 @@
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 HOOK=${XDG_CONFIG_HOME:-$HOME/.config}/wren/on-lock.d/keepassxc
+# It asks once whether it opens at login; after that your list says (update.sh
+# runs this again, and an answer or a change of yours isn't to be asked about again)
+ASKED=$HOME/.config/wren/keepassxc-start-asked
 
 if [ "${1:-}" = --remove ]; then
-    rm -f "$HOOK"
+    rm -f "$HOOK" "$ASKED"
     remove_snippet keepassxc-start
     if [ -x "$BIN/wren-autostart" ]; then "$BIN/wren-autostart" remove keepassxc; fi
     apt_purge keepassxc-full keepassxc-minimal keepassxc webext-keepassxc-browser
@@ -53,12 +56,16 @@ note "of yours can read them while you're away."
 autostart_ensure
 # (an older version's line in sway's config)
 remove_snippet keepassxc-start
-if "$BIN/wren-autostart" list | grep -qE '^  workspace [0-9]+ +keepassxc$'; then
-    # (where you may have moved it: left there)
-    note "It opens at login, as your list says: wren-autostart list"
-elif ask "Open KeePassXC on workspace 1 at every login?" y; then
-    "$BIN/wren-autostart" add 1 keepassxc
-    note "It opens on workspace 1 from your next login (wren-autostart edit changes that)."
+if [ ! -e "$ASKED" ]; then
+    if "$BIN/wren-autostart" list | grep -qE '^  workspace [0-9]+ +keepassxc$'; then
+        # (where you may have moved it: left there)
+        note "It opens at login, as your list says: wren-autostart list"
+    elif ask "Open KeePassXC on workspace 2 at every login?" y; then
+        "$BIN/wren-autostart" add 2 keepassxc
+        note "It opens on workspace 2 from your next login (wren-autostart edit changes that)."
+    fi
+    mkdir -p "${ASKED%/*}"
+    : >"$ASKED"
 fi
 note "Run it with: keepassxc   (or Super+d)"
 note "It can also generate two-factor login codes (TOTP) for your accounts."
