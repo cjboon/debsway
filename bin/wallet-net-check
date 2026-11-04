@@ -1,0 +1,32 @@
+#!/bin/bash
+# wallet-net-check: written by Wren Linux extras/wallet-sandbox.sh
+# Run by bin/wallet-session, as the wallet's user, so it sees what the wallet
+# would see: a system service saying "active" isn't enough, because anything that
+# loads a firewall with "flush ruleset" (Debian's own nftables.service does)
+# takes the wallet's table away and leaves that service active.
+#   exit 0  the firewall refuses this user, and Tor answers
+#   exit 1  the firewall isn't refusing this user: don't run a wallet
+#   exit 2  the firewall is there, but Tor doesn't answer
+set -euo pipefail
+code=$(cat <<'PY'
+import errno
+import socket
+import sys
+
+
+def connect(port):
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(5)
+        return s.connect_ex(("127.0.0.1", port))
+
+
+# Port 9 is closed on nearly every computer. Closed, it says "refused"; only the
+# wallet firewall's admin-prohibited says "no route", and anything else means
+# this user's connection went out.
+if connect(9) != errno.EHOSTUNREACH:
+    sys.exit(1)
+if connect(9050) != 0:
+    sys.exit(2)
+PY
+)
+exec python3 -I -c "$code"

@@ -242,7 +242,7 @@ install_no_abstract() {
 }
 remove_no_abstract() {
     local s
-    for s in incognito-session claude-session claude-vm-session opencode-vm-session firefox-session onion-site-session yt-dlp-session; do
+    for s in wallet-session incognito-session claude-session claude-vm-session opencode-vm-session firefox-session onion-site-session yt-dlp-session; do
         [ ! -e "/usr/local/libexec/$s" ] || return 0
     done
     # (a media viewer given a web address; this one is yours, in ~/.local/bin)
@@ -254,7 +254,7 @@ remove_no_abstract() {
 # it after the script's own command is gone)
 remove_wayland_restrict() {
     local c
-    for c in /usr/local/bin/firefox /usr/local/bin/incognito "$BIN/media-sandbox"; do
+    for c in /usr/local/bin/wallet /usr/local/bin/firefox /usr/local/bin/incognito "$BIN/media-sandbox"; do
         [ ! -e "$c" ] || return 0
     done
     remove_bin wayland-restrict

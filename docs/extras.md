@@ -49,6 +49,7 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `electrum.sh` | Electrum Bitcoin wallet, from Debian |
 | `feather-wallet.sh` | Feather Monero wallet, the signed official AppImage. Command: `feather` |
 | `hardware-wallet.sh` | Hardware wallets over USB (Trezor, Ledger, Coldcard, BitBox02, KeepKey) for Sparrow, Electrum and Feather: a udev rule gives them to the person at the keyboard only, and no maker's app is installed. Says how to sign air-gapped instead. See [extras/hardware-wallet.md](extras/hardware-wallet.md) |
+| `wallet-sandbox.sh` | Feather, Sparrow and Electrum each as its own user, on Tor only, for a computer that can't run VMs (Whonix is safer). Command: `wallet` |
 | `signal.sh` | Signal Desktop, from Signal's signed apt repo (updated by unattended-upgrades), linked to your phone's Signal; its sandbox helper isn't setuid root. Command: `signal-desktop`. See [extras/signal.md](extras/signal.md) |
 | `simplex-chat.sh` | SimpleX Chat desktop, the signed official AppImage. Command: `simplex` |
 | `seahorse.sh` | Seahorse and the GNOME keyring, unlocked by your login password (edits `/etc/pam.d/login`; `--remove` takes the lines out) |

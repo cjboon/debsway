@@ -70,6 +70,7 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 - [Sparrow, a Bitcoin wallet with extra privacy tools](sparrow-wallet.md)
 - [Feather, a Monero wallet](feather-wallet.md)
 - [Hardware wallets over USB](hardware-wallet.md)
+- [Sandboxed wallets, for a computer that can't run VMs](wallet-sandbox.md)
 
 ## Messaging and sharing
 

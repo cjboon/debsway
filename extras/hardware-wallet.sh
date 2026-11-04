@@ -5,7 +5,8 @@
 # hacked computer can't spend them, or quietly change where they go.
 #  - A udev rule (data/hardware-wallets.rules) gives these devices to you, at
 #    the keyboard, and to no one else: no group, no other user, none of Wren
-#    Linux's sandboxes (uaccess).
+#    Linux's sandboxes (uaccess). (extras/wallet-sandbox.sh can add one wallet's
+#    user, if you choose that.)
 #  - No maker's app is installed: Sparrow, Electrum and Feather talk to the
 #    devices themselves (wrenctl install sparrow-wallet, electrum, feather-wallet).
 #  - Safer still: a device that never connects at all. Coldcard, Jade,

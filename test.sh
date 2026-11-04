@@ -335,6 +335,7 @@ dev_test vps-client "Your side of the VPS (tools/vps-client.sh): keys, Tor clien
 dev_test publish-site "Publishing the site (tools/publish-site.sh): only a signed commit" "publish checks"
 dev_test try-vps "Trying the VPS setup in a VM (tools/try-vps.sh), without starting one" "try-vps checks"
 dev_test security-key "Hardware security keys (extras/security-key.sh), with pretend sudo and PAM" "security key checks"
+dev_test wallet-sandbox "Sandboxed wallets (extras/wallet-sandbox.sh): the firewall in a network namespace, the clipboard, the session" "wallet sandbox checks"
 dev_test hardware-wallet "Hardware wallets (extras/hardware-wallet.sh): the udev rule, for the user at the keyboard only" "hardware wallet checks"
 dev_test sudo-timeout "sudo remembers your password for 60 seconds (parts/sudo-timeout.sh)" "sudo timeout checks"
 dev_test sandbox-dns "The sandboxes' DNS only to this computer's resolver (parts/sandbox-dns.sh), with a pretend nft" "sandbox DNS checks"

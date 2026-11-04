@@ -100,7 +100,8 @@ for u in wren-firefox-firewall wren-incognito-firewall wren-ytdlp-firewall wren-
     grep -qx "ExecStartPost=-/usr/local/libexec/wren-sandbox-dns" "$F/$u.service.d/60-wren-sandbox-dns.conf" 2>/dev/null || missing+=" $u"
 done
 check "...and right after each sandbox's firewall loads (which empties its set)${missing:+: missing$missing}" test -z "$missing"
-units=$(grep -rhoE 'wren-[a-z-]+-firewall\.service' "$HERE/extras" "$HERE/parts" "$HERE/lib" | sort -u | grep -vE 'wren-(secure-dns|signer)-firewall' | sed 's/\.service$//' | paste -sd' ')
+# (the wallets' has no DNS at all: they reach Tor's port and nothing else)
+units=$(grep -rhoE 'wren-[a-z-]+-firewall\.service' "$HERE/extras" "$HERE/parts" "$HERE/lib" | sort -u | grep -vE 'wren-(wallet|secure-dns|signer)-firewall' | sed 's/\.service$//' | paste -sd' ')
 check "...every sandbox firewall service there is has that drop-in (the list is complete)" bash -c '
     for u in $1; do grep -q "$u" "$2" || { echo "$u"; exit 1; }; done' _ "$units" "$HERE/parts/sandbox-dns.sh"
 check "it is in the base, after secure DNS" bash -c '. "$1/packages.sh"; [[ " ${PARTS[*]} " == *" secure-dns sandbox-dns "* ]]' _ "$HERE"

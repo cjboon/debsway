@@ -1,0 +1,178 @@
+#!/bin/bash
+# wallet: written by Wren Linux extras/wallet-sandbox.sh
+#   wallet feather|sparrow|electrum   open that wallet in its sandbox
+#   wallet clip [in|out] [NAME]       move one line of text in or out of an open
+#                                     wallet (also Super+Ctrl+w)
+# Each wallet runs as its own user, in its own window system, and can reach Tor
+# and nothing else. Nothing crosses by itself. wallet clip shows you the text
+# before it goes, and takes one line of plain text: letters, numbers and ASCII
+# punctuation, so no look-alike letters and nothing that can steer your terminal.
+# What a wallet shows you can still be false, if it has been hacked: compare an
+# address with where it came from, and on a hardware wallet, with its own screen.
+set -euo pipefail
+
+die() { printf 'wallet: %s\n' "$*" >&2; exit 1; }
+usage() { die "usage: wallet feather|sparrow|electrum, or: wallet clip [in|out] [NAME]"; }
+
+SESSION=/usr/local/libexec/wallet-session
+CAMERA=/usr/local/libexec/wallet-camera
+CONF=${WREN_WALLET_CONF:-/etc/wren/wallets}
+WALLETS="feather sparrow electrum"
+# One line, plain text. Long enough for an address with an amount and a label.
+CLIP_MAX=1024
+
+name_ok() { case ${1:-} in feather | sparrow | electrum) ;; *) return 1 ;; esac; }
+
+[ "$(id -u)" -ne 0 ] || die "run it as your normal user, not root."
+rt=${XDG_RUNTIME_DIR:-}
+[ -n "$rt" ] && [ -d "$rt" ] || die "XDG_RUNTIME_DIR isn't set."
+command -v flock >/dev/null || die "flock is missing (package util-linux)."
+
+# is_open NAME: its lock is held. (The only way to know: nothing else lasts.)
+is_open() {
+    local free=1
+    exec 8>"$rt/wallet-$1.lock"
+    if flock -n 8; then free=0; fi
+    exec 8>&-
+    [ "$free" = 1 ]
+}
+
+# clip_ok TEXT: at most CLIP_MAX characters of printable ASCII, on one line
+clip_ok() {
+    local LC_ALL=C
+    [ ${#1} -le "$CLIP_MAX" ] && [[ $1 =~ ^[\ -~]+$ ]]
+}
+
+clip() {
+    local way='' name='' open=() w text a
+    while [ $# -gt 0 ]; do
+        case $1 in
+            in | out) way=$1 ;;
+            *) name_ok "$1" || usage; name=$1 ;;
+        esac
+        shift
+    done
+    command -v wl-copy >/dev/null || die "wl-copy is missing (package wl-clipboard)."
+    if [ -z "$name" ]; then
+        for w in $WALLETS; do
+            if is_open "$w"; then open+=("$w"); fi
+        done
+        [ ${#open[@]} -gt 0 ] || die "no wallet is open."
+        [ ${#open[@]} -eq 1 ] || die "more than one wallet is open; name one: wallet clip ${way:-in|out} NAME"
+        name=${open[0]}
+    fi
+    is_open "$name" || die "$name isn't open."
+    if [ -z "$way" ]; then
+        printf 'Into %s, from your clipboard (i), or out of %s, to your clipboard (o)? ' "$name" "$name"
+        IFS= read -r a || a=
+        case $a in
+            i | I) way=in ;;
+            o | O) way=out ;;
+            *) die "nothing was moved." ;;
+        esac
+    fi
+    if [ "$way" = in ]; then
+        text=$(wl-paste -n -t text 2>/dev/null | head -c $((CLIP_MAX + 1))) || true
+    else
+        text=$(sudo -n -u "wallet-$name" "$SESSION" clip-out "$name" 2>/dev/null | head -c $((CLIP_MAX + 1))) || true
+    fi
+    # Checked before it is shown: from a wallet, it isn't to be trusted
+    [ -n "$text" ] || die "that clipboard is empty, so nothing was moved."
+    clip_ok "$text" || die "that isn't one line of plain text of at most $CLIP_MAX characters, so nothing was moved."
+    if [ "$way" = in ]; then
+        printf 'Into %s:\n\n  %s\n\nSend it? [y/N] ' "$name" "$text"
+    else
+        printf 'Out of %s:\n\n  %s\n\nIf this is an address, compare it with where it came from.\nCopy it to your clipboard? [y/N] ' "$name" "$text"
+    fi
+    IFS= read -r a || a=
+    [[ $a =~ ^[Yy] ]] || die "nothing was moved."
+    if [ "$way" = in ]; then
+        printf '%s' "$text" | sudo -n -u "wallet-$name" "$SESSION" clip-in "$name" || die "it didn't get there."
+    else
+        printf '%s' "$text" | wl-copy
+    fi
+    printf 'Done.\n'
+}
+
+[ $# -ge 1 ] || usage
+if [ "$1" = clip ]; then
+    shift
+    clip "$@"
+    exit
+fi
+# Super+Ctrl+w: in a window of its own, which stays until you have read it
+if [ "$1" = clip-window ]; then
+    rc=0
+    ( clip ) || rc=$?
+    printf 'Press Enter to close. '
+    IFS= read -r _ || true
+    exit "$rc"
+fi
+[ $# -eq 1 ] && name_ok "$1" || usage
+name=$1
+user=wallet-$name
+
+[ -n "${WAYLAND_DISPLAY:-}" ] || die "it needs your sway session; start sway first."
+case $WAYLAND_DISPLAY in
+    */*) die "WAYLAND_DISPLAY should be a plain name like wayland-1." ;;
+esac
+[ -S "$rt/$WAYLAND_DISPLAY" ] || die "can't find your Wayland socket ($rt/$WAYLAND_DISPLAY)."
+restrict=$HOME/.local/bin/wayland-restrict
+[ -x "$restrict" ] || restrict=$(command -v wayland-restrict) || die "wayland-restrict is missing. Run: wrenctl install wallet-sandbox"
+command -v setfacl >/dev/null || die "setfacl is missing (package acl)."
+sudo -n -u "$user" -l "$SESSION" >/dev/null 2>&1 ||
+    die "$name isn't set up in the sandbox. Run: wrenctl install wallet-sandbox"
+
+exec 9>"$rt/wallet-$name.lock"
+flock -n 9 || die "$name is already open."
+
+# A newer Feather installed by its own script isn't in the sandbox's copy yet
+lib=/usr/local/lib/wren-wallet
+if [ "$name" = feather ]; then
+    have=$(cat "$lib/feather/.wren-version" 2>/dev/null || true)
+    new=$(cat "$HOME/.local/opt/feather/.wren-version" 2>/dev/null || true)
+    if [ -n "$new" ] && [ "$new" != "$have" ]; then
+        printf 'wallet: Feather %s is installed, the sandbox has %s. To bring it in: wrenctl install wallet-sandbox\n' "$new" "${have:-none}" >&2
+    fi
+fi
+
+# What it is handed is in a new folder with a name nobody can guess, and passage
+# is given to that alone: never through your runtime folder or your home.
+SHARE_ROOT=${WREN_SHARE_ROOT:-/dev/shm}
+[ -d "$SHARE_ROOT" ] || die "$SHARE_ROOT (memory) isn't available."
+# Left by a crash or a power cut (the lock above says this one isn't running)
+find "$SHARE_ROOT" -maxdepth 1 -user "$(id -un)" -name "wren-$user.*" -exec rm -rf {} + 2>/dev/null || true
+share=$(mktemp -d "$SHARE_ROOT/wren-$user.XXXXXXXX") || die "couldn't make a folder in $SHARE_ROOT."
+sock=$share/$user-wayland
+
+camera=false
+if grep -qsx 'camera=yes' "$CONF/$name.conf"; then camera=true; fi
+
+# shellcheck disable=SC2317,SC2329  # runs from the EXIT trap
+cleanup() {
+    if $camera; then sudo -n "$CAMERA" "$name" off 2>/dev/null || true; fi
+    if [ -n "${WL_PID:-}" ]; then kill "$WL_PID" 2>/dev/null || true; fi
+    rm -rf "$share"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM HUP
+
+# 9>&-: wayland-restrict must not inherit the lock. It ends when cleanup kills
+# it, or when this script dies (its standard input closes).
+coproc WL { "$restrict" "$sock" "$user" 9>&-; }
+IFS= read -r -t 10 line <&"${WL[0]}" && [ "$line" = ready ] ||
+    die "couldn't make a restricted Wayland socket (needs sway 1.9 or newer; see above)."
+setfacl -m "u:$user:--x" "$share"
+setfacl -m "u:$user:rw-" "$sock"
+
+if $camera; then
+    sudo -n "$CAMERA" "$name" on || printf 'wallet: the camera could not be given to it; QR codes will not work.\n' >&2
+    if ! compgen -G "${WREN_DEV:-/dev}/video*" >/dev/null; then
+        printf 'wallet: no camera is on now. For QR codes: switch it on first (Wren menu), then open the wallet again.\n' >&2
+    fi
+fi
+
+rc=0
+sudo -n -u "$user" "$SESSION" start "$name" "$share" "${sock##*/}" || rc=$?
+exit "$rc"

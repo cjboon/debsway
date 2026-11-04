@@ -179,6 +179,12 @@ With the extras:
 - **Logins phished or taken from the computer**, for sites and SSH servers
   that take a security key: the key signs only for the site it was registered
   with, and only when touched.
+- **A hacked wallet reading your files or showing your address**, with the
+  wallet sandbox (`extras/wallet-sandbox.sh`), for a computer that can't run VMs:
+  each wallet is its own user, the firewall lets it reach Tor's port and nothing
+  else, checked from its own side, and it has its own window system. It shares
+  this computer's kernel, so a kernel flaw gets out: Whonix is stronger. It can't
+  stop a hacked wallet showing you a false address.
 - **Coins spent behind your back**, with a hardware wallet
   (`extras/hardware-wallet.sh`): the device shows what it signs on its own
   screen and signs only when you agree there. It doesn't protect the
@@ -202,8 +208,9 @@ With the extras:
   offices), a sandbox user can still reach them: nothing marks them as local.
 - **Anything running as you.** If you run a malicious program, or an
   attack escapes the browser, it can read all your files, every Firefox
-  profile's logins and your wallets. Wren Linux doesn't sandbox your own
-  user. Only install software you trust. (With the Wren Linux package
+  profile's logins and your wallets (except those kept in the wallet sandbox,
+  `extras/wallet-sandbox.sh`, which it could still reach by waiting for your
+  password). Wren Linux doesn't sandbox your own user. Only install software you trust. (With the Wren Linux package
   installed, the scripts Wren Linux runs with sudo are root's files in
   `/usr/share/wren`, so such a program can't change them to wait for your
   password; from your own copy in `~/wren` it could.) `claude-regular`

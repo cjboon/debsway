@@ -1,0 +1,38 @@
+#!/bin/bash
+# wallet-camera NAME on|off: written by Wren Linux extras/wallet-sandbox.sh
+# Installed as /usr/local/libexec/wallet-camera, owned by root. Your user may run
+# it as root (a rule in /etc/sudoers.d, only if you chose the camera for a
+# wallet); the wallets' users may not. It lets that wallet's user open the
+# cameras that are there now, and takes that back: bin/wallet does this as a
+# wallet with the camera option opens and closes. "on" works only for a wallet
+# whose settings, root's file, say camera=yes. The webcam switch (extras/webcam.sh)
+# still decides: a camera switched off isn't there to open.
+set -euo pipefail
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+die() { printf 'wallet-camera: %s\n' "$*" >&2; exit 2; }
+
+# Always the real places for root; a test may point them elsewhere
+if [ "$(id -u)" -eq 0 ]; then
+    DEV=/dev CONF=/etc/wren/wallets
+else
+    DEV=${WREN_DEV:-/dev} CONF=${WREN_WALLET_CONF:-/etc/wren/wallets}
+fi
+
+[ $# -eq 2 ] || die "usage: wallet-camera feather|sparrow|electrum on|off"
+case $1 in feather | sparrow | electrum) ;; *) die "unknown wallet." ;; esac
+case $2 in on | off) ;; *) die "on or off." ;; esac
+user=wallet-$1
+
+if [ "$2" = on ]; then
+    grep -qsx 'camera=yes' "$CONF/$1.conf" || die "this wallet wasn't set up with the camera."
+fi
+shopt -s nullglob
+for d in "$DEV"/video*; do
+    [ -c "$d" ] && [ ! -L "$d" ] || continue
+    if [ "$2" = on ]; then
+        setfacl -m "u:$user:rw-" "$d"
+    else
+        setfacl -x "u:$user" "$d" 2>/dev/null || true
+    fi
+done

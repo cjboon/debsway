@@ -1,0 +1,31 @@
+# Keeps the sandboxed wallets' users (Wren Linux extras/wallet-sandbox.sh) on Tor
+# and nothing else. Only their traffic is touched. They may reach Tor's SOCKS port
+# on this computer (127.0.0.1:9050, the system Tor); everything else they send is
+# refused: no DNS, no IPv6, no address of your network, none of the internet
+# directly. So a wallet set up wrongly, or a bug in one, can't give away your
+# address: it can only fail to connect.
+#
+# It matches the user, not a group: a process can't change its user, and all
+# three exist from the install on, so this loads at boot whichever you use.
+# There is no rule for established connections: the wallet's own packets to Tor
+# match the first rule, and without it nothing a wallet listens on can answer
+# anyone, so it can't pretend to be a service on this computer.
+# admin-prohibited is how a wallet tells this rule from a closed port
+# (bin/wallet-net-check): it won't start, and is closed, without this table.
+
+table inet wren_wallet
+delete table inet wren_wallet
+
+table inet wren_wallet {
+    chain output {
+        type filter hook output priority 0; policy accept;
+        meta skuid { "wallet-feather", "wallet-sparrow", "wallet-electrum" } jump wallet
+    }
+
+    chain wallet {
+        # Tor, on this computer
+        ip daddr 127.0.0.1 tcp dport 9050 accept
+        # and nothing else, of any kind
+        reject with icmpx admin-prohibited
+    }
+}

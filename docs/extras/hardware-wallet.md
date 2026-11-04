@@ -16,7 +16,8 @@ quietly change where they go. Sparrow and Electrum (Bitcoin) and Feather
 of them need a udev rule before a user may reach them; this one
 (`data/hardware-wallets.rules`) gives Trezor, Ledger, Coldcard, BitBox02 and
 KeepKey devices to the person at the keyboard only (`uaccess`): no group, no
-other user and none of Wren Linux's sandbox users get them. Safer still is a
+other user and no sandbox user gets them, unless you choose that for one
+[sandboxed wallet](wallet-sandbox.md). Safer still is a
 device that never connects at all: Coldcard, Jade, Keystone and SeedSigner can
 sign from a QR code or a microSD card, which Sparrow does (the webcam extra for
 QR codes, `usb mount` for a card).

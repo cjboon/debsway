@@ -1,0 +1,161 @@
+#!/bin/bash
+# wallet-session: written by Wren Linux extras/wallet-sandbox.sh
+# Runs as a wallet's own user, wallet-feather, wallet-sparrow or wallet-electrum
+# (the wallet command starts it through sudo; it is the only thing your user may
+# run as them).
+#   start NAME SHARE_DIR WAYLAND_DISPLAY  the wallet, inside cage, a tiny Wayland
+#       compositor shown as one window in your sway. cage has its own private X
+#       server (XWayland) for the wallet, so it can't see your other windows or
+#       keys, or another wallet's. Its files stay in /var/lib/wren-wallet/NAME.
+#   clip-in NAME   standard input becomes the clipboard inside the wallet's window
+#   clip-out NAME  prints the clipboard inside the wallet's window
+# The clipboard is never shared by itself: only these two, one at a time, when
+# you ask for it (the wallet command, which checks and shows the text).
+set -euo pipefail
+# 077: also makes XWayland's socket in /tmp/.X11-unix this user's alone
+umask 077
+export PATH=/usr/local/bin:/usr/bin:/bin
+
+die() { printf 'wallet: %s\n' "$*" >&2; exit 1; }
+
+noabs=/usr/local/libexec/wren-no-abstract-sockets
+netcheck=/usr/local/libexec/wallet-net-check
+homes=/var/lib/wren-wallet
+lib=/usr/local/lib/wren-wallet
+[ -x "$noabs" ] || die "$noabs is missing. Run: wrenctl install wallet-sandbox"
+
+# Everything runs under it, from here on: XWayland's abstract socket is open to
+# any user, and Landlock is what keeps other sandboxes from it and this one from
+# others'. It also sets no_new_privs, so nothing here can run a setuid program.
+# (sudo clears the environment, so your user can't set this and skip it.)
+if [ "${WALLET_WRAPPED:-}" != 1 ]; then
+    WALLET_WRAPPED=1 exec "$noabs" "$0" "$@"
+fi
+
+[ $# -ge 2 ] || die "usage: wallet-session start|clip-in|clip-out NAME [...]"
+cmd=$1 name=$2
+case $name in feather | sparrow | electrum) ;; *) die "unknown wallet." ;; esac
+me=$(id -un)
+[ "$me" = "wallet-$name" ] || die "this runs as the user wallet-$name; use the wallet command."
+
+# wallet_display: the wallet's private X server, which its session wrote down. A
+# hacked wallet can change that file, but this runs as the same user and under
+# the same limits, so all it could do is lose the text.
+wallet_display() {
+    local base d
+    base=$(find /dev/shm -maxdepth 1 -uid "$(id -u)" -name "wallet-$name.*" -print -quit)
+    [ -n "$base" ] || die "this wallet isn't open."
+    d=$(head -c 16 "$base/run/display" 2>/dev/null) || die "its window isn't ready yet."
+    [[ $d =~ ^:[0-9]+$ ]] || die "its window isn't ready yet."
+    printf '%s' "$d"
+}
+
+case $cmd in
+    clip-in)
+        display=$(wallet_display)
+        # xclip stays in the background holding the text, until the wallet copies
+        # something else or its X server closes
+        DISPLAY=$display xclip -selection clipboard -in >/dev/null 2>&1
+        exit
+        ;;
+    clip-out)
+        display=$(wallet_display)
+        DISPLAY=$display timeout 5 xclip -selection clipboard -out
+        exit
+        ;;
+    start) ;;
+    *) die "unknown command." ;;
+esac
+
+[ $# -eq 4 ] || die "usage: wallet-session start NAME SHARE_DIR WAYLAND_DISPLAY"
+host_dir=$3 host_wl=$4
+# These come from the user who called us, so nothing else is accepted
+[[ $host_dir =~ ^/dev/shm/wren-$me\.[A-Za-z0-9]+$ ]] || die "unexpected socket folder."
+[[ $host_wl =~ ^[A-Za-z0-9._-]+$ ]] || die "unexpected Wayland display name."
+[ -S "$host_dir/$host_wl" ] || die "can't reach the Wayland socket."
+
+# Tor and nothing else, seen from here, or no wallet
+rc=0
+"$netcheck" || rc=$?
+case $rc in
+    0) ;;
+    2) die "Tor doesn't answer on 127.0.0.1:9050, so the wallet wasn't opened. Check: systemctl status tor@default" ;;
+    *) die "the firewall that keeps wallets on Tor isn't active, so the wallet wasn't opened. Run: sudo systemctl restart wren-wallet-firewall" ;;
+esac
+
+home=$homes/$name
+[ -d "$home" ] && [ -O "$home" ] || die "$home isn't this wallet's. Run: wrenctl install wallet-sandbox"
+cd "$home"
+# (the folder you share with it: ~/Wallets/NAME on your side)
+ln -sfn "$homes/files/$name" "$home/transfer"
+
+case $name in
+    feather)
+        [ -x "$lib/feather/usr/bin/feather" ] || die "Feather isn't here. Run: wrenctl install wallet-sandbox"
+        app=(env "APPDIR=$lib/feather" "$lib/feather/usr/bin/feather")
+        ;;
+    sparrow)
+        [ -x /opt/sparrowwallet/bin/Sparrow ] || die "Sparrow isn't here. Run: wrenctl install sparrow-wallet"
+        # The first start already uses Tor; only a file that isn't there yet
+        if [ ! -e "$home/.sparrow/config" ]; then
+            mkdir -p "$home/.sparrow"
+            printf '{\n  "useProxy": true,\n  "proxyServer": "127.0.0.1:9050"\n}\n' >"$home/.sparrow/config"
+        fi
+        app=(/opt/sparrowwallet/bin/Sparrow)
+        ;;
+    electrum)
+        command -v electrum >/dev/null || die "Electrum isn't here. Run: wrenctl install electrum"
+        app=(electrum --proxy socks5:127.0.0.1:9050)
+        ;;
+esac
+
+[ -d /dev/shm ] || die "/dev/shm (memory) isn't available."
+# Left behind by a crash or a power cut
+find /dev/shm -maxdepth 1 -name "wallet-$name.*" -uid "$(id -u)" -exec rm -rf {} + 2>/dev/null || true
+base=$(mktemp -d "/dev/shm/wallet-$name.XXXXXXXX")
+mkdir "$base/run" "$base/tmp"
+pid='' watch=''
+
+cleanup() {
+    trap - EXIT INT TERM HUP
+    if [ -n "$watch" ]; then kill "$watch" 2>/dev/null || true; fi
+    if [ -n "$pid" ]; then
+        kill -TERM -- "-$pid" 2>/dev/null || true
+        sleep 2
+        kill -KILL -- "-$pid" 2>/dev/null || true
+    fi
+    rm -rf "$base"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM HUP
+
+# All of them use X (Electrum could use Wayland, but this way the clipboard works
+# one way for all three). cage connects to your sway through the restricted socket
+# (bin/wayland-restrict); the wallet connects only to cage's X server.
+# shellcheck disable=SC2016  # expanded by the inner bash, on purpose
+start='printf %s "$DISPLAY" >"$XDG_RUNTIME_DIR/display"; exec "$@"'
+setsid env -i \
+    PATH="$PATH" LANG=C.UTF-8 WALLET_WRAPPED=1 \
+    HOME="$home" TMPDIR="$base/tmp" XDG_RUNTIME_DIR="$base/run" \
+    WAYLAND_DISPLAY="$host_dir/$host_wl" WLR_BACKENDS=wayland WLR_RENDERER=pixman \
+    QT_QPA_PLATFORM=xcb GDK_BACKEND=x11 _JAVA_AWT_WM_NONREPARENTING=1 \
+    LIBGL_ALWAYS_SOFTWARE=1 DBUS_SESSION_BUS_ADDRESS=disabled: \
+    cage -d -- bash -c "$start" wallet-start "${app[@]}" &
+pid=$!
+
+# The firewall can go while it runs (a "flush ruleset"): the wallet goes too.
+# (WALLET_RECHECK is for a test: sudo clears the environment)
+(
+    while /bin/sleep "${WALLET_RECHECK:-20}"; do
+        rc=0
+        "$netcheck" || rc=$?
+        if [ "$rc" = 1 ]; then
+            printf 'wallet: the firewall that keeps wallets on Tor went away, so the wallet was closed.\n' >&2
+            kill -TERM -- "-$pid" 2>/dev/null || true
+            exit
+        fi
+    done
+) &
+watch=$!
+wait "$pid" || true
