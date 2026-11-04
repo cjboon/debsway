@@ -3,7 +3,8 @@
 # fresh VPS would get it, before any real server meets it. The VM is the
 # bundled vendor/mockvps-kvm: a Debian 13 install of its own, reachable only
 # from this computer (SSH on a loopback port, the site at
-# http://127.0.0.1:8080 through an SSH tunnel). Needs KVM, and downloads
+# http://127.0.0.1:8080 through an SSH tunnel). Needs KVM and the
+# mockvps-kvm extra (wrenctl install mockvps-kvm, once), and downloads
 # Debian's installer the first time (5-15 minutes).
 #  - The VM's user, vps, becomes setup-vps.sh's user (its SSH key is the one
 #    mockvps-kvm made), with no domain (plain http), both onion services, and
@@ -67,6 +68,8 @@ case ${1:-} in
 esac
 
 [ -e /dev/kvm ] || die "No /dev/kvm: KVM is off in the BIOS, or this is a VM itself (docs/bios.md)."
+# mockvps-kvm needs its extra first (QEMU, and its command): it refuses to run without
+[ -e "$HOME/.local/bin/mockvps-kvm" ] || die "First set up the VM tool, once: wrenctl install mockvps-kvm   (then run this again)"
 mkdir -p "$WORK"
 chmod 700 "$WORK"
 say "The onion client key for the test (kept in ~/.config/wren/vps/try-vps.key)"

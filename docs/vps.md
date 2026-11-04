@@ -19,6 +19,7 @@ the server.
 ## 1. Try it first, in a VM here
 
 ```bash
+wrenctl install mockvps-kvm      # once: QEMU, and the VM tool try-vps.sh uses
 bash tools/try-vps.sh            # 5-15 minutes the first time: a Debian VM, then setup-vps.sh in it
 bash tools/try-vps.sh --publish  # this copy's site on it
 bash tools/try-vps.sh --status   # its onion addresses: open the site one in Tor Browser

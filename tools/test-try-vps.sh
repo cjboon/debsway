@@ -24,6 +24,8 @@ check "...run with the VM's user and key, no domain, both onion services, the te
     grep -q "VPS_SSH_KEY=\$(head -n1 /home/vps/.ssh/authorized_keys) VPS_ADMIN=vps VPS_DOMAIN= VPS_ONION_SITE=yes VPS_ONION_SSH=yes VPS_ONION_SSH_CLIENT=$2 VPS_CONFIRM_MINUTES=30 bash /root/setup-vps.sh --yes" "$1"' _ "$T/p.sh" "$CLIENT"
 check "the VM's SSH and site only on this computer's loopback (never -k, no other address)" bash -c '
     ! grep -qE -- "(^|[[:space:]])(-k|--ip)([[:space:]]|$)" "$1" && grep -q "vps@127.0.0.1" "$1"' _ "$HERE/tools/try-vps.sh"
+check "without the mockvps-kvm extra it says to set that up first" bash -c '
+    [ ! -e /dev/kvm ] && exit 0; out=$(HOME=$1 bash "$2/tools/try-vps.sh" 2>&1); grep -q "wrenctl install mockvps-kvm" <<<"$out"' _ "$T/home" "$HERE"
 check "it confirms the change from a second login, as you would" grep -q 'wren-vps --confirm' "$HERE/tools/try-vps.sh"
 
 [ "$fails" -eq 0 ]
