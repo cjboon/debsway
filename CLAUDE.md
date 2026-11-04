@@ -13,9 +13,9 @@ installed (`~/.local/bin`), and other users exist (e.g. `onion-site`). So:
   services and VMs unless the owner asks; say the command and let them run it.
 - sudo asks for a password, so it can't run unattended. Never try to get around that.
 - The home folder holds private files (password database, keys, `~/.gnupg`, notes,
-  logs). Read nothing outside `~/wren` and the scratchpad unless the owner points you
+  logs). Read nothing outside `~/wren-linux` and the scratchpad unless the owner points you
   to a specific file.
-- `~/wren` is a git repo tracking `origin/main` (https://github.com/cjboon/wren-linux.git).
+- `~/wren-linux` is a git repo tracking `origin/main` (https://github.com/cjboon/wren-linux.git).
   There is no `~/.ssh` here; pushing uses the owner's own credential, so the owner pushes.
   Commit each finished item of work as soon as its tests pass (one commit per item);
   push only when the owner asks.
