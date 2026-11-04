@@ -24,7 +24,8 @@
 #    needs it; kernel and network hardening (sysctl).
 #  - Never locked out: the SSH and firewall changes undo themselves after
 #    VPS_CONFIRM_MINUTES unless you confirm them from a second, new login
-#    (wren-vps --confirm). Keep the first session open until then.
+#    (wren-vps --confirm), and at the next boot if the server restarts before
+#    that. Keep the first session open until then.
 #  - A read-only git mirror at /git/ (pushed by tools/publish-site.sh).
 #
 # Variables (asked when not set; --yes takes the defaults, and needs the key):
@@ -67,6 +68,7 @@ SITE=/srv/wren-site
 GITDIR=/srv/wren-git
 SELF=/usr/local/sbin/wren-vps
 ROLLBACK=/usr/local/sbin/wren-vps-rollback
+BOOT_UNIT=$ROOT/etc/systemd/system/wren-vps-undo-unconfirmed.service
 
 [ -n "$FAKE" ] || [ "$(id -u)" -eq 0 ] || die "run it as root (sudo bash $0)."
 
@@ -389,6 +391,27 @@ logger -t wren-vps "SSH and firewall changes rolled back: they weren't confirmed
 EOF
 }
 
+# The timer that undoes a change doesn't survive a restart: someone locked out
+# who restarts the server from the provider's console would keep the change.
+# This undoes it at the next boot instead, while it is still unconfirmed.
+boot_unit() {
+    cat <<EOF
+# Written by Wren Linux setup-vps.sh: an SSH or firewall change that wasn't
+# confirmed (wren-vps --confirm) before a restart is undone at the next boot.
+[Unit]
+Description=Wren Linux: undo an SSH or firewall change that wasn't confirmed
+ConditionPathExists=/var/lib/wren-vps/rollback
+After=ssh.service nftables.service
+
+[Service]
+Type=oneshot
+ExecStart=$ROLLBACK
+
+[Install]
+WantedBy=multi-user.target
+EOF
+}
+
 # ---- the never-locked-out switch ----
 armed() { [ -d "$BACKUP" ]; }
 # session: where this login came from ("CLIENT PORT SERVER PORT"), or console.
@@ -560,6 +583,9 @@ setup() {
 
     say "SSH and the firewall"
     rollback_script | write_file "$ROOT$ROLLBACK" 0755
+    boot_unit | write_file "$BOOT_UNIT" 0644
+    run systemctl daemon-reload
+    run systemctl enable wren-vps-undo-unconfirmed.service
     # this script, as the wren-vps command
     if [ -f "$0" ]; then install -D -m 0755 "$0" "$ROOT$SELF"; fi
     arm

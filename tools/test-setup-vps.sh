@@ -82,6 +82,10 @@ check "security updates every day, a reboot at 04:00 when one needs it, services
 check "kernel and network hardening (sysctl)" bash -c 'grep -qx "kernel.kptr_restrict = 2" "$1" && grep -qx "net.ipv4.conf.all.accept_redirects = 0" "$1"' _ "$R/etc/sysctl.d/60-wren-vps.conf"
 check "it says where the site and both onion addresses are, and how to log in through the onion" bash -c '
     grep -q "https://example.org" <<<"$1" && grep -q "$2" <<<"$1" && grep -q "$3" <<<"$1" && grep -q "vps-client.sh ssh-config wren $3" <<<"$1"' _ "$out" "$SITE_ONION" "$SSH_ONION"
+check "...and at the next boot, if the server restarts before it is confirmed (the timer wouldn't survive that)" bash -c '
+    f="$1/etc/systemd/system/wren-vps-undo-unconfirmed.service"
+    grep -qx "ConditionPathExists=/var/lib/wren-vps/rollback" "$f" && grep -qx "ExecStart=/usr/local/sbin/wren-vps-rollback" "$f" &&
+    grep -qx "WantedBy=multi-user.target" "$f" && grep -qx "systemctl enable wren-vps-undo-unconfirmed.service" "$2"' _ "$R" "$T/calls"
 check "it installs itself as wren-vps, and the rollback" bash -c '[ -x "$1/usr/local/sbin/wren-vps" ] && [ -x "$1/usr/local/sbin/wren-vps-rollback" ]' _ "$R"
 
 # The never-locked-out switch
