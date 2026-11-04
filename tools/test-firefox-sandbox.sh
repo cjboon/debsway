@@ -17,7 +17,7 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 not() { ! "$@"; }
 command -v flock >/dev/null || { echo "  ok    skipped: flock isn't installed"; exit 0; }
 
-mkdir -p "$T/fake" "$T/run" "$T/home"
+mkdir -p "$T/fake" "$T/run" "$T/home" "$T/shm"
 # sudo: -l says yes; "start" stays up a while (a running Firefox); anything else is written down
 # shellcheck disable=SC2016  # written into the pretend programs, expanded when they run
 cat >"$T/fake/sudo" <<FAKE
@@ -35,19 +35,19 @@ printf '#!/bin/sh\necho ready\ncat >/dev/null\n' >"$T/fake/wayland-restrict"
 chmod +x "$T/fake/"*
 python3 -I -c 'import socket,sys; s=socket.socket(socket.AF_UNIX); s.bind(sys.argv[1]); import time; time.sleep(30)' "$T/run/wayland-1" &
 sleep 0.3
-fx() { env PATH="$T/fake:$PATH" HOME="$T/home" XDG_RUNTIME_DIR="$T/run" WAYLAND_DISPLAY=wayland-1 bash "$HERE/bin/firefox" "$@"; }
+fx() { env PATH="$T/fake:$PATH" HOME="$T/home" XDG_RUNTIME_DIR="$T/run" WAYLAND_DISPLAY=wayland-1 WREN_SHARE_ROOT="$T/shm" bash "$HERE/bin/firefox" "$@"; }
 
 # 1. the first start
 : >"$T/calls"
 fx --no-audio https://example.org/
 check "the first start runs the session as the firefox user" grep -q 'sudo -n -u firefox /usr/local/libexec/firefox-session start' "$T/calls"
-check "...with the runtime folder, the restricted socket, no sound, your Downloads, the theme (dark), no picture and the address" \
-    grep -qF "firefox-session start $T/run firefox-wayland - $T/home/Downloads dark - https://example.org/" "$T/calls"
+check "...with its private folder, the restricted socket, no sound, your Downloads, the theme (dark), no picture and the address" \
+    grep -qE "firefox-session start $T/shm/wren-firefox\.[A-Za-z0-9]+ firefox-wayland - $T/home/Downloads dark - https://example.org/" "$T/calls"
 check "it gave the firefox user the socket and a way through to ~/Downloads, not the whole home" \
-    grep -q "setfacl -m u:firefox:--x $T/run $T/home" "$T/calls"
+    grep -qE "setfacl -m u:firefox:--x $T/shm/wren-firefox\.[A-Za-z0-9]+ $T/home" "$T/calls"
 check "...read and write on ~/Downloads, for both of you, for later files too" \
     grep -q "setfacl -P -d -m u:firefox:rwx,u:$(id -un):rwx $T/home/Downloads" "$T/calls"
-check "...and took the access back when it ended" grep -q "setfacl -x u:firefox $T/run $T/home" "$T/calls"
+check "...and took the access back when it ended" grep -q "setfacl -x u:firefox $T/home" "$T/calls"
 check "~/Downloads exists" test -d "$T/home/Downloads"
 
 # 1b. started with a PATH without ~/.local/bin (lib.sh's, so gh from git-init.sh):
@@ -56,7 +56,7 @@ mkdir -p "$T/fake-nolocal" "$T/home/.local/bin"
 cp "$T/fake/sudo" "$T/fake/setfacl" "$T/fake-nolocal/"
 cp "$T/fake/wayland-restrict" "$T/home/.local/bin/"
 : >"$T/calls"
-env PATH="$T/fake-nolocal:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" HOME="$T/home" XDG_RUNTIME_DIR="$T/run" WAYLAND_DISPLAY=wayland-1 \
+env PATH="$T/fake-nolocal:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" HOME="$T/home" XDG_RUNTIME_DIR="$T/run" WAYLAND_DISPLAY=wayland-1 WREN_SHARE_ROOT="$T/shm" \
     bash "$HERE/bin/firefox" --no-audio https://example.org/ >/dev/null 2>&1
 check "a PATH without ~/.local/bin (Wren Linux's scripts): wayland-restrict is found there, it starts" grep -q 'firefox-session start' "$T/calls"
 check "...so do incognito and the media viewer" bash -c 'for f in incognito media-sandbox; do grep -qx "restrict=\$HOME/.local/bin/wayland-restrict" "$1/bin/$f" || exit 1; done' _ "$HERE"
@@ -87,14 +87,14 @@ rm -f "$T/home/Downloads/swapped"
 FAKE_UP=2 fx --no-audio https://example.org/ >/dev/null 2>&1 &
 sleep 0.6
 fx --no-audio --profile bank
-check "a profile starts as its own user, next to the other Firefox" grep -qF "sudo -n -u fx-bank /usr/local/libexec/firefox-session start $T/run firefox-bank-wayland - $T/home/Downloads/bank dark -" "$T/calls"
+check "a profile starts as its own user, next to the other Firefox" grep -qE "sudo -n -u fx-bank /usr/local/libexec/firefox-session start $T/shm/wren-firefox-bank\.[A-Za-z0-9]+ firefox-bank-wayland - $T/home/Downloads/bank dark -" "$T/calls"
 check "...with its own downloads folder, so profiles cannot read each other's files" test -d "$T/home/Downloads/bank"
 check "...and rights only for its own user on it" grep -q "setfacl -P -m u:fx-bank:rwx $T/home/Downloads/bank" "$T/calls"
 check "...the main Firefox's, inherited from ~/Downloads, taken off its folder and what is in it" grep -qF "setfacl -P -R -x u:firefox,d:u:firefox $T/home/Downloads/bank" "$T/calls"
 check "...and not the other user's" not grep -q "u:firefox:rwx $T/home/Downloads/bank" "$T/calls"
 # closing the profile takes back only its own user's rights: the Firefox still
 # open next to it keeps its way through your home folder to ~/Downloads
-check "closing the profile takes back only its own user's access" grep -q "setfacl -x u:fx-bank $T/run $T/home $T/home/Downloads" "$T/calls"
+check "closing the profile takes back only its own user's access" grep -q "setfacl -x u:fx-bank $T/home $T/home/Downloads" "$T/calls"
 wait
 : >"$T/calls"
 FAKE_UP=2 fx --profile bank https://bank.example/ >/dev/null 2>&1 &
@@ -130,16 +130,16 @@ cat >"$T/fake/sudo" <<FAKE
 echo "sudo \$*" >>"$T/calls"
 case " \$* " in
     *" -l "*) exit 0 ;;
-    *" start "*) for p in "$T"/run/firefox-newtab.*; do [ -e "\$p" ] && cp "\$p" "$T/handed"; done ;;
+    *" start "*) for p in "$T"/shm/wren-firefox.*/firefox-newtab.*; do [ -e "\$p" ] && cp "\$p" "$T/handed"; done ;;
 esac
 FAKE
 : >"$T/calls"; rm -f "$T/handed"
 fx --no-audio
-check "the light theme: the session is told light" grep -qF "firefox-session start $T/run firefox-wayland - $T/home/Downloads light firefox-newtab.jpg" "$T/calls"
+check "the light theme: the session is told light" grep -qE "firefox-session start $T/shm/wren-firefox\.[A-Za-z0-9]+ firefox-wayland - $T/home/Downloads light firefox-newtab.jpg" "$T/calls"
 check "your New Tab picture: the newest real one is handed over (one named .png that isn't a picture is passed over)" \
     bash -c 'grep -q newest "$1"' _ "$T/handed"
-check "...readable by firefox alone, under the one name the session accepts" grep -q "setfacl -m u:firefox:r-- $T/run/firefox-newtab.jpg" "$T/calls"
-check "...and gone again when Firefox closes" test ! -e "$T/run/firefox-newtab.jpg"
+check "...readable by firefox alone, under the one name the session accepts" grep -qE "setfacl -m u:firefox:r-- $T/shm/wren-firefox\.[A-Za-z0-9]+/firefox-newtab.jpg" "$T/calls"
+check "...and gone again when Firefox closes" bash -c '! ls "$1"/wren-firefox.*/firefox-newtab.jpg' _ "$T/shm"
 : >"$T/calls"
 fx --no-audio --profile bank
 check "...a profile gets the theme, never the picture" grep -qF "firefox-bank-wayland - $T/home/Downloads/bank light -" "$T/calls"
@@ -152,9 +152,9 @@ bad_arg() { # LINE-PATTERN VALUE VAR: does the script's check for VAR refuse VAL
     ( die() { exit 1; }; export "$3=$2"; eval "${line//\[ -S*/true}" ) 2>/dev/null && return 1 || return 0
 }
 ok_arg() { ! bad_arg "$@"; }
-host_rt= host_wl= audio= downloads= theme= picture=
-check "a runtime folder that is not /run/user/N is refused" bad_arg '=~ ^/run/user/' /tmp/x host_rt
-check "...and /run/user/1000 is accepted" ok_arg '=~ ^/run/user/' /run/user/1000 host_rt
+host_dir= host_wl= audio= downloads= theme= picture=
+check "a folder other than its own private one is refused" bad_arg 'unexpected socket folder' /run/user/1000 host_dir
+check "...and its own is accepted" ok_arg 'unexpected socket folder' /dev/shm/wren-firefox.AbCd1234 host_dir
 check "a Wayland name with a slash is refused" bad_arg 'unexpected Wayland display name' ../x host_wl
 check "...and wayland-1 is accepted" ok_arg 'unexpected Wayland display name' wayland-1 host_wl
 check "a sound pipe name it did not expect is refused" bad_arg 'unexpected sound pipe name' /etc/passwd audio
@@ -258,10 +258,10 @@ assert "if [ \"$links\" = yes ]; then" in b and "unset_default_app wren-firefox.
 ' "$HERE/extras/firefox-sandbox.sh"
 check "...and --remove takes the answers away" grep -q 'sudo rm -f /etc/wren/firefox.conf' "$HERE/extras/firefox-sandbox.sh"
 # what the session writes for the theme and the picture, run on a temp profile
-session_theme() { # THEME PICTURE: the session's lines, with $T/rt as the runtime folder
+session_theme() { # THEME PICTURE: the session's lines, with $T/rt as its private folder
     mkdir -p "$T/tp" "$T/rt"
     : >"$T/tp/user.js"
-    ( profile=$T/tp host_rt=$T/rt theme=$1 picture=$2
+    ( profile=$T/tp host_dir=$T/rt theme=$1 picture=$2
       eval "$(sed -n '/^# Light or dark (bin\/theme)/,/^# fast JavaScript:/p' "$HERE/bin/firefox-session")" ) 2>/dev/null
 }
 session_theme light -

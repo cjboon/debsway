@@ -127,7 +127,6 @@ if ! flock -n 9; then
     exec sudo -n -u "$user" "$SESSION" open "$@"
 fi
 
-sock=$rt/firefox$tag-wayland
 # wayland-restrict is yours, in ~/.local/bin: taken from there, so a link from a
 # program whose PATH leaves that out (Wren Linux's own scripts) still opens
 restrict=$HOME/.local/bin/wayland-restrict
@@ -136,14 +135,30 @@ command -v setfacl >/dev/null || die "setfacl is missing (package acl)."
 # (firefox-session accepts only /home/NAME/Downloads, or .../Downloads/PROFILE)
 downloads=$HOME/Downloads${name:+/$name}
 
-fifo=$rt/firefox$tag-audio.fifo
+# What this Firefox is handed (the restricted socket, the sound pipe, the New
+# Tab picture) is in a new folder of its own, with a name nobody can guess, and
+# passage is given to that alone. Never through your runtime folder: that also
+# leads to every socket in it, and your audio server's (pipewire-0, pulse/native)
+# are open to anyone who reaches them, with your microphones and camera behind
+# them. (firefox-session accepts only such a folder.)
+SHARE_ROOT=${WREN_SHARE_ROOT:-/dev/shm}
+[ -d "$SHARE_ROOT" ] || die "$SHARE_ROOT (memory) isn't available."
+# Left by a crash or a power cut (the lock above says this one isn't running)
+find "$SHARE_ROOT" -maxdepth 1 -user "$(id -un)" -name "wren-firefox$tag.*" -exec rm -rf {} + 2>/dev/null || true
+share=$(mktemp -d "$SHARE_ROOT/wren-firefox$tag.XXXXXXXX") || die "couldn't make a folder in $SHARE_ROOT."
+trap 'rm -rf "$share"' EXIT
+# An older version's passage, if it ended without taking it back
+setfacl -x "u:$user" "$rt" 2>/dev/null || true
+
+sock=$share/firefox$tag-wayland
+fifo=$share/firefox$tag-audio.fifo
 player=
 # The theme (bin/theme, light or dark): the sandbox gets just the word
 theme=$(head -c 16 "${XDG_CONFIG_HOME:-$HOME/.config}/wren/theme" 2>/dev/null || true)
 case $theme in light | dark) ;; *) theme=dark ;; esac
 # Your New Tab picture, for the main Firefox: the newest JPEG or PNG in
 # ~/Pictures/wren/firefox. The sandbox never sees that folder: a checked
-# copy goes into your runtime folder, readable by firefox alone, and goes
+# copy goes into its private folder, readable by firefox alone, and goes
 # again when Firefox closes. (firefox-session checks it once more.)
 picture=
 picture_arg=-
@@ -159,8 +174,7 @@ if [ -z "$name" ]; then
     if [ -n "$best" ]; then
         ext=jpg
         case ${best,,} in *.png) ext=png ;; esac
-        picture=$rt/firefox-newtab.$ext
-        rm -f "$rt"/firefox-newtab.*
+        picture=$share/firefox-newtab.$ext
         (umask 077; cp -- "$best" "$picture")
         picture_arg=${picture##*/}
     fi
@@ -177,9 +191,8 @@ fi
 cleanup() {
     if [ -n "$player" ]; then kill "$player" 2>/dev/null || true; fi
     if [ -n "${WL_PID:-}" ]; then kill "$WL_PID" 2>/dev/null || true; fi
-    rm -f "$fifo" "$sock"
-    if [ -n "$picture" ]; then rm -f "$picture"; fi
-    setfacl -x "u:$user" "$rt" "$HOME" "$HOME/Downloads" 2>/dev/null || true
+    rm -rf "$share"
+    setfacl -x "u:$user" "$HOME" "$HOME/Downloads" 2>/dev/null || true
 }
 trap cleanup EXIT
 trap 'exit 130' INT
@@ -188,7 +201,7 @@ trap 'exit 143' TERM HUP
 coproc WL { "$restrict" "$sock" "firefox$tag" 9>&-; }
 IFS= read -r -t 10 line <&"${WL[0]}" && [ "$line" = ready ] ||
     die "couldn't make a restricted Wayland socket (needs sway 1.9 or newer; see above)."
-# To reach the socket, and to pass through your home folder to ~/Downloads
+# To reach what it is handed, and to pass through your home folder to ~/Downloads
 # (traverse only: it cannot list or read anything there)
 mkdir -p "$downloads"
 # The sandboxed Firefox may write in ~/Downloads, so a profile's folder there
@@ -198,7 +211,7 @@ mkdir -p "$downloads"
 [ ! -L "$downloads" ] && [ -d "$downloads" ] && [ -O "$downloads" ] &&
     [ "$(cd -P -- "$downloads" && pwd)" = "$(cd -P -- "$HOME/Downloads" && pwd)${name:+/$name}" ] ||
     die "$downloads isn't a folder of yours (a link, or someone else's): move it away, and start it again."
-setfacl -m "u:$user:--x" "$rt" "$HOME" "$HOME/Downloads"
+setfacl -m "u:$user:--x" "$share" "$HOME" "$HOME/Downloads"
 setfacl -m "u:$user:rw-" "$sock"
 if [ -n "$picture" ]; then setfacl -m "u:$user:r--" "$picture"; fi
 # Read, write and enter the downloads folder, for both of you, also for files made later
@@ -211,7 +224,6 @@ if [ -n "$name" ]; then
     setfacl -P -R -x "u:firefox,d:u:firefox" "$downloads" 2>/dev/null || true
 fi
 if $audio; then
-    rm -f "$fifo"
     mkfifo -m 600 "$fifo"
     setfacl -m "u:$user:rw-" "$fifo"
     # 9>&-: the player must not inherit the lock, or it outlives us holding it
@@ -223,5 +235,5 @@ else
 fi
 
 rc=0
-sudo -n -u "$user" "$SESSION" start "$rt" "${sock##*/}" "$audio_arg" "$downloads" "$theme" "$picture_arg" "$@" || rc=$?
+sudo -n -u "$user" "$SESSION" start "$share" "${sock##*/}" "$audio_arg" "$downloads" "$theme" "$picture_arg" "$@" || rc=$?
 exit "$rc"

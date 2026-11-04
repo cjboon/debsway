@@ -22,21 +22,21 @@ noabs=/usr/local/libexec/wren-no-abstract-sockets
 
 me=$(id -un)
 [ "$me" = incognito ] || [ "$me" = wifi-signin ] || die "this runs as the user incognito or wifi-signin; use the incognito command."
-[ $# -ge 5 ] || die "usage: incognito-session RUNTIME_DIR WAYLAND_DISPLAY AUDIO THEME normal|signin [URL...]"
-host_rt=$1 host_wl=$2 audio=$3 theme=$4 kind=$5
+[ $# -ge 5 ] || die "usage: incognito-session SOCKET_DIR WAYLAND_DISPLAY AUDIO THEME normal|signin [URL...]"
+host_dir=$1 host_wl=$2 audio=$3 theme=$4 kind=$5
 shift 5
 
 # These come from the user who called us, so nothing else is accepted
-[[ $host_rt =~ ^/run/user/[0-9]+$ ]] || die "unexpected runtime folder."
+[[ $host_dir =~ ^/dev/shm/wren-$me\.[A-Za-z0-9]+$ ]] || die "unexpected socket folder."
 [[ $host_wl =~ ^[A-Za-z0-9._-]+$ ]] || die "unexpected Wayland display name."
-[ -S "$host_rt/$host_wl" ] || die "can't reach the Wayland socket."
+[ -S "$host_dir/$host_wl" ] || die "can't reach the Wayland socket."
 [[ $audio == - || $audio == incognito-audio.fifo ]] || die "unexpected sound pipe name."
 [[ $theme == light || $theme == dark ]] || die "unexpected theme."
 [[ $kind == normal || $kind == signin ]] || die "unexpected window kind."
 { [ "$me" = incognito ] && [ "$kind" = normal ]; } || { [ "$me" = wifi-signin ] && [ "$kind" = signin ]; } ||
     die "the user $me doesn't run the $kind window."
 if [ "$audio" != - ]; then
-    [ -p "$host_rt/$audio" ] || audio=-
+    [ -p "$host_dir/$audio" ] || audio=-
     for c in pipewire wireplumber pipewire-pulse; do
         command -v "$c" >/dev/null || audio=-
     done
@@ -118,7 +118,7 @@ context.modules = [
   { name = libpipewire-module-pipe-tunnel
     args = {
       tunnel.mode = sink
-      pipe.filename = "$host_rt/$audio"
+      pipe.filename = "$host_dir/$audio"
       audio.format = S16LE
       audio.rate = 48000
       audio.channels = 2
@@ -153,7 +153,7 @@ setsid env -i \
     HOME="$base/home" TMPDIR="$base/tmp" XDG_RUNTIME_DIR="$base/run" \
     XDG_CONFIG_HOME="$base/home/.config" XDG_CACHE_HOME="$base/home/.cache" \
     XDG_DATA_HOME="$base/home/.local/share" \
-    WAYLAND_DISPLAY="$host_rt/$host_wl" WLR_BACKENDS=wayland WLR_RENDERER=pixman \
+    WAYLAND_DISPLAY="$host_dir/$host_wl" WLR_BACKENDS=wayland WLR_RENDERER=pixman \
     LIBGL_ALWAYS_SOFTWARE=1 MOZ_ENABLE_WAYLAND=1 MOZ_DBUS_REMOTE=0 GTK_USE_PORTAL=0 \
     DBUS_SESSION_BUS_ADDRESS=disabled: \
     PULSE_SERVER="unix:$base/run/pulse/native" \

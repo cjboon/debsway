@@ -85,7 +85,7 @@ check "a normal window runs as incognito" test "$(user_for normal)" = incognito
 check "the sign-in window runs as wifi-signin, without sound" bash -c '
     [ "$1" = wifi-signin ] && grep -qx "if \[ \"\$kind\" = signin \]; then user=wifi-signin audio=false; fi" "$2"' _ "$(user_for signin)" "$HERE/bin/incognito"
 check "...each with its own lock, so the two can be open together" \
-    bash -c 'grep -qx "exec 9>\"\$rt/\$user.lock\"" "$1" && grep -qx "sock=\$rt/\$user-wayland" "$1" && ! grep -q "u:incognito:--x" "$1"' _ "$HERE/bin/incognito"
+    bash -c 'grep -qx "exec 9>\"\$rt/\$user.lock\"" "$1" && grep -qx "sock=\$share/\$user-wayland" "$1" && ! grep -q "u:incognito:--x" "$1"' _ "$HERE/bin/incognito"
 # incognito-session: each user runs only its own kind
 line=$(sed -n '/^{ \[ "\$me" = incognito \]/,/die "the user/p' "$HERE/bin/incognito-session")
 runs() { bash -c 'die() { exit 1; }; me=$1 kind=$2; eval "$3"' _ "$1" "$2" "$line"; }

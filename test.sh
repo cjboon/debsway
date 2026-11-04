@@ -391,6 +391,7 @@ dev_test bluetooth-conf "Bluetooth's start-off setting and the new extras" "blue
 
 # --------------------------------------------------------------------
 dev_test firefox-sandbox "The sandboxed Firefox (bin/firefox), with pretend sudo and setfacl" "sandboxed Firefox checks"
+dev_test sandbox-sockets "The sandboxed browsers and your runtime folder (your audio server is in it)" "runtime folder checks"
 
 # --------------------------------------------------------------------
 dev_test firefox-policy "Firefox's policies.json (bin/ublock-allow): uBlock, DNS-over-HTTPS off" "Firefox policy checks"

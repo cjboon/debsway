@@ -34,7 +34,6 @@ case $WAYLAND_DISPLAY in
     */*) die "WAYLAND_DISPLAY should be a plain name like wayland-1." ;;
 esac
 [ -S "$rt/$WAYLAND_DISPLAY" ] || die "can't find your Wayland socket ($rt/$WAYLAND_DISPLAY)."
-sock=$rt/$user-wayland
 # wayland-restrict is yours, in ~/.local/bin: taken from there, so a link from a
 # program whose PATH leaves that out (Wren Linux's own scripts) still opens
 restrict=$HOME/.local/bin/wayland-restrict
@@ -49,9 +48,25 @@ sudo -n -u "$user" -l /usr/local/libexec/incognito-session >/dev/null 2>&1 ||
 exec 9>"$rt/$user.lock"
 flock -n 9 || die "it is already open."
 
+# What it is handed (the restricted socket, the sound pipe) is in a new folder
+# of its own, with a name nobody can guess, and passage is given to that alone.
+# Never through your runtime folder: that also leads to every socket in it, and
+# your audio server's (pipewire-0, pulse/native) are open to anyone who reaches
+# them, with your microphones and camera behind them. (incognito-session accepts
+# only such a folder.)
+SHARE_ROOT=${WREN_SHARE_ROOT:-/dev/shm}
+[ -d "$SHARE_ROOT" ] || die "$SHARE_ROOT (memory) isn't available."
+# Left by a crash or a power cut (the lock above says this one isn't running)
+find "$SHARE_ROOT" -maxdepth 1 -user "$(id -un)" -name "wren-$user.*" -exec rm -rf {} + 2>/dev/null || true
+share=$(mktemp -d "$SHARE_ROOT/wren-$user.XXXXXXXX") || die "couldn't make a folder in $SHARE_ROOT."
+trap 'rm -rf "$share"' EXIT
+# An older version's passage, if it ended without taking it back
+setfacl -x "u:$user" "$rt" 2>/dev/null || true
+sock=$share/$user-wayland
+
 # The sound pipe: incognito writes, a player of yours reads and plays it.
 # Only raw sound can come through it.
-fifo=$rt/incognito-audio.fifo
+fifo=$share/incognito-audio.fifo
 player=
 if $audio && command -v pw-cat >/dev/null && [ -S "$rt/pipewire-0" ]; then
     :
@@ -60,14 +75,12 @@ else
 fi
 
 # incognito may only reach the restricted Wayland socket (and the sound pipe),
-# and only while it runs. It gets no read access to the runtime folder: it can open
-# what it is given and nothing it isn't told the name of.
+# and only while it runs.
 # shellcheck disable=SC2317,SC2329  # runs from the EXIT trap
 cleanup() {
     if [ -n "$player" ]; then kill "$player" 2>/dev/null || true; fi
     if [ -n "${WL_PID:-}" ]; then kill "$WL_PID" 2>/dev/null || true; fi
-    rm -f "$fifo" "$sock"
-    setfacl -x "u:$user" "$rt" 2>/dev/null || true
+    rm -rf "$share"
 }
 trap cleanup EXIT
 trap 'exit 130' INT
@@ -77,11 +90,10 @@ trap 'exit 143' TERM HUP
 coproc WL { "$restrict" "$sock" "$user" 9>&-; }
 IFS= read -r -t 10 line <&"${WL[0]}" && [ "$line" = ready ] ||
     die "couldn't make a restricted Wayland socket (needs sway 1.9 or newer; see above)."
-setfacl -m "u:$user:--x" "$rt"
+setfacl -m "u:$user:--x" "$share"
 setfacl -m "u:$user:rw-" "$sock"
 
 if $audio; then
-    rm -f "$fifo"
     mkfifo -m 600 "$fifo"
     setfacl -m u:incognito:rw- "$fifo"
     # Opening the pipe waits until incognito's sound server opens its end.
@@ -99,5 +111,5 @@ rc=0
 # the theme (bin/theme): just the word light or dark
 theme=$(head -c 16 "${XDG_CONFIG_HOME:-$HOME/.config}/wren/theme" 2>/dev/null || true)
 case $theme in light | dark) ;; *) theme=dark ;; esac
-sudo -n -u "$user" /usr/local/libexec/incognito-session "$rt" "${sock##*/}" "$audio_arg" "$theme" "$kind" "$@" || rc=$?
+sudo -n -u "$user" /usr/local/libexec/incognito-session "$share" "${sock##*/}" "$audio_arg" "$theme" "$kind" "$@" || rc=$?
 exit "$rc"
