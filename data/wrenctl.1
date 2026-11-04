@@ -95,6 +95,19 @@ folder), to repair it.
 Show what Wren Linux has set up: disk encryption, the base packages, the parts
 and the extras.
 .TP
+.B \-\-git
+.RI [ DIR ]
+Set git up for you
+.RB ( git\-init.sh ):
+the name and email on your commits (for GitHub, your no-reply address,
+since GitHub refuses pushes that carry an email kept private), and how git
+logs in to push over https: a token pasted at each push, the same kept in
+memory for an hour, or gh's login.
+With no
+.IR DIR ,
+the repository you are in; outside one, your name and email, and a copy of
+Wren Linux from a stick is connected to the published one.
+.TP
 .B \-\-test
 Check that the scripts, packages, downloads and signing keys still work
 .RB ( "bash test.sh" ).

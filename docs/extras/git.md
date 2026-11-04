@@ -8,19 +8,20 @@ wrenctl remove git                      remove git and gh (~/.gitconfig and ~/.c
 wrenctl manual git                      print the manual steps below
 
 git clone URL / git status / git commit -a / git push
-bash git-init.sh [DIR]   (in Wren Linux's folder) your name, email and push login; DIR: any repository
+wrenctl git [DIR]                       your name, email and push login (DIR, or the repository you are in)
 ```
 
 git keeps the history of a folder of files, and gh is GitHub's command line
 tool; both come from Debian. The script installs git, offers gh, and makes
 `main` the first branch of new repositories. It asks nothing else: your name
 and email on commits, and how git logs in to push, are `git-init.sh`'s, run
-when you want them. It asks for your name and email (and, for GitHub, offers
+when you want them (`wrenctl git`). It asks for your name and email (and, for GitHub, offers
 your no-reply address, looked up from your public profile, since GitHub
 refuses pushes that carry an email you keep private), then how git logs in
 over https: a token you paste at each push (nothing saved), the same kept in
 memory for an hour, or gh's login through a web page (saved in plain text).
-`bash git-init.sh DIR` does this for any repository of yours, on any server.
+`wrenctl git DIR`, or `wrenctl git` inside a repository, does this for any
+repository of yours, on any server.
 
 ## LIMITS
 

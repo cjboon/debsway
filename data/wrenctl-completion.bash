@@ -20,6 +20,7 @@ _wrenctl() {
             --wifi | --bluetooth | --mic | --camera) words=(on off) ;;
             update | --update) words=(--since --all) ;;
             apps | --apps) words=(--list) ;;
+            git | --git) mapfile -t COMPREPLY < <(compgen -d -- "$cur"); return 0 ;;
         esac
     fi
     [ ${#words[@]} -gt 0 ] || return 0

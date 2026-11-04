@@ -23,4 +23,4 @@ apt_install "${pkgs[@]}"
 
 git config --global init.defaultBranch main
 note "Your name and email on commits, and how git logs in to push (a token, or gh):"
-note "  bash $WREN_DIR/git-init.sh        (for any repository of yours: bash $WREN_DIR/git-init.sh DIR)"
+note "  wrenctl git        (in a repository of yours, or: wrenctl git DIR)"

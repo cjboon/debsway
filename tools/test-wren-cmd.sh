@@ -18,7 +18,7 @@ not() { ! "$@"; }
 
 mkdir -p "$T/dir" "$T/home/.local/bin"
 : >"$T/dir/lib.sh"
-for s in update install-extras status test; do
+for s in update install-extras status test git-init; do
     # shellcheck disable=SC2016  # written into the pretend scripts, expanded when they run
     printf '#!/bin/bash\necho "%s $*" >>"%s/ran"\n' "$s" "$T" >"$T/dir/$s.sh"
 done
@@ -38,6 +38,15 @@ d --update --since abc123
 check "--update runs update.sh with its arguments" grep -qx 'update --since abc123' "$T/ran"
 d --apps --list
 check "--apps runs install-extras.sh with its arguments" grep -qx 'install-extras --list' "$T/ran"
+mkdir -p "$T/repo/sub" "$T/plain"
+git -C "$T/repo" init -q
+(cd "$T/repo/sub" && d git)
+check "git, in a repository: git-init.sh for the folder you are in" grep -qx "git-init $T/repo/sub" "$T/ran"
+(cd "$T/plain" && d git)
+check "...outside one: git-init.sh as it is (your name and email; a Wren Linux copy)" grep -qx 'git-init ' "$T/ran"
+d --git "$T/plain"
+check "...a folder named: that one" grep -qx "git-init $T/plain" "$T/ran"
+check "...two folders: refused" not d git a b
 d --status
 check "--status runs status.sh" grep -qx 'status *' "$T/ran"
 d --test --offline

@@ -26,6 +26,7 @@
 #     Over ssh, git uses your ssh key: there is nothing to set.
 # Usage: bash git-init.sh         this copy of Wren Linux: steps 1 to 3
 #        bash git-init.sh DIR     any git repository of yours: steps 1 and 3
+# (wrenctl git [DIR] runs it: for DIR, or the repository you are in)
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
 . "$WREN_DIR/lib/update.sh"
 . "$WREN_DIR/lib/appimage.sh"
@@ -152,7 +153,7 @@ login() {
         skip) note "Left as it was."; return 0 ;;
         gh)
             "$GH" auth login --hostname github.com --git-protocol https && "$GH" auth setup-git ||
-                warn "That didn't work; nothing else was changed. Try again later: bash $WREN_DIR/git-init.sh"
+                warn "That didn't work; nothing else was changed. Try again later: wrenctl git $repo"
             return 0 ;;
     esac
     # token or memory: no helper but git's own (an empty one drops the rest)
@@ -200,7 +201,7 @@ if [ -e "$WREN_DIR/.git" ]; then
 fi
 if [ ! -w "$WREN_DIR" ]; then
     note "$WREN_DIR is read-only (the Wren Linux package's): apt brings its updates. For a"
-    note "repository of yours: bash $WREN_DIR/git-init.sh DIR"
+    note "repository of yours: wrenctl git DIR"
     exit 0
 fi
 url=${WREN_GIT_URL:?pins.sh has no WREN_GIT_URL}
