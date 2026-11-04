@@ -113,7 +113,7 @@ Three rough levels, to place yourself:
   before you leave it in a hotel room, a car, a checked bag or at a border.
   Wren Linux's power menu is Super+Shift+Escape.
 - **Lock the screen whenever you step away,** even briefly (Super+Escape).
-  Wren Linux also locks by itself after 30 minutes idle; `timer lock 5` makes
+  Wren Linux also locks by itself after 5 minutes idle; `timer lock 2` makes
   that shorter.
 
 ### Firmware and boot

@@ -1,7 +1,7 @@
 #!/bin/sh
 # wren-idle: written by Wren Linux parts/swayidle.sh
 # Runs swayidle with Wren Linux's timeouts. The screen locks after the minutes set
-# with  timer lock MINUTES  (30 unless you changed it; 1 to 120); for the 30
+# with  timer lock MINUTES  (5 unless you changed it, as in sway's own config; 1 to 120); for the 30
 # seconds before that it fades down with a notice (bin/dim-warning), and it
 # turns off 5 minutes after the lock. It always locks before the laptop sleeps.
 # Just before each lock it runs every program in ~/.config/wren/on-lock.d
@@ -12,8 +12,8 @@
 conf=${XDG_CONFIG_HOME:-$HOME/.config}/wren/lock
 
 minutes=$(sed -n 's/^minutes=//p' "$conf" 2>/dev/null | tail -n 1)
-case $minutes in '' | *[!0-9]*) minutes=30 ;; esac
-[ "$minutes" -ge 1 ] && [ "$minutes" -le 120 ] || minutes=30
+case $minutes in '' | *[!0-9]*) minutes=5 ;; esac
+[ "$minutes" -ge 1 ] && [ "$minutes" -le 120 ] || minutes=5
 
 if [ "${1:-}" = --minutes ]; then
     echo "$minutes"

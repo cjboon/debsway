@@ -1,5 +1,6 @@
 #!/bin/bash
-# Lock after 30 minutes idle, screen off 5 minutes later, lock before suspend.
+# Lock after 5 minutes idle (sway's own default), screen off 5 minutes later,
+# lock before suspend.
 # Half a minute before the lock the screen starts to fade down slowly and a
 # notification says it is about to lock, so moving the mouse in time stops it
 # (bin/dim-warning). Installs swaylock too, since that's what does the locking.

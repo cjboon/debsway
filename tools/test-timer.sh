@@ -248,8 +248,8 @@ for c in swayidle swaymsg pkill; do
     chmod +x "$T/fake/$c"
 done
 export WREN_IDLE=$IDLE
-check "with nothing set the screen locks after 30 minutes" test "$("$IDLE" --minutes)" = 30
-check "timer lock alone says how long" grep -q 'after 30 minutes' <<<"$(t lock)"
+check "with nothing set the screen locks after 5 minutes (sway's own default)" test "$("$IDLE" --minutes)" = 5
+check "timer lock alone says how long" grep -q 'after 5 minutes' <<<"$(t lock)"
 : >"$T/calls"
 out=$(SWAYSOCK=/pretend t lock 10 2>&1)
 check "timer lock 10 says so" grep -q 'now locks after 10 minutes' <<<"$out"
@@ -273,7 +273,7 @@ check "...locks at 600 s (after the on-lock programs)" grep -qF "; swaylock -f -
 check "...turns the screen off 5 minutes later (900 s)" grep -q 'timeout 900 swaymsg "output \* power off"' <<<"$run"
 check "...and locks before sleep (after them too)" grep -qF '; swaylock -f -c $(~/.local/bin/theme get LOCK 2>/dev/null || echo 000000)' <<<"$(grep -o 'before-sleep .*on-lock.d.*' <<<"$run")"
 printf 'minutes=500\n' >"$T/config/wren/lock"
-check "a time out of range in the file falls back to 30" test "$("$IDLE" --minutes)" = 30
+check "a time out of range in the file falls back to 5" test "$("$IDLE" --minutes)" = 5
 check "the timer menu offers it" grep -q 'lock after $("$IDLE" --minutes) min idle' "$TIMER"
 check "parts/swayidle.sh starts swayidle through wren-idle" grep -qx 'IDLE_CMD="$HOME/.local/bin/wren-idle"' "$HERE/parts/swayidle.sh"
 
