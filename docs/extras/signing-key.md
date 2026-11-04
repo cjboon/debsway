@@ -13,7 +13,15 @@ wren-key git-setup [DIR]    git in DIR signs every commit and tag with it
 wren-key pin [DIR]          DIR's pins.sh and data/ name the key (then commit and push)
 wren-key sign-repo FOLDER DEB...   a signed apt repository of Wren Linux's packages
 wren-key renew BACKUP       two more years for the signing subkey, from the backup
+wren-key restore BACKUP [FINGERPRINT]   on a new computer: the key from its backup
 ```
+
+On a new computer (or after reinstalling), don't make a second key: set up
+the extra, mount your stick (`usb mount`), and run
+`wren-key restore /media/$USER/STICK/wren-signing-key/wren-signing-key-backup.asc`.
+It takes only the key `pins.sh` pins (or the one you name), asks the backup's
+passphrase, and keeps only the signing subkey here, as the first run does. Then
+`wren-key git-setup ~/wren-linux` if git should sign with it there.
 
 To keep the backup on an encrypted stick, run `bash encrypt-usb.sh` first, and open it with `usb mount`. This extra is only in a git copy of Wren Linux, not the package (`wrenctl install wren-dev` gets one). Where the package is installed, run its `wrenctl` lines as `WREN_DIR=~/wren-linux wrenctl ...`.
 
@@ -26,7 +34,7 @@ the signing subkey stays here, held by `wren-signer`, a system user with no
 password, no login and no network (a firewall rule drops everything it sends),
 whose files your own user can't read. Your user may run one program as it,
 the signer, and only after typing your sudo password; the signer signs, hands
-out the public key and makes or renews the key, and never hands out a secret
+out the public key and makes, renews or restores the key, and never hands out a secret
 key. `wren-key` asks the signer for what it needs: on the first run it
 explains, asks your name, email, where the backup goes and its passphrase,
 makes the key, writes the backup, a revocation certificate and the public key

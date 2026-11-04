@@ -21,6 +21,10 @@
 #   renew            the signing subkey good for two more years: the backup's
 #                    passphrase on the first line of stdin, the backup after it;
 #                    writes the renewed backup and public key as a tar on stdout
+#   restore FPR      on a new computer: the key FPR from its backup, the
+#                    passphrase on the first line of stdin, the backup after it.
+#                    Only when there is no key yet; keeps only the subkey, as new
+#                    does, and writes the public key on stdout
 set -euo pipefail
 umask 077
 export PATH=/usr/bin:/bin
@@ -33,7 +37,7 @@ die() { printf 'wren-signer: %s\n' "$*" >&2; exit 1; }
 
 [ "$(id -un)" = wren-signer ] ||
     die "this runs as the user wren-signer; use wren-key."
-[ $# -ge 1 ] || die "usage: wren-signer new NAME EMAIL | sign | clearsign | detach-sign | public | fingerprint | expires | renew"
+[ $# -ge 1 ] || die "usage: wren-signer new NAME EMAIL | sign | clearsign | detach-sign | public | fingerprint | expires | renew | restore FPR"
 cmd=$1
 shift
 
@@ -169,6 +173,34 @@ case $cmd in
         "${T[@]}" --armor --export "$f" >"$S/out/wren-signing-key-public.asc"
         keep_subkey "$S/g" "$f"
         tar -C "$S/out" -cf - wren-signing-key-backup.asc wren-signing-key-public.asc ;;
+    restore)
+        args 1 "$@"
+        f=$1
+        [[ $f =~ ^[0-9A-F]{40}$ ]] || die "a fingerprint is 40 hex digits, in capitals."
+        [ ! -s "$KEYRING/fingerprint" ] || die "there is a key already ($(cat "$KEYRING/fingerprint"))."
+        S=$(scratch)
+        trap 'scratch_done "$S"' EXIT
+        IFS= read -r pass || die "no passphrase was given."
+        printf '%s\n' "$pass" >"$S/pass"
+        unset pass
+        cat >"$S/backup.asc"
+        gpg --homedir "$S/h" --batch --no-tty --quiet --pinentry-mode loopback --passphrase-file "$S/pass" \
+            --decrypt "$S/backup.asc" >"$S/full.gpg" 2>/dev/null || die "the backup doesn't open with that passphrase."
+        rm -f "$S/pass"
+        T=(gpg --homedir "$S/g" --batch --no-tty --quiet --pinentry-mode loopback --passphrase '')
+        "${T[@]}" --import "$S/full.gpg" 2>/dev/null
+        rm -f "$S/full.gpg"
+        # that key and nothing else: a backup Wren Linux made holds one key
+        [ "$("${T[@]}" --with-colons --list-secret-keys | grep -c '^sec:')" = 1 ] || die "that backup doesn't hold exactly one key."
+        case $(primary_secret "$S/g" "$f") in
+            +) ;;
+            "") die "that backup isn't the key $f." ;;
+            *) die "that backup has no primary key in it: it isn't a Wren Linux backup." ;;
+        esac
+        "${T[@]}" --with-colons --list-secret-keys "$f" | awk -F: '$1 == "ssb" && $12 ~ /s/ { found = 1 } END { exit !found }' ||
+            die "the key has no signing subkey."
+        keep_subkey "$S/g" "$f"
+        cat "$KEYRING/public.asc" ;;
     *)
         die "unknown command \"$cmd\"." ;;
 esac

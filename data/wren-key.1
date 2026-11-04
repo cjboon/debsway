@@ -100,6 +100,17 @@ copy it to your second stick, then
 .B pin
 and publish the renewed public key before the old date.
 .TP
+.BI restore " BACKUP \fR[\fPFINGERPRINT\fR]"
+On a new computer, or after reinstalling: the key from its backup into the
+signer (it asks for the backup's passphrase).
+Only the key
+.I pins.sh
+pins is taken, or the one
+.I FINGERPRINT
+names, and only when this computer has no key yet.
+As on the first run, the signer keeps only the signing subkey; the primary key
+stays in the backup.
+.TP
 .BR public ", " fingerprint
 The public key, or the primary key's fingerprint.
 .TP

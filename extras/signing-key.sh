@@ -9,7 +9,7 @@
 #  - Your user may run one program as wren-signer, the signer
 #    (/usr/local/libexec/wren-signer), and only after your sudo password,
 #    so that program can't sign without you either. It signs, gives the public
-#    key, and makes or renews the key; it never hands out a secret key.
+#    key, and makes, renews or restores the key; it never hands out a secret key.
 #  - The primary key, which vouches for the signing subkey, lives only in the
 #    backup the first run of wren-key writes to your USB stick, encrypted
 #    with a passphrase of yours.
@@ -43,7 +43,7 @@ if [ "${1:-}" = --remove ]; then
     if id "$NAME" >/dev/null 2>&1; then
         warn "The signing subkey is still in $HOME_DIR (the user $NAME, off the network)."
         warn "Delete it only if your backup is safe: without the subkey you sign nothing until"
-        warn "you install this again and renew it from the backup (wren-key renew)."
+        warn "you install this again and restore it from the backup (wren-key restore BACKUP)."
         if ask "Delete the user $NAME and the signing subkey in $HOME_DIR?" n; then
             $SUDO pkill -KILL -u "$NAME" 2>/dev/null || true
             $SUDO userdel "$NAME"

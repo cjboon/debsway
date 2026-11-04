@@ -15,7 +15,7 @@ T=$(mktemp -d)
 # shellcheck disable=SC2317,SC2329  # runs from the EXIT trap
 cleanup() {
     local h
-    for h in "$T"/signer-home/gnupg "$T"/r "$T"/v "$T"/home/.local/share/wren/signing-key/public; do
+    for h in "$T"/signer-home/gnupg "$T"/signer-home/first "$T"/r "$T"/v "$T"/v2 "$T"/home/.local/share/wren/signing-key/public; do
         gpgconf --homedir "$h" --kill all 2>/dev/null
     done
     rm -rf "$T"
@@ -139,6 +139,30 @@ check "...the signer still has only the subkey" \
 printf '%s\n' "not the passphrase at all" >"$T/answers"
 out=$(WREN_KEY_ANSWERS=$T/answers bash "$K" renew "$B/wren-signing-key-backup.asc" 2>&1)
 check "...a wrong passphrase renews nothing" bash -c 'grep -q "doesn.t open with that passphrase" <<<"$1" && [ ! -e "$2/wren-signing-key-backup.asc.old.old" ]' _ "$out" "$B"
+
+# restore: a new computer (the signer with no key, nothing remembered) gets the
+# key from the backup; the key pins.sh pins, or one you name
+gpgconf --homedir "$T/signer-home/gnupg" --kill all 2>/dev/null
+mv "$T/signer-home/gnupg" "$T/signer-home/first"
+mv "$HOME/.local/share/wren/signing-key" "$T/first-state"
+restore() { printf '%s\n' "$1" n >"$T/answers"; shift; WREN_KEY_ANSWERS=$T/answers bash "$K" restore "$@" 2>&1; }
+out=$(restore "not the passphrase at all" "$B/wren-signing-key-backup.asc")
+check "restore: a wrong passphrase restores nothing" bash -c 'grep -q "doesn.t open with that passphrase" <<<"$1" && [ ! -s "$2/gnupg/fingerprint" ]' _ "$out" "$T/signer-home"
+out=$(restore "$PW" "$B/wren-signing-key-backup.asc" 0123456789ABCDEF0123456789ABCDEF01234567)
+check "...a backup that isn't the key asked for: nothing" bash -c 'grep -q "isn.t the key" <<<"$1" && [ ! -s "$2/gnupg/fingerprint" ]' _ "$out" "$T/signer-home"
+out=$(restore "$PW" "$B/wren-signing-key-public.asc")
+check "...the public key alone isn't a backup: nothing" bash -c '[ ! -s "$1/gnupg/fingerprint" ]' _ "$T/signer-home"
+check "...nor are options or a short fingerprint taken" bash -c '! "$1" restore 2>/dev/null </dev/null && ! "$1" restore ABC </dev/null 2>/dev/null && ! "$1" restore --homedir /tmp </dev/null 2>/dev/null' _ "$T/signer"
+out=$(restore "$PW" "$B/wren-signing-key-backup.asc")
+check "...the right passphrase: the key pins.sh pins is back" bash -c '[ "$(cat "$1/gnupg/fingerprint")" = "$2" ] && grep -q "Restored" <<<"$3" && [ "$(cat "$4/.local/share/wren/signing-key/fingerprint")" = "$2" ]' _ "$T/signer-home" "$F" "$out" "$HOME"
+check "...the signer has only the signing subkey, and nothing is left in memory" \
+    bash -c '[ "$(gpg --homedir "$1/gnupg" --with-colons -K "$2" | grep -E "^(sec|ssb)" | cut -d: -f1,15 | paste -sd" ")" = "sec:# ssb:+" ] && [ -z "$(ls -A "$3")" ]' _ "$T/signer-home" "$F" "$T/shm"
+check "...and it signs: a signature the public key checks" bash -c '
+    mkdir -p -m 700 "$2/v2" && gpg --homedir "$2/v2" --batch --import "$4" 2>/dev/null &&
+    echo hello >"$2/msg" && "$1" detach-sign <"$2/msg" >"$2/msg.asc" && gpg --homedir "$2/v2" --batch --status-fd 1 --verify "$2/msg.asc" "$2/msg" 2>/dev/null | grep -q "VALIDSIG .* $3$"' _ "$T/signer" "$T" "$F" "$B/wren-signing-key-public.asc"
+out=$(restore "$PW" "$B/wren-signing-key-backup.asc")
+check "...run again: refused, the key is there already" grep -q "has a key already" <<<"$out"
+check "the first run says how to restore instead of making a second key" grep -q "wren-key restore BACKUP" "$HERE/bin/wren-key"
 
 # The extra: the firewall before the user, the rule asks for your password
 X=$HERE/extras/signing-key.sh

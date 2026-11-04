@@ -10,6 +10,8 @@
 #   wren-key pin [DIR]          DIR's pins.sh and data/ name the key (then commit and push)
 #   wren-key sign-repo FOLDER DEB...   a signed apt repository (tools/make-apt-repo.sh)
 #   wren-key renew BACKUP       two more years for the signing subkey, from the backup
+#   wren-key restore BACKUP [FINGERPRINT]   on a new computer: the key from its
+#                               backup (the one pins.sh pins, unless you name one)
 #   wren-key public | fingerprint | clearsign | detach-sign
 set -uo pipefail
 umask 077
@@ -100,6 +102,9 @@ setup() {
 
     Wren Linux's signing key
     ---------------------
+    (Moving the key to a new computer? Don't make another: Ctrl+C, then
+    wren-key restore BACKUP, with the backup on your stick.)
+
     Every Wren Linux computer will trust this key: update.sh brings in only
     commits it signed, and apt only packages from a repository it signed.
     Whoever has it can put anything onto every one of those computers, as root.
@@ -260,6 +265,38 @@ renew() {
     note "renewed public key in Wren Linux and publish it, signed: wren-key pin, commit, push."
 }
 
+# restore BACKUP [FINGERPRINT]: on a new computer (or after a reinstall), the
+# key from its backup into the signer: the key pins.sh pins, unless you name one
+restore() {
+    local backup=${1:-} f=${2:-} pass until
+    [ -n "$backup" ] && [ -f "$backup" ] || die "usage: wren-key restore BACKUP [FINGERPRINT] (BACKUP: the wren-signing-key-backup.asc on your stick; usb mount mounts it)"
+    if [ -z "$f" ]; then
+        f=$(sed -n 's/^WREN_SIGNING_FPR=\([0-9A-F]\{40\}\)$/\1/p' "$DIR/pins.sh" 2>/dev/null | head -n1)
+        [ -n "$f" ] || die "$DIR/pins.sh pins no signing key: name the key, wren-key restore BACKUP FINGERPRINT"
+    fi
+    [[ $f =~ ^[0-9A-F]{40}$ ]] || die "a fingerprint is 40 hex digits, in capitals."
+    command -v gpg >/dev/null || die "gpg is missing."
+    [ -x "$SIGNER" ] || die "the signer isn't set up. Run: wrenctl install signing-key"
+    say "Restoring the key $f (sudo asks for your password)"
+    if fingerprint >/dev/null; then die "this computer has a key already: wren-key status"; fi
+    note "From $backup"
+    HIDE=1 answer pass "The backup's passphrase:"
+    { printf '%s\n' "$pass"; cat "$backup"; } | signer restore "$f" >/dev/null || { unset pass; die "nothing was restored (see above)."; }
+    unset pass
+    if ! until=$(signer expires); then
+        die "restored, but its signing subkey no longer signs: renew it, wren-key renew $backup"
+    fi
+    remember
+    note "Restored: the signer has the signing subkey again (the primary key stays in the backup)."
+    if [ "$until" != 0 ]; then note "It signs until $(date -d "@$until" +%F)."; fi
+    expiry_warning
+    if git -C "$DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 && [ -w "$DIR" ]; then
+        if yes_no "Sign every commit and tag in $DIR with it from now on?"; then git_setup "$DIR"; fi
+    else
+        note "To sign commits in your git copy: wren-key git-setup DIR"
+    fi
+}
+
 sign_repo() {
     [ $# -ge 2 ] || die "usage: wren-key sign-repo FOLDER DEB..."
     local out=$1
@@ -274,6 +311,7 @@ case ${1:-} in
     git-setup) git_setup "${2:-}" ;;
     pin) pin "${2:-}" ;;
     renew) renew "${2:-}" ;;
+    restore) restore "${2:-}" "${3:-}" ;;
     sign-repo) shift; sign_repo "$@" ;;
     public | fingerprint | clearsign | detach-sign)
         [ $# -eq 1 ] || die "usage: wren-key $1"

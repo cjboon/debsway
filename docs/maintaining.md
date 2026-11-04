@@ -61,7 +61,9 @@ nowhere else; and a signing subkey, kept here by its own user with no network,
 that your own user can't read), and offers to set git up to sign every commit
 and to pin the key. Then commit what `wren-key pin` changed, signed, and
 push it: computers that update to it take it unchecked (their copy has no pin
-yet); every update after that is checked. `man wren-key` and
+yet); every update after that is checked. On a new computer, or after
+reinstalling, don't make a second key: `wren-key restore BACKUP` takes it
+from the backup on your stick. `man wren-key` and
 [extras/signing-key.md](extras/signing-key.md) have the rest, the steps by
 hand included. In short, by hand:
 
