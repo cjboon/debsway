@@ -237,6 +237,7 @@ dev_test console-font "console-font in a terminal window (foot's text size)" "co
 
 # --------------------------------------------------------------------
 dev_test usb "The usb command, with pretend lsblk, udisksctl and sudo" "usb checks"
+dev_test encrypt-usb "Encrypting a USB stick (encrypt-usb.sh), with a pretend sudo" "encrypt-usb checks"
 
 # --------------------------------------------------------------------
 dev_test wallpaper "Your wallpaper (bin/wallpaper) and Debian's collections (extras/wallpapers.sh)" "wallpaper checks"

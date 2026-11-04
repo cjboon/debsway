@@ -84,6 +84,7 @@ wren/
 ├── wifi.sh                  get online over Wi-Fi, whatever is installed
 ├── status.sh                security at a glance first, then what's installed
 ├── update.sh                bring Wren Linux up to date and rerun the scripts whose files changed
+├── encrypt-usb.sh           erases a USB stick and makes it encrypted (LUKS), for backups and keys
 ├── test.sh                  checks scripts, packages, downloads and keys still work
 ├── packages.sh              the core's package list and the order of the parts
 ├── pins.sh                  every signing key Wren Linux trusts, with the date it was checked
