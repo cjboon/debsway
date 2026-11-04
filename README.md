@@ -248,7 +248,8 @@ online, this makes it a git checkout of the published Wren Linux
 bash ~/wren/git-init.sh
 ```
 
-It finds the published commit whose files are exactly yours and sets your
+It also offers a GitHub login, which you need only to push from here (it never
+pushes by itself). It finds the published commit whose files are exactly yours and sets your
 copy there, so `bash ~/wren/update.sh` then shows and brings in what came
 after. If your files match nothing that was published (you changed them, or
 someone changed them on the stick), it says so: look at `git -C ~/wren status`

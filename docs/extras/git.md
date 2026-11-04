@@ -8,7 +8,7 @@ wrenctl remove git                      remove git and gh (~/.gitconfig and ~/.c
 wrenctl manual git                      print the manual steps below
 
 git clone URL / git status / git commit -a / git push
-gh auth login && gh auth setup-git      log in to GitHub later
+gh auth login && gh auth setup-git      log in to GitHub later (git-init.sh offers this too)
 ```
 
 git keeps the history of a folder of files, and gh is GitHub's command line

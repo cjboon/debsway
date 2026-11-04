@@ -76,6 +76,38 @@ fi
 
 check "update.sh, in a copy that isn't a checkout yet, says to run git-init.sh" bash -c '
     stick() { :; }; out=$(cd "$1" && bash update.sh 2>&1); grep -q "git-init.sh" <<<"$out"' _ "$T/e"
+# Pushing needs a GitHub login: offered, on a checkout too; never a push
+L=$T/login
+mkdir -p "$L"
+stick "$SECOND" "$T/l"; gi "$T/l" >/dev/null
+git -C "$T/l" remote set-url origin https://github.com/someone/wren-linux.git
+# a pretend gh: logged in while $L/in exists; writes down everything it is asked
+cat >"$L/gh" <<EOF
+#!/bin/sh
+echo "gh \$*" >>"$L/calls"
+case "\$1 \$2" in
+    "auth status") [ -e "$L/in" ] ;;
+    "auth login") : >"$L/in" ;;
+esac
+EOF
+chmod +x "$L/gh"
+li() { : >"$L/calls"; printf '%s\n' "$1" >"$L/answers"; WREN_GH=${2:-$L/gh} WREN_TEST_ANSWERS=$L/answers bash "$T/l/git-init.sh" 2>&1; }
+out=$(li n)
+check "a checkout with no GitHub login: it offers one, and no is no" bash -c '
+    grep -q "Log in to GitHub" <<<"$1" && ! grep -q "auth login" "$2" && grep -q "gh auth login" <<<"$1"' _ "$out" "$L/calls"
+li y >/dev/null
+check "...yes logs in, and lets git use that login" bash -c '
+    grep -qx "gh auth login --hostname github.com --git-protocol https" "$1" && grep -qx "gh auth setup-git" "$1"' _ "$L/calls"
+out=$(li y)
+check "...logged in already: it asks nothing" bash -c '! grep -q "Log in to GitHub" <<<"$1" && ! grep -q "auth login" "$2"' _ "$out" "$L/calls"
+rm -f "$L/in"
+out=$(li y "$L/nothing")
+check "...no gh: it says how to get it" grep -q 'wrenctl install git' <<<"$out"
+check "...it never pushes" bash -c '! grep -qE "(^|[[:space:]])(g|git( -C [^ ]+)?) push" "$1"' _ "$HERE/git-init.sh"
+git -C "$T/l" remote set-url origin "file://$T/O.git"
+out=$(li y)
+check "...a server that isn't GitHub: no offer" bash -c '! grep -q "Log in to GitHub" <<<"$1" && ! grep -q "auth" "$2"' _ "$out" "$L/calls"
+
 check "the README's way back to GitHub is git-init.sh" grep -q 'bash ~/wren/git-init.sh' "$HERE/README.md"
 
 [ "$fails" -eq 0 ]

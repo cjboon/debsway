@@ -10,6 +10,8 @@
 #    Not found, your files differ from everything that was published (changed
 #    by you, or on the stick by someone else): it says so, and git status
 #    shows what differs.
+#  - It offers a GitHub login, which pushing needs (fetching doesn't), also on a
+#    copy that is a checkout already. It never pushes: that stays yours to do.
 # Usage: bash git-init.sh
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
 . "$WREN_DIR/lib/update.sh"
@@ -18,8 +20,26 @@ not_root
 
 g() { git -C "$WREN_DIR" "$@"; }
 
+# offer_login: for a copy whose server is GitHub, with no login yet
+offer_login() {
+    local gh=${WREN_GH:-gh}
+    case $(g remote get-url origin 2>/dev/null) in *github.com[/:]*) ;; *) return 0 ;; esac
+    if ! command -v "$gh" >/dev/null; then
+        note "To push to GitHub from here you need a login: wrenctl install git offers gh, which does that."
+        return 0
+    fi
+    if "$gh" auth status >/dev/null 2>&1; then return 0; fi
+    if ask "Log in to GitHub, to push from here? (Updates need no login.)" n; then
+        "$gh" auth login --hostname github.com --git-protocol https && "$gh" auth setup-git ||
+            warn "That didn't work; nothing else was changed. Try again later: gh auth login && gh auth setup-git"
+    else
+        note "Later: gh auth login --hostname github.com --git-protocol https && gh auth setup-git"
+    fi
+}
+
 if [ -e "$WREN_DIR/.git" ]; then
     note "$WREN_DIR is a git checkout already ($(g remote get-url origin 2>/dev/null || echo "no server set")); nothing to do."
+    offer_login
     exit 0
 fi
 [ -w "$WREN_DIR" ] || die "$WREN_DIR is read-only (the Wren Linux package's?): apt brings its updates."
@@ -77,6 +97,7 @@ if [ -n "$match" ]; then
     else
         note "$behind newer commits are published: bash $WREN_DIR/update.sh shows them and brings them in."
     fi
+    offer_login
 else
     g reset -q origin/main
     g branch -q -u origin/main
