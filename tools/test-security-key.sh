@@ -34,7 +34,7 @@ case \$1 in
         if \$dir; then mkdir -p "\${args[@]}"; else mkdir -p "\$(dirname "\${args[-1]}")" && cp "\${args[0]}" "\${args[-1]}"; fi
         exit ;;
     # (the sudo that confirms the change: its rm of the pending mark)
-    rm) case "\$*" in *wren-u2f-pending*) [ ! -e "$T/sudo-fails" ] || exit 1 ;; esac ;;
+    rm) case "\$*" in *u2f-pending*) [ ! -e "$T/sudo-fails" ] || exit 1 ;; esac ;;
 esac
 exec "\$@"
 EOF
@@ -49,7 +49,10 @@ EOF
 cat >"$T/bin/pamu2fcfg" <<EOF
 #!/bin/sh
 echo "pamu2fcfg \$*" >>"$T/calls"
-case " \$* " in *" -n "*) printf ':KEYTWO,es256,+presence' ;; *) printf '%s:KEYONE,es256,+presence' "$ME" ;; esac
+case " \$* " in
+    *" -n "*) if [ -e "$T/odd-backup" ]; then printf ':KEYTWO\nroot:EVIL'; else printf ':KEYTWO,es256,+presence'; fi ;;
+    *) printf '%s:KEYONE,es256,+presence' "$ME" ;;
+esac
 EOF
 cat >"$T/bin/pamtester" <<EOF
 #!/bin/sh
@@ -79,8 +82,8 @@ session    required   pam_limits.so
 @include common-account
 @include common-session-noninteractive'
 fresh() { # a pretend root: Debian's /etc/pam.d/sudo, another user's key already listed
-    rm -rf "$T/root" "$T/calls" "$T/sudo-fails" "$T/key-refused" "$T/tried"
-    mkdir -p "$T/root/etc/pam.d" "$T/root/etc/wren" "$T/root/run"
+    rm -rf "$T/root" "$T/calls" "$T/sudo-fails" "$T/key-refused" "$T/tried" "$T/odd-backup"
+    mkdir -p "$T/root/etc/pam.d" "$T/root/etc/wren"
     printf '%s\n' "$SUDO_PAM_TEXT" >"$T/root/etc/pam.d/sudo"
     echo 'alice:ALICEKEY,es256,+presence' >"$T/root/etc/wren/u2f_keys"
     : >"$T/calls"
@@ -118,8 +121,11 @@ check "sudo: the key's line right after the password (@include common-auth), wit
     [ "$(grep -A2 -x "@include common-auth" "$1" | sed -n 3p)" = "$2" ] && grep -qx "# Wren Linux extras/security-key.sh: sudo takes your password and a touch of your key" "$1"' _ "$P" "$U2F"
 check "...the rest of the file as it was" bash -c '[ "$(grep -v "Wren Linux extras/security-key.sh" "$1" | grep -vxF "$2")" = "$3" ]' _ "$P" "$U2F" "$SUDO_PAM_TEXT"
 check "...it would have undone itself in 3 minutes (a copy of the old sudo, and a timer)" grep -q "sudo systemd-run --quiet --unit=wren-u2f-rollback --on-active=3min" "$T/calls"
-check "...a new sudo worked: confirmed, the timer stopped, the copy gone" bash -c '
-    [ ! -e "$1/run/wren-u2f-pending" ] && [ ! -e "$1/etc/pam.d/sudo.wren-old" ] && grep -q "sudo systemctl stop wren-u2f-rollback.timer" "$2" && grep -q "Confirmed" <<<"$3"' _ "$T/root" "$T/calls" "$out"
+check "...and at the next boot, if the computer restarts first (a unit, while the change is unconfirmed)" bash -c '
+    grep -q "sudo systemctl enable wren-u2f-undo.service" "$1"' _ "$T/calls"
+check "...a new sudo worked: confirmed, the timer stopped, the boot undo gone, the copy gone" bash -c '
+    [ ! -e "$1/var/lib/wren/u2f-pending" ] && [ ! -e "$1/etc/pam.d/sudo.wren-old" ] && [ ! -e "$1/etc/systemd/system/wren-u2f-undo.service" ] &&
+    grep -q "sudo systemctl stop wren-u2f-rollback.timer" "$2" && grep -q "sudo systemctl disable wren-u2f-undo.service" "$2" && grep -q "Confirmed" <<<"$3"' _ "$T/root" "$T/calls" "$out"
 out=$(sk -- --sudo)
 check "--sudo again: it says the key is in use already, and changes nothing" bash -c 'grep -q "takes your key already" <<<"$1" && [ "$(grep -c pam_u2f "$2")" = 1 ]' _ "$out" "$P"
 out=$(sk -- --sudo-off)
@@ -144,11 +150,20 @@ fresh
 out=$(sk n y n -- )
 rc=$?
 check "a new sudo failing: it says so, and the old sudo waits to come back" bash -c '
-    [ "$3" -ne 0 ] && grep -q "takes your password alone again, by itself" <<<"$1" && [ -e "$2/run/wren-u2f-pending" ] && [ -e "$2/etc/pam.d/sudo.wren-old" ]' _ "$out" "$T/root" "$rc"
+    [ "$3" -ne 0 ] && grep -q "takes your password alone again, by itself" <<<"$1" && [ -e "$2/var/lib/wren/u2f-pending" ] && [ -e "$2/etc/pam.d/sudo.wren-old" ]' _ "$out" "$T/root" "$rc"
+U=$T/root/etc/systemd/system/wren-u2f-undo.service
+check "...the boot undo waits for exactly that change, and runs the same undo" bash -c '
+    grep -qx "ConditionPathExists=$2/var/lib/wren/u2f-pending" "$1" && grep -q "cp -p $2/etc/pam.d/sudo.wren-old $2/etc/pam.d/sudo" "$1" && grep -qx "WantedBy=multi-user.target" "$1"' _ "$U" "$T/root"
 rollback=$(sed -n 's/.*--on-active=3min \/bin\/sh -c //p' "$T/calls")
 rm -f "$T/sudo-fails"
 PATH="$T/bin:$PATH" sh -c "$rollback"
-check "...and the timer's command does put it back" bash -c '[ "$(cat "$1")" = "$2" ] && [ ! -e "$3/run/wren-u2f-pending" ]' _ "$P" "$SUDO_PAM_TEXT" "$T/root"
+check "...and the timer's command does put it back" bash -c '[ "$(cat "$1")" = "$2" ] && [ ! -e "$3/var/lib/wren/u2f-pending" ]' _ "$P" "$SUDO_PAM_TEXT" "$T/root"
+# a backup key's line that isn't one (a second line, another user's name): not added
+fresh
+: >"$T/odd-backup"
+sk n y y n -- >/dev/null
+check "a backup key's answer that isn't one line of keys (here a second line naming root) is not added" bash -c '
+    ! grep -q "root:" "$1" && grep -qx "$2:KEYONE,es256,+presence" "$1"' _ "$K" "$ME"
 
 # ---- what it refuses, and saying no ----
 fresh
@@ -157,7 +172,7 @@ check "no to sudo: sudo untouched, and it says how to later" bash -c '[ "$(cat "
 fresh
 printf '#%%PAM-1.0\nauth required pam_unix.so\n' >"$P"
 out=$(sk n y n -- )
-check "a sudo PAM file without @include common-auth: left as it was" bash -c 'grep -q "has no @include common-auth" <<<"$1" && ! grep -q pam_u2f "$2" && [ ! -e "$3/run/wren-u2f-pending" ]' _ "$out" "$P" "$T/root"
+check "a sudo PAM file without @include common-auth: left as it was" bash -c 'grep -q "has no @include common-auth" <<<"$1" && ! grep -q pam_u2f "$2" && [ ! -e "$3/var/lib/wren/u2f-pending" ]' _ "$out" "$P" "$T/root"
 
 # ---- --remove ----
 fresh

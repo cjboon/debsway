@@ -13,8 +13,8 @@
 #    key (pam_u2f). The keys it takes are listed in /etc/wren/u2f_keys, a file
 #    only root can change, so nothing running as you can add one of its own. It
 #    is tried in a PAM service of its own first, and the change to sudo undoes
-#    itself after 3 minutes unless sudo then works with your password and a
-#    touch. Register a second key as a backup: lose them all and sudo is closed
+#    itself after 3 minutes (or at the next boot, if the computer restarts
+#    first) unless sudo then works with your password and a touch. Register a second key as a backup: lose them all and sudo is closed
 #    to you (docs/extras/security-key.md says how to get back in).
 # Usage: bash security-key.sh [--remove | --manual | --sudo | --sudo-off]
 # summary: Hardware security keys (FIDO2): SSH, web, sudo
@@ -31,7 +31,8 @@ RULE=$ROOT/etc/udev/rules.d/72-wren-security-key-firefox.rules
 KEYS=$ROOT/etc/wren/u2f_keys
 TEST_PAM=$ROOT/etc/pam.d/wren-u2f-test
 SUDO_PAM=$ROOT/etc/pam.d/sudo
-PENDING=$ROOT/run/wren-u2f-pending
+PENDING=$ROOT/var/lib/wren/u2f-pending
+UNDO=$ROOT/etc/systemd/system/wren-u2f-undo.service
 MARK='# Wren Linux extras/security-key.sh: sudo takes your password and a touch of your key'
 U2F="auth required pam_u2f.so authfile=$KEYS origin=pam://wren appid=pam://wren cue nouserok"
 ME=$(id -un)
@@ -50,11 +51,17 @@ sudo_on() {
     ask "Set it up now (plug the key in first)?" n || { note "Later: wrenctl install security-key --sudo"; return 0; }
     local line more new
     note "Touch the key when it blinks."
+    # what pamu2fcfg says, one line: "NAME:KEY,..." and, for each more key, ":KEY,..."
+    local entry='[A-Za-z0-9+/=,*_-]+'
     line=$(pamu2fcfg -u "$ME" -o pam://wren -i pam://wren) || die "The key didn't answer; nothing was changed."
-    [[ $line == "$ME:"* ]] || die "pamu2fcfg said something unexpected; nothing was changed."
+    [[ $line =~ ^"$ME":$entry$ ]] || die "pamu2fcfg said something unexpected; nothing was changed."
     while ask "Register another key, as a backup (swap the keys now)?" y; do
         note "Touch the other key when it blinks."
-        more=$(pamu2fcfg -n -o pam://wren -i pam://wren) && line+=$more || warn "That key didn't answer; it wasn't added."
+        if more=$(pamu2fcfg -n -o pam://wren -i pam://wren) && [[ $more =~ ^:$entry$ ]]; then
+            line+=$more
+        else
+            warn "That key didn't answer (or said something unexpected); it wasn't added."
+        fi
     done
     # The list, root's: your line replaced, other users' kept
     new=$(mktemp)
@@ -75,9 +82,19 @@ sudo_on() {
 
     say "sudo takes it now; it undoes itself in 3 minutes unless sudo works with it"
     sudo cp -p "$SUDO_PAM" "$SUDO_PAM.wren-old"
+    sudo install -d -o root -g root -m 0755 "${PENDING%/*}"
     sudo touch "$PENDING"
-    sudo systemd-run --quiet --unit=wren-u2f-rollback --on-active=3min \
-        /bin/sh -c "if [ -e $PENDING ]; then cp -p $SUDO_PAM.wren-old $SUDO_PAM; rm -f $PENDING; logger -t wren 'security key: sudo put back, not confirmed'; fi"
+    local undo_cmd="if [ -e $PENDING ]; then cp -p $SUDO_PAM.wren-old $SUDO_PAM; rm -f $PENDING; logger -t wren 'security key: sudo put back, not confirmed'; fi"
+    # in 3 minutes, and at the next boot if the computer restarts before that
+    sudo install -d -o root -g root -m 0755 "${UNDO%/*}"
+    printf '%s\n' '# Written by Wren Linux extras/security-key.sh: a sudo change that was' \
+        "# never confirmed is undone at the next boot." '[Unit]' \
+        'Description=Wren Linux: undo a sudo change that was not confirmed' "ConditionPathExists=$PENDING" '' \
+        '[Service]' 'Type=oneshot' "ExecStart=/bin/sh -c \"$undo_cmd\"" '' '[Install]' 'WantedBy=multi-user.target' |
+        sudo tee "$UNDO" >/dev/null
+    sudo systemctl daemon-reload
+    sudo systemctl enable wren-u2f-undo.service
+    sudo systemd-run --quiet --unit=wren-u2f-rollback --on-active=3min /bin/sh -c "$undo_cmd"
     new=$(mktemp)
     # right after the password (common-auth): both are needed
     awk -v mark="$MARK" -v line="$U2F" '{ print } /^@include common-auth/ && !done { print mark; print line; done = 1 }' "$SUDO_PAM" >"$new"
@@ -88,7 +105,8 @@ sudo_on() {
     sudo -k
     if sudo rm -f "$PENDING"; then
         sudo systemctl stop wren-u2f-rollback.timer 2>/dev/null || true
-        sudo rm -f "$SUDO_PAM.wren-old"
+        sudo systemctl disable wren-u2f-undo.service 2>/dev/null || true
+        sudo rm -f "$SUDO_PAM.wren-old" "$UNDO"
         note "Confirmed: sudo takes your password and your key."
     else
         warn "That didn't work: in 3 minutes sudo takes your password alone again, by itself."
@@ -116,7 +134,7 @@ case ${1:-} in
     --sudo-off) sudo_off; exit ;;
     --remove)
         sudo_off
-        sudo rm -f "$RULE" "$TEST_PAM"
+        sudo rm -f "$RULE" "$TEST_PAM" "$UNDO"
         sudo udevadm control --reload-rules 2>/dev/null || true
         apt_purge fido2-tools pamu2fcfg libpam-u2f pamtester
         note "The keys themselves are untouched; SSH keys made with them stay in ~/.ssh."
@@ -147,6 +165,6 @@ fi
 
 say "SSH with the key"
 note "ssh-keygen -t ed25519-sk -f ~/.ssh/NAME   (the file is only a handle: every login needs the key)"
-note "For the Wren Linux VPS: bash ~/wren-linux/tools/vps-client.sh ssh-key --security-key"
+note "For the Wren Linux VPS (from a git copy): bash $WREN_DIR/tools/vps-client.sh ssh-key --security-key"
 
 sudo_on
