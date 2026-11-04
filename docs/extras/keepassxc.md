@@ -18,9 +18,14 @@ KeePassXC-Browser add-on for Firefox, so no web page, and not the sandboxed
 Firefox either, has a way to talk to it. You copy and paste a password, or use
 auto-type. qtwayland5 lets it run on Wayland. On a computer with the full build
 (`keepassxc-full`, with `webext-keepassxc-browser`), the script switches to the
-minimal one.
+minimal one. Whenever the screen locks (Super+Escape, the idle lock, the lid,
+before sleep), it locks its open databases too: an on-lock program,
+`~/.config/wren/on-lock.d/keepassxc`, runs `keepassxc --lock`. It asks whether
+KeePassXC should open on workspace 1 at every login.
 
 ## LIMITS
+
+- Unlocked, while you use the computer, its passwords are one window away from anything running as you. Its own settings can lock it sooner: Settings, Security, lock databases after a few minutes of inactivity.
 
 - Anything running as you can read the database file, watch the clipboard and log your master password as you type it.
 - A copied password stays on the clipboard until something replaces it.
@@ -34,13 +39,20 @@ minimal one.
 sudo apt purge keepassxc-full keepassxc webext-keepassxc-browser
 # The minimal build, and Qt's Wayland support so it runs without XWayland
 sudo apt install --no-install-recommends keepassxc-minimal qtwayland5
+# Locked whenever the screen locks: an on-lock program (Wren Linux runs these at every lock)
+mkdir -p ~/.config/wren/on-lock.d
+printf '%s\n' '#!/bin/sh' 'pgrep -x -u "$(id -u)" keepassxc >/dev/null || exit 0' 'exec keepassxc --lock' >~/.config/wren/on-lock.d/keepassxc
+chmod 755 ~/.config/wren/on-lock.d/keepassxc
+# Optional: on workspace 1 at every login
+printf '%s\n' "exec sh -c 'swaymsg -q \"workspace number 1\"; exec keepassxc'" >~/.config/sway/config.d/keepassxc-start.conf
 keepassxc
 ```
 
 To undo (your password databases, `.kdbx` files, stay where they are):
 
 ```
-# Remove KeePassXC
+# Remove KeePassXC, its on-lock program and its start at login
+rm -f ~/.config/wren/on-lock.d/keepassxc ~/.config/sway/config.d/keepassxc-start.conf
 sudo apt purge keepassxc-minimal
 sudo apt autoremove --purge
 ```
