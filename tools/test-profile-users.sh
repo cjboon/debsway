@@ -172,6 +172,20 @@ check "removing takes away the command" test ! -e "$T/home/.local/bin/bank"
 check "...the permission to run the session" grep -q 'sudo rm -f /etc/sudoers.d/wren-fx-bank' "$T/calls"
 check "...and the settings file" grep -q 'sudo rm -f /etc/wren/firefox-profiles/bank.conf' "$T/calls"
 check "saying no keeps the user and the logins" not grep -q 'userdel' "$T/calls"
+# its command gone (deleted by hand, or a run that stopped part-way): still
+# removed, from its settings file or its user
+mkdir -p "$T/profiles"
+echo 'url=https://gone.example/' >"$T/profiles/gone.conf"
+: >"$T/calls"; echo y >"$T/answers"
+echo fx-gone >"$T/made"
+out=$(WREN_FX_PROFILE_DIR="$T/profiles" run x x 'remove_profile gone' 2>&1)
+check "a profile whose command is gone: its rule and settings still go" bash -c '
+    grep -q "sudo rm -f /etc/sudoers.d/wren-fx-gone" "$1" && grep -q "sudo rm -f $2/gone.conf" "$1" && ! grep -q "isn.t set up" <<<"$3"' _ "$T/calls" "$T/profiles" "$out"
+check "...and, asked, its user and logins" grep -q 'sudo userdel fx-gone' "$T/calls"
+rm -f "$T/profiles/gone.conf"; : >"$T/made"; : >"$T/calls"
+out=$(WREN_FX_PROFILE_DIR="$T/profiles" run x x 'remove_profile none' 2>&1)
+check "...a profile with nothing left: it says so, and changes nothing" bash -c 'grep -q "isn.t set up" <<<"$1" && [ ! -s "$2" ]' _ "$out" "$T/calls"
+echo fx-bank >"$T/made"
 : >"$T/calls"
 run x x 'make_profile bank https://bank.example/ no' >/dev/null 2>&1
 : >"$T/calls"; echo y >"$T/answers"

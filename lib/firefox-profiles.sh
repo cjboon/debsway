@@ -103,18 +103,22 @@ fx_remove_cmd() {
 # remove_profile NAME: removes its command (NAME or firefox-NAME). A profile with
 # a user of its own (made by this version) loses its sudo rule and its settings
 # file, and you are asked whether to delete the logins and the user too; the
-# older kind (a profile in your own Firefox) keeps its profile, as before.
+# older kind (a profile in your own Firefox) keeps its profile, as before. A
+# profile whose command is gone (deleted by hand, or a run that stopped
+# part-way) is still removed from its settings file or its user.
 remove_profile() {
     local name=$1 c cmd='' user=fx-$1 sandboxed=false
     for c in "$BIN/$name" "$BIN/firefox-$name"; do
         if grep -qsE "$OURS" "$c"; then cmd=$c; fi
     done
-    if [ -z "$cmd" ]; then
+    # (decided from the launcher, before it is removed; your user can't look
+    # into /etc/sudoers.d, so the rule itself can't tell)
+    if grep -qs -e 'firefox --profile' "$cmd"; then sandboxed=true; fi
+    if [ -e "$FX_PROFILE_DIR/$name.conf" ] || id "$user" >/dev/null 2>&1; then sandboxed=true; fi
+    if [ -z "$cmd" ] && ! $sandboxed; then
         note "The profile $name isn't set up."
         return 0
     fi
-    # (decided from the launcher, before it is removed)
-    if grep -qs -e 'firefox --profile' "$cmd"; then sandboxed=true; fi
     fx_remove_cmd "$name"
     if ! $sandboxed; then
         note "Removed ${cmd##*/}. The profile and its logins are kept;"
@@ -123,7 +127,7 @@ remove_profile() {
     fi
     fx_disallow_session "$user"
     sudo rm -f "$FX_PROFILE_DIR/$name.conf"
-    note "Removed ${cmd##*/} and the permission to run it."
+    note "Removed ${cmd:+${cmd##*/}, }the permission to run it and its settings."
     if id "$user" >/dev/null 2>&1; then
         note "Its logins and history are kept in $FX_HOME_ROOT/$name (user $user, locked)."
         if ask "Delete them and the user too?" n; then
