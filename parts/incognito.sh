@@ -61,9 +61,8 @@ if [ "${1:-}" = --remove ]; then
     sudo systemctl disable --now wren-incognito-firewall.service >/dev/null 2>&1 || true
     sudo nft delete table inet wren_incognito 2>/dev/null || true
     sudo nft delete table inet wren_wifi_signin 2>/dev/null || true
-    # the media sandbox needs it too
-    [ -f "$BIN/media-sandbox" ] || remove_bin wayland-restrict
     sudo rm -f "$SUDOERS" "$LIMITS" "$CMD" /usr/local/bin/wifi-signin "$SESSION" "$PREFS" "$FIREWALL" "$SIGNIN_FIREWALL" "$UNIT"
+    remove_wayland_restrict
     remove_no_abstract
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
     sudo rmdir "$SHARE" /usr/local/libexec /etc/wren 2>/dev/null || true

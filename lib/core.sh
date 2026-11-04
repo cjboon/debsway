@@ -250,6 +250,16 @@ remove_no_abstract() {
     sudo rm -f "$NO_ABSTRACT"
 }
 
+# remove_wayland_restrict: takes wayland-restrict away once nothing uses it (call
+# it after the script's own command is gone)
+remove_wayland_restrict() {
+    local c
+    for c in /usr/local/bin/firefox /usr/local/bin/incognito "$BIN/media-sandbox"; do
+        [ ! -e "$c" ] || return 0
+    done
+    remove_bin wayland-restrict
+}
+
 # remove_bin NAME: removes ~/.local/bin/NAME if Wren Linux wrote it
 remove_bin() {
     if grep -qis 'written by Wren Linux' "$BIN/$1"; then rm -f "$BIN/$1"; fi

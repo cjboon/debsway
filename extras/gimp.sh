@@ -25,8 +25,8 @@ if [ "${1:-}" = --remove ]; then
     # the media and PDF extras, and incognito, use the sandbox too
     if [ ! -f "$BIN/imv" ] && [ ! -f "$BIN/mpv" ] && [ ! -f "$BIN/zathura" ]; then
         remove_bin media-sandbox
-        [ -x /usr/local/bin/incognito ] || remove_bin wayland-restrict
     fi
+    remove_wayland_restrict
     remove_no_abstract
     apt_purge gimp bubblewrap
     note "Your GIMP settings stay in ~/.config/GIMP, your pictures in ~/Pictures."

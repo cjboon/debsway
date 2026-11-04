@@ -18,8 +18,7 @@ if [ "${1:-}" = --remove ]; then
     remove_bin mpv
     # the pdf-viewer extra uses the sandbox too
     [ -f "$BIN/zathura" ] || [ -f "$BIN/gimp" ] || remove_bin media-sandbox
-    # incognito needs wayland-restrict too
-    [ -f "$BIN/media-sandbox" ] || [ -x /usr/local/bin/incognito ] || remove_bin wayland-restrict
+    remove_wayland_restrict
     remove_no_abstract
     apt_purge imv mpv bubblewrap
     exit

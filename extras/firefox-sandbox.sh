@@ -71,10 +71,10 @@ if [ "${1:-}" = --remove ]; then
     fi
     sudo systemctl disable --now wren-firefox-firewall.service >/dev/null 2>&1 || true
     sudo nft delete table inet wren_firefox 2>/dev/null || true
-    [ -f "$BIN/media-sandbox" ] || [ -x /usr/local/bin/incognito ] || remove_bin wayland-restrict
     fx_disallow_session "$NAME"
     sudo rm -f /etc/wren/firefox.conf
     sudo rm -f "$LIMITS" "$CMD" "$SESSION" "$PREFS" "$FIREWALL" "$UNIT"
+    remove_wayland_restrict
     remove_no_abstract
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
     sudo rmdir "$SHARE" /usr/local/libexec /etc/wren 2>/dev/null || true

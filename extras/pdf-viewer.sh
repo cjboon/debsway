@@ -20,8 +20,8 @@ if [ "${1:-}" = --remove ]; then
     # the media extra and incognito need the sandbox too
     if [ ! -f "$BIN/imv" ] && [ ! -f "$BIN/mpv" ] && [ ! -f "$BIN/gimp" ]; then
         remove_bin media-sandbox
-        [ -x /usr/local/bin/incognito ] || remove_bin wayland-restrict
     fi
+    remove_wayland_restrict
     remove_no_abstract
     apt_purge zathura zathura-pdf-poppler bubblewrap
     exit

@@ -83,6 +83,19 @@ for e in media pdf-viewer gimp; do
         bash -c 'grep -qx "install_no_abstract" "$1" && grep -q "^# files:.*bin/no-abstract-sockets" "$1" && grep -q "remove_no_abstract" "$1"' _ "$HERE/extras/$e.sh"
     check "...its manual steps too" grep -q 'wren-no-abstract-sockets' "$HERE/docs/extras/$e.md"
 done
+# wayland-restrict goes only when nothing uses it (the function, on a temp folder)
+wr() { # FILE-THAT-USES-IT: is wayland-restrict still there after the function?
+    rm -rf "$T/wr"; mkdir -p "$T/wr/bin" "$T/wr/usr"
+    printf '#!/bin/sh\n# written by Wren Linux\n' >"$T/wr/bin/wayland-restrict"
+    [ -z "$1" ] || { : >"$T/wr/$1"; chmod +x "$T/wr/$1"; }
+    bash -c 'BIN=$2/bin; eval "$(sed -n "/^remove_bin() {/,/^}/p; /^remove_wayland_restrict() {/,/^}/p" "$1/lib/core.sh" | sed "s|/usr/local/bin|$2/usr|g")"; remove_wayland_restrict' _ "$HERE" "$T/wr"
+    [ -e "$T/wr/bin/wayland-restrict" ]
+}
+check "wayland-restrict stays while the sandboxed Firefox needs it" wr usr/firefox
+check "...incognito" wr usr/incognito
+check "...and the media sandbox" wr bin/media-sandbox
+check "...and goes when nothing does" not wr ""
+check "no script decides that by itself" bash -c '! grep -l "remove_bin wayland-restrict" "$1"/parts/*.sh "$1"/extras/*.sh | grep -q .' _ "$HERE"
 check "the media and PDF extras keep the sandbox while GIMP uses it" bash -c 'grep -q "BIN/gimp" "$1" && grep -q "BIN/gimp" "$2"' _ "$HERE/extras/media.sh" "$HERE/extras/pdf-viewer.sh"
 
 [ "$fails" -eq 0 ]
