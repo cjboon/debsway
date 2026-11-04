@@ -6,14 +6,16 @@
 #                          address. Keeps that half in ~/.config/wren/vps/NAME.key
 #                          (yours alone) and prints the public half, for
 #                          setup-vps.sh's VPS_ONION_SSH_CLIENT.
-#   ssh-key                an SSH key for the server, ~/.ssh/wren-vps (it asks
-#                          a passphrase for it), and prints its public line
+#   ssh-key [--security-key]   an SSH key for the server, ~/.ssh/wren-vps (it
+#                          asks a passphrase for it), and prints its public
+#                          line. --security-key: one that needs your hardware
+#                          key and a touch for every login (extras/security-key.sh)
 #   tor-auth ONION [NAME]  Tor's client file for that onion address, and the
 #                          root commands that give it to this computer's Tor
 #   ssh-config USER ONION [HOST]   the ~/.ssh/config entry that reaches the server
 #                          through Tor (ssh HOST then works; HOST: wren-vps)
 # NAME is the server's name for the key files (default: wren-vps).
-# Usage: bash tools/vps-client.sh keygen | ssh-key | tor-auth ONION | ssh-config USER ONION
+# Usage: bash tools/vps-client.sh keygen | ssh-key [--security-key] | tor-auth ONION | ssh-config USER ONION
 set -euo pipefail
 umask 077
 
@@ -44,13 +46,26 @@ keygen() {
 keygen_show() { local name=${1:-wren-vps}; name_ok "$name"; cat "$DIR/$name.pub" 2>/dev/null || die "no key called $name: bash $0 keygen $name"; }
 
 ssh_key() {
-    local f=$HOME/.ssh/wren-vps
+    local f=$HOME/.ssh/wren-vps type=ed25519
+    case ${1:-} in
+        "") ;;
+        --security-key) type=ed25519-sk ;;
+        *) die "ssh-key takes only --security-key." ;;
+    esac
+    if [ -f "$f" ] && [ "$type" = ed25519-sk ] && ! grep -q '^sk-ssh-ed25519@openssh.com ' "$f.pub"; then
+        die "$f is a plain key already; move it away first (and remove it from the server once the new one works)."
+    fi
     if [ ! -f "$f" ]; then
         command -v ssh-keygen >/dev/null || die "ssh-keygen is missing (sudo apt install openssh-client)."
         mkdir -p "$HOME/.ssh"
         chmod 700 "$HOME/.ssh"
-        note "A passphrase protects the key if this computer is ever lost (it asks twice):"
-        ssh-keygen -q -t ed25519 -a 100 -C "wren-vps" -f "$f"
+        if [ "$type" = ed25519-sk ]; then
+            note "Plug the key in and touch it when it blinks. The file is only a handle: every login"
+            note "needs the key too. A passphrase on the file is optional then (it asks twice):"
+        else
+            note "A passphrase protects the key if this computer is ever lost (it asks twice):"
+        fi
+        ssh-keygen -q -t "$type" -a 100 -C "wren-vps" -f "$f"
     fi
     note "For setup-vps.sh, VPS_SSH_KEY:"
     cat "$f.pub"
@@ -96,7 +111,7 @@ EOF
 case ${1:-} in
     keygen) keygen "${2:-}" ;;
     keygen-show) keygen_show "${2:-}" ;;
-    ssh-key) ssh_key ;;
+    ssh-key) ssh_key "${2:-}" ;;
     tor-auth) tor_auth "${2:-}" "${3:-}" ;;
     ssh-config) ssh_config "${2:-}" "${3:-}" "${4:-}" ;;
     -h | --help | "") sed -n '2,/^set -euo/{ /^set -euo/d; s/^# \{0,1\}//; p }' "$0" ;;

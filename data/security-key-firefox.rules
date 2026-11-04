@@ -1,0 +1,6 @@
+# Written by Wren Linux extras/security-key.sh: the sandboxed Firefox's users
+# (the group wren-fx: firefox, and fx-NAME for each profile) may use a
+# security key, for website logins (WebAuthn). udev's 60-fido-id.rules marks
+# the key as one (ID_SECURITY_TOKEN); you, at the keyboard, get it from
+# 70-uaccess.rules anyway. Each login still needs a touch of the key.
+ACTION=="add|change", SUBSYSTEM=="hidraw", ENV{ID_SECURITY_TOKEN}=="1", RUN+="/usr/bin/setfacl -m g:wren-fx:rw $env{DEVNAME}"
