@@ -52,8 +52,11 @@ or work account, social media. Sites you don't log into don't need one.
 ## What each user is, and what it shares
 
 - **Your files are out of reach.** The profile's user can read none of your
-  files, ssh keys or passwords, and a program running as *you* cannot read the
-  profile's logins either (its home is `/var/lib/wren-fx/NAME`, mode 700).
+  files, ssh keys or passwords. Its home (`/var/lib/wren-fx/NAME`, mode 700)
+  can't be read by your user either, but that doesn't keep a program running
+  as *you* out of the profile: you start it, so such a program can start it
+  too, show it pages and type into its window (see "Anything running as you"
+  in `THREAT-MODEL.md`).
 - **Profiles can't read each other.** Each has its own user, its own sound pipe,
   its own folder in memory, and its own downloads folder, `~/Downloads/NAME`,
   which is shared with you and with no other profile.
