@@ -249,7 +249,7 @@ online, this makes it a git checkout of the published Wren Linux
 (`WREN_GIT_URL` in `pins.sh`), without changing a file:
 
 ```bash
-bash ~/wren/git-init.sh
+bash ~/wren/git-helper.sh
 ```
 
 It first asks your name and email for commits (on GitHub, it offers your

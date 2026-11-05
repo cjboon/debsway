@@ -32,7 +32,11 @@ usage: wrenctl [OPTION]
   --part NAME           run one part of the base desktop again (repairs it)
   --status     show what Wren Linux has set up on this computer
   --git [DIR]  set git up for you: your name and email, and how it logs in to
-               push, for DIR or the repository you are in (git-init.sh)
+               push, for DIR or the repository you are in (git-helper.sh)
+  --gh [rulesets [OWNER/REPO] | --logout]
+               GitHub's gh, with a token you make (nothing saved unless you
+               say so); rulesets: only you update main, nobody force-pushes or
+               deletes it (gh-helper.sh)
   --test       check that the scripts, packages, downloads and keys still work
   --wifi [on|off]       switch Wi-Fi on or off (no word: say whether it is on)
   --bluetooth [on|off]  the same for Bluetooth
@@ -143,7 +147,8 @@ case $cmd in
         [ $# -le 1 ] || die "one folder at a time (wrenctl git [DIR])."
         # no folder named: the repository you are in, if you are in one
         if [ $# -eq 0 ] && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then set -- "$PWD"; fi
-        exec bash "$DIR/git-init.sh" "$@" ;;
+        exec bash "$DIR/git-helper.sh" "$@" ;;
+    --gh | gh) need_dir; exec bash "$DIR/gh-helper.sh" "$@" ;;
     --test | test) need_dir; cd "$DIR" && exec bash test.sh "$@" ;;
     --wifi | --bluetooth | --mic | --camera)
         [ -x "$HOME/.local/bin/radios" ] || die "the radio switch isn't installed (bash $DIR/parts/wren-menu.sh)."

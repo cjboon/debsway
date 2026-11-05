@@ -18,7 +18,7 @@ not() { ! "$@"; }
 
 mkdir -p "$T/dir" "$T/home/.local/bin"
 : >"$T/dir/lib.sh"
-for s in update install-extras status test git-init; do
+for s in update install-extras status test git-helper; do
     # shellcheck disable=SC2016  # written into the pretend scripts, expanded when they run
     printf '#!/bin/bash\necho "%s $*" >>"%s/ran"\n' "$s" "$T" >"$T/dir/$s.sh"
 done
@@ -41,11 +41,11 @@ check "--apps runs install-extras.sh with its arguments" grep -qx 'install-extra
 mkdir -p "$T/repo/sub" "$T/plain"
 git -C "$T/repo" init -q
 (cd "$T/repo/sub" && d git)
-check "git, in a repository: git-init.sh for the folder you are in" grep -qx "git-init $T/repo/sub" "$T/ran"
+check "git, in a repository: git-helper.sh for the folder you are in" grep -qx "git-helper $T/repo/sub" "$T/ran"
 (cd "$T/plain" && d git)
-check "...outside one: git-init.sh as it is (your name and email; a Wren Linux copy)" grep -qx 'git-init ' "$T/ran"
+check "...outside one: git-helper.sh as it is (your name and email; a Wren Linux copy)" grep -qx 'git-helper ' "$T/ran"
 d --git "$T/plain"
-check "...a folder named: that one" grep -qx "git-init $T/plain" "$T/ran"
+check "...a folder named: that one" grep -qx "git-helper $T/plain" "$T/ran"
 check "...two folders: refused" not d git a b
 d --status
 check "--status runs status.sh" grep -qx 'status *' "$T/ran"
@@ -139,6 +139,7 @@ check "Tab after install: the extras" test "$(comp wrenctl install '')" = "claud
 check "...after --remove and manual too" bash -c '[ "$1" = "vim" ] && [ "$2" = "claude-vm vim" ]' _ "$(comp wrenctl --remove v)" "$(comp wrenctl manual '')"
 check "Tab after part: the parts" test "$(comp wrenctl part '')" = ufw
 check "Tab after --mic: on and off" test "$(comp wrenctl --mic '')" = "off on"
+check "Tab after gh: rulesets and --logout" test "$(comp wrenctl gh '')" = "--logout rulesets"
 check "nothing after the name" test -z "$(comp wrenctl install vim '')"
 check "the part installs the completion where bash-completion looks" \
     grep -q '"$WREN_DIR/data/wrenctl-completion.bash" "$COMPLETION"' "$HERE/parts/wren-menu.sh"

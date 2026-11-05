@@ -101,7 +101,7 @@ each with what to run.
 - **Add or remove a program:** `wrenctl --apps`, or `wrenctl --remove NAME`
 - **Updates:** Debian's security fixes install themselves. For Wren Linux's own,
   run `wrenctl --update`. If your copy has no git yet, first run
-  `bash ~/wren/git-init.sh`.
+  `bash ~/wren/git-helper.sh`.
 - **Something broke:** run its script again, which repairs it: `wrenctl --install NAME`
   for a program, `wrenctl --part NAME` for a piece of the desktop. `wrenctl --test`
   checks that it all still works.

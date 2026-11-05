@@ -336,7 +336,8 @@ dev_test update-package "update.sh in the Wren Linux package's copy (no git), wi
 dev_test signing-key "The signing key (extras/signing-key.sh, wren-key), with a pretend sudo" "signing key checks"
 
 # --------------------------------------------------------------------
-dev_test git-init "git-init.sh: a copy from a stick, connected to what was published" "git-init checks"
+dev_test git-helper "git-helper.sh: a copy from a stick, connected to what was published" "git-helper checks"
+dev_test gh-helper "gh-helper.sh: a token you make, and the rules on main, with a pretend gh" "gh-helper checks"
 dev_test site "The website (site/, tools/build-site.sh): plain HTML, no script, built from a signed commit" "website checks"
 dev_test setup-vps "The VPS setup (tools/setup-vps.sh), with a pretend root folder" "VPS setup checks"
 dev_test vps-client "Your side of the VPS (tools/vps-client.sh): keys, Tor client file, ssh entry" "VPS client checks"

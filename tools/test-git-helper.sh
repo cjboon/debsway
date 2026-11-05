@@ -1,11 +1,11 @@
 #!/bin/bash
-# Checks git-init.sh with a pretend server (a bare repository in a temp
+# Checks git-helper.sh with a pretend server (a bare repository in a temp
 # folder, two commits of this checkout's files) and copies like a stick's:
 # a copy of an older commit is set at that commit and told what is newer; the
 # newest one is up to date; a copy whose files were changed is said to differ
 # from everything published; a FAT stick's lost executable marks don't count;
 # a pinned key refuses an unsigned server and leaves nothing behind. Changes
-# nothing outside a temp folder. Run by test.sh, or:  bash tools/test-git-init.sh
+# nothing outside a temp folder. Run by test.sh, or:  bash tools/test-git-helper.sh
 # shellcheck disable=SC2016  # the inner shells expand their own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 T=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
@@ -36,7 +36,7 @@ git clone -q --bare "$T/W" "$T/O.git"
 # stick COMMIT DIR: what an install stick holds of that commit (git archive)
 stick() { rm -rf "$2"; mkdir -p "$2"; git -C "$T/W" archive "$1" | tar -C "$2" -xf -; }
 # (its questions answered from a file: none, so each takes its default)
-gi() { WREN_TEST_ANSWERS=/dev/null bash "$1/git-init.sh" 2>&1; }
+gi() { WREN_TEST_ANSWERS=/dev/null bash "$1/git-helper.sh" 2>&1; }
 
 stick "$FIRST" "$T/a"
 out=$(gi "$T/a")
@@ -79,8 +79,8 @@ if command -v gpg >/dev/null; then
     gpgconf --homedir "$T/gh" --kill all 2>/dev/null
 fi
 
-check "update.sh, in a copy that isn't a checkout yet, says to run git-init.sh" bash -c '
-    stick() { :; }; out=$(cd "$1" && bash update.sh 2>&1); grep -q "git-init.sh" <<<"$out"' _ "$T/e"
+check "update.sh, in a copy that isn't a checkout yet, says to run git-helper.sh" bash -c '
+    stick() { :; }; out=$(cd "$1" && bash update.sh 2>&1); grep -q "git-helper.sh" <<<"$out"' _ "$T/e"
 # ---- your name and email, and how git logs in to push; never a push
 L=$T/login
 mkdir -p "$L"
@@ -104,16 +104,16 @@ echo "wget \$*" >>"$L/calls"
 printf '{\n  "login": "someone",\n  "id": 4242,\n  "node_id": "U_x",\n  "followers": 7\n}\n'
 EOF
 chmod +x "$L/gh" "$L/wget"
-# li DIR ANSWER...: git-init.sh (DIR "-": this copy, $T/l), answering in turn
+# li DIR ANSWER...: git-helper.sh (DIR "-": this copy, $T/l), answering in turn
 li() {
     local d=$1
     shift
     : >"$L/calls"
     printf '%s\n' "$@" >"$L/answers"
     if [ "$d" = - ]; then
-        WREN_GH=${GHP:-$L/gh} WREN_WGET=$L/wget WREN_TEST_ANSWERS=$L/answers bash "$T/l/git-init.sh" 2>&1
+        WREN_GH=${GHP:-$L/gh} WREN_WGET=$L/wget WREN_TEST_ANSWERS=$L/answers bash "$T/l/git-helper.sh" 2>&1
     else
-        WREN_GH=${GHP:-$L/gh} WREN_WGET=$L/wget WREN_TEST_ANSWERS=$L/answers bash "$T/l/git-init.sh" "$d" 2>&1
+        WREN_GH=${GHP:-$L/gh} WREN_WGET=$L/wget WREN_TEST_ANSWERS=$L/answers bash "$T/l/git-helper.sh" "$d" 2>&1
     fi
 }
 helper() { git config --global --get-all "credential.https://$1.helper" | paste -sd'|'; }
@@ -191,11 +191,11 @@ check "...over ssh: nothing to set" bash -c 'grep -q "over ssh" <<<"$1" && ! gre
 out=$(li "$T/nothere")
 check "...a folder that isn't a repository: refused" grep -q "isn't a git repository" <<<"$out"
 mv "$T/gitconfig" "$HOME/.gitconfig"
-check "it never pushes" bash -c '! grep -qE "(^|[[:space:]])(g|git( -C [^ ]+)?) push" "$1"' _ "$HERE/git-init.sh"
-check "the git extra asks no name, email or login during an install: it points to git-init.sh" bash -c '
-    ! grep -qE "user\.(name|email)|auth login" "$1/extras/git.sh" && grep -q "git-init.sh" "$1/extras/git.sh" && ! grep -q WREN_GH_LOGIN "$1/install-base.sh"' _ "$HERE"
+check "it never pushes" bash -c '! grep -qE "(^|[[:space:]])(g|git( -C [^ ]+)?) push" "$1"' _ "$HERE/git-helper.sh"
+check "the git extra asks no name, email or login during an install: it points to git-helper.sh" bash -c '
+    ! grep -qE "user\.(name|email)|auth login" "$1/extras/git.sh" && grep -q "git-helper.sh" "$1/extras/git.sh" && ! grep -q WREN_GH_LOGIN "$1/install-base.sh"' _ "$HERE"
 check "...and installs no gh: it isn't in its packages, its status line or install-base.sh" bash -c '
     ! grep -qE "apt_install .*\bgh\b|apt:gh" "$1/extras/git.sh" && ! grep -q WREN_SETUP_GH "$1/install-base.sh"' _ "$HERE"
-check "the README's way back to GitHub is git-init.sh" grep -q 'bash ~/wren/git-init.sh' "$HERE/README.md"
+check "the README's way back to GitHub is git-helper.sh" grep -q 'bash ~/wren/git-helper.sh' "$HERE/README.md"
 
 [ "$fails" -eq 0 ]

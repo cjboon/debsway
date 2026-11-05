@@ -44,7 +44,7 @@ DE09 E9B9 E956 5B2B DA9D  5FF5 F0F1 9D6C EF46 5DC5
 As one word, as `pins.sh` has it: `DE09E9B9E9565B2BDA9D5FF5F0F19D6CEF465DC5`. Its
 public part is `data/wren-signing-key.asc`.
 
-- **Updates check this for you.** `update.sh` and `git-init.sh` take only what this
+- **Updates check this for you.** `update.sh` and `git-helper.sh` take only what this
   key signed, and the newest commit's signature vouches for the commits under it.
 - **The first copy is the one to be careful with.** A check can only be as good as
   the copy doing the checking, and a copy someone changed could name a key of theirs.

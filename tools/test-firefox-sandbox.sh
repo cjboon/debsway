@@ -50,7 +50,7 @@ check "...read and write on ~/Downloads, for both of you, for later files too" \
 check "...and took the access back when it ended" grep -q "setfacl -x u:firefox $T/home" "$T/calls"
 check "~/Downloads exists" test -d "$T/home/Downloads"
 
-# 1b. started with a PATH without ~/.local/bin (lib.sh's, so gh from git-init.sh):
+# 1b. started with a PATH without ~/.local/bin (lib.sh's, so gh from git-helper.sh):
 # wayland-restrict is still found there
 mkdir -p "$T/fake-nolocal" "$T/home/.local/bin"
 cp "$T/fake/sudo" "$T/fake/setfacl" "$T/fake-nolocal/"

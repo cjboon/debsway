@@ -100,7 +100,7 @@ and the extras.
 .B \-\-git
 .RI [ DIR ]
 Set git up for you
-.RB ( git\-init.sh ):
+.RB ( git\-helper.sh ):
 the name and email on your commits (for GitHub, your no-reply address,
 since GitHub refuses pushes that carry an email kept private), and how git
 logs in to push over https: a token pasted at each push, the same kept in
@@ -109,6 +109,20 @@ With no
 .IR DIR ,
 the repository you are in; outside one, your name and email, and a copy of
 Wren Linux from a stick is connected to the published one.
+.TP
+.B \-\-gh
+.RB [ rulesets
+.RI [ OWNER/REPO ]
+|
+.BR \-\-logout ]
+GitHub's gh
+.RB ( gh\-helper.sh ),
+from Debian, with a fine-grained token you make: nothing is saved unless you
+say so.
+.B rulesets
+adds the rules that keep a repository's main branch yours: only its admins
+update it, and nobody force-pushes or deletes it.
+\fB\-\-logout\fR forgets a saved token.
 .TP
 .B \-\-test
 Check that the scripts, packages, downloads and signing keys still work

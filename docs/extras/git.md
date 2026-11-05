@@ -9,6 +9,7 @@ wrenctl manual git                      print the manual steps below
 
 git clone URL / git status / git commit -a / git push
 wrenctl git [DIR]                       your name, email and push login (DIR, or the repository you are in)
+wrenctl gh rulesets [OWNER/REPO]        on GitHub: only you update main, nobody force-pushes or deletes it
 ```
 
 git keeps the history of a folder of files; it comes from Debian. GitHub's
@@ -16,7 +17,7 @@ command line tool, gh, isn't installed: git needs only a token to push, and
 pull requests, issues and the like are on GitHub's site, in the browser. The
 script installs git and makes
 `main` the first branch of new repositories. It asks nothing else: your name
-and email on commits, and how git logs in to push, are `git-init.sh`'s, run
+and email on commits, and how git logs in to push, are `git-helper.sh`'s, run
 when you want them (`wrenctl git`). It asks for your name and email (and, for GitHub, offers
 your no-reply address, looked up from your public profile, since GitHub
 refuses pushes that carry an email you keep private), then how git logs in
@@ -24,7 +25,14 @@ over https: a token you paste at each push (nothing saved), the same kept in
 memory for an hour, or, if you installed gh yourself, gh's login through a
 web page (saved in plain text).
 `wrenctl git DIR`, or `wrenctl git` inside a repository, does this for any
-repository of yours, on any server.
+repository of yours, on any server. `wrenctl gh` (`gh-helper.sh`) installs gh,
+from Debian, when you want it, with a fine-grained token you make for the job:
+nothing is saved unless you say so. `wrenctl gh rulesets` gives a GitHub
+repository's main branch the rules that keep it yours: only you (its admins)
+update it, so a deploy key you gave a helper can push its own branch and never
+main, and nobody force-pushes or deletes it. The token for that needs
+Administration, Read and write, on that repository alone; made for this, a day's
+expiry is enough, and it is asked for hidden and not saved.
 
 ## LIMITS
 
@@ -42,7 +50,7 @@ sudo apt install --no-install-recommends git
 git config --global init.defaultBranch main
 ```
 
-What `git-init.sh` then sets, by hand:
+What `git-helper.sh` then sets, by hand:
 
 ```
 # The name and email on your commits (for GitHub, your no-reply address,

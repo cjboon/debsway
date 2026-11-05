@@ -1,6 +1,6 @@
 #!/bin/bash
 # git, from Debian. Your name and email on commits, and how git logs in to
-# push, are wrenctl git's (git-init.sh): it asks when you run it, not during
+# push, are wrenctl git's (git-helper.sh): it asks when you run it, not during
 # an install. GitHub's gh isn't installed: git needs no more than a token to
 # push, and pull requests and the like are on GitHub's site (wrenctl git still
 # offers gh's login if you install gh yourself).

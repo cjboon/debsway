@@ -1,5 +1,5 @@
 #!/bin/bash
-# git-init.sh: sets git up for you, and connects a copy of Wren Linux to the
+# git-helper.sh: sets git up for you, and connects a copy of Wren Linux to the
 # published one. It changes no file of a repository, and never pushes.
 #  1. Your name and email on commits (git config --global): asked when they
 #     aren't set, offered to change when they are. For a GitHub repository, an
@@ -24,8 +24,8 @@
 #       gh      GitHub's own login, through a web page: saved in plain text in
 #               ~/.config/gh, for every repository on your account
 #     Over ssh, git uses your ssh key: there is nothing to set.
-# Usage: bash git-init.sh         this copy of Wren Linux: steps 1 to 3
-#        bash git-init.sh DIR     any git repository of yours: steps 1 and 3
+# Usage: bash git-helper.sh         this copy of Wren Linux: steps 1 to 3
+#        bash git-helper.sh DIR     any git repository of yours: steps 1 and 3
 # (wrenctl git [DIR] runs it: for DIR, or the repository you are in)
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
 . "$WREN_DIR/lib/update.sh"
