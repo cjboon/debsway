@@ -60,6 +60,16 @@ if command -v debugfs >/dev/null && command -v qemu-img >/dev/null && command -v
     out=$( ( image_put "$T/ws.qcow2" --edit /etc/not-there 's/a/b/' ) 2>&1)
     check "...a file that isn't there: it stops, and the image is unchanged" bash -c '
         grep -q "Couldn.t read /etc/not-there" <<<"$1" && [ "$2" = "$3" ]' _ "$out" "$before" "$(sum)"
+    # A VM switched off without shutting down: its journal left for its next boot
+    qemu-img convert -O raw "$T/ws.qcow2" "$raw"
+    debugfs -w -R "feature needs_recovery" "$fs" >/dev/null 2>&1
+    qemu-img convert -O qcow2 "$raw" "$T/dirty.qcow2" && rm -f "$raw"
+    dirty() { sha256sum "$T/dirty.qcow2" | cut -d' ' -f1; }
+    d0=$(dirty)
+    out=$( ( image_put "$T/dirty.qcow2" "$T/prog" /usr/local/bin/x ) 2>&1)
+    check "a disk switched off without shutting down (its journal to replay): not edited, and it says how to fix that" bash -c '
+        grep -q "switched off without shutting down" <<<"$1" && grep -q "shut it down from inside" <<<"$1" &&
+        [ "$2" = "$3" ] && [ ! -e "$4.raw" ]' _ "$out" "$d0" "$(dirty)" "$T/dirty.qcow2"
     # A failed write back (a full disk): never in the image's place
     # shellcheck disable=SC2317,SC2329  # the stand-in is called by image_put
     out=$( ( qemu-img() { if [[ " $* " == *" -O qcow2 "* ]]; then echo "No space left on device" >&2; return 1; fi; command qemu-img "$@"; }
@@ -81,6 +91,7 @@ wget() { # -q --show-progress -O FILE URL
 }
 verify_clearsigned() { [ -z "${FAKE_BADSIG:-}" ] && cp "$3" "$4"; }
 check_sha256() { [ -z "${FAKE_BADSUM:-}" ]; }
+# shellcheck disable=SC2317,SC2329  # called by workstation_feather
 apt_install() { :; }
 W=$T/work
 mkdir -p "$W"
@@ -138,6 +149,17 @@ check "...and libvirt can read it (xmllint finds it well formed)" bash -c '! com
 
 # The Gateway's files for each bridge: its own DNS on only for those that look
 # names up, Tor held off when a bridge is wanted but none was given
+# webtunnel: lyrebird from the Tor Project's repository (its key pinned), copied
+# in, and the version written in kept, for bin/whonix to compare
+eval "$(fn gateway_lyrebird | sed "s|\[ -x /usr/bin/lyrebird \]|[ -x \"\$T/lyrebird\" ]|")"
+: >"$T/lyrebird"
+chmod +x "$T/lyrebird"
+eval "$(sed -n '/^LYREBIRD_COPY=/p' "$HERE/extras/whonix.sh")"
+LYREBIRD_COPY=$T/lyrebird-version
+add_torproject_repo() { echo add_torproject_repo >>"$T/lyr-calls"; }
+# shellcheck disable=SC2317,SC2329  # called by gateway_lyrebird
+apt_install() { echo "apt_install $*" >>"$T/lyr-calls"; }
+dpkg-query() { echo 0.6.1-1; }
 eval "$(fn gateway_config)"
 eval "$(sed -n '/^bridge_needs_dns() /p' "$HERE/extras/whonix.sh")"
 bridge_summary() { echo "$BRIDGE_TYPE"; }
@@ -149,6 +171,15 @@ done
 for b in obfs4 none; do
     check "$b: it stays off (and is turned off if it was on)" grep -qxF 's/^nameserver 10\.0\.2\.3$/#nameserver 10.0.2.3/' <<<"$(gc $b false)"
 done
+out=$(gc webtunnel true)
+check "webtunnel: lyrebird from the Tor Project's pinned repository, before anything is written" \
+    test "$(tail -n 2 "$T/lyr-calls" | paste -sd';')" = "add_torproject_repo;apt_install lyrebird"
+check "...copied into the Gateway as /usr/bin/lyrebird, 0755" grep -qx -- '--exec' <<<"$(grep -B1 -x /usr/bin/lyrebird <<<"$out" | head -1)"
+check "...and the version written in kept" grep -qx '0.6.1-1' "$LYREBIRD_COPY"
+: >"$T/lyr-calls"
+gc snowflake true >/dev/null
+check "another bridge chosen: nothing installed, and the kept version goes" bash -c '[ ! -s "$1" ] && [ ! -e "$2" ]' _ "$T/lyr-calls" "$LYREBIRD_COPY"
+
 gc none true >/dev/null
 check "a bridge wanted but none given: Tor held off" grep -qx 'DisableNetwork 1' "$T/gc/40_tor_control_panel.conf"
 gc obfs4 true >/dev/null

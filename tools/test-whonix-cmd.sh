@@ -101,6 +101,21 @@ reset
 w gateway
 check "the Gateway running already: its passt isn't started again" not grep -q '^passt' "$T/calls"
 
+# webtunnel's program in the Gateway: said when the one here (apt's) is newer
+printf '#!/bin/sh\ncat "%s/lyrebird-here"\n' "$T" >"$T/bin/dpkg-query"
+chmod +x "$T/bin/dpkg-query"
+mkdir -p "$T/home/.local/state/wren"
+lyr() { echo "$1" >"$T/lyrebird-here"; rm -f "$T/notified"; reset; w gateway 2>&1; }
+echo 0.6.1-1 >"$T/home/.local/state/wren/whonix-lyrebird-version"
+check "the Gateway's lyrebird as new as the one here: nothing said" test -z "$(lyr 0.6.1-1)"
+out=$(lyr 0.6.2-1)
+check "...a newer one here: it says so, and how to copy it in" bash -c '
+    grep -q "lyrebird 0.6.2-1 is out; the Gateway has 0.6.1-1" <<<"$1" && grep -q "wrenctl install whonix --bridges" <<<"$1"' _ "$out"
+check "...in a notification too, with no terminal" grep -q "lyrebird 0.6.2-1 is out" "$T/notified"
+check "...and the Gateway still starts" grep -q '^virsh start Whonix-Gateway' "$T/calls"
+rm -f "$T/home/.local/state/wren/whonix-lyrebird-version"
+check "no webtunnel in the Gateway: nothing said" test -z "$(lyr 0.6.2-1)"
+
 # Right after installing, without logging out and in
 X=$HERE/extras/whonix.sh
 check "whonix.sh gives you /dev/kvm now if the new kvm group hasn't applied yet" \

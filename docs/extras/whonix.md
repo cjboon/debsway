@@ -21,8 +21,8 @@ your user under KVM (libvirt's `qemu:///session`), with no root daemon or host
 network setup. The download (about 1.9 GB) is checked against Whonix's signing
 key, pinned in `pins.sh` (`WHONIX_FPR`), and kept in `offline/whonix`. Before
 the first boot, Wren Linux writes into the images, without mounting them (with
-qemu-img and debugfs): a bridge for the Gateway if you need one (obfs4 lines
-you paste, or Snowflake), so its very first connection uses it, or Tor kept
+qemu-img and debugfs): a bridge for the Gateway if you need one (obfs4 or
+webtunnel lines you paste, or Snowflake), so its very first connection uses it, or Tor kept
 off until you turn it on (`--bridges` chooses again later); and in the Workstation, Tor Browser at Safest with
 JavaScript off (`data/tor-browser-safest.js`) and the Feather wallet for Monero:
 Feather's own build for Tails and Whonix, which has no Tor of its own and uses
@@ -43,8 +43,14 @@ Whonix's fixed addresses (the Gateway 10.0.2.15, its gateway 10.0.2.2), IPv4
 only, no DHCP, nothing of this computer mapped in (`--no-map-gw`), and one
 address, 10.0.2.3, where only DNS goes on, to the resolver this computer uses
 (Unbound with secure DNS on, so encrypted). The Gateway's own DNS stays off, as
-Whonix ships it, except for a bridge that has to look names up (Snowflake):
-then its `/etc/resolv.conf.whonix` gets `nameserver 10.0.2.3`. Installed before
+Whonix ships it, except for a bridge that has to look names up (Snowflake,
+webtunnel): then its `/etc/resolv.conf.whonix` gets `nameserver 10.0.2.3`.
+webtunnel is experimental here: Whonix ships no program for it, so Wren Linux
+installs lyrebird on this computer from the Tor Project's repository (its key
+pinned, `TORPROJECT_FPR`, and an apt pin that lets nothing else come from
+there), where its updates install themselves, and copies it into the Gateway
+as `/usr/bin/lyrebird`; Tor's AppArmor profile in Whonix 18 already lets Tor
+run it. Installed before
 this? Running `wrenctl install whonix` again (with the Gateway shut down)
 gives it the new card; `--bridges` then sets the DNS for the bridge you choose.
 
@@ -58,7 +64,9 @@ gives it the new card; `--bridges` then sets the DNS for the bridge you choose.
 - Whonix's own updates run inside the VMs: update them there.
 - With Snowflake, the Gateway looks up its broker and STUN servers through this computer's resolver (encrypted, with secure DNS on); the resolver sees those names, and your network sees you reach them, as with Snowflake anywhere. Whonix's page on Gateway DNS knows of no risk in having it on.
 - Started any other way than `whonix` (virt-manager, `virsh start`), the Gateway has no network: its passt isn't running.
-- The Gateway's own network was tried here with Whonix 18.2.4.2 under passt (its outside card is eth0, Tor reaches its relays). Snowflake through it still needs to be confirmed on your computer.
+- webtunnel's copy of lyrebird in the Gateway isn't updated by Whonix. `whonix` says when the one on this computer is newer; then `whonix stop` and `wrenctl install whonix --bridges` copy it in again. Until you do, the Gateway runs the older one.
+- A disk switched off without shutting down (as `whonix stop` does to a VM whose shutdown dialog stays open) isn't edited: `--bridges` asks you to start the Gateway once and shut it down from inside first, so its journal is replayed.
+- The Gateway's own network was tried here with Whonix 18.2.4.2 under passt (its outside card is eth0, Tor reaches its relays), and Snowflake through it connected on a real install. webtunnel was tried here only up to lyrebird starting and looking up a bridge's address: a real webtunnel bridge (from bridges.torproject.org) is yours to try.
 
 ## MANUAL INSTALL
 
@@ -127,7 +135,12 @@ printf '%s\n' 'UseBridges 1' 'ClientTransportPlugin obfs4 exec /usr/bin/obfs4pro
 # computer's resolver). Take Whonix's file out of the image first: copy it from
 # "debugfs -R 'cat /etc/resolv.conf.whonix'" (see put below), then
 #   sed -i 's/^#nameserver 10\.0\.2\.3$/nameserver 10.0.2.3/' resolv.conf.whonix
-# and put it back as /etc/resolv.conf.whonix
+# and put it back as /etc/resolv.conf.whonix (for webtunnel too)
+# Only for webtunnel: lyrebird, from the Tor Project's repository (as
+# parts/apt-tor.sh adds it: key @TORPROJECT_FPR@, pinned to lyrebird only),
+# and in 50_user.conf "ClientTransportPlugin webtunnel exec /usr/bin/lyrebird"
+# with your "Bridge webtunnel ..." lines; then, with put below:
+#   put gw.qcow2 /usr/bin/lyrebird /usr/bin/lyrebird 755
 
 # put IMAGE FILE DEST [MODE]: write FILE into the image's root file system as
 # DEST (root's, mode 0644 or MODE), checked, without mounting it

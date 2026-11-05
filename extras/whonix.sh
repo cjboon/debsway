@@ -127,6 +127,14 @@ image_put() {
     start=$(sfdisk -d "$raw" | sed -n 's/.*start= *\([0-9]*\),.*name="primary".*/\1/p')
     [ -n "$start" ] || { rm -f "$raw"; die "Couldn't find the root partition in $img."; }
     fs="$raw?offset=$((start * 512))"
+    # A VM switched off without shutting down (whonix stop does that to one whose
+    # shutdown dialog stays open) leaves its journal for its next boot to replay.
+    # Edited before that, the replay could undo the edit, or the edit the replay:
+    # so not edited, and said how to let it replay
+    if debugfs -R features "$fs" 2>/dev/null | grep -qw needs_recovery; then
+        rm -f "$raw"
+        die "$img was switched off without shutting down, so it can't be edited safely yet. Start it once (whonix gateway, or whonix), shut it down from inside, then run this again. Nothing was changed."
+    fi
     cmds=$(mktemp)
     while [ $# -ge 2 ]; do
         mode=0644
@@ -273,6 +281,33 @@ gateway_has_wren_net() { "${VIRSH[@]}" dumpxml --inactive "$GW" 2>/dev/null | gr
 # meek's front), not only through addresses in its lines
 bridge_needs_dns() { case $BRIDGE_TYPE in snowflake | webtunnel | meek) return 0 ;; esac; return 1; }
 
+# The webtunnel program, lyrebird: the Gateway has none, and Whonix ships none
+# (Debian has no package of it). It comes from the Tor Project's repository onto
+# this computer (add_torproject_repo: TORPROJECT_FPR, an apt pin for lyrebird
+# only), where its updates install themselves, and a copy is written into the
+# Gateway. That copy isn't updated by Whonix: the version written in is kept
+# here, and bin/whonix says when the one here is newer (--bridges copies it in
+# again). Tor's AppArmor profile in Whonix 18 already lets Tor run it.
+LYREBIRD_COPY="$HOME/.local/state/wren/whonix-lyrebird-version"
+gateway_lyrebird() {
+    [ "$BRIDGE_TYPE" = webtunnel ] || { rm -f "$LYREBIRD_COPY"; return 0; }
+    add_torproject_repo
+    apt_install lyrebird
+    [ -x /usr/bin/lyrebird ] || die "lyrebird didn't install, so the Gateway can't use webtunnel."
+    GW_FILES+=(--exec /usr/bin/lyrebird /usr/bin/lyrebird)
+    mkdir -p "${LYREBIRD_COPY%/*}"
+    dpkg-query -W -f='${Version}\n' lyrebird >"$LYREBIRD_COPY"
+}
+
+# webtunnel_note: what webtunnel on the Gateway is, said when it is chosen
+webtunnel_note() {
+    [ "$BRIDGE_TYPE" = webtunnel ] || return 0
+    note "webtunnel on Whonix is experimental: Whonix doesn't ship it, so Wren Linux copies"
+    note "lyrebird (the Tor Project's, its signature checked) into the Gateway. Whonix's own"
+    note "updates won't update that copy: whonix tells you when a newer one is out, and"
+    note "wrenctl install whonix --bridges (Gateway shut down) copies it in again."
+}
+
 # gateway_config WORK: fills GW_FILES with image_put's arguments for the Gateway:
 # its bridge lines (or none), Tor on or held off, and its own DNS. Whonix keeps
 # the Gateway's DNS off; it is turned on only for a bridge that needs it, and
@@ -300,6 +335,7 @@ gateway_config() {
     else
         GW_FILES+=(--edit /etc/resolv.conf.whonix 's/^nameserver 10\.0\.2\.3$/#nameserver 10.0.2.3/')
     fi
+    gateway_lyrebird
 }
 
 # ---- remove ----
@@ -326,8 +362,10 @@ if [ "${1:-}" = --remove ]; then
         note "Kept the disks in $IMAGES. Installing again asks before replacing them."
     fi
     remove_bin whonix
+    rm -f "$LYREBIRD_COPY"
     # KVM and virt-manager go too, unless mockvps-kvm or another script needs them
     apt_purge
+    remove_torproject_repo_if_unused
     [ ! -d "$SAVED" ] || note "The saved download stays in $SAVED; delete it yourself if you like."
     exit
 fi
@@ -388,6 +426,7 @@ if defined "$GW" && defined "$WS"; then
         gateway_off
         say "Gateway bridges"
         pick_bridges whonix
+webtunnel_note
         work=$(mktemp -d)
         trap 'rm -rf "$work"' EXIT
         gateway_config "$work"
@@ -429,6 +468,7 @@ mv "$work"/Whonix-Workstation-*.qcow2 "$work/ws.qcow2"
 say "Gateway bridges"
 note "Whonix 18 connects to Tor at its first boot, so this is the time to say if it needs a bridge."
 pick_bridges whonix
+webtunnel_note
 gateway_config "$work"
 image_put "$work/gw.qcow2" "${GW_FILES[@]}"
 if [ "$BRIDGE_TYPE" != none ]; then

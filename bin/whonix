@@ -64,9 +64,21 @@ stop() {
     true
 }
 
+# webtunnel's program in the Gateway (extras/whonix.sh copies it in): Whonix doesn't
+# update that copy, so this says when the one here, updated by apt, is newer
+lyrebird_check() {
+    f=$GW_NET/whonix-lyrebird-version
+    [ -s "$f" ] || return 0
+    have=$(dpkg-query -W -f='${Version}' lyrebird 2>/dev/null) || return 0
+    dpkg --compare-versions "$have" gt "$(cat "$f")" || return 0
+    msg="lyrebird $have is out; the Gateway has $(cat "$f"). Copy it in: whonix stop, then wrenctl install whonix --bridges"
+    echo "whonix: $msg" >&2
+    [ -t 2 ] || notify-send Whonix "$msg" 2>/dev/null || true
+}
+
 case "${1:-start}" in
-    start) gateway_net && up Whonix-Gateway && up Whonix-Workstation && console Whonix-Workstation ;;
-    gateway) gateway_net && up Whonix-Gateway && console Whonix-Gateway ;;
+    start) lyrebird_check; gateway_net && up Whonix-Gateway && up Whonix-Workstation && console Whonix-Workstation ;;
+    gateway) lyrebird_check; gateway_net && up Whonix-Gateway && console Whonix-Gateway ;;
     stop) stop ;;
     *) echo "usage: whonix [start|gateway|stop]" >&2; exit 2 ;;
 esac

@@ -24,7 +24,7 @@ bridge_kinds() {
     case $1 in
         tor-browser) echo "obfs4-builtin obfs4 webtunnel snowflake meek" ;;
         system-tor) echo "obfs4 webtunnel snowflake" ;;
-        whonix) echo "obfs4 snowflake" ;;
+        whonix) echo "obfs4 snowflake webtunnel" ;;
         onionshare) echo "obfs4-builtin obfs4 snowflake" ;;
         *) echo "obfs4" ;;
     esac
@@ -35,7 +35,7 @@ bridge_unavailable() {
     case $1 in
         system-tor) echo "meek: no client program for it here" ;;
         onionshare) echo "webtunnel, meek: OnionShare and Debian have no client for them" ;;
-        whonix) echo "webtunnel, meek: the Whonix Gateway has no client for them" ;;
+        whonix) echo "meek: not offered for the Whonix Gateway" ;;
     esac
 }
 

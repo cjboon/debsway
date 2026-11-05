@@ -49,8 +49,8 @@ check "choice 1 is built-in obfs4" test "$(result "$out")" = "RESULT obfs4-built
 out=$(run whonix y 2)
 check "Whonix offers obfs4 lines" has 'obfs4, bridge lines' "$out"
 check "Whonix offers Snowflake" has 'Snowflake: no lines' "$out"
-check "Whonix says why webtunnel is missing" has 'Not offered here (webtunnel, meek: the Whonix Gateway' "$out"
-check "Whonix does not offer webtunnel as a choice" lacks 'webtunnel, bridge lines' "$out"
+check "Whonix offers webtunnel too (its lyrebird copied into the Gateway)" has 'webtunnel, bridge lines' "$out"
+check "...and says why meek isn't offered" has 'Not offered here (meek: not offered for the Whonix Gateway' "$out"
 check "choice 2 is Snowflake" test "$(result "$out")" = "RESULT snowflake 0 true"
 out=$(run system-tor y 1 "$OBFS4" "")
 check "the system Tor offers webtunnel (lyrebird)" has 'webtunnel, bridge lines' "$out"
