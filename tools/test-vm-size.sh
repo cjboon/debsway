@@ -73,6 +73,14 @@ ARGS='4096 290000' out=$(choose)
 check "...and a disk that could fill the computer's" grep -q "more could fill this computer's disk" <<<"$out"
 ARGS='1024 40000' out=$(choose)
 check "...and less than the VM needs to run" grep -q "isn't between 2048" <<<"$out"
+# A space typed before the number (the prompt reader keeps leading spaces) is trimmed
+rm -f "$WREN_VM_SIZE_FILE"
+ARGS='' out=$(choose ' 4096' '  40000  ')
+check "a number typed with spaces around it still counts (not failed as out of range)" \
+    bash -c '[ "$(cat "$2")" = "claude-vm 4096 40000" ] && ! grep -q "isn.t between" <<<"$1"' _ "$out" "$WREN_VM_SIZE_FILE"
+rm -f "$WREN_VM_SIZE_FILE"
+ARGS='' out=$(choose '   ' '')
+check "...a space-only answer counts as Enter: the suggestion" test "$(cat "$WREN_VM_SIZE_FILE")" = "claude-vm 3840 40000"
 ARGS='4096 60000' out=$(choose)
 check "a size it can spare is kept (memory from the next start, the disk from the next build)" \
     bash -c '[ "$(cat "$2")" = "claude-vm 4096 60000" ] && grep -q "claude-vm rebuild" <<<"$1"' _ "$out" "$WREN_VM_SIZE_FILE"

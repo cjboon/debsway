@@ -118,6 +118,10 @@ vm_size_choose() {
         tty_read mem "    Memory in MB (Enter for $rec_mem): "
         tty_read disk "    Disk in MB (Enter for $rec_disk): "
     fi
+    # A space typed before the number (the prompt reader keeps it) shouldn't fail
+    # it; and a space-only answer counts as Enter, falling back to the suggestion.
+    read -r mem <<<"$mem"
+    read -r disk <<<"$disk"
     [ -n "$mem" ] || mem=${have%% *}
     [ -n "$mem" ] || mem=$rec_mem
     [ -n "$disk" ] || disk=${have##* }
