@@ -10,6 +10,7 @@ HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 . "$HERE/lib.sh"
 . "$HERE/lib/appimage.sh"
 . "$HERE/lib/tails.sh"
+. "$HERE/lib/usb-stick.sh"
 set +e +o pipefail
 
 T=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
@@ -69,14 +70,14 @@ esac
 EOF
 printf '#!/bin/sh\necho /dev/mapper/vg-root\n' >"$T/fake/findmnt"
 chmod +x "$T/fake/"*
-disks=$(PATH="$T/fake:$PATH" usb_disks)
-check "a USB stick is offered, with its size and model" grep -qx 'sdb 16008609792 SanDisk Ultra' <<<"$disks"
-check "...even with a partition mounted by USB automount (it is unmounted first)" grep -q '^sdb ' <<<"$disks"
-check "...and a small one is listed (the size is refused later)" grep -q '^sdd ' <<<"$disks"
-check "the disk this system runs from is never offered" not grep -q '^nvme0n1 ' <<<"$disks"
-check "a SATA disk is never offered" not grep -q '^sda ' <<<"$disks"
-check "a USB disk holding /home is never offered" not grep -q '^sdc ' <<<"$disks"
-check "a USB DVD drive is not a disk" not grep -q '^sr0 ' <<<"$disks"
+found=$(PATH="$T/fake:$PATH" usb_disks)
+check "a USB stick is offered, with its size and model" grep -qx 'sdb 16008609792 SanDisk Ultra' <<<"$found"
+check "...even with a partition mounted by USB automount (it is unmounted first)" grep -q '^sdb ' <<<"$found"
+check "...and a small one is listed (the size is refused later)" grep -q '^sdd ' <<<"$found"
+check "the disk this system runs from is never offered" not grep -q '^nvme0n1 ' <<<"$found"
+check "a SATA disk is never offered" not grep -q '^sda ' <<<"$found"
+check "a USB disk holding /home is never offered" not grep -q '^sdc ' <<<"$found"
+check "a USB DVD drive is not a disk" not grep -q '^sr0 ' <<<"$found"
 # a system that runs from a USB disk: that one is never offered
 sed -i 's/"nvme0n1p3" "nvme0n1"/"sdb1" "sdb"/' "$T/fake/lsblk"
 check "a USB disk the system runs from is never offered" not grep -q '^sdb ' <<<"$(PATH="$T/fake:$PATH" usb_disks)"
@@ -91,12 +92,14 @@ printf '#!/bin/sh\nfor a; do case $a in of=*) head -c 3000000 /dev/zero >"${a#of
 chmod +x "$T/fake/dd"
 : >"$T/stick2"
 check "a write that didn't land is caught by reading it back" \
-    not env PATH="$T/fake:$PATH" bash -c '. "$1/lib.sh"; set +e; . "$1/lib/tails.sh"; PATH="$4:$PATH"; SUDO=; write_and_check "$2" "$3"' _ "$HERE" "$T/tails.img" "$T/stick2" "$T/fake"
+    not env PATH="$T/fake:$PATH" bash -c '. "$1/lib.sh"; set +e; . "$1/lib/usb-stick.sh"; PATH="$4:$PATH"; SUDO=; write_and_check "$2" "$3"' _ "$HERE" "$T/tails.img" "$T/stick2" "$T/fake"
 
 # ---- the extra ----
 E=$HERE/extras/tails-usb.sh
-check "the stick is chosen by typing its name" grep -q 'Type its name, $name, to go on' "$E"
-check "a stick under 8 GB is refused" grep -q 'MIN_STICK=$((7500 \* 1000 \* 1000))' "$E"
+check "the stick is chosen by typing its name" grep -q 'Type its name, $name, to go on' "$HERE/lib/usb-stick.sh"
+check "a stick under 8 GB is refused" bash -c 'grep -q "MIN_STICK=\$((7500 \* 1000 \* 1000))" "$1" && grep -q "stick_write \"\$img\" \"\$MIN_STICK\"" "$1"' _ "$E"
+check "the temp folder is removed at the end without failing (its name is in the trap, not a variable gone by then)" \
+    bash -c 'grep -qF "trap \"rm -rf '"'"'\$tmp'"'"'\" EXIT" "$1" && ! grep -qF "trap '"'"'rm -rf \"\$tmp\"'"'"' EXIT" "$1"' _ "$E"
 check "a download that fails the checks is deleted" grep -q 'rm -f "$img.part" "$sig"' "$E"
 check "setting it up doesn't offer to make a stick; it says how to use tails-usb" \
     bash -c 'sed -n "/^    \"\")/,/;;/p" "$1" | { s=$(cat); ! grep -q "ask " <<<"$s" && ! grep -q make_stick <<<"$s" && grep -q "Run in a terminal:  tails-usb" <<<"$s"; }' _ "$E"

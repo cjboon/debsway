@@ -1,0 +1,20 @@
+#!/bin/sh
+# get-iso: written by Wren Linux extras/get-iso.sh
+# Downloads another system's install image (Debian, Tails, Kicksecure, Kali,
+# Parrot, Arch: get-iso --list), through Tor when Tor runs here; keeps it in
+# ~/ISOs only if its project's pinned key vouches for it and it is the newest
+# release; and offers to write it to a USB stick you pick and type the name of.
+#   get-iso [NAME]    get-iso --list
+# Where Wren Linux is: WREN_DIR if you set it; else the root-owned copy the
+# Wren Linux package installs, which no program running as you can change; else
+# your own copy, ~/wren
+if [ -n "${WREN_DIR:-}" ]; then
+    DIR=$WREN_DIR
+elif [ -f "${WREN_SYSTEM_DIR:-/usr/share/wren}/lib.sh" ]; then
+    DIR=${WREN_SYSTEM_DIR:-/usr/share/wren}
+else
+    DIR=$HOME/wren
+fi
+[ -f "$DIR/extras/get-iso.sh" ] || { echo "get-iso: can't find the Wren Linux folder ($DIR). Set WREN_DIR to where it is." >&2; exit 1; }
+[ "${1:-}" != --list ] || exec bash "$DIR/extras/get-iso.sh" --list
+exec bash "$DIR/extras/get-iso.sh" --get "$@"

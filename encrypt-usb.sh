@@ -6,7 +6,7 @@
 # Usage: bash encrypt-usb.sh [NAME]     NAME: the stick, such as sdb
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
 . "$WREN_DIR/lib/appimage.sh"
-. "$WREN_DIR/lib/tails.sh"
+. "$WREN_DIR/lib/usb-stick.sh"
 not_root
 
 case ${1:-} in

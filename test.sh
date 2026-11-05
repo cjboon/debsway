@@ -118,7 +118,10 @@ done
 for f in bin/wren-camera data/webcam-off.rules; do
     [ -f "$f" ] || bad "extras/webcam.sh needs $f"
 done
-for f in lib/tails.sh bin/tails-usb; do
+for f in lib/get-iso.sh lib/tails.sh lib/usb-stick.sh bin/get-iso; do
+    [ -f "$f" ] || bad "extras/get-iso.sh needs $f"
+done
+for f in lib/tails.sh lib/usb-stick.sh bin/tails-usb; do
     [ -f "$f" ] || bad "extras/tails-usb.sh needs $f"
 done
 for f in lib/secure-dns.sh data/secure-dns-firewall.nft; do
@@ -198,6 +201,7 @@ dev_test install-iso "The install ISO (prep/make-install-iso.sh): answers, boot 
 dev_test webcam "The webcam switch (bin/wren-camera, extras/webcam.sh), on a pretend /sys" "webcam checks"
 
 # --------------------------------------------------------------------
+dev_test get-iso "Other systems' images (lib/get-iso.sh): newest release, signatures, a pretend internet" "get-iso checks"
 dev_test tails-usb "Tails on a USB stick (lib/tails.sh): release file, which disks, writing" "Tails stick checks"
 
 # --------------------------------------------------------------------
@@ -522,6 +526,9 @@ if online; then
     check_key "Signal" "$SIGNAL_FPR" "$SIGNAL_KEY_URL"
     check_key "Tails" "$TAILS_FPR" "$TAILS_KEY_URL"
     check_key "Debian CD" "$DEBIAN_CD_FPR" "$DEBIAN_CD_KEY_URL"
+    check_key "Kali" "$KALI_FPR" "$KALI_KEY_URL"
+    check_key "Arch Linux" "$ARCH_ISO_FPR" "$ARCH_ISO_KEY_URL"
+    check_key "Parrot" "$PARROT_FPR" "$PARROT_KEY_URL"
     check_key "yt-dlp" "$YTDLP_FPR" "$YTDLP_KEY_URL"
     # ----------------------------------------------------------------
     section "Newest releases: found, and signed by the pinned key"

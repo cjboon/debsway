@@ -41,33 +41,3 @@ tails_image_ok() {
     echo "$sha  $img" | sha256sum -c --quiet - >/dev/null 2>&1 ||
         { warn "$img isn't the image Tails' release file names (an older one?)."; return 1; }
 }
-
-# usb_disks: the USB disks that could take Tails, one per line as
-# "NAME SIZE-IN-BYTES MODEL": whole disks on USB, not the one this system runs
-# from, and none with a partition this system uses (/, /boot, /home, swap)
-usb_disks() {
-    local below_root name tran type size model
-    # every device the root file system sits on, through dm-crypt and LVM
-    below_root=$(lsblk -lno NAME -s "$(findmnt -no SOURCE / 2>/dev/null)" 2>/dev/null)
-    while read -r name tran type size model; do
-        [ "$tran" = usb ] && [ "$type" = disk ] || continue
-        ! grep -qxF "$name" <<<"$below_root" || continue
-        if lsblk -lno MOUNTPOINTS "/dev/$name" 2>/dev/null | grep -qxE '/|/boot(/efi)?|/home|\[SWAP\]'; then continue; fi
-        printf '%s %s %s\n' "$name" "$size" "${model:--}"
-    done < <(lsblk -dbn -o NAME,TRAN,TYPE,SIZE,MODEL 2>/dev/null)
-}
-
-# write_and_check IMG DEVICE: writes IMG over DEVICE, then reads it back and
-# compares, so a failed write or a bad stick is caught. The device's cache is
-# flushed first, so what is read back comes from the stick itself, not from
-# memory. Uses $SUDO.
-write_and_check() {
-    local img=$1 dev=$2 size want got
-    size=$(stat -c %s "$img")
-    want=$(sha256sum "$img" | cut -d' ' -f1)
-    $SUDO dd if="$img" of="$dev" bs=16M conv=fsync status=progress || return 1
-    sync
-    if [ -b "$dev" ]; then $SUDO blockdev --flushbufs "$dev" || return 1; fi
-    got=$($SUDO head -c "$size" "$dev" | sha256sum | cut -d' ' -f1)
-    [ "$got" = "$want" ] || { warn "What was read back from $dev isn't the image: the stick may be faulty."; return 1; }
-}

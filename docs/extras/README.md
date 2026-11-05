@@ -43,6 +43,7 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 - [Share files over Tor with OnionShare](onionshare.md)
 - [Your own onion site](onion-site.md)
 - [Remote access over Tor](remote-access.md)
+- [Other systems' install images, checked, onto a USB stick](get-iso.md)
 - [Tails on a USB stick](tails-usb.md)
 
 ## Sandboxes and test machines

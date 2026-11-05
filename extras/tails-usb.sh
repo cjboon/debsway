@@ -25,6 +25,7 @@
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$WREN_DIR/lib/appimage.sh"
 . "$WREN_DIR/lib/tails.sh"
+. "$WREN_DIR/lib/usb-stick.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
@@ -55,9 +56,11 @@ fetch() {
 }
 
 make_stick() {
-    local tmp line v url sha size img sig key i choice name dev bytes model
+    local tmp line v url sha size img sig key i
     tmp=$(mktemp -d)
-    trap 'rm -rf "$tmp"' EXIT
+    # (its name now: tmp is this function's, gone by the time the script exits)
+    # shellcheck disable=SC2064
+    trap "rm -rf '$tmp'" EXIT
     mkdir -p "$TAILS_OFFLINE"
 
     say "How to download"
@@ -108,35 +111,7 @@ make_stick() {
         note "Signed by the Tails signing key, and the image Tails' release file names: $img"
     fi
 
-    say "The USB stick"
-    mapfile -t disks < <(usb_disks)
-    while [ ${#disks[@]} -eq 0 ]; do
-        note "No USB stick found. Plug one in (8 GB or more; everything on it will be erased)."
-        tty_read choice "Press Enter when it's in, or q to stop: "
-        [ "$choice" != q ] || die "No stick was written."
-        mapfile -t disks < <(usb_disks)
-    done
-    for i in "${!disks[@]}"; do
-        read -r name bytes model <<<"${disks[i]}"
-        printf '    %d) /dev/%s  %s GB  %s\n' $((i + 1)) "$name" "$((bytes / 1000000000))" "$model"
-    done
-    tty_read choice "Which stick (1-${#disks[@]})? "
-    [[ $choice =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le ${#disks[@]} ] || die "No stick chosen; nothing was written."
-    read -r name bytes model <<<"${disks[choice - 1]}"
-    dev=/dev/$name
-    [ "$bytes" -ge "$MIN_STICK" ] || die "$dev holds $((bytes / 1000000000)) GB; Tails needs 8 GB or more. Nothing was written."
-    warn "EVERYTHING on $dev ($model, $((bytes / 1000000000)) GB) will be erased."
-    tty_read choice "Type its name, $name, to go on: "
-    [ "$choice" = "$name" ] || die "That isn't $name; nothing was written."
-
-    # Its partitions may be mounted (USB automount): unmount them first
-    while read -r part mnt; do
-        [ -n "$mnt" ] || continue
-        sudo umount "$part" || die "Couldn't unmount $part ($mnt); close what uses it and run tails-usb again."
-    done < <(lsblk -lnpo NAME,MOUNTPOINTS "$dev" | awk 'NF > 1')
-
-    say "Writing Tails $v to $dev (a few minutes)"
-    write_and_check "$img" "$dev" || die "Writing didn't work. Try again, or another stick."
+    stick_write "$img" "$MIN_STICK" "Tails $v"
     note "Written and read back: the stick holds exactly the checked image."
 
     cat <<EOF

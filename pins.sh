@@ -26,8 +26,10 @@ TB_KEY_URL=https://keys.openpgp.org/vks/v1/by-fingerprint/EF6E286DDA85EA2A4BA7DE
 #   Safest column and slider pref names are the same as 15's
 TB_SAFEST_VERSION=16
 
-# Whonix (extras/whonix.sh). Patrick Schleizer, signs all Whonix releases.
+# Whonix (extras/whonix.sh). Patrick Schleizer, signs all Whonix releases, and
+# Kicksecure's ISO (extras/get-iso.sh; its .asc, by this key's signing subkey).
 # checked: 2026-10-26  whonix.org signing key page; keys.openpgp.org
+#   2026-11-05  Kicksecure-LXQt-18.2.4.2.Intel_AMD64.iso.asc made by its subkey 6E979B28A6F37C43BE30AFA1CB8D50BB77BB3C48
 WHONIX_FPR=916B8D99C38EAF5E8ADC7A2A8D66066A2EEACCDA
 WHONIX_KEY_URL=https://keys.openpgp.org/vks/v1/by-fingerprint/916B8D99C38EAF5E8ADC7A2A8D66066A2EEACCDA
 # whonix.sh edits the disk images (root partition named "primary",
@@ -36,30 +38,37 @@ WHONIX_KEY_URL=https://keys.openpgp.org/vks/v1/by-fingerprint/916B8D99C38EAF5E8A
 # checked: 2026-10-26  Whonix 18.2.4.2 LXQt
 WHONIX_TESTED_VERSION=18
 
-# Debian's installer images (prep/make-install-iso.sh): the Debian CD signing
+# Debian's installer images (prep/make-install-iso.sh, extras/get-iso.sh): the Debian CD signing
 # key, which signs the SHA512SUMS of every release image (Debian 13's included).
 # checked: 2026-10-30  debian.org/CD/verify; keyring.debian.org; a good signature on 13.7.0's SHA512SUMS
 DEBIAN_CD_FPR=DF9B9C49EAA9298432589D76DA87E80D6294BE9B
 DEBIAN_CD_KEY_URL='https://keyring.debian.org/pks/lookup?op=get&search=0xDF9B9C49EAA9298432589D76DA87E80D6294BE9B'
 
-# Tails (extras/tails-usb.sh). The Tails signing key, which signs every Tails
+# Tails (extras/tails-usb.sh, extras/get-iso.sh). The Tails signing key, which signs every Tails
 # image (expires 2028-10-22; Tails says it extends it as needed).
 # checked: 2026-10-29  tails.net/doc/about/openpgp_keys; tails.net/install/expert; keys.openpgp.org
 TAILS_FPR=A490D0F4D311A4153E2BB7CADBB802B258ACD84F
 TAILS_KEY_URL=https://tails.net/tails-signing.key
 
-# Kali Linux (extras/distro-vm.sh). Kali's archive key, which also signs the
+# Kali Linux (extras/get-iso.sh, extras/distro-vm.sh). Kali's archive key, which also signs the
 # SHA256SUMS of every image in cdimage.kali.org/current (rsa4096, 2025).
 # checked: 2026-11-04  kali.org/docs/introduction/download-official-kali-linux-images;
 #   archive.kali.org/archive-key.asc; keyserver.ubuntu.com; a good signature on 2026.3's SHA256SUMS
 KALI_FPR=827C8569F2518CC677FECA1AED65462EC8D5E4C5
 KALI_KEY_URL=https://archive.kali.org/archive-key.asc
 
-# Arch Linux's install image (extras/distro-vm.sh). Pierre Schmitz, who signs
+# Arch Linux's install image (extras/get-iso.sh, extras/distro-vm.sh). Pierre Schmitz, who signs
 # every monthly ISO; archlinux.org's release list names him as its signer.
 # checked: 2026-11-04  archlinux.org/download; archlinux.org/releng/releases/json; WKD pierre@archlinux.org
 ARCH_ISO_FPR=3E80CA1A8B89F69CBA57D98A76A5EF9054449A5C
 ARCH_ISO_KEY_URL=https://keys.openpgp.org/vks/v1/by-fingerprint/3E80CA1A8B89F69CBA57D98A76A5EF9054449A5C
+
+# Parrot OS (extras/get-iso.sh). The Parrot Project's key, which signs each
+# release's signed-hashes.txt (and its apt repository); expires 2028-11-03.
+# checked: 2026-11-05  deb.parrot.sh/parrot/misc/parrotsec.gpg; docs.parrot.sh
+#   hash-and-key-verification; a good signature on 7.4's signed-hashes.txt
+PARROT_FPR=B711822346552E4D92DA02DF7A8286AF0E81EE4A
+PARROT_KEY_URL=https://deb.parrot.sh/parrot/misc/parrotsec.gpg
 
 # yt-dlp (extras/yt-dlp.sh). Simon Sawicki (yt-dlp signing key), which signs the
 # SHA2-256SUMS of every release (rsa4096, 2023-02-26). Fetched from

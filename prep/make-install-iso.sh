@@ -59,7 +59,7 @@
 . "$WREN_DIR/lib/appimage.sh"
 . "$WREN_DIR/lib/install-iso.sh"
 . "$WREN_DIR/lib/offline.sh"
-. "$WREN_DIR/lib/tails.sh"
+. "$WREN_DIR/lib/usb-stick.sh"
 not_root
 
 user=$(id -un) keymap=us locale=en_US.UTF-8 timezone=$(this_timezone) erase=true encrypt=true autologin=false simplesway=false scripts='' out='' choice=''
