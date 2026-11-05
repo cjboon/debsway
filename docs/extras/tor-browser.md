@@ -50,6 +50,13 @@ sudo apt install --no-install-recommends xwayland torbrowser-launcher xz-utils
 printf '%s\n' '# >>> Wren Linux: DNS through the resolv.conf symlink >>>' \
     '@{run}/resolvconf/resolv.conf r,' '@{run}/NetworkManager/{,no-stub-}resolv.conf r,' \
     '@{run}/systemd/resolve/{,stub-}resolv.conf r,' '# <<< Wren Linux <<<' | sudo tee -a /etc/apparmor.d/local/torbrowser.Tor.tor
+# Tor Browser 16 keeps torrc-defaults (where its bridges' programs are named),
+# geoip and geoip6 in TorBrowser/Tor, which the package's profile doesn't let Tor
+# read: without this, every bridge fails ("there is no configured transport")
+printf '%s\n' "# >>> Wren Linux: what Tor Browser 16 keeps in TorBrowser/Tor >>>" \
+    'owner @{torbrowser_home_dir}/TorBrowser/Tor/torrc-defaults r,' \
+    'owner @{torbrowser_home_dir}/TorBrowser/Tor/geoip r,' \
+    'owner @{torbrowser_home_dir}/TorBrowser/Tor/geoip6 r,' '# <<< Wren Linux <<<' | sudo tee -a /etc/apparmor.d/local/torbrowser.Tor.tor
 sudo apparmor_parser -r /etc/apparmor.d/torbrowser.Tor.tor
 
 # Safest, JavaScript off, before its first start: a user.js in the profile

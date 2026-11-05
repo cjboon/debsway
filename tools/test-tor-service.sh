@@ -14,6 +14,7 @@ set +e +o pipefail
 T=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
 trap 'rm -rf "$T"' EXIT
 fails=0
+not() { ! "$@"; }
 check() { # DESCRIPTION CONDITION-COMMAND...
     local what=$1
     shift
@@ -57,7 +58,30 @@ done
 # Tor Browser's AppArmor fix: taken out again on --remove, and the profile read
 # again, so the loaded rules lose it now rather than at the next reboot
 check "tor-browser.sh reloads Tor's AppArmor profile after taking its lines out" \
-    bash -c 'sed -n "/^unfix_apparmor_dns() {/,/^}/p" "$1" | grep -q "apparmor_parser -r /etc/apparmor.d/torbrowser.Tor.tor"' _ "$HERE/extras/tor-browser.sh"
+    bash -c 'sed -n "/^unfix_apparmor_dns() {/,/^}/p" "$1" | grep -q "apparmor_parser -r \"\$TOR_PROFILE\""' _ "$HERE/extras/tor-browser.sh"
+# Tor Browser 16 keeps torrc-defaults (the bridges' ClientTransportPlugin lines),
+# geoip and geoip6 in TorBrowser/Tor, where the package's profile doesn't let Tor
+# read them: the fix adds reading those three, once, and --remove takes it out
+A=$T/aa
+mkdir -p "$A/bin"
+printf '#!/bin/sh\n[ "$1" = apparmor_parser ] && { echo "$*" >>"%s/parsed"; exit 0; }\nexec "$@"\n' "$A" >"$A/bin/sudo"
+chmod +x "$A/bin/sudo"
+: >"$A/profile"
+printf '%s\n' '# by hand' 'owner @{torbrowser_home_dir}/TorBrowser/Tor/geoip r,' >"$A/local"
+aa() { PATH="$A/bin:$PATH" bash -c 'note() { :; }
+    eval "$(sed -n "/^TOR_PROFILE=/,/geoip6 r,.)$/p; /^fix_apparmor_dns() {/,/^}/p; /^unfix_apparmor_dns() {/,/^}/p" "$1")"
+    TOR_PROFILE=$2/profile TOR_LOCAL=$2/local; '"$1" _ "$HERE/extras/tor-browser.sh" "$A"; }
+aa fix_apparmor_dns
+aa fix_apparmor_dns
+check "Tor Browser 16: Tor may read its torrc-defaults, geoip and geoip6 in TorBrowser/Tor" bash -c '
+    for f in torrc-defaults geoip geoip6; do
+        [ "$(grep -cx "owner @{torbrowser_home_dir}/TorBrowser/Tor/$f r," "$1")" = 1 ] || exit 1
+    done' _ "$A/local"
+check "...read only, and nothing else of TorBrowser/Tor (the bridge programs were allowed already)" \
+    test "$(grep -c "TorBrowser/Tor/" "$A/local")" = 3
+check "...the profile read again so it applies now" grep -q "apparmor_parser -r $A/profile" "$A/parsed"
+aa unfix_apparmor_dns
+check "...and --remove takes it out" not grep -q "TorBrowser/Tor/torrc-defaults" "$A/local"
 check "OnionShare masks the tor service only when nobody needs it" \
     bash -c 'grep -B8 "systemctl mask tor.service" "$1" | grep -q "system_tor_wanted"' _ "$HERE/extras/onionshare.sh"
 

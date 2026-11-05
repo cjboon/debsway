@@ -67,12 +67,22 @@ disable_contrib() {
 # is usually a symlink and AppArmor checks the real file. Plain Tor never
 # notices (relays are IP addresses), but webtunnel and other bridges given
 # as hostnames fail with "Temporary failure in name resolution".
+TOR_PROFILE=/etc/apparmor.d/torbrowser.Tor.tor
 TOR_LOCAL=/etc/apparmor.d/local/torbrowser.Tor.tor
 DNS_BEGIN='# >>> Wren Linux: DNS through the resolv.conf symlink >>>'
 DNS_END='# <<< Wren Linux <<<'
+# Tor Browser 16 moved torrc-defaults, geoip and geoip6 from TorBrowser/Data/Tor
+# to TorBrowser/Tor, where the package's profile (torbrowser-launcher 0.3.7)
+# doesn't let Tor read them. torrc-defaults holds the ClientTransportPlugin
+# lines, so every bridge then fails: "there is no configured transport called
+# snowflake" (obfs4, webtunnel too). Only reading those three files is added.
+TB16_BEGIN='# >>> Wren Linux: what Tor Browser 16 keeps in TorBrowser/Tor >>>'
+TB16_RULES=('owner @{torbrowser_home_dir}/TorBrowser/Tor/torrc-defaults r,'
+    'owner @{torbrowser_home_dir}/TorBrowser/Tor/geoip r,'
+    'owner @{torbrowser_home_dir}/TorBrowser/Tor/geoip6 r,')
 
 fix_apparmor_dns() {
-    [ -f /etc/apparmor.d/torbrowser.Tor.tor ] || return 0
+    [ -f "$TOR_PROFILE" ] || return 0
     if ! sudo grep -qxF "$DNS_BEGIN" "$TOR_LOCAL" 2>/dev/null; then
         printf '%s\n' "$DNS_BEGIN" \
             '@{run}/resolvconf/resolv.conf r,' \
@@ -81,17 +91,26 @@ fix_apparmor_dns() {
             "$DNS_END" | sudo tee -a "$TOR_LOCAL" >/dev/null
         note "Let Tor's AppArmor profile read resolv.conf, for bridges given as hostnames."
     fi
+    if ! sudo grep -qxF "$TB16_BEGIN" "$TOR_LOCAL" 2>/dev/null; then
+        # (the same rules added by hand go: they would be there twice)
+        for r in "${TB16_RULES[@]}"; do
+            sudo sed -i "\\|^$r\$|d" "$TOR_LOCAL" 2>/dev/null || true
+        done
+        printf '%s\n' "$TB16_BEGIN" "${TB16_RULES[@]}" "$DNS_END" | sudo tee -a "$TOR_LOCAL" >/dev/null
+        note "Let Tor's AppArmor profile read Tor Browser 16's torrc-defaults: its bridges' programs are named there."
+    fi
     if [ -d /sys/kernel/security/apparmor ]; then
-        sudo apparmor_parser -r /etc/apparmor.d/torbrowser.Tor.tor
+        sudo apparmor_parser -r "$TOR_PROFILE"
     fi
 }
 
 unfix_apparmor_dns() {
     [ -f "$TOR_LOCAL" ] || return 0
     sudo sed -i "\\|^$DNS_BEGIN\$|,\\|^$DNS_END\$|d" "$TOR_LOCAL"
+    sudo sed -i "\\|^$TB16_BEGIN\$|,\\|^$DNS_END\$|d" "$TOR_LOCAL"
     # Loaded rules stay until the profile is read again: read it now, without them
-    if [ -f /etc/apparmor.d/torbrowser.Tor.tor ] && [ -d /sys/kernel/security/apparmor ]; then
-        sudo apparmor_parser -r /etc/apparmor.d/torbrowser.Tor.tor || true
+    if [ -f "$TOR_PROFILE" ] && [ -d /sys/kernel/security/apparmor ]; then
+        sudo apparmor_parser -r "$TOR_PROFILE" || true
     fi
 }
 
