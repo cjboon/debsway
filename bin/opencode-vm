@@ -39,9 +39,10 @@ case "$cmd" in
 esac
 
 # Started from wmenu or another launcher there is no terminal to talk in, and
-# ssh would quietly give up: open one in sway and run again inside it
+# ssh would quietly give up: open one in sway and run again inside it. (No
+# controlling terminal, /dev/tty: what sway starts gets tty1 as stdin, out of sight)
 if [ "$cmd" = connect ] || [ "$cmd" = shell ]; then
-    if [ ! -t 0 ] && [ ! -t 1 ] && [ -n "${WAYLAND_DISPLAY:-}" ] && command -v foot >/dev/null; then
+    if ! { : </dev/tty; } 2>/dev/null && [ -n "${WAYLAND_DISPLAY:-}" ] && command -v foot >/dev/null; then
         exec foot --title="opencode (VM)" env OPENCODE_VM_HOLD=1 "$0" "$cmd"
     fi
 fi

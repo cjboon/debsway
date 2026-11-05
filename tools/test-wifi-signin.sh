@@ -78,11 +78,18 @@ printf '#!/bin/sh\necho "foot $*" >>"%s/calls"\n' "$T" >"$T/fake/foot"
 chmod +x "$T/fake/foot"
 mkdir -p "$T/home/.config/wren"
 : >"$T/home/.config/wren/secure-dns-strict"
-wsmenu() { HOME=$T/home XDG_STATE_HOME=$T/xstate WAYLAND_DISPLAY=wayland-1 PATH=$T/fake:/usr/bin:/bin bash "$T/wifi-signin" </dev/null 2>>"$T/said"; }
+# (setsid: the menu starts it with swaymsg exec, so no controlling terminal)
+wsmenu() { HOME=$T/home XDG_STATE_HOME=$T/xstate WAYLAND_DISPLAY=wayland-1 PATH=$T/fake:/usr/bin:/bin setsid -w bash "$T/wifi-signin" </dev/null 2>>"$T/said"; }
 echo on >"$T/state"; : >"$T/calls"
 wsmenu
 check "off asks for a password, no terminal (the menu): it opens a window to ask in" grep -q "^foot .*WREN_SIGNIN_WINDOW=1 $T/wifi-signin" "$T/calls"
 check "...and switches nothing itself" bash -c '! grep -q "secure-dns off" "$1"' _ "$T/calls"
+# sway started on tty1 hands that console to what it starts: stdin a terminal, but
+# no controlling one, so sudo couldn't ask there
+: >"$T/calls"
+HOME=$T/home XDG_STATE_HOME=$T/xstate WAYLAND_DISPLAY=wayland-1 PATH=$T/fake:/usr/bin:/bin \
+    script -qec "setsid -w bash $T/wifi-signin" /dev/null </dev/null >/dev/null 2>&1
+check "...also when sway was started on tty1 (stdin that console, out of sight)" grep -q "^foot .*WREN_SIGNIN_WINDOW=1 $T/wifi-signin" "$T/calls"
 echo off >"$T/state"; : >"$T/calls"
 wsmenu
 check "...secure DNS off already: nothing to ask, no window for that" bash -c '! grep -q "^foot" "$1" && grep -q "incognito --no-audio --signin" "$1"' _ "$T/calls"

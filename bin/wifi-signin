@@ -26,8 +26,9 @@ say() {
 [ -x "$INCOGNITO" ] || { say "the incognito window isn't set up: wrenctl part incognito"; exit 1; }
 
 # You chose that switching secure DNS off asks for your password (parts/secure-dns.sh):
-# from the menu there is no terminal to ask in, so it opens a window for that
-if [ -e "$HOME/.config/wren/secure-dns-strict" ] && [ ! -t 0 ] && [ -z "${WREN_SIGNIN_WINDOW:-}" ] &&
+# from the menu there is no terminal to ask in (sudo asks on /dev/tty, so that is
+# what counts, not stdin), so it opens a window for that
+if [ -e "$HOME/.config/wren/secure-dns-strict" ] && ! { : </dev/tty; } 2>/dev/null && [ -z "${WREN_SIGNIN_WINDOW:-}" ] &&
     [ -n "${WAYLAND_DISPLAY:-}" ] && command -v foot >/dev/null &&
     [ -x "$SECURE_DNS" ] && [ "$("$SECURE_DNS" status)" = on ]; then
     exec foot --app-id=wren-run --title="Wi-Fi sign-in" env WREN_SIGNIN_WINDOW=1 "$(readlink -f -- "$0")"

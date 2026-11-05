@@ -44,17 +44,24 @@ run status
 check "a known command is passed through to the session" \
     grep -qx "sudo -n -u claude-vm /usr/local/libexec/claude-vm-session status" "$T/calls"
 
-# From wmenu: no terminal on stdin or stdout, in sway
+# From wmenu: no controlling terminal (setsid, as sway's exec), in sway
+launch() { setsid -w bash "$HERE/bin/claude-vm" "$@"; }
 : >"$T/calls"
-WAYLAND_DISPLAY=wayland-1 run </dev/null >/dev/null 2>&1
+WAYLAND_DISPLAY=wayland-1 launch </dev/null >/dev/null 2>&1
 check "from a launcher, claude-vm opens a foot window and runs itself in it" \
     grep -qx "foot --title=Claude (VM) env CLAUDE_VM_HOLD=1 $HERE/bin/claude-vm connect" "$T/calls"
 check "and doesn't start the session outside it" bash -c "! grep -q '^sudo' '$T/calls'"
 : >"$T/calls"
-WAYLAND_DISPLAY=wayland-1 run shell </dev/null >/dev/null 2>&1
+WAYLAND_DISPLAY=wayland-1 launch shell </dev/null >/dev/null 2>&1
 check "claude-vm shell does the same" grep -q "^foot .*/claude-vm shell\$" "$T/calls"
 : >"$T/calls"
-WAYLAND_DISPLAY=wayland-1 run status </dev/null >/dev/null 2>&1
+# sway started on tty1 hands that console to what it starts: stdin a terminal,
+# but no controlling one
+WAYLAND_DISPLAY=wayland-1 script -qec "setsid -w bash $HERE/bin/claude-vm" /dev/null </dev/null >/dev/null 2>&1
+check "...also when sway was started on tty1 (stdin that console, out of sight)" \
+    grep -qx "foot --title=Claude (VM) env CLAUDE_VM_HOLD=1 $HERE/bin/claude-vm connect" "$T/calls"
+: >"$T/calls"
+WAYLAND_DISPLAY=wayland-1 launch status </dev/null >/dev/null 2>&1
 check "a command that only prints (status) opens no window" bash -c "! grep -q '^foot' '$T/calls'"
 : >"$T/calls"
 run </dev/null >/dev/null 2>&1

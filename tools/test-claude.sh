@@ -125,9 +125,17 @@ printf '#!/bin/sh\necho "foot $*" >"%s/foot-ran"\n' "$C" >"$C/fake/foot"
 chmod +x "$C/fake/foot"
 cp "$C/claude-regular" "$C/home/.local/bin/"
 rm -f "$C/foot-ran"
+# (setsid: a launcher's programs have no controlling terminal, as sway's exec does)
 (cd "$C/elsewhere" && env -u CLAUDE_CHOOSER_WINDOW WAYLAND_DISPLAY=wayland-9 PATH="$C/fake:$PATH" HOME="$C/home" WREN_PASSWD="$C/passwd" \
-    bash "$HERE/bin/claude" </dev/null >/dev/null 2>&1)
+    setsid -w bash "$HERE/bin/claude" </dev/null >/dev/null 2>&1)
 check "claude from a launcher (Super+d): it opens a foot window and runs in it" \
+    bash -c 'grep -q "^foot --title=Claude env CLAUDE_CHOOSER_WINDOW=1 .*/bin/claude" "$1"' _ "$C/foot-ran"
+rm -f "$C/foot-ran"
+# sway started on tty1 hands that console to what it starts: stdin a terminal, but
+# no controlling one
+(cd "$C/elsewhere" && env -u CLAUDE_CHOOSER_WINDOW WAYLAND_DISPLAY=wayland-9 PATH="$C/fake:$PATH" HOME="$C/home" WREN_PASSWD="$C/passwd" \
+    script -qec "setsid -w bash $HERE/bin/claude" /dev/null </dev/null >/dev/null 2>&1)
+check "...also when sway was started on tty1 (stdin that console, out of sight)" \
     bash -c 'grep -q "^foot --title=Claude env CLAUDE_CHOOSER_WINDOW=1 .*/bin/claude" "$1"' _ "$C/foot-ran"
 rm -f "$C/foot-ran" "$C/ran"
 (cd "$C/elsewhere" && env -u CLAUDE_CHOOSER_WINDOW WAYLAND_DISPLAY=wayland-9 PATH="$C/fake:$PATH" HOME="$C/home" WREN_PASSWD="$C/passwd" \
