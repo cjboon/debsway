@@ -80,7 +80,7 @@ checked with `sway -C` before it's kept.
 | `needrestart.sh` | needrestart, libnotify-bin | After every update, lists the running programs that still use outdated libraries (list only: it never restarts anything). Check any time: `sudo needrestart` |
 | `sysctl-hardening.sh` | (none) | Kernel and network settings in the spirit of Kicksecure (`data/sysctl-hardening.conf`): kernel addresses hidden, only your own child programs can be traced, no kexec, SysRq limited, no io_uring, stricter file and network defaults. Applies now and at every boot. See [Kernel hardening](#kernel-hardening) |
 | `module-blacklist.sh` | (none) | Blocks rare network protocols, old filesystems and FireWire from loading (`data/module-blacklist.conf`) |
-| `boot-hardening.sh` | (none) | Adds Kicksecure's boot parameters to GRUB (`slab_nomerge init_on_alloc=1 init_on_free=1 page_alloc.shuffle=1 randomize_kstack_offset=on vsyscall=none debugfs=off`); applies after a reboot |
+| `boot-hardening.sh` | (none) | Adds Kicksecure's boot parameters to GRUB (`slab_nomerge init_on_alloc=1 init_on_free=1 page_alloc.shuffle=1 randomize_kstack_offset=on vsyscall=none debugfs=off intel_iommu=on iommu.passthrough=0 iommu.strict=1`); applies after a reboot |
 | `grub-colors.sh` | (none) | GRUB's boot menu: a red box with white text, the chosen entry yellow, black around it (`/etc/grub.d/06_wren_colors`); colours only |
 | `ufw.sh` | ufw | Firewall: blocks everything incoming, allows outgoing |
 | `power-profiles-daemon.sh` | power-profiles-daemon | `powerprofilesctl set power-saver \| balanced \| performance` (skips itself if tlp is installed) |
@@ -194,7 +194,9 @@ checked against this Debian:
   `kernel.sysrq = 438` back (edit `/etc/sysctl.d/60-wren-hardening.conf`).
 - **`boot-hardening.sh`**: kernel parameters that clear memory when it is
   handed out and freed (`init_on_free` costs a few percent of speed) and
-  make the allocator harder to predict. Needs GRUB (other boot loaders are
+  make the allocator harder to predict, and the IOMMU on and strict, so a
+  device (Thunderbolt, USB4, a Wi-Fi card) reaches only the memory its driver
+  gave it (with VT-d or AMD-Vi on in the firmware, see `docs/bios.md`). Needs GRUB (other boot loaders are
   skipped with a note) and one reboot. If the system ever doesn't start,
   press `e` on the GRUB entry, delete the parameters from the line that
   starts with `linux`, boot, then run `bash parts/boot-hardening.sh --remove`.

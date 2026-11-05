@@ -101,7 +101,8 @@ the **fingerprint reader**, the **SD card reader**, **Wake on LAN**, and
 A Thunderbolt (or USB4) device can ask to read the computer's memory directly.
 If you use the port, set its security to "User Authorization" or "Secure
 Connect" rather than "No security", and switch on **"Kernel DMA protection"**
-or **"Pre-boot DMA protection"** with the IOMMU (VT-d/AMD-Vi, above). Wren
+or **"Pre-boot DMA protection"** with the IOMMU (VT-d/AMD-Vi, above).
+`parts/boot-hardening.sh` then has Linux use the IOMMU in its strict mode. Wren
 Linux already blocks FireWire, the older port that could do the same.
 
 **Remote management and tracking agents**

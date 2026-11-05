@@ -2,10 +2,17 @@
 # Kernel boot parameters from Kicksecure's list, added to GRUB:
 #   slab_nomerge init_on_alloc=1 init_on_free=1 page_alloc.shuffle=1
 #   randomize_kstack_offset=on vsyscall=none debugfs=off
+#   intel_iommu=on iommu.passthrough=0 iommu.strict=1
 # Memory is cleared when it is handed out and freed (init_on_free costs a
 # few percent of speed, and leaves less behind in RAM), allocator layouts are
 # harder to predict, the old vsyscall page is gone, and debugfs is off (so
 # tools that read it, like powertop and perf probes, stop working).
+# The IOMMU (VT-d, AMD-Vi) is on and strict: a device (Thunderbolt, USB4, a
+# Wi-Fi card) reads and writes only the memory its driver handed it, and loses
+# it again as soon as the driver is done. Debian leaves Intel's off unless the
+# firmware asks, and AMD's lets go late. Kicksecure's riskier ones are left
+# out: amd_iommu=force_isolation and efi=disable_early_pci_dma stop some
+# computers from starting.
 # It needs GRUB and a reboot; check afterwards with: cat /proc/cmdline
 # Usage: bash boot-hardening.sh [--remove]
 # status: file:/etc/default/grub.d/60-wren-hardening.cfg
@@ -13,7 +20,7 @@
 need_user
 
 CONF=/etc/default/grub.d/60-wren-hardening.cfg
-PARAMS='slab_nomerge init_on_alloc=1 init_on_free=1 page_alloc.shuffle=1 randomize_kstack_offset=on vsyscall=none debugfs=off'
+PARAMS='slab_nomerge init_on_alloc=1 init_on_free=1 page_alloc.shuffle=1 randomize_kstack_offset=on vsyscall=none debugfs=off intel_iommu=on iommu.passthrough=0 iommu.strict=1'
 
 if [ "${1:-}" = --remove ]; then
     sudo rm -f "$CONF"
