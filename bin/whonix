@@ -16,6 +16,24 @@ fail() {
     exit 1
 }
 running() { [ "$($v domstate "$1" 2>/dev/null)" = running ]; }
+# The Gateway's outside network (extras/whonix.sh gives it a card of Wren Linux's):
+# passt with Whonix's fixed addresses, IPv4 only, no DHCP, nothing of this computer
+# mapped in, and 10.0.2.3 where only DNS goes on, to the resolver this computer
+# uses. It ends when the Gateway does (--one-off). A Gateway set up before this
+# has libvirt's own and is left as it is.
+GW_NET=$HOME/.local/state/wren
+gateway_net() {
+    $v dumpxml --inactive Whonix-Gateway 2>/dev/null | grep -q 'wren-gw-net' || return 0
+    running Whonix-Gateway && return 0
+    command -v passt >/dev/null || fail "passt is missing. Run: wrenctl install whonix"
+    mkdir -p "$GW_NET"
+    chmod 700 "$GW_NET"
+    rm -f "$GW_NET/whonix-gateway-net.sock"
+    passt --quiet --one-off --socket "$GW_NET/whonix-gateway-net.sock" --pid "$GW_NET/whonix-gateway-net.pid" \
+        --ipv4-only --address 10.0.2.15 --netmask 24 --gateway 10.0.2.2 \
+        --no-map-gw --dns-forward 10.0.2.3 --no-dhcp ${WHONIX_NET_PCAP:+--pcap "$WHONIX_NET_PCAP"} ||
+        fail "couldn't start the Gateway's network (passt)."
+}
 up() {
     running "$1" && return 0
     # (its error message, not its output)
@@ -47,8 +65,8 @@ stop() {
 }
 
 case "${1:-start}" in
-    start) up Whonix-Gateway && up Whonix-Workstation && console Whonix-Workstation ;;
-    gateway) up Whonix-Gateway && console Whonix-Gateway ;;
+    start) gateway_net && up Whonix-Gateway && up Whonix-Workstation && console Whonix-Workstation ;;
+    gateway) gateway_net && up Whonix-Gateway && console Whonix-Gateway ;;
     stop) stop ;;
     *) echo "usage: whonix [start|gateway|stop]" >&2; exit 2 ;;
 esac

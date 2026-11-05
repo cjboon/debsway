@@ -21,6 +21,7 @@
 #
 # Usage: bash whonix.sh            download (if needed) and install
 #        bash whonix.sh --fetch    only download and check, for later
+#        bash whonix.sh --bridges  installed already: choose the Gateway's bridge again
 #        bash whonix.sh --remove
 #        bash whonix.sh --manual   the steps to do it by hand
 # summary: Whonix Gateway + Workstation VMs (1.9 GB download)
@@ -28,6 +29,9 @@
 # status: bin:whonix
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$WREN_DIR/lib/appimage.sh"
+# The Gateway's network card of Wren Linux's (see "the Gateway's outside network")
+GW_NET_SOCK="$HOME/.local/state/wren/whonix-gateway-net.sock"
+GW_NET_MAC=52:54:00:57:52:4e
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
@@ -102,15 +106,24 @@ fetch_whonix() {
 
 # ---- editing the images before first boot ----
 
-# image_put IMAGE [--exec] FILE DEST...: copies each local FILE to DEST
-# (root:root, 0644, or 0755 after --exec; directories created) in the image's
-# root filesystem. The qcow2 is
+# image_put IMAGE [--exec] FILE DEST... [--edit DEST SED-EXPR]...: copies each
+# local FILE to DEST (root:root, 0644, or 0755 after --exec; directories
+# created) in the image's root filesystem; --edit changes a file already there
+# with sed (and fails if it isn't there). The qcow2 is
 # turned into a sparse raw file for debugfs, checked with e2fsck, and
 # turned back.
 image_put() {
-    local img=$1 raw="$1.raw" cmds start fs dir src dest bad mode
+    local img=$1 raw="$1.raw" cmds start fs dir src dest bad mode need free
     shift
-    qemu-img convert -O raw "$img" "$raw"
+    # Room for the raw copy and the new qcow2, each about the size of what the
+    # image holds: checked first, so a full disk never leaves a cut-off image
+    # in place of the real one
+    need=$(qemu-img info --output=json "$img" | python3 -I -c 'import json,sys; print(json.load(sys.stdin)["actual-size"] * 2 // 1048576 + 512)')
+    free=$(df -Pm "${img%/*}" | awk 'NR == 2 { print $4 }')
+    [ "$free" -ge "$need" ] ||
+        die "Editing $img needs about $need MB free next to it; there are $free. Nothing was changed."
+    qemu-img convert -O raw "$img" "$raw" ||
+        { rm -f "$raw"; die "Couldn't unpack $img (is the disk full?). Nothing was changed."; }
     start=$(sfdisk -d "$raw" | sed -n 's/.*start= *\([0-9]*\),.*name="primary".*/\1/p')
     [ -n "$start" ] || { rm -f "$raw"; die "Couldn't find the root partition in $img."; }
     fs="$raw?offset=$((start * 512))"
@@ -118,8 +131,17 @@ image_put() {
     while [ $# -ge 2 ]; do
         mode=0644
         if [ "$1" = --exec ]; then mode=0755; shift; fi
-        src=$1 dest=$2
-        shift 2
+        if [ "$1" = --edit ]; then
+            src=$(mktemp)
+            debugfs -R "cat $2" "$fs" >"$src" 2>/dev/null && [ -s "$src" ] ||
+                { rm -f "$raw" "$src"; die "Couldn't read $2 from $img."; }
+            sed -i -e "$3" "$src"
+            dest=$2
+            shift 3
+        else
+            src=$1 dest=$2
+            shift 2
+        fi
         dir=$(dirname -- "$dest")
         if ! debugfs -R "stat $dir" "$fs" 2>/dev/null | grep -q 'Type: directory'; then
             printf 'mkdir %s\nsif %s uid 0\nsif %s gid 0\nsif %s mode 040755\n' "$dir" "$dir" "$dir" "$dir" >>"$cmds"
@@ -148,7 +170,11 @@ image_put() {
         rm -f "$raw"
         die "The filesystem in $img didn't check out after editing it."
     fi
-    qemu-img convert -O qcow2 -o cluster_size=2M,extended_l2=on "$raw" "$img.new"
+    # (a failed write must never take the image's place)
+    if ! qemu-img convert -O qcow2 -o cluster_size=2M,extended_l2=on "$raw" "$img.new"; then
+        rm -f "$raw" "$img.new"
+        die "Couldn't write $img back (is the disk full?). It is unchanged."
+    fi
     rm -f "$raw"
     mv "$img.new" "$img"
 }
@@ -180,25 +206,99 @@ workstation_feather() {
     FEATHER_VERSION=$version
 }
 
-# Prints "SOURCE DEST" for the file to put in the Gateway, or nothing when
-# the Gateway should just connect to Tor by itself at first boot
+# ---- the Gateway's outside network ----
+# Whonix's libvirt file gives the Gateway <interface type='user'>: libvirt then
+# starts passt with its defaults, and libvirt can't give passt any other option.
+# With those defaults, the Gateway's address for your router leads to this
+# computer's loopback instead, every port of it (a hacked Gateway could reach
+# what listens only there: Tor's port, the VMs' consoles, ...), and nothing
+# answers DNS, so Snowflake (and webtunnel, meek) never connects: Whonix's
+# "nameserver 10.0.2.3" is VirtualBox's own DNS. So the Gateway gets a network
+# card of Wren Linux's instead, connected to a passt that bin/whonix starts with
+# Whonix's fixed addresses, IPv4 only, no DHCP, nothing of this computer mapped
+# in (--no-map-gw), and one address, 10.0.2.3, where only DNS (port 53) is
+# forwarded, to the resolver this computer uses (Unbound, with secure DNS on).
+# Its socket is in your home: passt's AppArmor profile allows it there
+# (GW_NET_SOCK and GW_NET_MAC, at the top, for --manual too).
+
+# gateway_net_xml IN OUT [SLOT]: the Gateway's libvirt file IN without its
+# libvirt-run network card; with SLOT (a free slot on the main PCI bus, as
+# 0x1e), with Wren Linux's card in it instead, on that bus: the main bus is
+# enumerated before the root ports libvirt puts its cards behind, so it is eth0,
+# the Gateway's outside card. Run on a file that has it already, it is the same.
+gateway_net_xml() {
+    python3 -I - "$1" "$2" "${3:-}" "$GW_NET_SOCK" "$GW_NET_MAC" <<'PYX'
+import json, re, sys
+src, out, slot, sock, mac = sys.argv[1:6]
+x = open(src).read()
+x = re.sub(r"\n?[ \t]*<interface type=['\"]user['\"]>.*?</interface>", "", x, flags=re.S)
+x = re.sub(r"\n?[ \t]*<qemu:commandline>.*?</qemu:commandline>", "", x, flags=re.S)
+if "xmlns:qemu=" not in x:
+    x = re.sub(r"<domain\b", "<domain xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0'", x, count=1)
+if slot:
+    assert re.fullmatch(r"0x[0-9a-f]{2}", slot), slot
+    netdev = {"type": "stream", "id": "wren-gw-netdev", "server": False, "reconnect-ms": 1000,
+              "addr": {"type": "unix", "path": sock}}
+    device = {"driver": "virtio-net-pci", "netdev": "wren-gw-netdev", "id": "wren-gw-net",
+              "mac": mac, "bus": "pcie.0", "addr": slot}
+    args = "".join("    <qemu:arg value='%s'/>\n" % a.replace("&", "&amp;").replace("'", "&apos;")
+                   for a in ("-netdev", json.dumps(netdev), "-device", json.dumps(device)))
+    x = re.sub(r"</domain>\s*$", "  <qemu:commandline>\n%s  </qemu:commandline>\n</domain>\n" % args, x)
+open(out, "w").write(x)
+PYX
+}
+
+# gateway_net_define XML: defines the Gateway from XML with Wren Linux's network
+# card, in a slot of the main PCI bus that libvirt left free
+gateway_net_define() {
+    local x=$1 slot
+    gateway_net_xml "$x" "$x.base" || die "Couldn't read the Gateway's libvirt file."
+    "${VIRSH[@]}" define "$x.base" >/dev/null || die "libvirt didn't take the Gateway's settings."
+    slot=$("${VIRSH[@]}" dumpxml --inactive "$GW" | python3 -I -c '
+import re, sys
+used = {int(s, 16) for s in re.findall(r"<address type=.pci. domain=.0x0000. bus=.0x00. slot=.(0x[0-9a-f]+).", sys.stdin.read())}
+print(next(("0x%02x" % n for n in range(0x1e, 0x02, -1) if n not in used), ""))')
+    [ -n "$slot" ] || die "No free slot on the Gateway's main PCI bus."
+    "${VIRSH[@]}" dumpxml --inactive "$GW" >"$x.defined"
+    gateway_net_xml "$x.defined" "$x.wren" "$slot"
+    "${VIRSH[@]}" define "$x.wren" >/dev/null || die "libvirt didn't take the Gateway's network card."
+    rm -f "$x.base" "$x.defined" "$x.wren"
+}
+
+# gateway_has_wren_net: the Gateway is defined with Wren Linux's network card
+gateway_has_wren_net() { "${VIRSH[@]}" dumpxml --inactive "$GW" 2>/dev/null | grep -q 'wren-gw-net'; }
+
+# bridge_needs_dns: the chosen bridge reaches the Tor network through names the
+# Gateway must look up (Snowflake's broker and STUN servers, webtunnel's URL,
+# meek's front), not only through addresses in its lines
+bridge_needs_dns() { case $BRIDGE_TYPE in snowflake | webtunnel | meek) return 0 ;; esac; return 1; }
+
+# gateway_config WORK: fills GW_FILES with image_put's arguments for the Gateway:
+# its bridge lines (or none), Tor on or held off, and its own DNS. Whonix keeps
+# the Gateway's DNS off; it is turned on only for a bridge that needs it, and
+# then 10.0.2.3 is where passt hands DNS (and only DNS) to this computer's
+# resolver (bin/whonix). Each file is written whole, so choosing again (--bridges)
+# leaves nothing of the choice before.
 gateway_config() {
     local work=$1
-    if [ "$BRIDGE_TYPE" != none ]; then
-        {
-            echo "# Written by Wren Linux extras/whonix.sh before the first boot."
-            tor_bridge_config
-        } >"$work/50_user.conf"
-        echo "$work/50_user.conf /usr/local/etc/torrc.d/50_user.conf"
-    elif $BRIDGE_WANTED; then
+    {
+        echo "# Written by Wren Linux extras/whonix.sh: the Gateway's bridge ($(bridge_summary))."
+        tor_bridge_config
+    } >"$work/50_user.conf"
+    if $BRIDGE_WANTED && [ "$BRIDGE_TYPE" = none ]; then
         # They need a bridge but have none yet. Whonix's own off switch:
         # Tor Control Panel turns it to 0
-        {
-            echo "# Written by Wren Linux extras/whonix.sh: Tor stays off until you"
-            echo "# turn it on in Tor Control Panel (Anon Connection Wizard)."
-            echo "DisableNetwork 1"
-        } >"$work/40_tor_control_panel.conf"
-        echo "$work/40_tor_control_panel.conf /usr/local/etc/torrc.d/40_tor_control_panel.conf"
+        printf '%s\n' "# Written by Wren Linux extras/whonix.sh: Tor stays off until you" \
+            "# turn it on in Tor Control Panel (Anon Connection Wizard)." "DisableNetwork 1"
+    else
+        printf '%s\n' "# Written by Wren Linux extras/whonix.sh: Tor connects (Tor Control Panel can change this)." "DisableNetwork 0"
+    fi >"$work/40_tor_control_panel.conf"
+    GW_FILES=("$work/50_user.conf" /usr/local/etc/torrc.d/50_user.conf
+        "$work/40_tor_control_panel.conf" /usr/local/etc/torrc.d/40_tor_control_panel.conf)
+    if bridge_needs_dns; then
+        GW_FILES+=(--edit /etc/resolv.conf.whonix 's/^#nameserver 10\.0\.2\.3$/nameserver 10.0.2.3/')
+    else
+        GW_FILES+=(--edit /etc/resolv.conf.whonix 's/^nameserver 10\.0\.2\.3$/#nameserver 10.0.2.3/')
     fi
 }
 
@@ -263,10 +363,38 @@ if [ ! -f "$HOME/.config/libvirt/qemu.conf" ]; then
     printf 'max_core = 0\nmax_processes = 0\nmax_files = 0\n' >"$HOME/.config/libvirt/qemu.conf"
 fi
 
+# gateway_off: the Gateway is shut down (its disk and settings can change only then)
+gateway_off() {
+    [ "$("${VIRSH[@]}" domstate "$GW" 2>/dev/null)" != running ] && return 0
+    die "The Gateway is running. Shut it down first (whonix stop), then run this again."
+}
+
 if defined "$GW" && defined "$WS"; then
     note "Whonix is already installed."
     install_bin whonix
-    note "Start it with: whonix   (Tor settings: whonix gateway)"
+    # An install from before: the Gateway gets Wren Linux's network card
+    if ! gateway_has_wren_net; then
+        gateway_off
+        say "The Gateway's network"
+        note "Its own passt now (bin/whonix): DNS for the bridges that need it, and"
+        note "nothing on this computer reachable from the Gateway."
+        work=$(mktemp -d)
+        "${VIRSH[@]}" dumpxml --inactive "$GW" >"$work/$GW.xml"
+        gateway_net_define "$work/$GW.xml"
+        rm -rf "$work"
+    fi
+    # Choosing the Gateway's bridge again (its disk is edited, with the Gateway off)
+    if [ "${1:-}" = --bridges ]; then
+        gateway_off
+        say "Gateway bridges"
+        pick_bridges whonix
+        work=$(mktemp -d)
+        trap 'rm -rf "$work"' EXIT
+        gateway_config "$work"
+        image_put "$IMAGES/$GW.qcow2" "${GW_FILES[@]}"
+        note "The Gateway's bridge: $(bridge_summary). It takes effect at its next start."
+    fi
+    note "Start it with: whonix   (Tor settings: whonix gateway; another bridge: wrenctl install whonix --bridges)"
     exit 0
 fi
 
@@ -301,9 +429,8 @@ mv "$work"/Whonix-Workstation-*.qcow2 "$work/ws.qcow2"
 say "Gateway bridges"
 note "Whonix 18 connects to Tor at its first boot, so this is the time to say if it needs a bridge."
 pick_bridges whonix
-gw_src='' gw_dest=''
-read -r gw_src gw_dest < <(gateway_config "$work") || true
-if [ -n "$gw_src" ]; then image_put "$work/gw.qcow2" "$gw_src" "$gw_dest"; fi
+gateway_config "$work"
+image_put "$work/gw.qcow2" "${GW_FILES[@]}"
 if [ "$BRIDGE_TYPE" != none ]; then
     note "The Gateway's first connection goes through a bridge: $(bridge_summary)."
 elif $BRIDGE_WANTED; then
@@ -337,7 +464,8 @@ fi
 mv "$work/gw.qcow2" "$IMAGES/$GW.qcow2"
 mv "$work/ws.qcow2" "$IMAGES/$WS.qcow2"
 "${VIRSH[@]}" pool-refresh default >/dev/null
-"${VIRSH[@]}" define "$work/$GW.xml" >/dev/null
+# The Gateway with Wren Linux's network card (gateway_net_define)
+gateway_net_define "$work/$GW.xml"
 "${VIRSH[@]}" define "$work/$WS.xml" >/dev/null
 install_bin whonix
 

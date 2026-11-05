@@ -4,6 +4,7 @@
 
 ```
 wrenctl install whonix                     download (if needed), check and install both VMs (asks about a bridge)
+wrenctl install whonix --bridges           installed already: choose the Gateway's bridge again
 wrenctl install whonix --fetch             only download and check it, for later
 wrenctl remove whonix                      remove the VMs (asks before deleting their disks)
 wrenctl manual whonix                      print the manual steps below
@@ -22,7 +23,7 @@ key, pinned in `pins.sh` (`WHONIX_FPR`), and kept in `offline/whonix`. Before
 the first boot, Wren Linux writes into the images, without mounting them (with
 qemu-img and debugfs): a bridge for the Gateway if you need one (obfs4 lines
 you paste, or Snowflake), so its very first connection uses it, or Tor kept
-off until you turn it on; and in the Workstation, Tor Browser at Safest with
+off until you turn it on (`--bridges` chooses again later); and in the Workstation, Tor Browser at Safest with
 JavaScript off (`data/tor-browser-safest.js`) and the Feather wallet for Monero:
 Feather's own build for Tails and Whonix, which has no Tor of its own and uses
 the Gateway's, checked against the hash list signed by Feather's key
@@ -32,6 +33,21 @@ without it. For wallets, Whonix is the safest choice Wren Linux has: a wallet in
 the Workstation can't reach this computer's files or its real address, even if
 it is hacked.
 
+The Gateway's way out is a network card of Wren Linux's, joined to a passt that
+`whonix` starts before the Gateway. Whonix's own file gives it libvirt's, and
+libvirt can't give passt any option: with passt's defaults the Gateway's address
+for your router leads to this computer's own loopback instead (every port of it:
+Tor's port, the VMs' consoles, a local server), and nothing answers DNS, so
+Snowflake never gets past "broker failure" at 10%. Wren Linux's passt has
+Whonix's fixed addresses (the Gateway 10.0.2.15, its gateway 10.0.2.2), IPv4
+only, no DHCP, nothing of this computer mapped in (`--no-map-gw`), and one
+address, 10.0.2.3, where only DNS goes on, to the resolver this computer uses
+(Unbound with secure DNS on, so encrypted). The Gateway's own DNS stays off, as
+Whonix ships it, except for a bridge that has to look names up (Snowflake):
+then its `/etc/resolv.conf.whonix` gets `nameserver 10.0.2.3`. Installed before
+this? Running `wrenctl install whonix` again (with the Gateway shut down)
+gives it the new card; `--bridges` then sets the DNS for the bridge you choose.
+
 ## LIMITS
 
 - A bug in KVM or QEMU could reach this computer from a VM.
@@ -40,6 +56,9 @@ it is hacked.
 - Wren Linux doesn't update Feather in the Workstation after the install: Feather says when a newer version is out, and its guide for Whonix (docs.featherwallet.org) shows how to replace it. Whonix updates Electrum with its other packages.
 - Feather inside the Workstation hasn't been tried in a real Whonix VM yet: the files are put in place and checked, but not run there.
 - Whonix's own updates run inside the VMs: update them there.
+- With Snowflake, the Gateway looks up its broker and STUN servers through this computer's resolver (encrypted, with secure DNS on); the resolver sees those names, and your network sees you reach them, as with Snowflake anywhere. Whonix's page on Gateway DNS knows of no risk in having it on.
+- Started any other way than `whonix` (virt-manager, `virsh start`), the Gateway has no network: its passt isn't running.
+- The Gateway's own network was tried here with Whonix 18.2.4.2 under passt (its outside card is eth0, Tor reaches its relays). Snowflake through it still needs to be confirmed on your computer.
 
 ## MANUAL INSTALL
 
@@ -104,6 +123,11 @@ cp @WREN_DIR@/data/whonix-feather @WREN_DIR@/data/whonix-feather.desktop .
 # from data/snowflake-bridges.txt instead)
 printf '%s\n' 'UseBridges 1' 'ClientTransportPlugin obfs4 exec /usr/bin/obfs4proxy' \
     'Bridge obfs4 1.2.3.4:443 FINGERPRINT cert=... iat-mode=0' >50_user.conf
+# Only for Snowflake: the Gateway's own DNS, at 10.0.2.3 (passt hands it to this
+# computer's resolver). Take Whonix's file out of the image first: copy it from
+# "debugfs -R 'cat /etc/resolv.conf.whonix'" (see put below), then
+#   sed -i 's/^#nameserver 10\.0\.2\.3$/nameserver 10.0.2.3/' resolv.conf.whonix
+# and put it back as /etc/resolv.conf.whonix
 
 # put IMAGE FILE DEST [MODE]: write FILE into the image's root file system as
 # DEST (root's, mode 0644 or MODE), checked, without mounting it
@@ -130,7 +154,9 @@ EOF
         rm "$1.raw"
         return 1
     fi
-    qemu-img convert -O qcow2 -o cluster_size=2M,extended_l2=on "$1.raw" "$1.new"
+    # (a write that fails, on a full disk, must never take the image's place)
+    qemu-img convert -O qcow2 -o cluster_size=2M,extended_l2=on "$1.raw" "$1.new" ||
+        { echo "Couldn't write $1 back; it is unchanged." >&2; rm -f "$1.raw" "$1.new"; return 1; }
     rm "$1.raw" && mv "$1.new" "$1"
 }
 put ws.qcow2 user.js /usr/local/etc/torbrowser.d/user.js
@@ -148,8 +174,24 @@ virsh -c qemu:///session pool-start default
 mv gw.qcow2 ~/.local/share/libvirt/images/Whonix-Gateway.qcow2
 mv ws.qcow2 ~/.local/share/libvirt/images/Whonix-Workstation.qcow2
 virsh -c qemu:///session pool-refresh default
+# The Gateway's outside card: in Whonix-Gateway.xml, delete the block
+# <interface type='user'> ... </interface>, add xmlns:qemu to its first line, so
+# it reads <domain xmlns:qemu='http://libvirt.org/schemas/domain/qemu/1.0' type='kvm'>,
+# and put this just before </domain> (with your home folder in the path; slot
+# 0x1e must be free on bus 0x00: virsh dumpxml shows the slots in use)
+#   <qemu:commandline>
+#     <qemu:arg value='-netdev'/>
+#     <qemu:arg value='{"type": "stream", "id": "wren-gw-netdev", "server": false, "reconnect-ms": 1000, "addr": {"type": "unix", "path": "/home/YOU/.local/state/wren/whonix-gateway-net.sock"}}'/>
+#     <qemu:arg value='-device'/>
+#     <qemu:arg value='{"driver": "virtio-net-pci", "netdev": "wren-gw-netdev", "id": "wren-gw-net", "mac": "@GW_NET_MAC@", "bus": "pcie.0", "addr": "0x1e"}'/>
+#   </qemu:commandline>
 virsh -c qemu:///session define Whonix-Gateway.xml
 virsh -c qemu:///session define Whonix-Workstation.xml
+# Its network, before every start of the Gateway (the whonix command does this)
+mkdir -p ~/.local/state/wren && chmod 700 ~/.local/state/wren
+passt --quiet --one-off --socket ~/.local/state/wren/whonix-gateway-net.sock \
+    --pid ~/.local/state/wren/whonix-gateway-net.pid --ipv4-only --address 10.0.2.15 \
+    --netmask 24 --gateway 10.0.2.2 --no-map-gw --dns-forward 10.0.2.3 --no-dhcp
 
 # The whonix command
 install -D -m 0755 @WREN_DIR@/bin/whonix ~/.local/bin/whonix

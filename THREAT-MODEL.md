@@ -154,7 +154,12 @@ With the extras:
   the Tor Project for that one program, as Tor Browser users do.
 - **A hacked browser revealing your real IP address**: Whonix
   (`extras/whonix.sh`) runs the browser in a virtual machine whose only
-  way out is Tor.
+  way out is Tor. The Gateway (the VM that runs Tor) reaches the network
+  through a passt of Wren Linux's that maps nothing of this computer into it:
+  only DNS, at one address, goes on to this computer's resolver, for bridges
+  that look names up (Snowflake). With libvirt's own passt, a hacked Gateway
+  could reach whatever listens on this computer's loopback, through the
+  address it has for your router.
 - **Losing everything to a dead or stolen disk**: encrypted backups
   (`extras/backup.sh`).
 - **Hidden data in files you share**: Metadata Cleaner and mat2 (`extras/metadata-cleaner.sh`).
