@@ -26,14 +26,15 @@ table inet wren_wifi_signin {
     }
 
     chain wifi_signin {
-        # Answers to connections that others made to it (it can listen)
-        ct state established,related accept
+        # Nothing lets answers out: it listens for nothing, so it can't stand in
+        # for a service here (Tor's port, say, while Tor is down)
         # DNS, the network's own: the window is there to use it
         ip daddr @resolvers udp dport 53 accept
         ip daddr @resolvers tcp dport 53 accept
         # Anything addressed to this computer itself goes out through "lo",
         # whichever of its addresses is used, so this catches them all
-        oifname "lo" reject
+        # (admin-prohibited: how bin/sandbox-net-check tells this from a closed port)
+        oifname "lo" reject with icmpx admin-prohibited
         ip daddr { 0.0.0.0/8, 127.0.0.0/8, 224.0.0.0/4, 255.255.255.255 } reject
         ip6 daddr { ::1, ff00::/8 } reject
     }

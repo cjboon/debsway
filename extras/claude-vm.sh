@@ -37,7 +37,7 @@
 # Usage: bash claude-vm.sh [--remove | --manual | --account NAME | --remove-account NAME]
 # summary: Claude Code in a disposable VM (no shared folder)
 # security: most
-# files: bin/no-abstract-sockets lib/claude-accounts.sh bin/claude-vm-net-check
+# files: bin/no-abstract-sockets lib/claude-accounts.sh bin/claude-vm-net-check bin/sandbox-net-check
 # status: bin:claude-vm file:/usr/local/libexec/claude-vm-session
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$WREN_DIR/lib/claude-accounts.sh"
@@ -228,6 +228,7 @@ if [ "${1:-}" = --remove ]; then
     sudo rm -f "$SUDOERS" "$SESSION" "$MOCKVPS" "$FIREWALL" "$UNIT"
     sudo rm -f /usr/local/libexec/claude-vm-net-check
     remove_no_abstract
+    remove_net_check
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
     sudo rmdir /usr/local/libexec /etc/wren 2>/dev/null || true
     if id "$AGENT" >/dev/null 2>&1; then
@@ -285,6 +286,7 @@ sudo install -o root -g root -m 0755 "$WREN_DIR/vendor/mockvps-kvm/mockvps-kvm.s
 sudo install -o root -g root -m 0755 "$WREN_DIR/bin/claude-vm-net-check" /usr/local/libexec/claude-vm-net-check
 sudo install -o root -g root -m 0755 "$WREN_DIR/bin/claude-vm-session" "$SESSION"
 install_no_abstract
+install_net_check
 
 install_provision
 sudoers_rule "$SUDOERS"

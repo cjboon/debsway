@@ -43,7 +43,32 @@ PROVISION=$HOME/.config/onion-site/provision.sh
 KEY_FILE=$HOME/.ssh/${VM_NAME}_id
 
 die() { printf 'onion-site-session: %s\n' "$*" >&2; exit 1; }
-mockvps() { [ -x "$MOCKVPS" ] || die "the VM engine is missing ($MOCKVPS); run extras/onion-site.sh again."; "$MOCKVPS" "$@"; }
+# The firewall that keeps the VM off your computer and network, seen from this
+# user (bin/sandbox-net-check): checked before anything starts a VM (the first
+# install too, which has the internet), and watched while it runs: if the rule
+# goes, the VM goes too.
+NET_CHECK=/usr/local/libexec/wren-sandbox-net-check
+net_ok() {
+    [ -x "$NET_CHECK" ] || die "$NET_CHECK is missing; run extras/onion-site.sh again."
+    "$NET_CHECK" || die "the firewall that keeps the VM off your network isn't active, so the VM wasn't started. Run: sudo systemctl restart wren-onion-site-firewall"
+    # (and while this runs: an install has the internet for minutes before QEMU's own watch begins)
+    "$NET_CHECK" --watch $$ </dev/null >/dev/null 2>&1 &
+}
+watch_vm() {
+    local pid
+    pid=$(head -n1 "$WORKDIR/run/$VM_NAME.pid" 2>/dev/null) || return 0
+    [[ $pid =~ ^[0-9]+$ ]] || return 0
+    setsid "$NET_CHECK" --watch "$pid" </dev/null >/dev/null 2>&1 &
+}
+mockvps() {
+    local rc=0 starts=false
+    [ -x "$MOCKVPS" ] || die "the VM engine is missing ($MOCKVPS); run extras/onion-site.sh again."
+    case " $* " in *" --uninstall "*) ;; *" --start "* | *" --yes "*) starts=true ;; esac
+    if $starts; then net_ok; fi
+    "$MOCKVPS" "$@" || rc=$?
+    if $starts; then watch_vm; fi
+    return "$rc"
+}
 
 # Non-interactive, key-only ssh into the VM, independent of ~/.ssh/config
 guest_ssh() {
@@ -58,9 +83,11 @@ running() { mockvps --status 2>/dev/null | grep -q Running; }
 # boot: start the VM with no network, the site's port forwarded
 boot() {
     echo "Starting the site's VM; this takes about a minute."
+    net_ok
     env NET_RESTRICT=1 HOST_FORWARDS="$WEB" "$MOCKVPS" --start 2>&1 |
         sed -un 's/^==> /  /p; /^\(ERROR\|WARNING\):/p' ||
         die "could not start the VM (see $WORKDIR/${VM_NAME}-run.log)."
+    watch_vm
 }
 
 ensure_up() {
@@ -100,6 +127,7 @@ case "${1:-}" in
         if running; then mockvps --stop >/dev/null; fi
         echo "Updating the VM's packages through Tor (slow)."
         rc=0
+        net_ok
         env NET_RESTRICT=1 HOST_FORWARDS="$WEB" GUEST_SOCKS="$SOCKS" PROVISION_FILES="$up" "$MOCKVPS" --start || rc=$?
         # Never left running with the relay, whether the update worked or not
         mockvps --stop >/dev/null || true

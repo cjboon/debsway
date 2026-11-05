@@ -39,6 +39,36 @@ if systemctl is-active --quiet ufw 2>/dev/null && grep -qsx 'ENABLED=yes' "$ETC/
 else
     glance " " "Firewall off: bash parts/ufw.sh"
 fi
+# The sandboxes' own firewalls, really loaded: a "flush ruleset" (Debian's own
+# nftables service does one) takes them away and leaves their services "active".
+# Each sandbox then refuses to start (bin/sandbox-net-check); this says which.
+# Only root can list them: with sudo already unlocked (sudo -n), never asking.
+fw_tables=()
+for u in "$ETC"/systemd/system/wren-*-firewall.service; do
+    [ -f "$u" ] && systemctl is-enabled --quiet "${u##*/}" 2>/dev/null || continue
+    while read -r f; do
+        t=$(sed -n 's/^table inet \([a-z_]*\) {$/\1/p' "$f" 2>/dev/null | head -1)
+        [ -n "$t" ] && fw_tables+=("$t:${u##*/}")
+    done < <(sed -n 's|^ExecStart=/usr/sbin/nft -f ||p' "$u")
+done
+if [ ${#fw_tables[@]} -gt 0 ]; then
+    if loaded=$(sudo -n nft list tables 2>/dev/null); then
+        gone=()
+        for e in "${fw_tables[@]}"; do
+            grep -qx "table inet ${e%%:*}" <<<"$loaded" || gone+=("${e#*:}")
+        done
+        if [ ${#gone[@]} -eq 0 ]; then
+            glance x "The sandboxes' firewalls are loaded (${#fw_tables[@]})"
+        else
+            glance " " "Sandbox firewall NOT loaded, so that sandbox won't start: sudo systemctl restart $(printf '%s\n' "${gone[@]}" | sort -u | paste -sd' ')"
+        fi
+    else
+        glance "~" "The sandboxes' firewalls weren't checked (that needs sudo): sudo -v; bash status.sh"
+    fi
+    if systemctl is-enabled --quiet nftables.service 2>/dev/null; then
+        glance "~" "Debian's nftables service is on: its \"flush ruleset\" can take the sandboxes' firewalls away (sudo systemctl disable nftables)"
+    fi
+fi
 if is_installed unattended-upgrades && grep -qs 'Unattended-Upgrade "1"' "$ETC/apt/apt.conf.d/20auto-upgrades"; then
     glance x "Security updates install by themselves"
 else

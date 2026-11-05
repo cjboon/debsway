@@ -342,6 +342,9 @@ dev_test wallet-sandbox "Sandboxed wallets (extras/wallet-sandbox.sh): the firew
 dev_test hardware-wallet "Hardware wallets (extras/hardware-wallet.sh): the udev rule, for the user at the keyboard only" "hardware wallet checks"
 dev_test sudo-timeout "sudo remembers your password for 60 seconds (parts/sudo-timeout.sh)" "sudo timeout checks"
 dev_test sandbox-dns "The sandboxes' DNS only to this computer's resolver (parts/sandbox-dns.sh), with a pretend nft" "sandbox DNS checks"
+
+# --------------------------------------------------------------------
+dev_test sandbox-net "Every sandbox off your network, or not running (bin/sandbox-net-check): the rules in a network namespace, the sessions, status.sh" "sandbox firewall checks"
 dev_test startup-watch "The startup watch (bin/wren-watch, extras/startup-watch.sh) in a pretend home" "startup watch checks"
 dev_test wren-lock "Every lock runs the on-lock programs (bin/wren-lock), with a pretend swaylock" "wren-lock checks"
 dev_test keepassxc "KeePassXC (extras/keepassxc.sh): locked at every lock, on workspace 2 at login" "KeePassXC checks"

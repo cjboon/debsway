@@ -24,7 +24,7 @@
 # Usage: bash onion-site.sh [--remove | --manual]
 # summary: Your own onion site, in a VM with no network
 # security: most
-# files: bin/no-abstract-sockets
+# files: bin/no-abstract-sockets bin/sandbox-net-check
 # status: bin:onion-site file:/usr/local/libexec/onion-site-session
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$WREN_DIR/lib/onion-site.sh"
@@ -85,6 +85,7 @@ if [ "${1:-}" = --remove ]; then
     sudo nft delete table inet wren_onion_site 2>/dev/null || true
     sudo rm -f "$SUDOERS" "$SESSION" "$MOCKVPS" "$FIREWALL" "$UNIT" "$VM_UNIT" "$SETTINGS"
     remove_no_abstract
+    remove_net_check
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
     sudo rmdir /usr/local/libexec /etc/wren 2>/dev/null || true
     if id "$AGENT" >/dev/null 2>&1; then
@@ -192,6 +193,7 @@ sudo install -d -o root -g root -m 0755 /usr/local/libexec
 sudo install -o root -g root -m 0755 "$WREN_DIR/vendor/mockvps-kvm/mockvps-kvm.sh" "$MOCKVPS"
 sudo install -o root -g root -m 0755 "$WREN_DIR/bin/onion-site-session" "$SESSION"
 install_no_abstract
+install_net_check
 printf '# Written by Wren Linux extras/onion-site.sh\napp=%s\naccess=%s\n' "$app" "$access" |
     sudo install -o root -g root -m 0644 /dev/stdin "$SETTINGS"
 sudo install -d -o "$AGENT" -g "$AGENT" -m 0700 "$AGENT_HOME/.config" "$AGENT_HOME/.config/onion-site"

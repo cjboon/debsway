@@ -52,4 +52,11 @@ first_signin_note "$HOME/.claude" "$@"
 # Without a way to reach XWayland's abstract socket, which any user can connect to
 noabs=/usr/local/libexec/wren-no-abstract-sockets
 [ -x "$noabs" ] || { echo "claude-session: $noabs is missing. Run: bash extras/claude-code.sh" >&2; exit 1; }
+# The firewall that keeps it off your computer and network, seen from this user:
+# no rule, no Claude Code (bin/sandbox-net-check); and while it runs, it is watched
+netcheck=/usr/local/libexec/wren-sandbox-net-check
+[ -x "$netcheck" ] || { echo "claude-session: $netcheck is missing. Run: bash extras/claude-code.sh" >&2; exit 1; }
+"$netcheck" || { echo "claude-session: the firewall that keeps it off your network isn't active, so it wasn't started. Run: sudo systemctl restart wren-claude-firewall" >&2; exit 1; }
+# (exec keeps this process's number, so the watch follows Claude Code itself)
+"$netcheck" --watch $$ </dev/null >/dev/null 2>&1 &
 exec "$noabs" /usr/bin/claude "$@"

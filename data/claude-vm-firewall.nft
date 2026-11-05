@@ -33,8 +33,10 @@ table inet wren_claude_vm {
     }
 
     chain claude_vm {
-        # Answers to connections that others made to it
-        ct state established,related accept
+        # Answers only from the guest's console port, which QEMU listens on for the
+        # login (another account's VM, claude-vm-NAME, answers from its own): nothing
+        # else, so it can't stand in for a service here
+        meta skuid "claude-vm" ip saddr 127.0.0.1 tcp sport 2242 accept
         ip daddr @resolvers udp dport 53 accept
         ip daddr @resolvers tcp dport 53 accept
         # The guest's SSH console on the host loopback, and nothing else on it

@@ -129,7 +129,7 @@ if PATH=$NS_PATH command -v nft >/dev/null && unshare -rn true 2>/dev/null; then
     # reach RULE-FILE USER HOST PORT: refused (by the rule), or out
     reach() {
         [ -f "$1" ] || { echo "no rule for $2"; return; }
-        sed -e "s/meta skuid \"$2\"/meta skuid 0/" -e 's/ reject$/ counter reject/' "$1" >"$T/fw.nft"
+        sed -e "s/meta skuid \"$2\"/meta skuid 0/" -e 's/ reject\( with icmpx admin-prohibited\)\{0,1\}$/ counter reject\1/' "$1" >"$T/fw.nft"
         PATH=$NS_PATH unshare -rn bash -c '
             ip link set lo up && ip link add d0 type dummy && ip link set d0 up &&
             ip addr add 192.168.5.2/24 dev d0 && ip route add 10.9.0.0/16 dev d0 &&

@@ -64,8 +64,9 @@ claude_vm_free_port() {
 }
 
 # claude_vm_firewall_text RULES: data/claude-vm-firewall.nft with, for each
-# account user, a line sending it through the same rules and one letting it
-# reach its own console port (none without a port: then it reaches none)
+# account user, a line sending it through the same rules, one letting it
+# reach its own console port and one letting QEMU answer from it (none
+# without a port: then it reaches none, and answers from none)
 claude_vm_firewall_text() {
     local line user uid port
     while IFS= read -r line; do
@@ -79,6 +80,12 @@ claude_vm_firewall_text() {
                 port=$(claude_vm_port "${user#"$CLAUDE_VM_PREFIX"}")
                 [[ $uid =~ ^[0-9]+$ ]] && [ -n "$port" ] &&
                     printf '        meta skuid %s ip daddr 127.0.0.1 tcp dport %s accept  # %s\n' "$uid" "$port" "$user"
+            done < <(claude_account_users "$CLAUDE_VM_PREFIX")
+        elif [[ $line =~ ^[[:space:]]*meta\ skuid\ \"claude-vm\"\ ip\ saddr\ 127\.0\.0\.1\ tcp\ sport\ 2242\ accept$ ]]; then
+            while IFS=: read -r user uid; do
+                port=$(claude_vm_port "${user#"$CLAUDE_VM_PREFIX"}")
+                [[ $uid =~ ^[0-9]+$ ]] && [ -n "$port" ] &&
+                    printf '        meta skuid %s ip saddr 127.0.0.1 tcp sport %s accept  # %s\n' "$uid" "$port" "$user"
             done < <(claude_account_users "$CLAUDE_VM_PREFIX")
         fi
     done <"$1"

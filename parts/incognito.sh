@@ -40,7 +40,7 @@
 # for that. See THREAT-MODEL.md.
 # Usage: bash incognito.sh [--remove]
 # status: file:/usr/local/bin/incognito
-# files: bin/no-abstract-sockets
+# files: bin/no-abstract-sockets bin/sandbox-net-check
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
@@ -64,6 +64,7 @@ if [ "${1:-}" = --remove ]; then
     sudo rm -f "$SUDOERS" "$LIMITS" "$CMD" /usr/local/bin/wifi-signin "$SESSION" "$PREFS" "$FIREWALL" "$SIGNIN_FIREWALL" "$UNIT"
     remove_wayland_restrict
     remove_no_abstract
+    remove_net_check
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
     sudo rmdir "$SHARE" /usr/local/libexec /etc/wren 2>/dev/null || true
     for u in "$NAME" "$SIGNIN"; do
@@ -113,6 +114,7 @@ say "The incognito command"
 sudo install -d -o root -g root -m 0755 "$SHARE" /usr/local/libexec
 install_bin wayland-restrict
 install_no_abstract
+install_net_check
 sudo install -o root -g root -m 0755 "$WREN_DIR/bin/incognito" "$CMD"
 # The Wi-Fi sign-in window (incognito --signin), next to it
 sudo install -o root -g root -m 0755 "$WREN_DIR/bin/wifi-signin" /usr/local/bin/wifi-signin

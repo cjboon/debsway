@@ -77,6 +77,8 @@ sudo install -d -o root -g root -m 0755 /usr/local/libexec
 sudo install -o root -g root -m 0755 @WREN_DIR@/vendor/mockvps-kvm/mockvps-kvm.sh /usr/local/libexec/onion-site-mockvps-kvm
 sudo install -o root -g root -m 0755 @WREN_DIR@/bin/onion-site-session /usr/local/libexec/onion-site-session
 sudo install -o root -g root -m 0755 @WREN_DIR@/bin/no-abstract-sockets /usr/local/libexec/wren-no-abstract-sockets
+# The check that its firewall really holds: it won't start without it, and ends if it goes
+sudo install -o root -g root -m 0755 @WREN_DIR@/bin/sandbox-net-check /usr/local/libexec/wren-sandbox-net-check
 # Your choices, and the provisioning script with them filled in
 printf 'app=%s\naccess=%s\n' "$APP" public | sudo install -o root -g root -m 0644 /dev/stdin /etc/wren/onion-site.conf
 sudo install -d -o onion-site -g onion-site -m 0700 /home/onion-site/.config /home/onion-site/.config/onion-site
@@ -153,8 +155,9 @@ sudo systemctl disable --now tor@default.service tor.service
 # The command, the sudo rule, root's scripts and the settings
 rm ~/.local/bin/onion-site
 sudo rm /etc/sudoers.d/wren-onion-site /usr/local/libexec/onion-site-session /usr/local/libexec/onion-site-mockvps-kvm /etc/wren/onion-site.conf
-# (the no-abstract-sockets wrapper only if no other sandbox uses it)
+# (the no-abstract-sockets wrapper and the firewall check only if no other sandbox uses it)
 sudo rm /usr/local/libexec/wren-no-abstract-sockets
+sudo rm /usr/local/libexec/wren-sandbox-net-check
 # The user, its home and the VM (with the site's files and data)
 sudo pkill -KILL -u onion-site
 sudo userdel -r onion-site

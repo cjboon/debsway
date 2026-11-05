@@ -30,14 +30,15 @@ table inet wren_firefox {
     }
 
     chain firefox {
-        # Answers to connections that others made to it (it can listen)
-        ct state established,related accept
+        # Nothing lets answers out: it listens for nothing, so it can't stand in
+        # for a service here (Tor's port, say, while Tor is down)
         ip daddr @resolvers udp dport 53 accept
         ip daddr @resolvers tcp dport 53 accept
         # Anything addressed to this computer itself goes out through "lo",
         # whichever of its addresses is used (127.0.0.1, its LAN address, its
         # public IPv4 or IPv6 address), so this catches them all
-        oifname "lo" reject
+        # (admin-prohibited: how bin/sandbox-net-check tells this from a closed port)
+        oifname "lo" reject with icmpx admin-prohibited
         ip daddr { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8,
                    169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16,
                    224.0.0.0/4, 255.255.255.255 } reject

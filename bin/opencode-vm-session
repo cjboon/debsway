@@ -41,7 +41,32 @@ PROVISION=$HOME/.config/opencode-vm/provision.sh
 KEY_FILE=$HOME/.ssh/${VM_NAME}_id
 
 die() { printf 'opencode-vm-session: %s\n' "$*" >&2; exit 1; }
-mockvps() { [ -x "$MOCKVPS" ] || die "the VM engine is missing ($MOCKVPS); run extras/opencode-vm.sh again."; "$MOCKVPS" "$@"; }
+# The firewall that keeps the VM off your computer and network, seen from this
+# user (bin/sandbox-net-check): checked before anything starts a VM (the first
+# install too, which has the internet), and watched while it runs: if the rule
+# goes, the VM goes too.
+NET_CHECK=/usr/local/libexec/wren-sandbox-net-check
+net_ok() {
+    [ -x "$NET_CHECK" ] || die "$NET_CHECK is missing; run extras/opencode-vm.sh again."
+    "$NET_CHECK" || die "the firewall that keeps the VM off your network isn't active, so the VM wasn't started. Run: sudo systemctl restart wren-opencode-vm-firewall"
+    # (and while this runs: an install has the internet for minutes before QEMU's own watch begins)
+    "$NET_CHECK" --watch $$ </dev/null >/dev/null 2>&1 &
+}
+watch_vm() {
+    local pid
+    pid=$(head -n1 "$WORKDIR/run/$VM_NAME.pid" 2>/dev/null) || return 0
+    [[ $pid =~ ^[0-9]+$ ]] || return 0
+    setsid "$NET_CHECK" --watch "$pid" </dev/null >/dev/null 2>&1 &
+}
+mockvps() {
+    local rc=0 starts=false
+    [ -x "$MOCKVPS" ] || die "the VM engine is missing ($MOCKVPS); run extras/opencode-vm.sh again."
+    case " $* " in *" --uninstall "*) ;; *" --start "* | *" --yes "*) starts=true ;; esac
+    if $starts; then net_ok; fi
+    "$MOCKVPS" "$@" || rc=$?
+    if $starts; then watch_vm; fi
+    return "$rc"
+}
 
 # Non-interactive, key-only ssh into the guest, independent of ~/.ssh/config.
 guest_ssh() {

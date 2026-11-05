@@ -12,7 +12,7 @@
 #   127.0.0.1:9050  Tor's SOCKS port, which "onion-site update" lends the VM
 #                   for apt (through socat, one connection at a time)
 # Tor reaches the site through 127.0.0.1:18080, which this user listens on;
-# the answers are "established" connections and pass.
+# answers go out from that port and the console's, and from no other.
 # DNS goes only to the resolver this computer uses: Unbound while secure DNS
 # is on, the network's while it is off (parts/sandbox-dns.sh).
 
@@ -32,14 +32,16 @@ table inet wren_onion_site {
     }
 
     chain onion_site {
-        # Answers to connections that others made to it (Tor visiting the site)
-        ct state established,related accept
+        # Answers only from the VM's console (2243) and the site (18080, which Tor
+        # visits): nothing else, so it can't stand in for a service here
+        ip saddr 127.0.0.1 tcp sport { 2243, 18080 } accept
         ip daddr @resolvers udp dport 53 accept
         ip daddr @resolvers tcp dport 53 accept
         ip daddr 127.0.0.1 tcp dport { 2243, 9050 } accept
         # Anything addressed to this computer itself goes out through "lo",
         # whichever of its addresses is used, so this catches them all
-        oifname "lo" reject
+        # (admin-prohibited: how bin/sandbox-net-check tells this from a closed port)
+        oifname "lo" reject with icmpx admin-prohibited
         ip daddr { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8,
                    169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16,
                    224.0.0.0/4, 255.255.255.255 } reject

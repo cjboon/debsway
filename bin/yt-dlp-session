@@ -22,6 +22,13 @@ id=${1:-}
 shift
 
 export HOME=$HOME_DIR XDG_CACHE_HOME=$HOME_DIR/.cache PATH=/usr/bin:/bin
+# The firewall that keeps it off your computer and network, seen from this user:
+# no rule, no download (bin/sandbox-net-check); and while it runs, it is watched
+netcheck=/usr/local/libexec/wren-sandbox-net-check
+[ -x "$netcheck" ] || { echo "yt-dlp-session: $netcheck is missing. Run: wrenctl install yt-dlp" >&2; exit 1; }
+"$netcheck" || { echo "yt-dlp-session: the firewall that keeps it off your network isn't active, so nothing was downloaded. Run: sudo systemctl restart wren-ytdlp-firewall" >&2; exit 1; }
+# (exec keeps this process's number, so the watch follows yt-dlp itself)
+"$netcheck" --watch $$ </dev/null >/dev/null 2>&1 &
 # Files and folders it makes: rw for ytdlp and your group (the folder's), so
 # you can copy them out and delete them; nothing for anyone else
 umask 0007

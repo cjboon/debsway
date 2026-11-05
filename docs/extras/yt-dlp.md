@@ -76,6 +76,8 @@ sudo install -d -o ytdlp -g "$(id -gn)" -m 2770 /var/lib/wren-ytdlp-out
 sudo install -d -o root -g root -m 0755 /usr/local/libexec
 sudo install -o root -g root -m 0755 @WREN_DIR@/bin/yt-dlp-session /usr/local/libexec/yt-dlp-session
 sudo install -o root -g root -m 0755 @WREN_DIR@/bin/no-abstract-sockets /usr/local/libexec/wren-no-abstract-sockets
+# The check that its firewall really holds: it won't start without it, and ends if it goes
+sudo install -o root -g root -m 0755 @WREN_DIR@/bin/sandbox-net-check /usr/local/libexec/wren-sandbox-net-check
 sudo install -o root -g root -m 0755 @WREN_DIR@/bin/yt-dlp /usr/local/bin/yt-dlp
 # Your user may run the session script, and nothing else, as ytdlp. visudo
 # checks the rule first: never put a rule in /etc/sudoers.d it hasn't passed.
@@ -108,8 +110,9 @@ sudo systemctl daemon-reload
 # The sudo rule, the limits, the command, its session script, yt-dlp and the run folder
 sudo rm /etc/sudoers.d/wren-ytdlp /etc/security/limits.d/50-wren-ytdlp.conf
 sudo rm /usr/local/bin/yt-dlp /usr/local/libexec/yt-dlp-session
-# (the no-abstract-sockets wrapper only if no other sandbox uses it)
+# (the no-abstract-sockets wrapper and the firewall check only if no other sandbox uses it)
 sudo rm /usr/local/libexec/wren-no-abstract-sockets
+sudo rm /usr/local/libexec/wren-sandbox-net-check
 sudo rm -rf /usr/local/lib/wren/yt-dlp /var/lib/wren-ytdlp-out
 # The user and its home (only yt-dlp's cache is there)
 sudo pkill -KILL -u ytdlp

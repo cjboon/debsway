@@ -111,8 +111,13 @@ chmod 2770 "$T/s/out"
 # (a pretend no-abstract-sockets wrapper, which writes down that it ran)
 printf '#!/bin/sh\necho wrapped >"%s/s/noabs.ran"\nexec "$@"\n' "$T" >"$T/s/noabs"
 chmod +x "$T/s/noabs"
+# (a pretend firewall check: the rule is "gone" while $T/s/net-down is there; a
+# watch it is asked for is written down)
+printf '#!/bin/sh\n[ "$1" = --watch ] && { echo "watch $2" >>"%s/s/watched"; exit 0; }\n[ ! -e "%s/s/net-down" ]\n' "$T" "$T" >"$T/s/netcheck"
+chmod +x "$T/s/netcheck"
 sed -e "s|^YTDLP=.*|YTDLP=$T/s/lib/yt-dlp|" -e "s|^OUT=.*|OUT=$T/s/out|" -e "s|^HOME_DIR=.*|HOME_DIR=$T/s/home|" \
-    -e "s|/usr/local/libexec/wren-no-abstract-sockets|$T/s/noabs|" "$HERE/bin/yt-dlp-session" >"$S"
+    -e "s|/usr/local/libexec/wren-no-abstract-sockets|$T/s/noabs|" \
+    -e "s|/usr/local/libexec/wren-sandbox-net-check|$T/s/netcheck|" "$HERE/bin/yt-dlp-session" >"$S"
 cat >"$T/s/lib/yt-dlp" <<'EOF'
 import os, sys
 print("argv", sys.argv[1:])
@@ -123,6 +128,11 @@ EOF
 id=0123456789abcdef01234567
 out=$(PYTHONPATH=/nonexistent bash "$S" "$id" --flag 'https://example.org/x' 2>&1)
 check "it can't reach X11's abstract socket: yt-dlp runs site JavaScript (the wrapper runs it)" test -e "$T/s/noabs.ran"
+check "...and its firewall is watched while it runs (it ends with the rule)" grep -q '^watch [0-9]' "$T/s/watched"
+: >"$T/s/net-down"
+check "its firewall gone (flushed): nothing downloaded, and it says how to put it back" bash -c '
+    out=$(bash "$1" 2123456789abcdef01234567 URL 2>&1); [ $? -ne 0 ] && grep -q "wren-ytdlp-firewall" <<<"$out" && [ ! -e "$2/out/2123456789abcdef01234567/x" ]' _ "$S" "$T/s"
+rm -f "$T/s/net-down"
 sed "s|$T/s/noabs|$T/s/nothing|" "$S" >"$S.nowrap"
 check "...and without the wrapper it won't run" not bash "$S.nowrap" 1123456789abcdef01234567 URL
 check "the session runs yt-dlp with python3 -I (no Python settings from outside)" grep -qx 'isolated 1' <<<"$out"

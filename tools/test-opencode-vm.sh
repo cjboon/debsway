@@ -94,8 +94,13 @@ S=$T/session
 mkdir -p "$S/home/vm" "$S/home/.config/opencode-vm" "$S/bin"
 sed -e "s|/home/opencode-vm|$S/home|g" \
     -e "s|/usr/local/libexec/opencode-vm-mockvps-kvm|$S/bin/mockvps|" \
+    -e "s|/usr/local/libexec/wren-sandbox-net-check|$S/bin/sandbox-net-check|" \
     -e "s|^export PATH=.*|export PATH=$S/bin:\$PATH|" \
     "$HERE/bin/opencode-vm-session" >"$S/opencode-vm-session"
+# (a pretend firewall check: the rule is "gone" while $S/net-down is there; each
+# watch it is asked for is written down)
+printf '#!/bin/sh\n[ "$1" = --watch ] && { echo "watch $2" >>"%s/watched"; exit 0; }\n[ ! -e "%s/net-down" ]\n' "$S" "$S" >"$S/bin/sandbox-net-check"
+chmod +x "$S/bin/sandbox-net-check"
 # shellcheck disable=SC2016  # expanded by the pretend id, not here
 printf '#!/bin/sh\n[ "$1" = -un ] && echo opencode-vm || exec /usr/bin/id "$@"\n' >"$S/bin/id"
 cat >"$S/bin/mockvps" <<MOCK
@@ -109,6 +114,22 @@ printf '#!/bin/sh\necho "ssh $*" >>"%s/calls"\n' "$S" >"$S/bin/ssh"
 chmod +x "$S/bin/id" "$S/bin/mockvps" "$S/bin/ssh"
 touch "$S/home/.config/opencode-vm/provision.sh"
 session() { PATH="$S/bin:$PATH" WREN_NOABS=1 bash "$S/opencode-vm-session" "$@"; }
+
+# Its firewall, seen from the VM's user: checked before anything starts a VM (the
+# install too, which has the internet), then watched: the session while it
+# builds, and QEMU (its pid file) after
+mkdir -p "$S/home/vm/run"
+echo 4242 >"$S/home/vm/run/opencode-vm.pid"
+: >"$S/net-down"
+: >"$S/calls"
+out=$(session install 2>&1)
+check "its firewall gone (flushed): the install doesn't run, and it says how to put it back" bash -c '
+    ! grep -q -- "mockvps --yes" "$1" && grep -q "sudo systemctl restart wren-opencode-vm-firewall" <<<"$2"' _ "$S/calls" "$out"
+rm -f "$S/net-down" "$S/watched"
+session install >/dev/null 2>&1
+check "...with it: the session watched while it builds, and QEMU after" bash -c '
+    grep -q "^watch [0-9]" "$1" && grep -qx "watch 4242" "$1"' _ "$S/watched"
+rm -f "$S/home/vm/opencode-vm.qcow2"
 
 : >"$S/calls"
 session install >/dev/null 2>&1

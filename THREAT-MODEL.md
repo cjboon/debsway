@@ -201,7 +201,15 @@ With the extras:
   internet, so one that is hacked can send out what it can read. Their DNS
   goes only to the resolver this computer uses (`parts/sandbox-dns.sh`),
   which keeps them off whatever else listens on port 53 nearby, but not from
-  sending data through that resolver or over the web.
+  sending data through that resolver or over the web. Their firewall rules are
+  what keeps them off your network, so none of them starts unless its rule is
+  really there, seen from its own user, and one that runs is ended within
+  seconds if the rule goes (a "flush ruleset" takes every rule away; Debian's
+  own nftables service does one, which `bash status.sh` warns about). The
+  rules also let no answers out, except from a VM's own forwarded ports, so a
+  hacked sandbox can't stand in for a service here, such as Tor's port while
+  Tor is down. What the check can't catch is a rule changed by hand: keep
+  root's files in `/etc/wren` as Wren Linux wrote them.
 - **A local network with public addresses.** The firewall rules that keep sandbox
   users off your network know IPv4's private ranges and give those users no IPv6.
   On a network where computers have public IPv4 addresses (some universities and

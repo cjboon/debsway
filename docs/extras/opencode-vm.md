@@ -81,6 +81,8 @@ sudo install -d -o root -g root -m 0755 /usr/local/libexec
 sudo install -o root -g root -m 0755 @WREN_DIR@/vendor/mockvps-kvm/mockvps-kvm.sh /usr/local/libexec/opencode-vm-mockvps-kvm
 sudo install -o root -g root -m 0755 @WREN_DIR@/bin/opencode-vm-session /usr/local/libexec/opencode-vm-session
 sudo install -o root -g root -m 0755 @WREN_DIR@/bin/no-abstract-sockets /usr/local/libexec/wren-no-abstract-sockets
+# The check that its firewall really holds: it won't start without it, and ends if it goes
+sudo install -o root -g root -m 0755 @WREN_DIR@/bin/sandbox-net-check /usr/local/libexec/wren-sandbox-net-check
 
 # The provisioning script, with the repository it installs from filled in, readable only by opencode-vm
 sudo install -d -o opencode-vm -g opencode-vm -m 0700 /home/opencode-vm/.config /home/opencode-vm/.config/opencode-vm
@@ -116,10 +118,11 @@ rm ~/.local/bin/opencode-vm
 sudo systemctl disable --now wren-opencode-vm-firewall.service
 sudo rm /etc/systemd/system/wren-opencode-vm-firewall.service /etc/wren/opencode-vm.nft
 sudo systemctl daemon-reload
-# The sudo rule and root's scripts (the no-abstract-sockets wrapper only if
+# The sudo rule and root's scripts (the no-abstract-sockets wrapper and the firewall check only if
 # incognito, the Claude extras and the Firefox sandbox don't use it)
 sudo rm /etc/sudoers.d/wren-opencode-vm /usr/local/libexec/opencode-vm-session /usr/local/libexec/opencode-vm-mockvps-kvm
 sudo rm /usr/local/libexec/wren-no-abstract-sockets
+sudo rm /usr/local/libexec/wren-sandbox-net-check
 # The user, its home and the VM in it
 sudo pkill -KILL -u opencode-vm
 sudo userdel -r opencode-vm

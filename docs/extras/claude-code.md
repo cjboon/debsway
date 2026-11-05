@@ -103,6 +103,8 @@ setfacl -R -d -m "u:claude-agent:rwX,u:$(id -un):rwX,m::rwX" ~/projects
 sudo install -d -o root -g root -m 0755 /usr/local/libexec
 sudo install -o root -g root -m 0755 @WREN_DIR@/bin/claude-session /usr/local/libexec/claude-session
 sudo install -o root -g root -m 0755 @WREN_DIR@/bin/no-abstract-sockets /usr/local/libexec/wren-no-abstract-sockets
+# The check that its firewall really holds: it won't start without it, and ends if it goes
+sudo install -o root -g root -m 0755 @WREN_DIR@/bin/sandbox-net-check /usr/local/libexec/wren-sandbox-net-check
 # Your user may run that script, and nothing else, as claude-agent. visudo
 # checks the rule first: never put a rule in /etc/sudoers.d it hasn't passed.
 printf '%s ALL=(claude-agent) NOPASSWD: /usr/local/libexec/claude-session\n' "$(id -un)" >/tmp/wren-claude
@@ -160,10 +162,11 @@ rm ~/.local/bin/claude ~/.local/bin/claude-unsandboxed ~/.local/bin/claude-pull 
 sudo systemctl disable --now wren-claude-firewall.service
 sudo rm /etc/systemd/system/wren-claude-firewall.service /etc/wren/claude.nft
 sudo systemctl daemon-reload
-# The sudo rule and the start script (the no-abstract-sockets wrapper only if
+# The sudo rule and the start script (the no-abstract-sockets wrapper and the firewall check only if
 # incognito, claude-vm and the Firefox sandbox don't use it)
 sudo rm /etc/sudoers.d/wren-claude /usr/local/libexec/claude-session
 sudo rm /usr/local/libexec/wren-no-abstract-sockets
+sudo rm /usr/local/libexec/wren-sandbox-net-check
 # Its access to your home and ~/projects
 setfacl -x u:claude-agent ~
 setfacl -R -x "u:claude-agent,d:u:claude-agent" ~/projects

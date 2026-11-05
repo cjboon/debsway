@@ -85,6 +85,8 @@ sudo install -o root -g root -m 0755 @WREN_DIR@/vendor/mockvps-kvm/mockvps-kvm.s
 sudo install -o root -g root -m 0755 @WREN_DIR@/bin/claude-vm-net-check /usr/local/libexec/claude-vm-net-check
 sudo install -o root -g root -m 0755 @WREN_DIR@/bin/claude-vm-session /usr/local/libexec/claude-vm-session
 sudo install -o root -g root -m 0755 @WREN_DIR@/bin/no-abstract-sockets /usr/local/libexec/wren-no-abstract-sockets
+# The check that its firewall really holds: it won't start without it, and ends if it goes
+sudo install -o root -g root -m 0755 @WREN_DIR@/bin/sandbox-net-check /usr/local/libexec/wren-sandbox-net-check
 
 # The provisioning script, with Anthropic's pinned key filled in, readable only by claude-vm
 sudo install -d -o claude-vm -g claude-vm -m 0700 /home/claude-vm/.config /home/claude-vm/.config/claude-vm
@@ -154,10 +156,11 @@ rm ~/.local/bin/claude
 sudo systemctl disable --now wren-claude-vm-firewall.service
 sudo rm /etc/systemd/system/wren-claude-vm-firewall.service /etc/wren/claude-vm.nft
 sudo systemctl daemon-reload
-# The sudo rule and root's scripts (the no-abstract-sockets wrapper only if
+# The sudo rule and root's scripts (the no-abstract-sockets wrapper and the firewall check only if
 # incognito, claude-code and the Firefox sandbox don't use it)
 sudo rm /etc/sudoers.d/wren-claude-vm /usr/local/libexec/claude-vm-session /usr/local/libexec/claude-vm-net-check /usr/local/libexec/claude-vm-mockvps-kvm
 sudo rm /usr/local/libexec/wren-no-abstract-sockets
+sudo rm /usr/local/libexec/wren-sandbox-net-check
 # The user, its home and the VM in it
 sudo pkill -KILL -u claude-vm
 sudo userdel -r claude-vm

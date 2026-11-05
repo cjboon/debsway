@@ -250,6 +250,21 @@ remove_no_abstract() {
     sudo rm -f "$NO_ABSTRACT"
 }
 
+# The check that a sandbox's firewall really holds (see bin/sandbox-net-check).
+# One copy, root's, shared by the sandboxes; the last one to be removed takes it away.
+NET_CHECK=/usr/local/libexec/wren-sandbox-net-check
+install_net_check() {
+    sudo install -d -o root -g root -m 0755 /usr/local/libexec
+    sudo install -o root -g root -m 0755 "$WREN_DIR/bin/sandbox-net-check" "$NET_CHECK"
+}
+remove_net_check() {
+    local s
+    for s in incognito-session claude-session claude-vm-session opencode-vm-session firefox-session onion-site-session yt-dlp-session; do
+        [ ! -e "/usr/local/libexec/$s" ] || return 0
+    done
+    sudo rm -f "$NET_CHECK"
+}
+
 # remove_wayland_restrict: takes wayland-restrict away once nothing uses it (call
 # it after the script's own command is gone)
 remove_wayland_restrict() {

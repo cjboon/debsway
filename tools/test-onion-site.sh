@@ -70,8 +70,13 @@ S=$T/session
 mkdir -p "$S/home/vm" "$S/home/.config/onion-site" "$S/bin"
 sed -e "s|/home/onion-site|$S/home|g" \
     -e "s|/usr/local/libexec/onion-site-mockvps-kvm|$S/bin/mockvps|" \
+    -e "s|/usr/local/libexec/wren-sandbox-net-check|$S/bin/sandbox-net-check|" \
     -e "s|^export PATH=.*|export PATH=$S/bin:\$PATH|" \
     "$HERE/bin/onion-site-session" >"$S/onion-site-session"
+# (a pretend firewall check: the rule is "gone" while $S/net-down is there; each
+# watch it is asked for is written down)
+printf '#!/bin/sh\n[ "$1" = --watch ] && { echo "watch $2" >>"%s/watched"; exit 0; }\n[ ! -e "%s/net-down" ]\n' "$S" "$S" >"$S/bin/sandbox-net-check"
+chmod +x "$S/bin/sandbox-net-check"
 printf '#!/bin/sh\n[ "$1" = -un ] && echo onion-site || exec /usr/bin/id "$@"\n' >"$S/bin/id"
 cat >"$S/bin/mockvps" <<EOF
 #!/bin/sh
@@ -86,6 +91,22 @@ printf '#!/bin/sh\necho "ssh $*" >>"%s/calls"\ncat >"%s/ssh-stdin"\n' "$S" "$S" 
 chmod +x "$S/bin/id" "$S/bin/mockvps" "$S/bin/ssh"
 touch "$S/home/.config/onion-site/provision.sh"
 session() { PATH="$S/bin:$PATH" WREN_NOABS=1 bash "$S/onion-site-session" "$@"; }
+
+# Its firewall, seen from the VM's user: checked before anything starts a VM (the
+# install too, which has the internet), then watched: the session while it
+# builds, and QEMU (its pid file) after
+mkdir -p "$S/home/vm/run"
+echo 4242 >"$S/home/vm/run/onion-site.pid"
+: >"$S/net-down"
+: >"$S/calls"
+out=$(session install 2>&1)
+check "its firewall gone (flushed): the install doesn't run, and it says how to put it back" bash -c '
+    ! grep -q -- "mockvps --yes" "$1" && grep -q "sudo systemctl restart wren-onion-site-firewall" <<<"$2"' _ "$S/calls" "$out"
+rm -f "$S/net-down" "$S/watched"
+session install >/dev/null 2>&1
+check "...with it: the session watched while it builds, and QEMU after" bash -c '
+    grep -q "^watch [0-9]" "$1" && grep -qx "watch 4242" "$1"' _ "$S/watched"
+rm -f "$S/home/vm/onion-site.qcow2"
 starts() { grep '^mockvps --start' "$S/calls"; }
 
 check "the session refuses anyone but the onion-site user" not bash "$HERE/bin/onion-site-session" start

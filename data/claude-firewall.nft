@@ -7,11 +7,14 @@
 #   - your router, printers, other computers, or your phone's hotspot
 # DNS goes only to the resolver this computer uses (parts/sandbox-dns.sh).
 #
-# To let it use servers on this machine (its own, and also yours: Tor's
-# proxy, a printing service...), add this line below the "established" one,
-# then run: sudo systemctl restart wren-claude-firewall
-#     oifname "lo" accept
-# (that also opens this computer's own LAN and public addresses to it)
+# To let it use one port on this machine (a dev server of its own on 3000, say,
+# or a service of yours), add these two lines just above the "oifname" one,
+# with that port, then run: sudo systemctl restart wren-claude-firewall
+#     ip daddr 127.0.0.1 tcp dport 3000 accept
+#     ip saddr 127.0.0.1 tcp sport 3000 accept
+# (the second lets a server of its own on that port answer). Don't open all of
+# "lo": then Claude Code won't start, as its check can no longer see the rule
+# (bin/sandbox-net-check).
 
 table inet wren_claude
 delete table inet wren_claude
@@ -29,14 +32,15 @@ table inet wren_claude {
     }
 
     chain claude {
-        # Answers to connections that others made to it
-        ct state established,related accept
+        # Nothing lets answers out: it listens for nothing, so it can't stand in
+        # for a service here (Tor's port, say, while Tor is down)
         ip daddr @resolvers udp dport 53 accept
         ip daddr @resolvers tcp dport 53 accept
         # Anything addressed to this computer itself goes out through "lo",
         # whichever of its addresses is used (127.0.0.1, its LAN address, its
         # public IPv4 or IPv6 address), so this catches them all
-        oifname "lo" reject
+        # (admin-prohibited: how bin/sandbox-net-check tells this from a closed port)
+        oifname "lo" reject with icmpx admin-prohibited
         ip daddr { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8,
                    169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16,
                    224.0.0.0/4, 255.255.255.255 } reject

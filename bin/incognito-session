@@ -22,6 +22,11 @@ noabs=/usr/local/libexec/wren-no-abstract-sockets
 
 me=$(id -un)
 [ "$me" = incognito ] || [ "$me" = wifi-signin ] || die "this runs as the user incognito or wifi-signin; use the incognito command."
+# The firewall that keeps it off your computer (and, for incognito, your network),
+# seen from this user: no rule, no window (bin/sandbox-net-check); and while it runs, it is watched
+netcheck=/usr/local/libexec/wren-sandbox-net-check
+[ -x "$netcheck" ] || die "$netcheck is missing. Run: wrenctl part incognito"
+"$netcheck" || die "the firewall that keeps it off your network isn't active, so it wasn't started. Run: sudo systemctl restart wren-incognito-firewall"
 [ $# -ge 5 ] || die "usage: incognito-session SOCKET_DIR WAYLAND_DISPLAY AUDIO THEME normal|signin [URL...]"
 host_dir=$1 host_wl=$2 audio=$3 theme=$4 kind=$5
 shift 5
@@ -160,4 +165,5 @@ setsid env -i \
     INCOGNITO_AUDIO="$([ "$audio" != - ] && echo 1)" INCOGNITO_PROFILE="$base/profile" \
     "$noabs" bash -c "$start" incognito-start "$@" &
 pid=$!
+"$netcheck" --watch "$pid" &
 wait "$pid" || true

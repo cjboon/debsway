@@ -33,8 +33,9 @@ table inet wren_opencode_vm {
     }
 
     chain opencode_vm {
-        # Answers to connections that others made to it
-        ct state established,related accept
+        # Answers only from the guest's console port, which QEMU listens on for the
+        # login: nothing else, so it can't stand in for a service here
+        ip saddr 127.0.0.1 tcp sport 2244 accept
         ip daddr @resolvers udp dport 53 accept
         ip daddr @resolvers tcp dport 53 accept
         # The guest's SSH console on the host loopback, and nothing else on it
@@ -42,7 +43,8 @@ table inet wren_opencode_vm {
         # Anything addressed to this computer itself goes out through "lo",
         # whichever of its addresses is used (127.0.0.1, its LAN address, its
         # public IPv4 or IPv6 address), so this catches them all
-        oifname "lo" reject
+        # (admin-prohibited: how bin/sandbox-net-check tells this from a closed port)
+        oifname "lo" reject with icmpx admin-prohibited
         ip daddr { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8,
                    169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16,
                    224.0.0.0/4, 255.255.255.255 } reject

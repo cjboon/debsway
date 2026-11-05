@@ -1,0 +1,43 @@
+#!/bin/bash
+# sandbox-net-check [--watch PID]: written by Wren Linux (lib/core.sh, install_net_check)
+# Installed as /usr/local/libexec/wren-sandbox-net-check. A sandbox's own session
+# script runs it as the sandbox's user (firefox, fx-NAME, incognito, wifi-signin,
+# ytdlp, claude-agent, onion-site, opencode-vm, claude-vm), so it sees what that
+# user's programs would see. Their firewall rules (data/*-firewall.nft) refuse
+# this computer's own addresses with "admin-prohibited": a connection to a closed
+# port here then says "no route", where without the rule it says "refused". A
+# service saying "active" isn't enough: anything that loads a firewall with
+# "flush ruleset" (Debian's own nftables.service does) takes the rule away and
+# leaves its service active.
+#   sandbox-net-check              exit 0 if the rule refuses this user, 1 if not
+#   sandbox-net-check --watch PID  while PID runs, checks again every 5 seconds;
+#                                  the moment the rule is gone, every process of
+#                                  this user is ended (and the journal says why)
+set -euo pipefail
+export PATH=/usr/bin:/bin
+
+check() {
+    python3 -I -c '
+import errno, socket, sys
+with socket.socket() as s:
+    s.settimeout(5)
+    sys.exit(0 if s.connect_ex(("127.0.0.1", 9)) == errno.EHOSTUNREACH else 1)
+'
+}
+
+case ${1:-} in
+    "") check ;;
+    --watch)
+        pid=${2:-}
+        [[ $pid =~ ^[0-9]+$ ]] || { echo "usage: sandbox-net-check [--watch PID]" >&2; exit 2; }
+        while kill -0 "$pid" 2>/dev/null; do
+            /bin/sleep "${WREN_NET_WATCH_EVERY:-5}"
+            kill -0 "$pid" 2>/dev/null || exit 0
+            if ! check; then
+                logger -t wren-sandbox "$(id -un): its firewall is gone, so all its programs were ended" 2>/dev/null || true
+                exec pkill -KILL -u "$(id -u)"
+            fi
+        done
+        ;;
+    *) echo "usage: sandbox-net-check [--watch PID]" >&2; exit 2 ;;
+esac

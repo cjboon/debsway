@@ -95,9 +95,14 @@ mkdir -p "$S/home/vm" "$S/home/.config/claude-vm" "$S/bin"
 sed -e "s|/home/claude-vm|$S/home|g" -e "s|\"/home/\$me\"|\"$S/home\"|" \
     -e "s|/etc/wren/claude-vm-ports|$S/ports|" \
     -e "s|/usr/local/libexec/claude-vm-mockvps-kvm|$S/bin/mockvps|" \
+    -e "s|/usr/local/libexec/wren-sandbox-net-check|$S/bin/sandbox-net-check|" \
     -e "s|/usr/local/libexec/claude-vm-net-check|$S/bin/net-check|" \
     -e "s|^export PATH=.*|export PATH=$S/bin:\$PATH|" \
     "$HERE/bin/claude-vm-session" >"$S/claude-vm-session"
+# (a pretend firewall check: the rule is "gone" while $S/net-down is there; each
+# watch it is asked for is written down)
+printf '#!/bin/sh\n[ "$1" = --watch ] && { echo "watch $2" >>"%s/watched"; exit 0; }\n[ ! -e "%s/net-down" ]\n' "$S" "$S" >"$S/bin/sandbox-net-check"
+chmod +x "$S/bin/sandbox-net-check"
 # shellcheck disable=SC2016  # expanded by the pretend id, not here
 printf '#!/bin/sh\n[ "$1" = -un ] && { cat "%s/me" 2>/dev/null || echo claude-vm; } || exec /usr/bin/id "$@"\n' "$S" >"$S/bin/id"
 # (the home folder comes from the user database: here, always $S/home)
@@ -114,6 +119,22 @@ printf '#!/bin/sh\necho "ssh $*" >>"%s/calls"\n' "$S" >"$S/bin/ssh"
 chmod +x "$S/bin/id" "$S/bin/mockvps" "$S/bin/ssh"
 touch "$S/home/.config/claude-vm/provision.sh"
 session() { PATH="$S/bin:$PATH" WREN_NOABS=1 bash "$S/claude-vm-session" "$@"; }
+
+# Its firewall, seen from the VM's user: checked before anything starts a VM (the
+# install too, which has the internet), then watched: the session while it
+# builds, and QEMU (its pid file) after
+mkdir -p "$S/home/vm/run"
+echo 4242 >"$S/home/vm/run/claude-vm.pid"
+: >"$S/net-down"
+: >"$S/calls"
+out=$(session install 2>&1)
+check "its firewall gone (flushed): the install doesn't run, and it says how to put it back" bash -c '
+    ! grep -q -- "mockvps --yes" "$1" && grep -q "sudo systemctl restart wren-claude-vm-firewall" <<<"$2"' _ "$S/calls" "$out"
+rm -f "$S/net-down" "$S/watched"
+session install >/dev/null 2>&1
+check "...with it: the session watched while it builds, and QEMU after" bash -c '
+    grep -q "^watch [0-9]" "$1" && grep -qx "watch 4242" "$1"' _ "$S/watched"
+rm -f "$S/home/vm/claude-vm.qcow2"
 
 : >"$S/calls"
 session install >/dev/null 2>&1
@@ -234,6 +255,10 @@ check "...reaching its own console port only (claude-vm keeps 2242 to itself)" b
     grep -qx "        meta skuid 901 ip daddr 127.0.0.1 tcp dport 2250 accept  # claude-vm-work" <<<"$1" &&
     grep -qx "        meta skuid \"claude-vm\" ip daddr 127.0.0.1 tcp dport 2242 accept" <<<"$1" &&
     [ "$(grep -c "127.0.0.1 tcp dport [0-9]* accept" <<<"$1")" = 2 ]' _ "$fw"
+check "...answering from its own console port only (QEMU's replies to the login)" bash -c '
+    grep -qx "        meta skuid 901 ip saddr 127.0.0.1 tcp sport 2250 accept  # claude-vm-work" <<<"$1" &&
+    grep -qx "        meta skuid \"claude-vm\" ip saddr 127.0.0.1 tcp sport 2242 accept" <<<"$1" &&
+    [ "$(grep -c "127.0.0.1 tcp sport [0-9]* accept" <<<"$1")" = 2 ] && ! grep -q "^[^#]*established" <<<"$1"' _ "$fw"
 check "...none for a user that only looks like one" bash -c '! grep -q "skuid 903" <<<"$1"' _ "$fw"
 : >"$T/empty.nft"
 if unshare -rn /usr/sbin/nft -c -f "$T/empty.nft" >/dev/null 2>&1; then

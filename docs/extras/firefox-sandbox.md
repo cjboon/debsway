@@ -86,6 +86,8 @@ sudo usermod -aG render firefox
 sudo install -d -o root -g root -m 0755 /usr/local/share/wren /usr/local/libexec
 install -D -m 0755 @WREN_DIR@/bin/wayland-restrict ~/.local/bin/wayland-restrict
 sudo install -o root -g root -m 0755 @WREN_DIR@/bin/no-abstract-sockets /usr/local/libexec/wren-no-abstract-sockets
+# The check that its firewall really holds: it won't start without it, and ends if it goes
+sudo install -o root -g root -m 0755 @WREN_DIR@/bin/sandbox-net-check /usr/local/libexec/wren-sandbox-net-check
 sudo install -o root -g root -m 0755 @WREN_DIR@/bin/firefox /usr/local/bin/firefox
 sudo install -o root -g root -m 0755 @WREN_DIR@/bin/firefox-session /usr/local/libexec/firefox-session
 sudo install -o root -g root -m 0644 @WREN_DIR@/data/firefox-user.js /usr/local/share/wren/firefox-user.js

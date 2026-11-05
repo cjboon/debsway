@@ -30,7 +30,7 @@
 # Usage: bash opencode-vm.sh [--remove | --manual]
 # summary: opencode in a disposable VM (no shared folder)
 # security: most
-# files: bin/no-abstract-sockets
+# files: bin/no-abstract-sockets bin/sandbox-net-check
 # status: bin:opencode-vm file:/usr/local/libexec/opencode-vm-session
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
@@ -52,6 +52,7 @@ if [ "${1:-}" = --remove ]; then
     sudo nft delete table inet wren_opencode_vm 2>/dev/null || true
     sudo rm -f "$SUDOERS" "$SESSION" "$MOCKVPS" "$FIREWALL" "$UNIT"
     remove_no_abstract
+    remove_net_check
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
     sudo rmdir /usr/local/libexec /etc/wren 2>/dev/null || true
     if id "$AGENT" >/dev/null 2>&1; then
@@ -119,6 +120,7 @@ sudo install -d -o root -g root -m 0755 /usr/local/libexec
 sudo install -o root -g root -m 0755 "$WREN_DIR/vendor/mockvps-kvm/mockvps-kvm.sh" "$MOCKVPS"
 sudo install -o root -g root -m 0755 "$WREN_DIR/bin/opencode-vm-session" "$SESSION"
 install_no_abstract
+install_net_check
 
 # The provisioning script, with the repository filled in, where only
 # opencode-vm can read it.

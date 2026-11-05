@@ -40,7 +40,7 @@
 # summary: Firefox as its own locked-down user
 # security: most
 # status: file:/usr/local/bin/firefox
-# files: bin/no-abstract-sockets bin/wayland-restrict data/firefox-firewall.nft data/firefox-user.js data/wren-firefox.desktop data/firefox-completion.bash lib/firefox-sandbox.sh
+# files: bin/no-abstract-sockets bin/wayland-restrict data/firefox-firewall.nft data/firefox-user.js data/wren-firefox.desktop data/firefox-completion.bash lib/firefox-sandbox.sh bin/sandbox-net-check
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$WREN_DIR/lib/firefox-sandbox.sh"
 # The hardening and incognito it sets up first, then the sandbox itself
@@ -78,6 +78,7 @@ if [ "${1:-}" = --remove ]; then
     sudo rm -f "$LIMITS" "$CMD" "$SESSION" "$PREFS" "$FIREWALL" "$UNIT"
     remove_wayland_restrict
     remove_no_abstract
+    remove_net_check
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
     sudo rmdir "$SHARE" /usr/local/libexec /etc/wren 2>/dev/null || true
     sudo rm -rf /dev/shm/firefox-run
@@ -189,6 +190,7 @@ say "The firefox command"
 sudo install -d -o root -g root -m 0755 "$SHARE" /usr/local/libexec
 install_bin wayland-restrict
 install_no_abstract
+install_net_check
 sudo install -o root -g root -m 0755 "$WREN_DIR/bin/firefox" "$CMD"
 sudo install -o root -g root -m 0755 "$WREN_DIR/bin/firefox-session" "$SESSION"
 sudo install -o root -g root -m 0644 "$WREN_DIR/data/firefox-user.js" "$PREFS"
