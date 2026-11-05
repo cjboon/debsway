@@ -56,6 +56,9 @@ st --remove >/dev/null
 check "--remove takes the rule and the mark out" bash -c 'grep -q "sudo rm -f /etc/sudoers.d/wren-sudo-timeout" "$1" && [ ! -e "$2" ]' _ "$T/calls" "$T/home/.config/wren/sudo-timeout"
 check "Wren Linux's scripts refresh sudo more often than once a minute (sudo_keepalive)" bash -c '
     n=$(sed -n "/^sudo_keepalive() {/,/^}/p" "$1" | grep -oE "sleep [0-9]+" | grep -oE "[0-9]+"); [ -n "$n" ] && [ "$n" -lt 60 ]' _ "$HERE/lib/core.sh"
+check "...and when a script ends, the refresher goes quietly (no \"Terminated\" after the last line)" bash -c '
+    out=$(bash -c "SUDO=true; eval \"\$(sed -n \"/^sudo_keepalive() {/,/^}/p\" \"\$1\")\"; sudo_keepalive; /bin/sleep 0.3; echo last" _ "$1" 2>&1)
+    [ "$out" = last ]' _ "$HERE/lib/core.sh"
 check "it is in the base (packages.sh's PARTS)" grep -qE '(^|[ (])sudo-timeout( |$)' "$HERE/packages.sh"
 
 [ "$fails" -eq 0 ]

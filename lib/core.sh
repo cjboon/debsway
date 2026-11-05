@@ -176,13 +176,15 @@ need_user() {
 sudo_keepalive() {
     [ -z "$SUDO" ] || $SUDO -v || return 1
     [ -n "$SUDO" ] || return 0
+    # (its own messages go nowhere: when the script ends, the exit trap below stops
+    # its sleep, and the shell would say "Terminated" about that, after all is done)
     (
         # ends by itself when the script that started it is gone
         while kill -0 "$$" 2>/dev/null; do
             $SUDO -n true 2>/dev/null || exit 0
             sleep 50
         done
-    ) &
+    ) 2>/dev/null &
     SUDO_KEEPALIVE_PID=$!
     trap '[ -z "${SUDO_KEEPALIVE_PID:-}" ] || { pkill -P "$SUDO_KEEPALIVE_PID" 2>/dev/null; kill "$SUDO_KEEPALIVE_PID" 2>/dev/null; }' EXIT
 }
