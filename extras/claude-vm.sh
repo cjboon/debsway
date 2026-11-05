@@ -34,15 +34,33 @@
 # /etc/wren/claude-vm-ports) that only it may reach, a firewall line and a
 # sudo rule; claude-vm --account NAME runs it. --remove-account NAME takes it
 # out again.
+# How big the VM is (lib/vm-size.sh): the first time, it shows this computer's
+# memory and free disk, suggests a size and asks (Enter takes the suggestion),
+# and never lets the VM have so much that the computer runs short. --memory MB
+# and --disk MB choose it, then or later (memory from the VM's next start, the
+# disk from its next build, claude-vm rebuild).
 # Usage: bash claude-vm.sh [--remove | --manual | --account NAME | --remove-account NAME]
+#                          [--memory MB] [--disk MB]
 # summary: Claude Code in a disposable VM (no shared folder)
 # security: most
 # files: bin/no-abstract-sockets lib/claude-accounts.sh bin/claude-vm-net-check bin/sandbox-net-check
 # status: bin:claude-vm file:/usr/local/libexec/claude-vm-session
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$WREN_DIR/lib/claude-accounts.sh"
+. "$WREN_DIR/lib/vm-size.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
+
+# --memory MB and --disk MB, wherever they are; the rest stays in order
+SIZE_MEM='' SIZE_DISK='' rest=()
+while [ $# -gt 0 ]; do
+    case $1 in
+        --memory) [ $# -ge 2 ] || die "--memory needs a number of MB"; SIZE_MEM=$2; shift 2 ;;
+        --disk) [ $# -ge 2 ] || die "--disk needs a number of MB"; SIZE_DISK=$2; shift 2 ;;
+        *) rest+=("$1"); shift ;;
+    esac
+done
+set -- "${rest[@]}"
 
 AGENT=claude-vm
 AGENT_HOME=/home/$AGENT
@@ -164,6 +182,7 @@ remove_account() {
     sudo rm -f "$ACCOUNT_SUDOERS"
     sudo pkill -KILL -u "$AGENT" 2>/dev/null || true
     set_port "$1"
+    vm_size_remove "$AGENT"
     if id "$AGENT" >/dev/null 2>&1; then
         if ask "Delete the user $AGENT and its home folder $AGENT_HOME (its VM disk, with anything not pushed, its ssh key and Claude login)?" n; then
             sudo userdel -r "$AGENT" 2>/dev/null || sudo userdel "$AGENT"
@@ -199,6 +218,7 @@ if [ "${1:-}" = --account ] || [ "${1:-}" = --remove-account ]; then
     install_provision
     say "Its sudo rule"
     sudoers_rule "$ACCOUNT_SUDOERS"
+    vm_size_choose "$AGENT" "$SIZE_MEM" "$SIZE_DISK"
     build_vm "$2"
     cat <<EOF
 
@@ -218,6 +238,7 @@ if [ "${1:-}" = --remove ]; then
     for u in "${accounts[@]}"; do remove_account "${u#"$CLAUDE_VM_PREFIX"}"; done
     AGENT=claude-vm AGENT_HOME=/home/claude-vm
     sudo rm -f "$CLAUDE_VM_PORTS"
+    vm_size_remove claude-vm
     remove_bin claude-vm
     remove_claude_chooser
     # claude-pull is shared with extras/claude-code.sh; keep it if that
@@ -296,6 +317,7 @@ install_bin claude
 # it. Shared with extras/claude-code.sh, which installs the same command.
 install_bin claude-pull
 
+vm_size_choose "$AGENT" "$SIZE_MEM" "$SIZE_DISK"
 build_vm
 
 cat <<EOF

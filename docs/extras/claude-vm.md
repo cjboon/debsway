@@ -8,6 +8,7 @@ wrenctl remove claude-vm                          remove it (asks before deletin
 wrenctl manual claude-vm                          print the manual steps below
 wrenctl install claude-vm --account NAME          another account, in a VM of its own
 wrenctl install claude-vm --remove-account NAME   remove it (asks before deleting its user and VM)
+wrenctl install claude-vm --memory MB --disk MB   the VM's size (also with --account NAME)
 
 claude                 Claude Code; asks which if you set up more than one (Enter: the VM)
 claude-vm              Claude Code inside the VM (boots it; powers it off when you exit)
@@ -40,7 +41,15 @@ gets a VM of its own, run by its own locked user, `claude-vm-NAME`: its own
 disk, keys and login, its own console port (2250-2299, written by root in
 `/etc/wren/claude-vm-ports`), a sudo rule, and firewall lines that let
 that user reach its own port and nobody else's. Each VM takes its own disk
-space (several GB) and memory while it runs.
+space (several GB) and memory while it runs. How much (`lib/vm-size.sh`): the
+first time, it shows this computer's memory and free disk and suggests a size
+(a third of the memory, 2 to 8 GB; a 40 GB disk), Enter taking the suggestion;
+it refuses more than this computer can spare (at most half the memory, always
+4 GB left for the computer; at most the free disk less 20 GB, since the VM's
+disk file grows as it fills), and builds no VM at all on a computer with less
+than 4 GB of memory or 25 GB of free disk. `--memory` and `--disk` change it later: memory
+from the VM's next start, the disk from its next build (`claude-vm rebuild`).
+The choice is kept in `/etc/wren/claude-vm-size`, which only root can change.
 
 ## LIMITS
 
@@ -107,6 +116,9 @@ install -D -m 0755 @WREN_DIR@/bin/claude ~/.local/bin/claude
 install -D -m 0755 @WREN_DIR@/bin/claude-pull ~/.local/bin/claude-pull
 
 # Build the VM (unattended, 10-20 minutes), then show its ssh key for your git host
+# Its size in MiB (memory, disk), if not the engine's 2048 and 20000; leave
+# this computer at least 4 GB of memory and 20 GB of disk
+echo "claude-vm 4096 40000" | sudo tee /etc/wren/claude-vm-size
 sudo -u claude-vm /usr/local/libexec/claude-vm-session install
 sudo -u claude-vm /usr/local/libexec/claude-vm-session pubkey
 claude-vm

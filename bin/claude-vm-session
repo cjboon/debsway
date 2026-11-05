@@ -49,6 +49,19 @@ export VM_USER=agent
 export SSH_HOST_IP=127.0.0.1
 export SSH_HOST_PORT=$port
 export WORKDIR=$HOME/vm
+# Its size, as root chose it (extras/claude-vm.sh, lib/vm-size.sh: "USER MEMORY DISK"
+# in MiB): the memory counts from the next start, the disk from the next build.
+# Without a line (or with one out of all reason), the engine's own 2048 and 20000.
+size=$(awk -v u="$me" '$1 == u && $2 ~ /^[0-9]+$/ && $3 ~ /^[0-9]+$/ { print $2, $3; exit }' \
+    /etc/wren/claude-vm-size 2>/dev/null) || true
+if [ -n "$size" ]; then
+    read -r mem disk <<<"$size"
+    if [ "$mem" -ge 1024 ] && [ "$mem" -le 131072 ] && [ "$disk" -ge 10000 ] && [ "$disk" -le 4000000 ]; then
+        export VM_MEMORY=$mem VM_DISK_SIZE_MB=$disk
+    else
+        echo "claude-vm-session: ignoring the size in /etc/wren/claude-vm-size ($size MiB): out of range." >&2
+    fi
+fi
 export WEB_TUNNEL=0
 # QEMU's own syscall filter: the guest has root, so a bug in QEMU is what it would
 # aim for, and this limits what that process could then do (libvirt's usual set)
