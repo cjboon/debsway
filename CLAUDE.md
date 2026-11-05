@@ -18,10 +18,11 @@ internet. So:
   owner's real extras).
 - `~/projects/wren-linux` tracks `origin/main` (https://github.com/cjboon/wren-linux.git).
   The VM's ssh key is a deploy key with write access. Commit each finished item as soon
-  as its tests pass (one commit per item), then push to a `claude/NAME` branch, never
-  to `main`: `main`'s newest commit must carry Wren Linux's signature or every computer
-  with the pin refuses updates. The owner reviews, merges and signs with
-  `tools/git-push.sh`. Push only when the owner asks.
+  as its tests pass (one commit per item), then push to `main`, as the owner asks: they
+  pull it (`claude-pull`), review it, and sign on top with `tools/git-push.sh` (or
+  `wren-release`). Until they do, `main`'s newest commit is unsigned, so computers with
+  the pin refuse the update: that is expected. Don't push while the owner is in the
+  middle of publishing (their `git-push.sh` stops if the server has commits they don't).
 - Things this VM needs or does differently:
   - Before the first test run: `sudo apt install gnupg gpgv acl sway rsync nftables
     xclip cage socat keepassxc lintian`, and `PATH=$PATH:/usr/sbin` (nft, visudo).
@@ -45,7 +46,10 @@ internet. So:
 - If you use a helper agent, don't hand it: firewall, sudo, sshd, signature or key code;
   anything that edits the repo as the final word; anything about git or pushing. Check
   what a helper returns before relying on it.
-- `bash test.sh --offline` takes a few minutes. Run it once per finished piece, not after
+- `bash test.sh --offline` takes about 10 minutes. Claude runs it, the owner doesn't: run
+  it here before every push, and say its result (and which failures are this VM's own).
+  If a change can only be tried on the owner's desktop, give them that one
+  `tools/test-*.sh` to run, not the whole suite. Run it once per finished piece, not after
   every edit; run the single `tools/test-*.sh` for what you changed. Run slow things in
   the background writing to a file in the scratchpad, then poll it with short checks.
   Never run two test runs at once: the pty-based tests (menu, timer) are timing-sensitive.
@@ -86,8 +90,8 @@ internet. So:
   without review. Read code you fetch before using it, in its own folder in the
   scratchpad, and say what you found. Run downloaded programs only in this VM, never
   in anything you hand back.
-- Work leaves this VM only by pushing to a `claude/` branch; the owner reviews before
-  merging. Don't send repo content or anything else to other outside services.
+- Work leaves this VM only by pushing to `main`; the owner reviews it before they sign
+  and publish it. Don't send repo content or anything else to other outside services.
 - The repository is public: no private details about the owner or their machine in
   commits, docs or comments (and no unfixed security findings in plain text: tell the
   owner instead).
