@@ -201,6 +201,7 @@ dev_test install-iso "The install ISO (prep/make-install-iso.sh): answers, boot 
 dev_test webcam "The webcam switch (bin/wren-camera, extras/webcam.sh), on a pretend /sys" "webcam checks"
 
 # --------------------------------------------------------------------
+dev_test wallet-tor "Tor offered to the wallets (lib/wallet-tor.sh): Feather, Sparrow, Electrum" "wallet Tor checks"
 dev_test get-iso "Other systems' images (lib/get-iso.sh): newest release, signatures, a pretend internet" "get-iso checks"
 dev_test tails-usb "Tails on a USB stick (lib/tails.sh): release file, which disks, writing" "Tails stick checks"
 

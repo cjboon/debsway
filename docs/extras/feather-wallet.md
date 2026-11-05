@@ -16,7 +16,7 @@ featherwallet.org only if it matches the list of SHA-256 checksums that
 Feather signs with its key, pinned in `pins.sh` (`FEATHER_FPR`). The newest
 version is read from GitHub and must be plain numbers. The AppImage is
 unpacked into `~/.local/opt/feather` (no FUSE needed), and `feather` starts
-it. Feather uses X11 itself, so XWayland is installed.
+it. Feather uses X11 itself, so XWayland is installed. Feather has its own Tor and uses it by default for all but a wallet's first sync; before Feather's first run, installing asks (yes by default) whether everything goes through it, the first sync too (`lib/wallet-tor.sh` sets `torPrivacyLevel` 2 in `~/.config/feather/settings.json`).
 
 ## LIMITS
 

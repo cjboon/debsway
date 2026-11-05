@@ -9,6 +9,7 @@
 # status: opt:feather
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$WREN_DIR/lib/appimage.sh"
+. "$WREN_DIR/lib/wallet-tor.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
@@ -51,3 +52,12 @@ fi
 # Their AppRun only works under the AppImage runtime; run the binary the
 # way it would, X11 included
 write_launcher "$NAME" feather-wallet.sh usr/bin/feather QT_QPA_PLATFORM=xcb
+
+# Feather has its own Tor, and uses it by default for all but the first sync of
+# the wallet (which goes to the node directly, so the node sees your address):
+# offered here is all of it (proxy 1 is Tor, torPrivacyLevel 2 is "all over
+# Tor", in Feather's src/utils/config.h)
+wallet_offer_tor Feather feather "${XDG_CONFIG_HOME:-$HOME/.config}/feather/settings.json" \
+    '{"proxy": 1, "torPrivacyLevel": 2}' \
+    "Feather has its own Tor. It can send everything through it, the wallet's first sync too, so no node sees your address (slower)." \
+    "Feather's Settings > Network: Tor, for all traffic."

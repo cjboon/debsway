@@ -10,6 +10,7 @@
 # security: some
 # status: apt:sparrowwallet
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
+. "$WREN_DIR/lib/wallet-tor.sh"
 . "$WREN_DIR/lib/appimage.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
@@ -62,3 +63,15 @@ note "Run it with: sparrow   (or Super+d). Wallets live in ~/.sparrow."
 note "On first start it asks which server to use. A public server sees your wallet's"
 note "addresses; Sparrow's Tor (proxy) setting hides your IP address from it, and"
 note "your own Bitcoin node is the most private."
+# Sparrow uses its own Tor only for an .onion server; for any other, the proxy
+# setting (useProxy, proxyServer in ~/.sparrow/config) is this computer's Tor
+SPARROW_TOR_HOW="Sparrow's File > Preferences > Server: Use Proxy, $WALLET_TOR_SOCKS (or pick an .onion server: Sparrow then uses its own Tor)."
+if system_tor_runs; then
+    wallet_offer_tor Sparrow Sparrow "$HOME/.sparrow/config" \
+        "{\"useProxy\": true, \"proxyServer\": \"$WALLET_TOR_SOCKS\"}" \
+        "Tor runs on this computer: Sparrow can reach every server through it, so none sees your address." \
+        "$SPARROW_TOR_HOW"
+else
+    note "Tor for Sparrow: Tor doesn't run on this computer. Set up apt over Tor (wrenctl part apt-tor),"
+    note "then: $SPARROW_TOR_HOW"
+fi

@@ -13,7 +13,7 @@ electrum                                     start it (or Super+d, then electrum
 Electrum is a Bitcoin wallet, installed from Debian's own archive, which
 keeps it patched along with the rest of the system. It runs on Wayland
 through qtwayland5. Wallets are kept in `~/.electrum`: write down the seed it
-shows when you make one, because nothing else can bring a lost wallet back.
+shows when you make one, because nothing else can bring a lost wallet back. When Tor runs on this computer (apt over Tor, remote access, the onion site), installing asks before Electrum's first run (yes by default) whether it reaches its servers through that Tor (`proxy` `socks5:127.0.0.1:9050` in `~/.electrum/config`).
 
 ## LIMITS
 

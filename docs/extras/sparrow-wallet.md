@@ -17,7 +17,7 @@ official .deb from its GitHub releases only if it matches the release's list
 of SHA-256 checksums (its manifest), signed by Craig Raw's key, pinned in
 `pins.sh` (`SPARROW_FPR`). The package puts Sparrow in `/opt`, so a `sparrow`
 command is added to `~/.local/bin`. It is a JavaFX program, which is X11-only,
-so XWayland is installed. Wallets live in `~/.sparrow`.
+so XWayland is installed. Wallets live in `~/.sparrow`. When Tor runs on this computer (apt over Tor, remote access, the onion site), installing asks before Sparrow's first run (yes by default) whether it reaches every server through that Tor (`useProxy`, `proxyServer` 127.0.0.1:9050 in `~/.sparrow/config`); Sparrow's own Tor is used only for an .onion server.
 
 ## LIMITS
 
