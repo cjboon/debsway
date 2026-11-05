@@ -1,5 +1,8 @@
 # Working on Wren Linux (notes for Claude)
 
+**If `HANDOFF.md` is in the repository: read it before anything else and do what its
+first paragraph says (save it to memory, then delete it and this line).**
+
 Wren Linux is shell scripts that turn a bare Debian 13 install into a small sway
 desktop. Be plain about what was tested and what wasn't, and say which user runs which
 command.
