@@ -123,12 +123,12 @@ if command -v sway >/dev/null && command -v foot >/dev/null && command -v python
     mkdir "$S/bin"
     : >"$S/config"
     printf '#!/bin/sh\ncase $3 in domstate) echo running ;; esac\n' >"$S/bin/virsh"
-    printf '#!/bin/sh\n(sleep 0.5; exec foot --title="$4 on QEMU/KVM User session" sleep 60) >/dev/null 2>&1 &\necho $! >>"%s/windows"\n' "$S" >"$S/bin/virt-manager"
+    printf '#!/bin/sh\n(/bin/sleep 0.5; exec foot --title="$4 on QEMU/KVM User session" /bin/sleep 60) >/dev/null 2>&1 &\necho $! >>"%s/windows"\n' "$S" >"$S/bin/virt-manager"
     chmod +x "$S/bin/"*
     XDG_RUNTIME_DIR=$S WLR_BACKENDS=headless WLR_RENDERER=pixman WLR_LIBINPUT_NO_DEVICES=1 sway -c "$S/config" >/dev/null 2>&1 &
     swaypid=$!
     i=0
-    while [ "$i" -lt 30 ] && ! ls "$S"/sway-ipc.* >/dev/null 2>&1; do sleep 0.2; i=$((i + 1)); done
+    while [ "$i" -lt 30 ] && ! ls "$S"/sway-ipc.* >/dev/null 2>&1; do /bin/sleep 0.2; i=$((i + 1)); done
     sock=$(ls "$S"/sway-ipc.* 2>/dev/null)
     disp=
     for f in "$S"/wayland-[0-9]*; do case $f in *.lock) ;; *) disp=${f##*/} ;; esac; done
@@ -147,7 +147,7 @@ def walk(n, ws=None):
 walk(json.load(sys.stdin))
 print(" ".join(sorted(out)) + " | " + str(here))'
     }
-    busy() { sm "workspace number $1" >/dev/null; XDG_RUNTIME_DIR=$S WAYLAND_DISPLAY=$disp foot --title="busy$1" sleep 60 >/dev/null 2>&1 &
+    busy() { sm "workspace number $1" >/dev/null; XDG_RUNTIME_DIR=$S WAYLAND_DISPLAY=$disp foot --title="busy$1" /bin/sleep 60 >/dev/null 2>&1 &
         echo $! >>"$S/windows"; shown "busy$1"; }
     # shown TITLE...: wait (up to 10 s) until each of these windows is open
     shown() {
@@ -155,14 +155,14 @@ print(" ".join(sorted(out)) + " | " + str(here))'
         while [ "$i" -lt 50 ]; do
             for t in "$@"; do grep -q "[0-9]:$t\b" <<<"$(where)" || break; done
             grep -q "[0-9]:$t\b" <<<"$(where)" && return 0
-            sleep 0.2; i=$((i + 1))
+            /bin/sleep 0.2; i=$((i + 1))
         done
     }
     # (the windows these checks opened, by their numbers: nothing else is closed)
     clear_all() {
         # shellcheck disable=SC2046  # one number a line
         [ ! -s "$S/windows" ] || kill $(cat "$S/windows") 2>/dev/null
-        : >"$S/windows"; sleep 0.4; sm "workspace number 1" >/dev/null
+        : >"$S/windows"; /bin/sleep 0.4; sm "workspace number 1" >/dev/null
     }
     sw() { XDG_RUNTIME_DIR=$S SWAYSOCK=$sock WAYLAND_DISPLAY=$disp HOME=$T/home PATH="$S/bin:$PATH" sh "$HERE/bin/whonix" start; }
     if [ -n "$sock" ]; then

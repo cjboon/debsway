@@ -40,6 +40,12 @@ mapfile -t EXTRAS < <(
         case $tier in most | some | least) ;; *) tier=some ;; esac
         installed=0
         if [ -n "$(script_found "$f")" ]; then installed=1; fi
+        # A retired extra (update.sh offers its --remove): listed only while you
+        # still have it, so it can be taken out here too, never to install
+        if grep -q '^# retired: ' "$f"; then
+            [ "$installed" = 1 ] || continue
+            summary="(retired) ${summary:-$name}"
+        fi
         printf '%s\t%s\t%s\t%s\t%s\n' "$(tier_rank "$tier")" "$name" "${summary:-$name}" "$installed" "$tier"
     done | sort -t$'\t' -k1,1n -k2,2 | cut -f2-
 )

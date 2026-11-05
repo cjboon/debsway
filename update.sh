@@ -5,8 +5,11 @@
 # again is how a change gets installed (/usr/local, the firewall, Firefox's
 # policy...), and it is safe: scripts repair, never remove.
 #
-# It never runs --remove, never merges anything but a plain fast-forward
-# (so it can't overwrite your own changes), and asks before each step.
+# An extra Wren Linux retired (its "# retired:" line says why) is not run
+# again: it asks whether to take each one you still have out with its own
+# --remove, and Enter keeps it (it asks again next time). Apart from that it
+# never runs --remove, never merges anything but a plain fast-forward (so it
+# can't overwrite your own changes), and asks before each step.
 #
 # It remembers the commit it last brought you to (~/.local/state/wren/
 # updated-to); a script is offered when a file it uses changed since then.
@@ -140,22 +143,49 @@ main() {
     run_offered
 }
 
+# retired_offers: retired extras are not run again (out of offered); those
+# still set up here are offered for removal, each asked on its own, into removing
+retired_offers() {
+    local script why kept=()
+    for script in "${offered[@]}"; do
+        [ -n "$(update_retired "$script")" ] || kept+=("$script")
+    done
+    offered=("${kept[@]}")
+    while IFS= read -r script; do
+        [[ $script == extras/* ]] || continue
+        why=$(update_retired "$script")
+        [ -n "$why" ] && update_installed "$script" || continue
+        say "Wren Linux retired ${script#extras/}"
+        note "$why"
+        if ask "Take it out now (bash $script --remove)?" n; then
+            removing+=("$script")
+        else
+            note "Kept. It gets no more updates; update.sh asks again next time."
+        fi
+    done < <(update_scripts)
+}
+
 # run_offered: offers the scripts in offered, runs them one after the other if
-# you say so, and on success records that the setup is up to date (save_state)
+# you say so (and the --remove of those in removing), and on success records
+# that the setup is up to date (save_state)
 run_offered() {
-    local script
-    if [ ${#offered[@]} -eq 0 ]; then
+    local script declined=false
+    retired_offers
+    if [ ${#offered[@]} -eq 0 ] && [ ${#removing[@]} -eq 0 ]; then
         save_state "$now"
         say "Nothing to run again."
         return 0
     fi
 
-    say "These are set up here and use files that changed:"
-    for script in "${offered[@]}"; do note "$script"; done
-    ask "Run them again now, one after the other?" y || {
-        note "Left for next time: run  bash update.sh  again (or run them yourself: bash <script>)."
-        return 0
-    }
+    if [ ${#offered[@]} -gt 0 ]; then
+        say "These are set up here and use files that changed:"
+        for script in "${offered[@]}"; do note "$script"; done
+        ask "Run them again now, one after the other?" y || {
+            note "Left for next time: run  bash update.sh  again (or run them yourself: bash <script>)."
+            offered=() declined=true
+            [ ${#removing[@]} -gt 0 ] || return 0
+        }
+    fi
     # The password once, here: a wrong one stops everything before any script
     # runs (and does not move on to ask again for the next), and the permission
     # is kept fresh while they run so there is no second question part way.
@@ -166,6 +196,13 @@ run_offered() {
     fi
 
     local failed=()
+    for script in "${removing[@]}"; do
+        say "Taking out ${script#extras/}"
+        if ! "$RUNNER" "$WREN_DIR/$script" --remove; then
+            failed+=("$script --remove")
+            warn "$script --remove did not finish."
+        fi
+    done
     for script in "${offered[@]}"; do
         say "Running $script"
         if ! "$RUNNER" "$WREN_DIR/$script"; then
@@ -177,6 +214,8 @@ run_offered() {
         warn "These failed: ${failed[*]}. Run one again with: bash <script>. (update.sh will offer them again.)"
         return 1
     fi
+    # (what you left for next time is offered again then)
+    $declined && return 0
     save_state "$now"
     say "Up to date."
 }
@@ -218,7 +257,7 @@ package_offers() {
     done < <(update_stale)
 }
 
-offered=() now=
+offered=() removing=() now=
 # Everything runs inside main: git may replace this very file while it runs
 main "$@"
 rc=$?

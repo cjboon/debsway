@@ -88,6 +88,12 @@ update_scripts() {
     done
 }
 
+# update_retired SCRIPT: why SCRIPT is retired (its "# retired:" line), or
+# nothing. A retired extra is on its way out of Wren Linux: it is not offered
+# to install or to run again, only its --remove (update.sh asks), and its file
+# goes from the repository a release or two later.
+update_retired() { sed -n 's/^# retired: //p' "$WREN_DIR/$1" 2>/dev/null | head -1; }
+
 # update_installed SCRIPT: succeeds if SCRIPT is set up on this computer
 # (the "# status:" line). WREN_UPDATE_ASSUME_INSTALLED, a list of scripts,
 # stands in for that in tests.

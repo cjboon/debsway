@@ -305,8 +305,11 @@ that key, checked with the key in the copy you already have; until then it
 says that it didn't check.
 Then it lists the parts and extras you have set up whose files changed and
 offers to run them again, one after the other: running a script again is
-how a change reaches `/usr/local`, the firewall or Firefox's policy. It
-never runs `--remove`. If a script fails it says so and offers it again
+how a change reaches `/usr/local`, the firewall or Firefox's policy. An
+extra Wren Linux has retired (its `# retired:` line says why) gets no more
+runs: if you still have it, it asks whether to take it out with its own
+`--remove`, and Enter keeps it until next time. Otherwise it never runs
+`--remove`. If a script fails it says so and offers it again
 next time. A part of the base desktop that is new in an update is offered
 too, even though it isn't set up yet.
 

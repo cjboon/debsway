@@ -132,7 +132,10 @@ case $cmd in
         script=$(script_for extras "${1:-}") || exit 1
         shift
         case $cmd in
-            *install) watched "$script" "$@" ;;
+            *install)
+                ! grep -q '^# retired: ' "$script" ||
+                    die "Wren Linux retired $(basename "$script" .sh): $(sed -n 's/^# retired: //p' "$script" | head -1) (wrenctl remove $(basename "$script" .sh) takes it out.)"
+                watched "$script" "$@" ;;
             *manual) exec bash "$script" --manual "$@" ;;
             *) watched "$script" "--${cmd#--}" "$@" ;;
         esac ;;

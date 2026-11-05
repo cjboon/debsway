@@ -71,6 +71,9 @@ internet. So:
   what that script alone sets up: a package another script installs makes a permanent `*`.
   `# files:` names repo files that a library function installs for the script, so that
   `update.sh` knows when to run it again.
+  To drop an extra, don't delete it at once: add `# retired: WHY` under its first line.
+  It leaves the install list and `wrenctl install`, and `update.sh` offers its `--remove`
+  to whoever still has it. Delete the file a release or two later.
 - Every behaviour has a test in `tools/test-*.sh`, registered in `test.sh`. Make a test
   that can fail: check that it fails on the old code. The test suite replaces `sleep` with
   a no-op; use `/bin/sleep` where a test must really wait.

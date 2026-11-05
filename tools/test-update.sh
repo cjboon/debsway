@@ -53,7 +53,7 @@ SECOND=$(git -C "$T/W" rev-parse HEAD)
 
 # A runner that writes down what it was asked to run (and fails on request)
 # shellcheck disable=SC2016  # written into the runner, expanded when it runs
-printf '#!/bin/bash\necho "$1" >>"%s/ran"\n[ "$1" != "$FAIL_ON" ]\n' "$T" >"$T/runner"
+printf '#!/bin/bash\necho "$*" >>"%s/ran"\n[ "$1" != "$FAIL_ON" ]\n' "$T" >"$T/runner"
 chmod +x "$T/runner"
 export WREN_UPDATE_RUNNER="$T/runner"
 # A pretend sudo: -v succeeds (or fails with FAKE_SUDO_RC); every call is written down
@@ -145,6 +145,32 @@ check "...says so, in plain words" grep -q "sudo didn't accept the password, so 
 check "...fails, so it is not mistaken for success" not grep -qx 'rc=0' <<<"$bad"
 check "...asks only once (it does not go on to the next script and ask again)" test "$(grep -c '^sudo -v' "$T/sudolog")" -eq 1
 check "...and does not record the update as done" test ! -e "$T/state/wren/updated-to"
+
+# 6c. extras Wren Linux retired: not run again; each one still set up is
+# offered for removal (its own --remove), and Enter keeps it
+rm -f "$T/state/wren/updated-to"
+for x in claude-code media; do sed -i '2i # retired: kept for checking update.sh' "$T/W/extras/$x.sh"; done
+echo '# changed again' >>"$T/W/bin/incognito"
+git -C "$T/W" commit -q -am retire && git -C "$T/W" push -q origin main
+: >"$T/ran"
+ARGS='' out=$(upd y y n y)
+check "a retired extra that changed is not run again" not ran extras/claude-code.sh
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+check "...it says it is retired, and why" bash -c 'grep -q "retired claude-code" <<<"$1" && grep -q "kept for checking update.sh" <<<"$1"' _ "$out"
+check "...yes takes it out with its own --remove" grep -qxF "$T/L/extras/claude-code.sh --remove" "$T/ran"
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+check "...no keeps it, and says it is asked again" bash -c '! grep -q "media.sh --remove" "$1" && grep -q "asks again next time" <<<"$2"' _ "$T/ran" "$out"
+check "...and the rest still runs again" ran parts/incognito.sh
+: >"$T/ran"
+ARGS='' out=$(upd)
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+check "...next time, one still set up is asked about again (Enter keeps it)" bash -c 'grep -q "retired media" <<<"$1" && ! grep -q -- "--remove" "$2"' _ "$out" "$T/ran"
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+check "a retired extra isn't in the list to install" bash -c '! WREN_DIR="$1" bash "$1/install-extras.sh" --list | grep -q "^  media "' _ "$T/L"
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+check "...and wrenctl install refuses it, saying why and how to take it out" bash -c '
+    o=$(WREN_DIR="$1" bash "$1/bin/wrenctl" install media 2>&1) && exit 1
+    grep -q "retired media: kept for checking update.sh" <<<"$o" && grep -q "wrenctl remove media" <<<"$o"' _ "$T/L"
 
 # 7. a plain-git problem: your own commit on top
 echo mine >"$T/L/mine.txt"
