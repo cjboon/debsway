@@ -199,7 +199,7 @@ check "and the marker was rebuilt for it" test "$(count '^apt-get install')" -gt
 
 # need_tools: only the packages of what is missing, each once, through apt_install
 (
-    # shellcheck disable=SC2317  # called by need_tools
+    # shellcheck disable=SC2317,SC2329  # called by need_tools
     apt_install() { printf '%s\n' "$*" >"$ST/need"; }
     : >"$ST/need"
     need_tools bash:bash "$ST:nothing" >/dev/null 2>&1

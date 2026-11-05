@@ -8,7 +8,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Pinned to a commit: a tag can be moved to different code
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
       - run: sudo apt-get update && sudo apt-get install -y shellcheck
+      # What the tests use, as on a Wren Linux computer with the developer extra
+      # (gpg-agent makes and checks keys, nftables runs the firewall rules in a
+      # network namespace, lintian checks the package)
+      - run: sudo apt-get install -y gnupg gpgv acl sway rsync nftables xclip cage socat keepassxc lintian python3 wget
       - run: shellcheck $(git ls-files '*.sh' 'bin/*')
       - run: bash test.sh --offline

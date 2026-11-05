@@ -149,6 +149,7 @@ bad_arg() { # LINE-PATTERN VALUE VAR: does the script's check for VAR refuse VAL
     local line
     line=$(grep -F -m1 "$1" "$HERE/bin/firefox-session")
     [ -n "$line" ] || return 1
+    # shellcheck disable=SC2329  # die is called by the line run through eval
     ( die() { exit 1; }; export "$3=$2"; eval "${line//\[ -S*/true}" ) 2>/dev/null && return 1 || return 0
 }
 ok_arg() { ! bad_arg "$@"; }
