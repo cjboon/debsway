@@ -38,6 +38,15 @@ took=$(($(date +%s) - start))
 check "a scan that never finishes is cut off (took ${took}s)" test "$took" -lt 10
 check "...and gives no networks, so wifi.sh asks for the name" test -z "$out"
 check "a scan that works lists the networks, strongest first" test "$(scan ok | paste -sd' ')" = "near far"
+# A network's name is whatever its owner typed: shown without control characters
+show=$(grep -F 'for i in "${!ssids[@]}"; do printf' "$HERE/wifi.sh")
+pr=$(sed -n '/^printable() /p' "$HERE/lib/core.sh")
+out=$(bash -c "$pr"'
+    ssids=("$1" plain); '"$show" _ "$(printf 'evil\033[2K\033]0;owned\007\r\302\23331mname')")
+check "a network named with escape codes is listed, cleaned of them" bash -c '
+    [ "$(sed -n 1p <<<"$1")" = "   1) evil[2K]0;owned31mname" ] && [ "$(sed -n 2p <<<"$1")" = "   2) plain" ]' _ "$out"
+check "...and every message that shows the name cleans it too" bash -c '
+    ! grep -nE "(say|note|warn|die|ask) .*\\\$SSID" "$1" | grep -v printable' _ "$HERE/wifi.sh"
 check "nmcli and iwctl scans have a time limit too" \
     bash -c 'grep -q "timeout \"\$SCAN_TIMEOUT\" nmcli" "$1" && grep -q "timeout \"\$SCAN_TIMEOUT\" iwctl station \"\$IF\" get-networks" "$1"' _ "$HERE/wifi.sh"
 

@@ -337,7 +337,8 @@ ask_network() {
         mapfile -t ssids < <(scan_ssids || true)
     fi
     if [ ${#ssids[@]} -gt 0 ]; then
-        for i in "${!ssids[@]}"; do printf '  %2d) %s\n' $((i + 1)) "${ssids[i]}"; done
+        # (a network's name is whatever its owner typed: shown without control characters)
+        for i in "${!ssids[@]}"; do printf '  %2d) %s\n' $((i + 1)) "$(printf '%s' "${ssids[i]}" | printable)"; done
     else
         note "Couldn't scan (or nothing found). Type the network name."
     fi
@@ -351,7 +352,7 @@ ask_network() {
     done
     HIDDEN=false
     if ! printf '%s\n' "${ssids[@]}" | grep -qxF -- "$SSID"; then
-        if ask "\"$SSID\" wasn't in the scan. Is it a hidden network?" y; then HIDDEN=true; fi
+        if ask "\"$(printf '%s' "$SSID" | printable)\" wasn't in the scan. Is it a hidden network?" y; then HIDDEN=true; fi
     fi
 }
 
@@ -517,7 +518,7 @@ connect_wpa() {
     case $rc in
         0) ;;
         2) warn "Wrong password."; return 2 ;;
-        *) warn "Couldn't connect to \"$SSID\" (out of range, or wrong name?)."; return 1 ;;
+        *) warn "Couldn't connect to \"$(printf '%s' "$SSID" | printable)\" (out of range, or wrong name?)."; return 1 ;;
     esac
     sleep 1
 
@@ -624,7 +625,7 @@ done
 say "Checking the connection"
 for i in $(seq 15); do
     if has_ipv4 "$IF" && have_internet; then
-        say "Online: $SSID on $IF ($(ip -4 -o addr show dev "$IF" scope global | awk '{ print $4; exit }'))"
+        say "Online: $(printf '%s' "$SSID" | printable) on $IF ($(ip -4 -o addr show dev "$IF" scope global | awk '{ print $4; exit }'))"
         exit 0
     fi
     sleep 1
@@ -632,4 +633,4 @@ done
 if has_ipv4 "$IF"; then
     die "Connected with an address, but names don't resolve. Check /etc/resolv.conf."
 fi
-die "Joined \"$SSID\" but got no address from it."
+die "Joined \"$(printf '%s' "$SSID" | printable)\" but got no address from it."

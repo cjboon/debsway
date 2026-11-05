@@ -46,7 +46,9 @@ printf '#!/bin/bash\n# status: bin:newpart\n' >"$T/W/parts/newpart.sh"
 printf '#!/bin/bash\n# status: bin:otherpart\n' >"$T/W/parts/otherpart.sh"
 sed -i 's/^PARTS=(/PARTS=(newpart /' "$T/W/packages.sh"
 git -C "$T/W" add -A
-git -C "$T/W" commit -q -am second && git -C "$T/W" push -q origin main
+# (its message carries what would steer a terminal: an escape sequence, a title
+# change, a bell, and an 8-bit CSI in its UTF-8 form)
+git -C "$T/W" commit -q -am "second$(printf '\033[2K\033]0;owned\007\302\23331m')" && git -C "$T/W" push -q origin main
 SECOND=$(git -C "$T/W" rev-parse HEAD)
 
 # A runner that writes down what it was asked to run (and fails on request)
@@ -73,6 +75,8 @@ upd() { # ANSWERS... then the arguments of update.sh in $ARGS
 ARGS='' out=$(upd n)
 check "saying no to the update changes nothing" test "$(git -C "$T/L" rev-parse HEAD)" = "$FIRST"
 check "...and runs nothing" test ! -s "$T/ran"
+# (shown cleaned, the line reads exactly this: every control character in it gone)
+check "the server's commit message is shown, but none of its control characters reach the terminal" grep -qF 'second[2K]0;owned31m' <<<"$out"
 
 # 2. saying yes merges, and offers the scripts that use what changed
 ARGS='' out=$(upd y y)

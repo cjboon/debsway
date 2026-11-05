@@ -76,7 +76,8 @@ main() {
         elif ! g merge-base --is-ancestor "$before" "$upstream"; then
             die "Your copy and the server's have both changed, so it can't be brought in as a plain update. Look at: git -C $WREN_DIR status"
         else
-            g --no-pager log --stat --format='%n%C(yellow)%h%Creset %s%n%b' 'HEAD..@{upstream}'
+            # (as plain text: what the server sends could steer the terminal otherwise)
+            g --no-pager log --stat --format='%n%h %s%n%b' 'HEAD..@{upstream}' | printable
             echo
             note "Every changed line: git -C $WREN_DIR diff HEAD..@{upstream}"
             # Only what Wren Linux's own key signed (pins.sh), checked before the merge

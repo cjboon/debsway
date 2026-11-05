@@ -17,7 +17,8 @@ if [ -z "$(git rev-list 'HEAD..@{upstream}')" ]; then
     exit 0
 fi
 # (without control characters: a commit message from the VM could steer your terminal)
-git --no-pager log --stat --format='%n%h %s%n%b' 'HEAD..@{upstream}' | LC_ALL=C tr -d '\000-\010\013-\037\177'
+# (the 8-bit controls too, in their UTF-8 form: some terminals obey those as well)
+git --no-pager log --stat --format='%n%h %s%n%b' 'HEAD..@{upstream}' | LC_ALL=C sed 's/\xc2[\x80-\x9f]//g' | LC_ALL=C tr -d '\000-\010\013-\037\177'
 echo
 echo "Every changed line: git diff HEAD..@{upstream}"
 read -rp "Bring these in? [y/N] " answer

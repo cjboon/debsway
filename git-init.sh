@@ -251,7 +251,7 @@ if [ -n "$match" ]; then
     # the same contents: this only gives back the executable marks a stick lost
     g checkout -q -- .
     behind=$(g rev-list --count "$match..origin/main")
-    say "Your copy is exactly the published commit $(g log -1 --format='%h (%ad): %s' --date=short "$match")"
+    say "Your copy is exactly the published commit $(g log -1 --format='%h (%ad): %s' --date=short "$match" | printable)"
     if [ "$behind" = 0 ]; then
         note "That is the newest: you are up to date."
     else

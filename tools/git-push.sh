@@ -57,7 +57,8 @@ if [ "$(g rev-list --count origin/main..HEAD)" = 0 ]; then
 fi
 
 say "What would go out"
-g --no-pager log --format='  %C(yellow)%h%Creset %s' origin/main..HEAD
+# (as plain text: a helper's commit message could steer the terminal otherwise)
+g --no-pager log --format='  %h %s' origin/main..HEAD | printable
 echo
 
 if ! update_signed HEAD; then

@@ -232,6 +232,13 @@ install_bin() {
     note "Installed $dest"
 }
 
+# printable: standard input without control characters (an escape sequence that
+# steers the terminal, a carriage return that writes over a line, a backspace...),
+# tabs and line breaks kept, and without the 8-bit ones in their UTF-8 form
+# (U+0080-U+009F: some terminals obey those too). For text from outside, before
+# it reaches the terminal: a commit message from the server, a Wi-Fi network's name.
+printable() { LC_ALL=C sed 's/\xc2[\x80-\x9f]//g' | LC_ALL=C tr -d '\000-\010\013-\037\177'; }
+
 # The wrapper that keeps a sandbox user off X11's abstract socket (see
 # bin/no-abstract-sockets). One copy, root's, shared by the sandboxes; the last
 # one to be removed takes it away.
