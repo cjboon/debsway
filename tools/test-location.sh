@@ -89,6 +89,38 @@ check "...the install stick is still made there (make-install-iso.sh doesn't ask
     bash -c '! grep -q "^need_user" "$1" && grep -q "^not_root" "$1"' _ "$HERE/prep/make-install-iso.sh"
 check "a computer set up as Wren Linux: no stop" grep -q passed <<<"$(env HOME="$T/home" WREN_SUDO=true bash -c '. "$1/lib.sh"; need_user && echo passed' _ "$HERE" 2>&1)"
 
+# A password typed wrong three times (sudo's own tries): it asks whether to try
+# again, rather than ending a first install; not for a user who can't use sudo,
+# not with nobody to ask, and not forever
+mkdir -p "$T/pw"
+# (a pretend sudo -v that fails the first FAILS times)
+printf '#!/bin/sh\nn=$(cat "%s/pw/n" 2>/dev/null || echo 0); echo $((n + 1)) >"%s/pw/n"\n[ "$n" -ge "${FAILS:-0}" ]\n' "$T" "$T" >"$T/pw/sudo"
+chmod +x "$T/pw/sudo"
+pw() { # FAILS GROUPS ANSWERS... (a group list as id -nG would give)
+    local fails=$1 groups=$2
+    shift 2
+    rm -f "$T/pw/n"
+    printf '%s\n' "$@" >"$T/pw/answers"
+    env HOME="$T/home" WREN_SUDO="$T/pw/sudo" FAILS="$fails" WREN_TEST_ANSWERS="$T/pw/answers" GROUPS_SAY="$groups" \
+        bash -c 'id() { if [ "$1" = -nG ]; then echo "$GROUPS_SAY"; else command id "$@"; fi; }
+            . "$1/lib.sh"; need_user && echo passed' _ "$HERE" 2>&1
+}
+out=$(pw 1 "me sudo" y)
+check "a password typed wrong: it asks whether to try again, and goes on when it is right" bash -c '
+    grep -q "Try again?" <<<"$1" && grep -q passed <<<"$1"' _ "$out"
+out=$(pw 9 "me sudo" n)
+check "...no: it stops, and says nothing was changed" bash -c '
+    ! grep -q passed <<<"$1" && grep -q "Stopped before changing anything" <<<"$1"' _ "$out"
+out=$(pw 99 "me sudo" y y y y y y y y y y)
+check "...not forever: five rounds at most" bash -c '
+    ! grep -q passed <<<"$1" && [ "$(cat "$2")" = 5 ]' _ "$out" "$T/pw/n"
+out=$(pw 9 "me users")
+check "a user who can't use sudo: no question, just how to set it up" bash -c '
+    ! grep -q "Try again?" <<<"$1" && grep -q "setup-sudo.sh" <<<"$1"' _ "$out"
+out=$(WREN_NONINTERACTIVE=1 pw 9 "me sudo")
+check "an unattended run: it stops, with nobody to ask" bash -c '
+    ! grep -q "Try again?" <<<"$1" && grep -q "Stopped before changing anything" <<<"$1"' _ "$out"
+
 # 6. The documentation in ~/Documents/wren-docs, links into the copy in use
 dl() { env HOME="$1" WREN_DIR="$2" bash -c 'note() { :; }; eval "$(sed -n "/^DOCS=/p; /^docs_links() {/,/^}/p" "$3")"; docs_links' _ "$1" "$2" "$HERE/parts/core-commands.sh"; }
 mkdir -p "$T/dh"

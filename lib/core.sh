@@ -160,13 +160,21 @@ need_user() {
     command -v sudo >/dev/null ||
         die "sudo isn't installed. Log in as root and run: bash $WREN_DIR/prep/setup-sudo.sh $(id -un)"
     # Two different failures: a user who is not allowed to use sudo at all, and one
-    # who is but typed the password wrong
-    if ! $SUDO -v; then
-        if id -nG | tr ' ' '\n' | grep -qxE 'sudo|wheel|admin'; then
-            die "sudo didn't accept the password (after three tries). Run this again and type your own password."
+    # who is but typed the password wrong. A typo shouldn't end a first install:
+    # it asks whether to try again (yes unless you say no), where there is someone
+    # to ask, a few rounds at most; nothing has been changed yet either way
+    local round=1
+    until $SUDO -v; do
+        id -nG | tr ' ' '\n' | grep -qxE 'sudo|wheel|admin' ||
+            die "Your user can't use sudo. Log in as root and run: bash $WREN_DIR/prep/setup-sudo.sh $(id -un)"
+        warn "sudo didn't accept the password (three tries). Your own password, the one you log in with."
+        if [ -n "${WREN_NONINTERACTIVE:-}" ] || [ "$round" -ge 5 ] ||
+            { [ -z "${WREN_TEST_ANSWERS:-}" ] && ! { : </dev/tty; } 2>/dev/null; } ||
+            ! ask "Try again?" y; then
+            die "Stopped before changing anything. Run this again and type your own password."
         fi
-        die "Your user can't use sudo. Log in as root and run: bash $WREN_DIR/prep/setup-sudo.sh $(id -un)"
-    fi
+        round=$((round + 1))
+    done
 }
 
 # sudo_keepalive: asks for the sudo password once, now, and keeps the permission
