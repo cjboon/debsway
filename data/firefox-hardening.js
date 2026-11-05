@@ -5,6 +5,13 @@
 // HTTPS-Only Mode: no unencrypted pages without asking first
 pref("dom.security.https_only_mode", true);
 
+// No "save this password?" and no made-up passwords: KeePassXC keeps them,
+// encrypted with your own passphrase, apart from the browser pages run in (the
+// policy OfferToSaveLogins locks the first; logins saved before stay listed)
+pref("signon.rememberSignons", false);
+pref("signon.generation.enabled", false);
+pref("signon.firefoxRelay.feature", "disabled");
+
 // JavaScript JIT off: slower JavaScript, much less to attack
 pref("javascript.options.ion", false);
 pref("javascript.options.baselinejit", false);

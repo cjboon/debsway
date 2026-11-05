@@ -317,6 +317,14 @@ about incognito; your profiles stay).
   bookmarks and saved passwords stay: no website can read them.
 - **Saved passwords fill in on a click**, not as the page loads: tracking
   scripts have added hidden login boxes to read what Firefox filled in.
+- **No "save this password?"**: Firefox never offers to save a password, nor
+  makes one up or offers Relay addresses. KeePassXC (`wrenctl install
+  keepassxc`) keeps them, encrypted with your own passphrase and apart from
+  the browser that pages run in. Logins saved before stay in Firefox's list
+  (Settings, Passwords), so you can move them over.
+- **A "Learn (Wren Linux)" bookmarks folder**, read-only and apart from your
+  own bookmarks: Linux and the command line, Bash, sed and awk, security and
+  privacy, programming and full-stack web (`data/firefox-bookmarks.json`).
 - **HTTPS-Only Mode**: Firefox won't load an unencrypted page without
   asking first, so nobody on café or hotel Wi-Fi can tamper with it.
 - **Its DNS, encrypted either way** (set at each start, never a provider

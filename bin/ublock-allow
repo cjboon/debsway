@@ -24,6 +24,9 @@ ETC=${WREN_FIREFOX_ETC:-/etc/firefox-esr}
 LIST="$ETC/wren-ublock-allow"
 # standard or medium; no file: medium, as Wren Linux was before the choice
 MODE_FILE="$ETC/wren-ublock-mode"
+# The "Learn (Wren Linux)" bookmarks (data/firefox-bookmarks.json), put there by
+# parts/firefox-hardening.sh; none if it isn't there
+BOOKMARKS="$ETC/wren-bookmarks.json"
 # Debian's Firefox only finds policies.json in its install folder (it looks
 # in /etc/firefox-esr/policies too, but the Debian build never reads it)
 DIST=${WREN_FIREFOX_DIST:-/usr/share/firefox-esr/distribution}
@@ -77,10 +80,19 @@ write_policy() {
     #                            for every add-on; incognito is private all the time).
     #   Override*Page          - no Mozilla first-run or what's-new tabs; Firefox
     #                            opens straight to the home page.
+    #   OfferToSaveLogins      - Firefox never asks to save a password: KeePassXC
+    #                            keeps them, encrypted with your own passphrase and
+    #                            apart from the browser pages run in. Logins saved
+    #                            before stay in Firefox's list, to move over.
+    #   ManagedBookmarks       - a read-only folder of learning links (Linux, Bash,
+    #                            sed and awk, security, programming, the web),
+    #                            kept apart from your own bookmarks.
     #   (Firefox's own DNS isn't set here: each Firefox Wren Linux starts sets
     #   it at its start, firefox-session and incognito-session, so the Wi-Fi
     #   sign-in window can differ from the rest. A policy would lock it for all.)
-    printf '{\n  "policies": {\n    "SearchEngines": { "Default": "DuckDuckGo", "DefaultPrivate": "DuckDuckGo" },\n    "OverrideFirstRunPage": "",\n    "OverridePostUpdatePage": "",\n    "ExtensionSettings": {\n      "uBlock0@raymondhill.net": { "private_browsing": true }\n    },\n    "3rdparty": {\n      "Extensions": {\n        "uBlock0@raymondhill.net": {\n          "adminSettings": "%s"\n        }\n      }\n    }\n  }\n}\n' "$inner" |
+    local bookmarks='[]'
+    [ ! -s "$BOOKMARKS" ] || bookmarks=$(tr -d '\n' <"$BOOKMARKS")
+    printf '{\n  "policies": {\n    "SearchEngines": { "Default": "DuckDuckGo", "DefaultPrivate": "DuckDuckGo" },\n    "OverrideFirstRunPage": "",\n    "OverridePostUpdatePage": "",\n    "OfferToSaveLogins": false,\n    "ManagedBookmarks": %s,\n    "ExtensionSettings": {\n      "uBlock0@raymondhill.net": { "private_browsing": true }\n    },\n    "3rdparty": {\n      "Extensions": {\n        "uBlock0@raymondhill.net": {\n          "adminSettings": "%s"\n        }\n      }\n    }\n  }\n}\n' "$bookmarks" "$inner" |
         $SUDO tee "$POLICY" >/dev/null
     sum=$(sha256sum "$POLICY")
     echo "$sum" | $SUDO tee "$OURS" >/dev/null

@@ -19,7 +19,7 @@ Debian project. (It was called debsway until November 2026.)
 What's different from a dotfiles repo:
 
 - **Hardened Firefox** (an extra you pick): uBlock Origin (standard or medium mode, your choice), HTTPS-Only,
-  JIT off, DuckDuckGo, and `firefox` runs it as its own locked-down user (shared
+  JIT off, DuckDuckGo, no password-saving prompts (KeePassXC keeps them), a folder of learning bookmarks, and `firefox` runs it as its own locked-down user (shared
   clipboard and `~/Downloads`, nothing else of yours). `incognito` opens a throwaway Firefox as a
   separate locked-down user, in memory, on a restricted Wayland socket,
   with its own firewall rule and audio, that plays video and sound. "Wi-Fi sign-in" in the

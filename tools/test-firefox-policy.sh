@@ -46,6 +46,27 @@ check "no DNS in it: a locked policy would hold every Firefox, the Wi-Fi sign-in
 check "uBlock's medium mode is still set" \
     bash -c "grep -q '3p-script block' <<<\"\$1\"" _ "$(policy 3rdparty Extensions uBlock0@raymondhill.net adminSettings)"
 check "DuckDuckGo is still the search engine" test "$(policy SearchEngines Default)" = '"DuckDuckGo"'
+check "Firefox never offers to save a password (KeePassXC keeps them)" test "$(policy OfferToSaveLogins)" = false
+check "...and makes none up, nor offers Relay addresses (every profile's defaults)" \
+    bash -c 'grep -qx "pref(\"signon.rememberSignons\", false);" "$1" && grep -qx "pref(\"signon.generation.enabled\", false);" "$1" && grep -qx "pref(\"signon.firefoxRelay.feature\", \"disabled\");" "$1"' _ "$HERE/data/firefox-hardening.js"
+check "without the bookmarks file: an empty bookmarks policy, still valid" test "$(policy ManagedBookmarks)" = '[]'
+cp "$HERE/data/firefox-bookmarks.json" "$T/etc/wren-bookmarks.json"
+allow --refresh
+check "with it: the \"Learn (Wren Linux)\" folder, as data/firefox-bookmarks.json has it" python3 -I -c '
+import json, sys
+p = json.load(open(sys.argv[1]))["policies"]["ManagedBookmarks"]
+assert p == json.load(open(sys.argv[2]))
+assert p[0] == {"toplevel_name": "Learn (Wren Linux)"}
+' "$POLICY" "$HERE/data/firefox-bookmarks.json"
+check "...every bookmark a name and an https address, in a folder" python3 -I -c '
+import json, re, sys
+for folder in json.load(open(sys.argv[1]))[1:]:
+    assert folder["name"] and folder["children"]
+    for b in folder["children"]:
+        assert b["name"] and re.fullmatch(r"https://[a-z0-9.-]+(/[^\s\"<>]*)?", b["url"]), b
+' "$HERE/data/firefox-bookmarks.json"
+check "...installed by the hardening, and taken out with it" \
+    bash -c 'grep -q "install -m 0644 \"\$WREN_DIR/data/firefox-bookmarks.json\" \"\$ETC/wren-bookmarks.json\"" "$1" && grep -q "\"\$ETC/wren-bookmarks.json\" \"\$ALLOW\"" "$1"' _ "$HERE/parts/firefox-hardening.sh"
 
 allow example.com >/dev/null
 check "an allowed site lands in the policy" \

@@ -1,0 +1,211 @@
+[
+  {
+    "toplevel_name": "Learn (Wren Linux)"
+  },
+  {
+    "name": "Linux and the command line",
+    "children": [
+      {
+        "name": "The Linux Command Line (free book)",
+        "url": "https://linuxcommand.org/tlcl.php"
+      },
+      {
+        "name": "MIT: The Missing Semester of Your CS Education",
+        "url": "https://missing.csail.mit.edu/"
+      },
+      {
+        "name": "explainshell: what a command line does",
+        "url": "https://explainshell.com/"
+      },
+      {
+        "name": "tldr pages: short examples for commands",
+        "url": "https://tldr.sh/"
+      },
+      {
+        "name": "The Debian Administrator's Handbook",
+        "url": "https://debian-handbook.info/browse/stable/"
+      },
+      {
+        "name": "Debian Wiki",
+        "url": "https://wiki.debian.org/"
+      },
+      {
+        "name": "Arch Wiki (much of it fits Debian too)",
+        "url": "https://wiki.archlinux.org/"
+      },
+      {
+        "name": "Linux man pages online",
+        "url": "https://man7.org/linux/man-pages/"
+      }
+    ]
+  },
+  {
+    "name": "Bash and shell scripts",
+    "children": [
+      {
+        "name": "GNU Bash manual",
+        "url": "https://www.gnu.org/software/bash/manual/bash.html"
+      },
+      {
+        "name": "Greg's Wiki: BashGuide",
+        "url": "https://mywiki.wooledge.org/BashGuide"
+      },
+      {
+        "name": "Greg's Wiki: BashFAQ",
+        "url": "https://mywiki.wooledge.org/BashFAQ"
+      },
+      {
+        "name": "Greg's Wiki: BashPitfalls",
+        "url": "https://mywiki.wooledge.org/BashPitfalls"
+      },
+      {
+        "name": "ShellCheck wiki: every warning explained",
+        "url": "https://www.shellcheck.net/wiki/"
+      },
+      {
+        "name": "POSIX shell command language",
+        "url": "https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html"
+      }
+    ]
+  },
+  {
+    "name": "sed, awk and text",
+    "children": [
+      {
+        "name": "GNU sed manual",
+        "url": "https://www.gnu.org/software/sed/manual/sed.html"
+      },
+      {
+        "name": "GNU awk (gawk) manual",
+        "url": "https://www.gnu.org/software/gawk/manual/gawk.html"
+      },
+      {
+        "name": "Grymoire: sed",
+        "url": "https://www.grymoire.com/Unix/Sed.html"
+      },
+      {
+        "name": "Grymoire: awk",
+        "url": "https://www.grymoire.com/Unix/Awk.html"
+      },
+      {
+        "name": "GNU grep manual",
+        "url": "https://www.gnu.org/software/grep/manual/grep.html"
+      },
+      {
+        "name": "Regular expressions: regular-expressions.info",
+        "url": "https://www.regular-expressions.info/"
+      }
+    ]
+  },
+  {
+    "name": "Security and privacy",
+    "children": [
+      {
+        "name": "EFF: Surveillance Self-Defense",
+        "url": "https://ssd.eff.org/"
+      },
+      {
+        "name": "Tor Project: support and manual",
+        "url": "https://support.torproject.org/"
+      },
+      {
+        "name": "OWASP Top 10",
+        "url": "https://owasp.org/projects/top-ten"
+      },
+      {
+        "name": "OWASP Cheat Sheet Series",
+        "url": "https://cheatsheetseries.owasp.org/"
+      },
+      {
+        "name": "Debian Security (advisories and how-tos)",
+        "url": "https://www.debian.org/security/"
+      },
+      {
+        "name": "Mozilla Observatory (check a website)",
+        "url": "https://developer.mozilla.org/en-US/observatory"
+      },
+      {
+        "name": "GnuPG manual",
+        "url": "https://www.gnupg.org/documentation/manuals/gnupg/"
+      },
+      {
+        "name": "OpenSSH manual pages",
+        "url": "https://www.openssh.org/manual.html"
+      }
+    ]
+  },
+  {
+    "name": "Programming",
+    "children": [
+      {
+        "name": "Harvard CS50 (free course)",
+        "url": "https://cs50.harvard.edu/x/"
+      },
+      {
+        "name": "The Python Tutorial",
+        "url": "https://docs.python.org/3/tutorial/"
+      },
+      {
+        "name": "Pro Git (free book)",
+        "url": "https://git-scm.com/book/en/v2"
+      },
+      {
+        "name": "Eloquent JavaScript (free book)",
+        "url": "https://eloquentjavascript.net/"
+      },
+      {
+        "name": "The Rust Programming Language (free book)",
+        "url": "https://doc.rust-lang.org/book/"
+      },
+      {
+        "name": "Exercism: practice in many languages",
+        "url": "https://exercism.org/"
+      }
+    ]
+  },
+  {
+    "name": "Full-stack web",
+    "children": [
+      {
+        "name": "MDN Web Docs (HTML, CSS, JavaScript)",
+        "url": "https://developer.mozilla.org/en-US/"
+      },
+      {
+        "name": "MDN: Learn web development",
+        "url": "https://developer.mozilla.org/en-US/docs/Learn_web_development"
+      },
+      {
+        "name": "The Odin Project (free course)",
+        "url": "https://www.theodinproject.com/"
+      },
+      {
+        "name": "Full Stack Open (University of Helsinki)",
+        "url": "https://fullstackopen.com/en/"
+      },
+      {
+        "name": "web.dev (Google's web guides)",
+        "url": "https://web.dev/learn"
+      },
+      {
+        "name": "Flask documentation",
+        "url": "https://flask.palletsprojects.com/en/stable/"
+      },
+      {
+        "name": "PostgreSQL documentation",
+        "url": "https://www.postgresql.org/docs/current/"
+      },
+      {
+        "name": "SQLite documentation",
+        "url": "https://www.sqlite.org/docs.html"
+      },
+      {
+        "name": "nginx documentation",
+        "url": "https://nginx.org/en/docs/"
+      },
+      {
+        "name": "HTTP: MDN's guide",
+        "url": "https://developer.mozilla.org/en-US/docs/Web/HTTP"
+      }
+    ]
+  }
+]

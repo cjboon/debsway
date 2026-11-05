@@ -38,7 +38,7 @@ if [ "${1:-}" = --remove ]; then
             sudo rmdir "$d" 2>/dev/null || true
         fi
     done
-    sudo rm -f "$PREFS" "$ETC/wren-ublock-allow" "$ALLOW"
+    sudo rm -f "$PREFS" "$ETC/wren-ublock-allow" "$ETC/wren-bookmarks.json" "$ALLOW"
     # Firefox and uBlock Origin stay while the Firefox extra is installed (its own
     # marker package keeps them); extras/firefox-sandbox.sh --remove takes them out
     apt_purge
@@ -52,6 +52,8 @@ apt_install firefox-esr webext-ublock-origin-firefox libnotify-bin
 sudo install -m 0644 "$WREN_DIR/data/firefox-hardening.js" "$PREFS"
 note "HTTPS-Only Mode on, JavaScript JIT off, blank foxy home page ($PREFS)"
 
+sudo install -m 0644 "$WREN_DIR/data/firefox-bookmarks.json" "$ETC/wren-bookmarks.json"
+note "A \"Learn (Wren Linux)\" bookmarks folder: Linux, Bash, sed and awk, security, programming."
 sudo install -m 0755 "$WREN_DIR/bin/ublock-allow" "$ALLOW"
 if sudo "$ALLOW" --refresh; then
     note "uBlock Origin blocks other sites' scripts and frames. When a site breaks:"
