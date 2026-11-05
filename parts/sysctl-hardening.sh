@@ -1,8 +1,8 @@
 #!/bin/bash
 # Kernel and network hardening settings (data/sysctl-hardening.conf), in the
 # spirit of Kicksecure: hide kernel addresses, only trace your own child
-# programs, no kexec, Magic SysRq limited to the secure attention key,
-# stricter file and network defaults. They apply now and at every boot.
+# programs, no kexec, Magic SysRq limited to the secure attention key, no
+# io_uring, stricter file and network defaults. They apply now and at every boot.
 # Side effects: gdb and strace can't attach to a running program without
 # sudo; the SysRq REISUB rescue sequence needs kernel.sysrq = 438 again.
 # Edit /etc/sysctl.d/60-wren-hardening.conf to change one.

@@ -78,7 +78,7 @@ checked with `sway -C` before it's kept.
 | `wren-menu.sh` | wmenu, rfkill | `wren-menu`: click "wren" at the left of the bar, or press Super+m (again closes it), for a black-and-gray menu in a floating window over what you were doing (arrows and Enter, or click; Space flips a switch; Esc goes back from a list, and closes the rest, the install list and the help page included). Its first screen has Web browser (the one links open in, or the first installed), Password manager (KeePassXC), Terminal (as Super+Enter opens; only inside sway), Wi-Fi sign-in and Help (the key cheat sheet, in the menu's own pager, which also opens on Super+?), and a line that shows the microphone, webcam and secure DNS at a glance. Three lists hold the rest, each with only what is here: Switches (Wi-Fi, Bluetooth, Microphone, Webcam, the Vault, Secure DNS: choosing one flips it), Apps (Text editor, File manager, Signal, SimpleX, Claude, opencode; only inside sway) and System (Install apps, `install-extras.sh`, in three groups: most secure, somewhat secure, least secure; Remove apps, `install-extras.sh --remove`; Update, `update.sh`; Status, `status.sh`; Back up now; Startup programs, `wren-autostart edit`; Theme; Font size on a text console). What you pick runs in that window, which closes when it ends; the install and update screens wait for Enter first if they did something |
 | `power-menu.sh` | wmenu | `powermenu`: lock, suspend, log out, reboot or power off from a small menu on Super+Shift+Escape |
 | `needrestart.sh` | needrestart, libnotify-bin | After every update, lists the running programs that still use outdated libraries (list only: it never restarts anything). Check any time: `sudo needrestart` |
-| `sysctl-hardening.sh` | (none) | Kernel and network settings in the spirit of Kicksecure (`data/sysctl-hardening.conf`): kernel addresses hidden, only your own child programs can be traced, no kexec, SysRq limited, stricter file and network defaults. Applies now and at every boot. See [Kernel hardening](#kernel-hardening) |
+| `sysctl-hardening.sh` | (none) | Kernel and network settings in the spirit of Kicksecure (`data/sysctl-hardening.conf`): kernel addresses hidden, only your own child programs can be traced, no kexec, SysRq limited, no io_uring, stricter file and network defaults. Applies now and at every boot. See [Kernel hardening](#kernel-hardening) |
 | `module-blacklist.sh` | (none) | Blocks rare network protocols, old filesystems and FireWire from loading (`data/module-blacklist.conf`) |
 | `boot-hardening.sh` | (none) | Adds Kicksecure's boot parameters to GRUB (`slab_nomerge init_on_alloc=1 init_on_free=1 page_alloc.shuffle=1 randomize_kstack_offset=on vsyscall=none debugfs=off`); applies after a reboot |
 | `grub-colors.sh` | (none) | GRUB's boot menu: a red box with white text, the chosen entry yellow, black around it (`/etc/grub.d/06_wren_colors`); colours only |
@@ -184,7 +184,9 @@ checked against this Debian:
 - **`sysctl-hardening.sh`**: Debian already sets `dmesg_restrict`,
   `unprivileged_bpf_disabled`, `perf_event_paranoid` and
   `protected_symlinks`/`hardlinks`; this adds `kptr_restrict=2`,
-  `ptrace_scope=1`, `kexec_load_disabled=1`, `sysrq=4`, a hardened BPF JIT,
+  `ptrace_scope=1`, `kexec_load_disabled=1`, `sysrq=4`, `io_uring_disabled=2`
+  (io_uring, a frequent source of kernel exploits, off for everyone; a
+  program that wants it, such as QEMU, falls back), a hardened BPF JIT,
   `protected_fifos/regular=2` and stricter network defaults (reverse-path
   filtering in loose mode, so VPNs keep working). Two things it changes:
   `gdb` and `strace` can't attach to a program that is already running

@@ -22,7 +22,8 @@ this page to decide what else you need.
   Firefox most exploits target, is off; and HTTPS-Only Mode refuses
   unencrypted pages unless you agree (`parts/firefox-hardening.sh`).
 - **Some kernel attacks.** Kernel addresses are hidden, memory is cleared
-  when it is allocated and freed, rare protocols and filesystems and
+  when it is allocated and freed, io_uring (where many recent kernel
+  exploits came from) is off, rare protocols and filesystems and
   FireWire can't be loaded (`parts/sysctl-hardening.sh`,
   `parts/boot-hardening.sh`, `parts/module-blacklist.sh`). These make
   exploits harder; they don't make the kernel bug-free.
