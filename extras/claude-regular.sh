@@ -1,4 +1,5 @@
 #!/bin/bash
+# retired: Claude Code running as you can read all your files. Use claude-vm (the most walled off) or claude-code (its own user) instead.
 # Claude Code as your own user, set up to be easy and still careful: in any
 # folder you start it from, with your tools, and none of the sandboxed claude's
 # walls (extras/claude-code.sh puts it in a user of its own; claude-vm.sh in a VM).

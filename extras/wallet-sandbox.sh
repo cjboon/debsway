@@ -1,4 +1,5 @@
 #!/bin/bash
+# retired: Whonix is the safer place for wallets (Feather and Electrum come in its Workstation, behind Tor): wrenctl install whonix. Feather and Sparrow also have a Tor setting of their own.
 # Coin wallets kept apart from you, each other and the internet, for a computer
 # that can't run VMs: Whonix (extras/whonix.sh) is the safer place for wallets,
 # and this says so first when the computer could run it. It adds the command

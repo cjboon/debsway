@@ -1,5 +1,7 @@
 # Other distributions in VMs (`extras/distro-vm.sh`)
 
+**Retired.** Kali, Tails and Arch VMs took a lot of root-run machinery for rare use. Tails is safer on a stick of its own: wrenctl install tails-usb. `update.sh` offers to take it out (`wrenctl remove distro-vm`); it is no longer offered to install.
+
 ## SYNOPSIS
 
 ```

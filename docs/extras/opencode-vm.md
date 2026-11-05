@@ -1,5 +1,7 @@
 # opencode in a VM (`extras/opencode-vm.sh`)
 
+**Retired.** A second copy of claude-vm's machinery, for little use. claude-vm stays: wrenctl install claude-vm. `update.sh` offers to take it out (`wrenctl remove opencode-vm`); it is no longer offered to install.
+
 ## SYNOPSIS
 
 ```

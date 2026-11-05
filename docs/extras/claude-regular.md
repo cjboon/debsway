@@ -1,5 +1,7 @@
 # Claude Code as you (`extras/claude-regular.sh`)
 
+**Retired.** Claude Code running as you can read all your files. Use claude-vm (the most walled off) or claude-code (its own user) instead. `update.sh` offers to take it out (`wrenctl remove claude-regular`); it is no longer offered to install.
+
 ## SYNOPSIS
 
 ```

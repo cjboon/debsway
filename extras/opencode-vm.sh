@@ -1,4 +1,5 @@
 #!/bin/bash
+# retired: a second copy of claude-vm's machinery, for little use. claude-vm stays: wrenctl install claude-vm.
 # opencode, the open-source coding agent, inside a disposable virtual machine:
 # for people who can't pay for Claude, it works with free models (opencode's
 # own, named "... Free"; /models inside it lists them) as well as paid ones. It runs in

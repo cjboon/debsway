@@ -1,4 +1,5 @@
 #!/bin/bash
+# retired: Kali, Tails and Arch VMs took a lot of root-run machinery for rare use. Tails is safer on a stick of its own: wrenctl install tails-usb.
 # Other Linux distributions in throwaway VMs on this computer: Kali (security
 # testing), Tails (an amnesic desktop on Tor) and Arch (minimal, rolling; you
 # install it yourself). You tick which ones; nothing is ticked for you.

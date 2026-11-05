@@ -47,12 +47,12 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 
 ## Sandboxes and test machines
 
-- [Claude Code as you, with its own sandbox on](claude-regular.md)
+- [Claude Code as you, with its own sandbox on](claude-regular.md) (retired)
 - [Claude Code in its own user](claude-code.md)
 - [Claude Code inside a disposable virtual machine](claude-vm.md)
-- [opencode inside a disposable virtual machine](opencode-vm.md)
+- [opencode inside a disposable virtual machine](opencode-vm.md) (retired)
 - [A disposable practice server](mockvps-kvm.md)
-- [Kali, Tails and Arch in VMs kept off your network](distro-vm.md)
+- [Kali, Tails and Arch in VMs kept off your network](distro-vm.md) (retired)
 - [Images and video in a sandbox](media.md)
 - [yt-dlp as its own locked-down user](yt-dlp.md)
 
@@ -71,7 +71,7 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 - [Sparrow, a Bitcoin wallet with extra privacy tools](sparrow-wallet.md)
 - [Feather, a Monero wallet](feather-wallet.md)
 - [Hardware wallets over USB](hardware-wallet.md)
-- [Sandboxed wallets, for a computer that can't run VMs](wallet-sandbox.md)
+- [Sandboxed wallets, for a computer that can't run VMs](wallet-sandbox.md) (retired)
 
 ## Messaging and sharing
 

@@ -1,5 +1,7 @@
 # Sandboxed wallets (`extras/wallet-sandbox.sh`)
 
+**Retired.** Whonix is the safer place for wallets (Feather and Electrum come in its Workstation, behind Tor): wrenctl install whonix. Feather and Sparrow also have a Tor setting of their own. `update.sh` offers to take it out (`wrenctl remove wallet-sandbox`); it is no longer offered to install.
+
 ## SYNOPSIS
 
 ```
