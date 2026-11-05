@@ -185,6 +185,16 @@ check "the sudo rule allows exactly on and off" grep -qF 'NOPASSWD: %s on, %s of
 check "...checked by visudo before it is installed" grep -q 'sudo visudo -cf "$rule"' "$HERE/parts/secure-dns.sh"
 check "...or, if you chose so, on alone without a password (off then asks for it)" bash -c '
     grep -qF "NOPASSWD: %s on\\n" "$1" && grep -q "Switching secure DNS off: ask for your password?" "$1"' _ "$HERE/parts/secure-dns.sh"
+# The question's default: yes the first time; your earlier no stays your default
+sd_default() { # STRICT-FILE-THERE? RULE-THERE? -> the default given
+    bash -c 'STRICT=$1/strict SUDOERS=$1/rule
+        rm -f "$STRICT" "$SUDOERS"; [ "$2" = y ] && : >"$STRICT"; [ "$3" = y ] && : >"$SUDOERS"
+        sudo() { "$@"; }
+        eval "$(sed -n "/^strict_default=y$/,/^if \[ ! -e \"\$STRICT\" \]/p" "$4")"; echo "$strict_default"' _ "$T" "$1" "$2" "$HERE/parts/secure-dns.sh"
+}
+check "asking for a password to switch it off: yes by default the first time" test "$(sd_default n n)" = y
+check "...yes again after a yes" test "$(sd_default y y)" = y
+check "...no after your no (a run again keeps your answer)" test "$(sd_default n y)" = n
 # off when only on is allowed without a password: it asks, in a terminal; never
 # without one. This sudo does as the real one does for someone in the sudo group:
 # -l lists the command (it may run, with a password), -n refuses to run it

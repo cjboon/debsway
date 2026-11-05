@@ -154,7 +154,11 @@ note "Off sends this computer's lookups to the network unencrypted. Anything run
 note "you can switch it off as easily as you can (the bar shows \"dns OFF\" then). With a"
 note "password, it can't do it without you; the Wi-Fi sign-in window and the menu then ask too."
 rule=$(mktemp)
-if auto_or_ask WREN_SECURE_DNS_STRICT "Switching secure DNS off: ask for your password?" "$([ -e "$STRICT" ] && echo y || echo n)"; then
+# Yes unless you said no before (the switch's rule is there, without your yes):
+# a run again keeps your answer as its default
+strict_default=y
+if [ ! -e "$STRICT" ] && sudo test -e "$SUDOERS"; then strict_default=n; fi
+if auto_or_ask WREN_SECURE_DNS_STRICT "Switching secure DNS off: ask for your password?" "$strict_default"; then
     mkdir -p "${STRICT%/*}" && : >"$STRICT"
     printf '# Written by Wren Linux parts/secure-dns.sh. %s may switch secure DNS on, and\n# nothing else, without a password; off asks for it (sudo %s off).\n%s ALL=(root) NOPASSWD: %s on\n' \
         "$(id -un)" "$SWITCH" "$(id -un)" "$SWITCH" >"$rule"
