@@ -23,7 +23,7 @@ mkdir "$T/src"
 (cd "$HERE" && git ls-files -co --exclude-standard | tar -cf - -T -) | tar -C "$T/src" -xf -
 git -C "$T/src" init -q -b main
 git -C "$T/src" add -A
-git -C "$T/src" -c user.name=t -c user.email=t@t commit -q -m "as it is now" --allow-empty
+git -C "$T/src" -c user.name=t -c user.email=t@example.org commit -q -m "as it is now" --allow-empty
 echo "not committed" >"$T/src/UNCOMMITTED.txt"
 B=$T/src/tools/build-deb.sh
 mkdir "$T/a" "$T/b"
@@ -41,7 +41,7 @@ check "without --version: 0~git, the commit's time and id" bash -c 'ls "$1" | gr
 v_of() { dpkg-deb -f "$1"/wren-linux_*_all.deb Version; }
 newer=true
 for n in 1 2 3 4 5 6; do
-    GIT_COMMITTER_DATE="$(date -u -d "2030-01-01 12:00:0$n")" git -C "$T/src" -c user.name=t -c user.email=t@t commit -q --allow-empty -m "later $n"
+    GIT_COMMITTER_DATE="$(date -u -d "2030-01-01 12:00:0$n")" git -C "$T/src" -c user.name=t -c user.email=t@example.org commit -q --allow-empty -m "later $n"
     rm -rf "$T/v"; mkdir "$T/v"; bash "$B" --out "$T/v" >/dev/null 2>&1
     now=$(v_of "$T/v")
     if [ -n "${before:-}" ] && ! dpkg --compare-versions "$now" gt "$before"; then newer=false; fi
@@ -53,7 +53,7 @@ check "a version that isn't one is refused" bash -c '! bash "$1" --out "$2" --ve
 
 f() { dpkg-deb -f "$D" "$1"; }
 check "the package is Wren Linux, for every architecture" bash -c '[ "$1" = wren-linux ] && [ "$2" = all ]' _ "$(f Package)" "$(f Architecture)"
-check "...it depends only on bash and sudo, which every Debian install has: the install stick puts it in with no network" test "$(f Depends)" = "bash, sudo"
+check "...it depends only on sudo, which every Debian install has (bash is essential: never named): the install stick puts it in with no network" test "$(f Depends)" = "sudo"
 check "...and recommends the tools the parts install themselves" bash -c 'for d in gpg git wget python3 acl nftables; do grep -qw "$d" <<<"$1" || exit 1; done' _ "$(f Recommends)"
 check "no install scripts: installing it runs nothing as root" test "$(dpkg-deb --ctrl-tarfile "$D" | tar -t | sort | paste -sd' ')" = "./ ./control ./md5sums"
 
@@ -102,17 +102,24 @@ chmod -R u+w "$T/root"
 # lintian: remarks are one thing, lintian itself failing another
 LC=$(sed -n '/^lintian_check() {/,/^}/p' "$HERE/tools/build-deb.sh")
 # shellcheck disable=SC2317,SC2329  # lintian is called by the function in LC
-lc_rc() { ( lc_code=$1; lintian() { return "$lc_code"; }; eval "$LC"; lintian_check x 2>&1 ); }
+lc_rc() { ( lc_code=$1 lc_out=${2:-}; lintian() { [ -z "$lc_out" ] || echo "$lc_out"; return "$lc_code"; }; eval "$LC"; lintian_check x 2>&1 ); }
 check "lintian content: nothing more to say" test -z "$(lc_rc 0)"
-check "lintian with remarks: says so" grep -q 'has remarks' <<<"$(lc_rc 1)"
+check "lintian with remarks: shows them, and says so" bash -c 'grep -q "^W: x" <<<"$1" && grep -q "has remarks" <<<"$1"' _ "$(lc_rc 0 'W: x')"
+check "...whatever code a lintian version gives for them: only its own failure is a failure" bash -c 'grep -q "NOT checked" <<<"$1" && grep -q "NOT checked" <<<"$2"' _ "$(lc_rc 1 'W: x')" "$(lc_rc 2 'E: x')"
+check "lintian runs with --fail-on none: its own failure is then the only thing its exit code says" \
+    grep -q 'lintian --fail-on none ' <<<"$LC"
 check "lintian itself failing (a bad option is 25): says the package was NOT checked" bash -c 'grep -q "NOT checked" <<<"$1" && ! grep -q "has remarks" <<<"$1"' _ "$(lc_rc 25)"
 # The option as this lintian takes it: fails here, in the tests, when one is renamed
 if command -v lintian >/dev/null; then
-    opt=$(sed -n 's/^ *lintian \(--[^"]*\) "\$1".*/\1/p' "$HERE/tools/build-deb.sh")
+    opt=$(sed -n 's/.*$(lintian \(--[^"]*\) "\$1").*/\1/p' "$HERE/tools/build-deb.sh")
     # shellcheck disable=SC2086  # the options, as the script has them
     out=$(lintian $opt /nonexistent.deb 2>&1); rc=$?
     check "this lintian takes the options build-deb.sh gives it" test "$rc" != 25
     check "...and doesn't warn that it will stop taking them" not grep -qi 'future release' <<<"$out"
+    # The real lintian on the package built above: it ran, whatever it says
+    out=$(eval "$LC"; lintian_check "$T/a/wren-linux_1.0_all.deb" 2>&1)
+    check "the real lintian checks the package (it runs: no NOT checked)" not grep -q 'NOT checked' <<<"$out"
+    check "...and finds no errors in it (E:)" not grep -q '^E: ' <<<"$out"
 fi
 
 [ "$fails" -eq 0 ]

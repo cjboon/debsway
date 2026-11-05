@@ -109,7 +109,7 @@ Version: $version
 Architecture: all
 Maintainer: $maint
 Installed-Size: $installed_kb
-Depends: bash, sudo
+Depends: sudo
 Recommends: gpg, git, wget, python3, acl, nftables, bash-completion
 Section: admin
 Priority: optional
@@ -133,16 +133,20 @@ deb=$out/wren-linux_${version}_all.deb
 dpkg-deb --root-owner-group -Zxz --build "$R" "$deb" >/dev/null
 echo "$deb"
 sha256sum "$deb" | cut -d' ' -f1 | sed 's/^/SHA-256: /'
-# Remarks (exit 1) are one thing; lintian itself failing, as it would on an option
-# a new version no longer takes, is another: then nothing was checked
+# Remarks are one thing; lintian itself failing, as it would on an option a new
+# version no longer takes, is another: then nothing was checked. lintian's exit
+# code for remarks changed between versions (1 before, 2 since --fail-on, and 1
+# is now its own failure), so --fail-on none: its exit then only says whether it
+# ran, and whether it had remarks is whether it printed any
 lintian_check() {
-    local rc=0
-    lintian --tag-display-limit 0 "$1" || rc=$?
-    case $rc in
-        0) ;;
-        1) echo "(lintian has remarks: see above)" ;;
-        *) echo "!! lintian itself failed (exit $rc), so this package was NOT checked by it. Has one of its options changed? See tools/build-deb.sh" >&2 ;;
-    esac
+    local rc=0 out
+    out=$(lintian --fail-on none --tag-display-limit 0 "$1") || rc=$?
+    [ -z "$out" ] || printf '%s\n' "$out"
+    if [ "$rc" -ne 0 ]; then
+        echo "!! lintian itself failed (exit $rc), so this package was NOT checked by it. Has one of its options changed? See tools/build-deb.sh" >&2
+    elif [ -n "$out" ]; then
+        echo "(lintian has remarks: see above)"
+    fi
 }
 if command -v lintian >/dev/null; then
     lintian_check "$deb"
