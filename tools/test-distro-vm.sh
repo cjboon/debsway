@@ -288,8 +288,31 @@ check "the net check runs before a start and before a download, and keeps watch 
 check "the sudo rule it writes passes visudo, and names only the VMs' users" bash -c '
     command -v visudo >/dev/null || PATH=$PATH:/usr/sbin; command -v visudo >/dev/null || exit 0
     OWNER=me SESSION=/usr/local/libexec/distro-vm-session chosen=(kali arch)
-    eval "$(grep -A1 "^    printf .# Written by Wren Linux extras/distro-vm.sh. %s may run" "$1" | sed "s/>\"\$rule\"\$/>\"\$2\"/")"
+    eval "$(grep -A1 "^printf .# Written by Wren Linux extras/distro-vm.sh. %s may run" "$1" | sed "s/>\"\$rule\"\$/>\"\$2\"/")"
     visudo -cf "$2" && grep -qx "me ALL=(dvm-kali,dvm-arch) NOPASSWD: /usr/local/libexec/distro-vm-session" "$2"' _ "$EXTRA" "$T/sudoers"
+# The script itself, run with a pretend sudo (it only notes what it was asked to do)
+# and a pretend /etc, in a temp home
+if [ -e /dev/kvm ]; then
+    mkdir -p "$T/x/bin" "$T/x/home" "$T/x/etc/wren" "$T/x/r/extras" "$T/x/r/lib"
+    printf '#!/bin/sh\n[ "$1" = -v ] && exit 0\necho "sudo $*" >>"%s/x/calls"\n' "$T" >"$T/x/bin/sudo"
+    chmod +x "$T/x/bin/sudo"
+    sed 's|^export PATH=.*|export PATH="$DV_TEST_PATH"|' "$HERE/lib.sh" >"$T/x/r/lib.sh"
+    for f in pins.sh packages.sh data bin docs; do ln -s "$HERE/$f" "$T/x/r/$f"; done
+    for f in "$HERE"/lib/*; do ln -s "$f" "$T/x/r/lib/${f##*/}"; done
+    cp "$EXTRA" "$T/x/r/extras/"
+    dv() { : >"$T/x/calls"; env -u SWAYSOCK HOME="$T/x/home" XDG_CONFIG_HOME= WREN_ETC="$T/x/etc" \
+        DV_TEST_PATH="$T/x/bin:$PATH" WREN_TEST_ANSWERS=/dev/null bash "$T/x/r/extras/distro-vm.sh" 2>&1; }
+    out=$(DISTRO_VM_CHOOSE='' dv)
+    check "none ticked: nothing installed, and it says so" bash -c '
+        grep -q "None ticked, so nothing was installed" <<<"$1" && [ ! -s "$2" ]' _ "$out" "$T/x/calls"
+    printf 'owner me\narch tor\n' >"$T/x/etc/wren/distro-vm.conf"
+    out=$(DISTRO_VM_CHOOSE='' dv)
+    check "none ticked, with some set up before: removed, as --remove does" bash -c '
+        grep -q "None ticked: removing" <<<"$1" && grep -q "nft delete table inet wren_distro_vm" "$2" &&
+        ! grep -q "apt-get install" "$2"' _ "$out" "$T/x/calls"
+else
+    echo "  ok    skipped running the script: no /dev/kvm here"
+fi
 check "the summary fits the list (52 characters at most)" test "$(sed -n 's/^# summary: //p' "$EXTRA" | wc -L)" -le 52
 check "--remove takes the firewall, the sudo rule, the keys and the Tor block out" bash -c '
     r=$(sed -n "/--remove ]; then/,/^fi/p" "$1")

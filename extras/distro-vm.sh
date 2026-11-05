@@ -40,7 +40,8 @@ DISTROS=(kali tails arch)
 HOMES=/var/lib/wren-distro-vm
 SESSION=/usr/local/libexec/distro-vm-session
 NETCHECK=/usr/local/libexec/distro-vm-net-check
-CONF=/etc/wren/distro-vm.conf
+# (a test points WREN_ETC elsewhere)
+CONF=${WREN_ETC:-/etc}/wren/distro-vm.conf
 KEYS=/etc/wren/distro-vm
 SUDOERS=/etc/sudoers.d/wren-distro-vm
 FIREWALL=/etc/wren/distro-vm.nft
@@ -142,6 +143,15 @@ fi
 for d in "${chosen[@]}"; do
     case $d in kali | tails | arch) ;; *) die "Not one of these: $d (kali, tails, arch)" ;; esac
 done
+# None ticked: nothing is installed, and what was set up before goes (as --remove)
+if [ ${#chosen[@]} -eq 0 ]; then
+    if [ -f "$CONF" ]; then
+        note "None ticked: removing what was set up (you're asked about each one's files)."
+        exec bash "$0" --remove
+    fi
+    note "None ticked, so nothing was installed."
+    exit 0
+fi
 
 declare -A mode
 any_tor=false
@@ -303,19 +313,15 @@ sudo install -d -o root -g root -m 0755 /usr/local/libexec
 sudo install -o root -g root -m 0755 "$WREN_DIR/bin/distro-vm-session" "$SESSION"
 sudo install -o root -g root -m 0755 "$WREN_DIR/bin/distro-vm-net-check" "$NETCHECK"
 install_no_abstract
-if [ ${#chosen[@]} -gt 0 ]; then
-    rule=$(mktemp)
-    printf '# Written by Wren Linux extras/distro-vm.sh. %s may run distro-vm-session,\n# and nothing else, as the VMs'"'"' users.\n%s ALL=(%s) NOPASSWD: %s\n' \
-        "$OWNER" "$OWNER" "$(printf 'dvm-%s,' "${chosen[@]}" | sed 's/,$//')" "$SESSION" >"$rule"
-    sudo visudo -cf "$rule" >/dev/null || { rm -f "$rule"; die "The sudoers rule didn't pass visudo's check, so it wasn't installed."; }
-    sudo install -o root -g root -m 0440 "$rule" "$SUDOERS"
-    rm -f "$rule"
-else
-    sudo rm -f "$SUDOERS"
-fi
+rule=$(mktemp)
+printf '# Written by Wren Linux extras/distro-vm.sh. %s may run distro-vm-session,\n# and nothing else, as the VMs'"'"' users.\n%s ALL=(%s) NOPASSWD: %s\n' \
+    "$OWNER" "$OWNER" "$(printf 'dvm-%s,' "${chosen[@]}" | sed 's/,$//')" "$SESSION" >"$rule"
+sudo visudo -cf "$rule" >/dev/null || { rm -f "$rule"; die "The sudoers rule didn't pass visudo's check, so it wasn't installed."; }
+sudo install -o root -g root -m 0440 "$rule" "$SUDOERS"
+rm -f "$rule"
 install_bin distro-vm
 
-if [ ${#chosen[@]} -gt 0 ] && ask "Download the images now (it can take a while)?" y; then
+if ask "Download the images now (it can take a while)?" y; then
     for d in "${chosen[@]}"; do
         say "$d"
         sudo -u "dvm-$d" "$SESSION" fetch || warn "$d wasn't downloaded; try again with: distro-vm $d update"
