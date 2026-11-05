@@ -103,7 +103,9 @@ bridge for the Gateway if you say you need one (obfs4 lines you paste, or
 Snowflake; the Gateway has no webtunnel client; Whonix 18 connects at first
 boot, and if you need a bridge but have none yet, Tor is kept off until you
 turn it on), and Safest with JavaScript off for the Workstation's Tor
-Browser. Then `whonix` starts both, `whonix gateway` opens the
+Browser. Then `whonix` starts both and opens each on an empty workspace
+(the Gateway on yours if it is empty, else the next empty one; the Workstation
+on the one after, where you are left), `whonix gateway` opens the
 Gateway's Tor settings, `whonix stop` shuts both down (switching off a VM that
 only opens its shutdown dialog, after 20 seconds: save your work inside first).
 

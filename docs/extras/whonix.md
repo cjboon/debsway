@@ -9,7 +9,7 @@ wrenctl install whonix --fetch             only download and check it, for later
 wrenctl remove whonix                      remove the VMs (asks before deleting their disks)
 wrenctl manual whonix                      print the manual steps below
 
-whonix             start both VMs and open the Workstation (or Super+d)
+whonix             start both VMs and open both, each on an empty workspace (or Super+d)
 whonix gateway     start the Gateway and open it (Tor settings, bridges)
 whonix stop        shut both down (one still running after 20 seconds is switched off)
 ```

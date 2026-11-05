@@ -1,6 +1,9 @@
 #!/bin/sh
 # whonix: written by Wren Linux extras/whonix.sh
-#   whonix          start both VMs and open the Workstation
+#   whonix          start both VMs and open both, each on an empty workspace:
+#                   the Gateway on this one if it is empty, else the next empty
+#                   one to the right (or left), the Workstation on the next
+#                   empty one after it, where you are left
 #   whonix gateway  start the Gateway and open it (Tor settings)
 #   whonix stop     shut both down. Each is asked to shut down first; Whonix's
 #                   desktop answers that with a dialog, so one still running
@@ -40,9 +43,74 @@ up() {
     # shellcheck disable=SC2069  # this order on purpose: keeps the error, drops the output
     err=$($v start "$1" 2>&1 >/dev/null) || fail "couldn't start $1: $err"
 }
+# console VM: its window. virt-manager goes into the background by itself, and
+# a second one hands its window to the first.
 console() {
     command -v virt-manager >/dev/null || fail "virt-manager is missing. Run: wrenctl install whonix"
-    exec virt-manager -c qemu:///session --show-domain-console "$1"
+    virt-manager -c qemu:///session --show-domain-console "$1" || fail "couldn't open the window of $1."
+}
+
+# In sway, with workspaces (not extras/one-workspace.sh: there the two share
+# the one screen), each window gets an empty workspace of its own
+spread() {
+    [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null || return 1
+    [ ! -e "${XDG_CONFIG_HOME:-$HOME/.config}/sway/config.d/one-workspace.conf" ]
+}
+# sway_ask empty [AFTER]: the number of an empty workspace (1-10). Without
+# AFTER, the one you are on if it is empty; else, and with AFTER, the next one
+# to the right of it (or of AFTER), or else to the left. None free: nothing.
+# sway_ask open TITLE: is a window "TITLE on ..." (virt-manager's) open?
+sway_ask() {
+    swaymsg -t get_tree 2>/dev/null | python3 -I -c '
+import json, sys
+used, here, titles = set(), None, []
+def walk(n, ws=None):
+    global here
+    if n.get("type") == "workspace":
+        ws = n.get("num", -1)
+    if n.get("focused") and ws is not None:
+        here = ws
+    if n.get("pid"):
+        titles.append(n.get("name") or "")
+        if ws is not None:
+            used.add(ws)
+    for c in n.get("nodes", []) + n.get("floating_nodes", []):
+        walk(c, ws)
+walk(json.load(sys.stdin))
+if sys.argv[1] == "open":
+    sys.exit(0 if any(sys.argv[2] + " on " in t for t in titles) else 1)
+after = int(sys.argv[2]) if len(sys.argv) > 2 else None
+start = after if after is not None else (here if here and here > 0 else 1)
+order = ([] if after is not None else [start]) + list(range(start + 1, 11)) + list(range(start - 1, 0, -1))
+print(next((w for w in order if w not in used), ""))
+' "$@"
+}
+# window_to TITLE WORKSPACE: once the window is there (virt-manager takes a
+# moment), it goes to that workspace, and so do you
+window_to() {
+    i=0
+    while [ "$i" -lt 40 ]; do
+        swaymsg "[title=\"$1 on \"] move container to workspace number $2, workspace number $2" >/dev/null 2>&1 && return 0
+        sleep 0.25
+        i=$((i + 1))
+    done
+}
+open_both() {
+    if ! spread; then
+        console Whonix-Gateway && console Whonix-Workstation
+        return
+    fi
+    gw=
+    if ! sway_ask open Whonix-Gateway && gw=$(sway_ask empty) && [ -n "$gw" ]; then
+        console Whonix-Gateway && window_to Whonix-Gateway "$gw"
+    else
+        console Whonix-Gateway
+    fi
+    if ! sway_ask open Whonix-Workstation && ws=$(sway_ask empty ${gw:+"$gw"}) && [ -n "$ws" ]; then
+        console Whonix-Workstation && window_to Whonix-Workstation "$ws"
+    else
+        console Whonix-Workstation
+    fi
 }
 stop() {
     for vm in Whonix-Workstation Whonix-Gateway; do
@@ -77,7 +145,7 @@ lyrebird_check() {
 }
 
 case "${1:-start}" in
-    start) lyrebird_check; gateway_net && up Whonix-Gateway && up Whonix-Workstation && console Whonix-Workstation ;;
+    start) lyrebird_check; gateway_net && up Whonix-Gateway && up Whonix-Workstation && open_both ;;
     gateway) lyrebird_check; gateway_net && up Whonix-Gateway && console Whonix-Gateway ;;
     stop) stop ;;
     *) echo "usage: whonix [start|gateway|stop]" >&2; exit 2 ;;
