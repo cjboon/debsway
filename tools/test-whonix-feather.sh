@@ -70,6 +70,17 @@ if command -v debugfs >/dev/null && command -v qemu-img >/dev/null && command -v
     check "a disk switched off without shutting down (its journal to replay): not edited, and it says how to fix that" bash -c '
         grep -q "switched off without shutting down" <<<"$1" && grep -q "shut it down from inside" <<<"$1" &&
         [ "$2" = "$3" ] && [ ! -e "$4.raw" ]' _ "$out" "$d0" "$(dirty)" "$T/dirty.qcow2"
+    # A disk with errors but no journal flag (switched off with orphaned files, as
+    # a Gateway was on a real install): refused before it is edited, not after
+    qemu-img convert -O raw "$T/ws.qcow2" "$raw"
+    # (a file's link count wrong: e2fsck reports it, as it does what a switch-off leaves)
+    debugfs -w -R "sif /etc/resolv.conf.whonix links_count 3" "$fs" >/dev/null 2>&1
+    qemu-img convert -O qcow2 "$raw" "$T/broken.qcow2" && rm -f "$raw"
+    b0=$(sha256sum "$T/broken.qcow2" | cut -d' ' -f1)
+    out=$( ( image_put "$T/broken.qcow2" "$T/prog" /usr/local/bin/x ) 2>&1)
+    check "...a disk whose file system doesn't check out: refused before editing, with how to put it right" bash -c '
+        grep -q "switched off without shutting down" <<<"$1" && ! grep -q "after editing" <<<"$1" && [ "$2" = "$3" ]' \
+        _ "$out" "$b0" "$(sha256sum "$T/broken.qcow2" | cut -d' ' -f1)"
     # A failed write back (a full disk): never in the image's place
     # shellcheck disable=SC2317,SC2329  # the stand-in is called by image_put
     out=$( ( qemu-img() { if [[ " $* " == *" -O qcow2 "* ]]; then echo "No space left on device" >&2; return 1; fi; command qemu-img "$@"; }
@@ -151,6 +162,7 @@ check "...and libvirt can read it (xmllint finds it well formed)" bash -c '! com
 # names up, Tor held off when a bridge is wanted but none was given
 # webtunnel: lyrebird from the Tor Project's repository (its key pinned), copied
 # in, and the version written in kept, for bin/whonix to compare
+eval "$(fn lyrebird_record)"
 eval "$(fn gateway_lyrebird | sed "s|\[ -x /usr/bin/lyrebird \]|[ -x \"\$T/lyrebird\" ]|")"
 : >"$T/lyrebird"
 chmod +x "$T/lyrebird"
@@ -175,9 +187,13 @@ out=$(gc webtunnel true)
 check "webtunnel: lyrebird from the Tor Project's pinned repository, before anything is written" \
     test "$(tail -n 2 "$T/lyr-calls" | paste -sd';')" = "add_torproject_repo;apt_install lyrebird"
 check "...copied into the Gateway as /usr/bin/lyrebird, 0755" grep -qx -- '--exec' <<<"$(grep -B1 -x /usr/bin/lyrebird <<<"$out" | head -1)"
-check "...and the version written in kept" grep -qx '0.6.1-1' "$LYREBIRD_COPY"
+check "...its version not kept before the Gateway's files are written (a failed write leaves no false record)" test ! -e "$LYREBIRD_COPY"
+BRIDGE_TYPE=webtunnel gateway_lyrebird
+lyrebird_record
+check "...and kept once they are" grep -qx '0.6.1-1' "$LYREBIRD_COPY"
 : >"$T/lyr-calls"
 gc snowflake true >/dev/null
+lyrebird_record
 check "another bridge chosen: nothing installed, and the kept version goes" bash -c '[ ! -s "$1" ] && [ ! -e "$2" ]' _ "$T/lyr-calls" "$LYREBIRD_COPY"
 
 gc none true >/dev/null

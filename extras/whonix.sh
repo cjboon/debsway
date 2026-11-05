@@ -128,10 +128,11 @@ image_put() {
     [ -n "$start" ] || { rm -f "$raw"; die "Couldn't find the root partition in $img."; }
     fs="$raw?offset=$((start * 512))"
     # A VM switched off without shutting down (whonix stop does that to one whose
-    # shutdown dialog stays open) leaves its journal for its next boot to replay.
-    # Edited before that, the replay could undo the edit, or the edit the replay:
-    # so not edited, and said how to let it replay
-    if debugfs -R features "$fs" 2>/dev/null | grep -qw needs_recovery; then
+    # shutdown dialog stays open) leaves its file system for its next boot to put
+    # right: a journal to replay, orphaned files to clear. Edited before that, the
+    # boot could undo the edit, or the edit spoil what the boot puts right: so it
+    # must check out first, and it is said how to let the VM do that
+    if debugfs -R features "$fs" 2>/dev/null | grep -qw needs_recovery || ! e2fsck -fn "$fs" >/dev/null 2>&1; then
         rm -f "$raw"
         die "$img was switched off without shutting down, so it can't be edited safely yet. Start it once (whonix gateway, or whonix), shut it down from inside, then run this again. Nothing was changed."
     fi
@@ -290,13 +291,24 @@ bridge_needs_dns() { case $BRIDGE_TYPE in snowflake | webtunnel | meek) return 0
 # again). Tor's AppArmor profile in Whonix 18 already lets Tor run it.
 LYREBIRD_COPY="$HOME/.local/state/wren/whonix-lyrebird-version"
 gateway_lyrebird() {
-    [ "$BRIDGE_TYPE" = webtunnel ] || { rm -f "$LYREBIRD_COPY"; return 0; }
+    LYREBIRD_VERSION=
+    [ "$BRIDGE_TYPE" = webtunnel ] || return 0
     add_torproject_repo
     apt_install lyrebird
     [ -x /usr/bin/lyrebird ] || die "lyrebird didn't install, so the Gateway can't use webtunnel."
     GW_FILES+=(--exec /usr/bin/lyrebird /usr/bin/lyrebird)
-    mkdir -p "${LYREBIRD_COPY%/*}"
-    dpkg-query -W -f='${Version}\n' lyrebird >"$LYREBIRD_COPY"
+    LYREBIRD_VERSION=$(dpkg-query -W -f='${Version}' lyrebird)
+}
+
+# lyrebird_record: after the Gateway's files are written (and only then), the
+# lyrebird version now in it, or none
+lyrebird_record() {
+    if [ -n "${LYREBIRD_VERSION:-}" ]; then
+        mkdir -p "${LYREBIRD_COPY%/*}"
+        printf '%s\n' "$LYREBIRD_VERSION" >"$LYREBIRD_COPY"
+    else
+        rm -f "$LYREBIRD_COPY"
+    fi
 }
 
 # webtunnel_note: what webtunnel on the Gateway is, said when it is chosen
@@ -431,6 +443,7 @@ webtunnel_note
         trap 'rm -rf "$work"' EXIT
         gateway_config "$work"
         image_put "$IMAGES/$GW.qcow2" "${GW_FILES[@]}"
+        lyrebird_record
         note "The Gateway's bridge: $(bridge_summary). It takes effect at its next start."
     fi
     note "Start it with: whonix   (Tor settings: whonix gateway; another bridge: wrenctl install whonix --bridges)"
@@ -471,6 +484,7 @@ pick_bridges whonix
 webtunnel_note
 gateway_config "$work"
 image_put "$work/gw.qcow2" "${GW_FILES[@]}"
+lyrebird_record
 if [ "$BRIDGE_TYPE" != none ]; then
     note "The Gateway's first connection goes through a bridge: $(bridge_summary)."
 elif $BRIDGE_WANTED; then
