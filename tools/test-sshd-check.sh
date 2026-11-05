@@ -46,7 +46,7 @@ check "...and include every new one" bash -c 'for k in allowtcpforwarding allows
 
 # ---- the public key remote-access.sh takes from you (ssh_pubkey_ok) ----
 if command -v ssh-keygen >/dev/null; then
-    K=$(mktemp -d)
+    K=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
     ssh-keygen -q -t ed25519 -N '' -C 'me@laptop' -f "$K/id" >/dev/null 2>&1
     pub=$(cat "$K/id.pub")
     check "a real public key is taken" ssh_pubkey_ok "$pub"

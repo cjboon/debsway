@@ -10,7 +10,7 @@
 # shellcheck disable=SC2016  # the inner shells and pretend programs expand their own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 W=$HERE/bin/wren-watch
-T=$(mktemp -d)
+T=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
 trap 'rm -rf "$T"' EXIT
 fails=0
 check() { # DESCRIPTION CONDITION-COMMAND...

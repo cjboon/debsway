@@ -21,7 +21,12 @@ export WREN_ALLOW_OLD_INSTALL=1
 
 OFFLINE=false
 [ "${1:-}" = --offline ] && OFFLINE=true
-TMP=$(mktemp -d)
+# Room for the tests' temp folders (some write real disk images): with too little,
+# they fail all over, for no fault of the scripts
+free_mb=$(df -Pm "${TMPDIR:-/tmp}" 2>/dev/null | awk 'NR == 2 { print $4 }')
+[ -z "$free_mb" ] || [ "$free_mb" -ge 500 ] ||
+    die "Only $free_mb MB free in ${TMPDIR:-/tmp}; the tests need about 500. Free some, or run with TMPDIR=/var/tmp"
+TMP=$(mktemp -d) || die "Couldn't make a temp folder in ${TMPDIR:-/tmp}."
 trap 'rm -rf "$TMP"' EXIT
 n_ok=0 n_warn=0 n_fail=0
 ok() { printf '  \033[32mok\033[0m    %s\n' "$*"; n_ok=$((n_ok + 1)); }

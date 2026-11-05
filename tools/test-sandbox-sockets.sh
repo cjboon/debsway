@@ -10,7 +10,7 @@
 # shellcheck disable=SC2016  # the pretend programs and bash -c lines expand their own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 
-T=$(mktemp -d)
+T=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
 trap 'kill $(jobs -p) 2>/dev/null; rm -rf "$T"' EXIT
 fails=0
 check() { # DESCRIPTION CONDITION-COMMAND...

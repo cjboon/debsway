@@ -6,7 +6,7 @@
 # shellcheck disable=SC2016,SC2088,SC2010,SC2317,SC1007  # patterns name shell variables literally; die() runs in the eval
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 
-T=$(mktemp -d)
+T=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
 trap 'rm -rf "$T"; kill $(jobs -p) 2>/dev/null' EXIT
 fails=0
 check() { # DESCRIPTION CONDITION-COMMAND...

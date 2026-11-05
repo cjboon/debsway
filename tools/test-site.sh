@@ -10,7 +10,7 @@
 # nothing outside a temp folder. Run by test.sh, or:  bash tools/test-site.sh
 # shellcheck disable=SC2016  # the inner shells expand their own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-T=$(mktemp -d)
+T=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
 # shellcheck disable=SC2317,SC2329  # runs from the EXIT trap
 cleanup() { gpgconf --homedir "$T/gh" --kill all 2>/dev/null; rm -rf "$T"; }
 trap cleanup EXIT

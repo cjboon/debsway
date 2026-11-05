@@ -7,7 +7,7 @@
 # Run by test.sh, or:  bash tools/test-wallet-sandbox.sh
 # shellcheck disable=SC2016,SC2329  # the inner shells and pretend programs expand their own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-T=$(mktemp -d)
+T=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
 trap 'rm -rf "$T" /dev/shm/wren-wallet-feather.test-* /dev/shm/wallet-feather.*; kill $(jobs -p) 2>/dev/null' EXIT
 fails=0
 check() { # DESCRIPTION CONDITION-COMMAND...
@@ -212,7 +212,7 @@ chmod +x "$T/sfake/"* "$T/noabs" "$T/netcheck" "$T/lib/feather/usr/bin/feather"
 sed -e "s|^export PATH=.*|export PATH=$T/sfake:\$PATH|" -e "s|^noabs=.*|noabs=$T/noabs|" -e "s|^netcheck=.*|netcheck=$T/netcheck|" \
     -e "s|^homes=.*|homes=$T/homes|" -e "s|^lib=.*|lib=$T/lib|" "$HERE/bin/wallet-session" >"$T/session"
 chmod +x "$T/session"
-SD=$(mktemp -d /dev/shm/wren-wallet-feather.testXXXXXXX)
+SD=$(mktemp -d /dev/shm/wren-wallet-feather.testXXXXXXX) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
 SN=wayland-test
 python3 -I -c 'import socket,sys,time; s=socket.socket(socket.AF_UNIX); s.bind(sys.argv[1]); time.sleep(60)' "$SD/$SN" >/dev/null 2>&1 &
 /bin/sleep 0.3
@@ -261,7 +261,7 @@ check "an unknown wallet name is refused" grep -q 'unknown wallet' <<<"$out"
 
 out=$(s clip-in feather </dev/null)
 check "the clipboard with no wallet open: says so" grep -q "isn't open" <<<"$out"
-B=$(mktemp -d /dev/shm/wallet-feather.XXXXXXX)
+B=$(mktemp -d /dev/shm/wallet-feather.XXXXXXX) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
 mkdir "$B/run"
 printf ':7' >"$B/run/display"
 printf 'text' | s clip-in feather

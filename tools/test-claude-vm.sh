@@ -6,7 +6,7 @@
 # shellcheck disable=SC2016  # the inner shells and pretend programs expand their own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 
-T=$(mktemp -d)
+T=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
 trap 'rm -rf "$T"' EXIT
 fails=0
 check() { # DESCRIPTION CONDITION-COMMAND...
@@ -294,7 +294,7 @@ if command -v qemu-system-x86_64 >/dev/null; then
 fi
 NS_PATH=/usr/sbin:/sbin:/usr/bin:/bin
 if PATH=$NS_PATH command -v nft >/dev/null && unshare -rn true 2>/dev/null; then
-    TN=$(mktemp -d)
+    TN=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
     sed 's/meta skuid "claude-vm"/meta skuid 0/' "$HERE/data/claude-vm-firewall.nft" >"$TN/fw.nft"
     nc() { PATH=$NS_PATH unshare -rn bash -c 'ip link set lo up; [ "$1" = none ] || nft -f "$1" || exit 8; bash "$2"' _ "$1" "$HERE/bin/claude-vm-net-check"; echo $?; }
     check "the net check, the firewall there: go" test "$(nc "$TN/fw.nft")" = 0
@@ -308,14 +308,17 @@ check "pubkey checks what the guest says before showing it" grep -q "ssh-ed25519
 check "a clean snapshot after install and rebuild" test "$(grep -c '^        clean_snapshot$' "$HERE/bin/claude-vm-session")" = 2
 check "reset asks first, and no answer changes nothing" bash -c 'grep -q "Nothing was changed" "$1" && grep -q "\[y/N\]" "$1"' _ "$HERE/bin/claude-vm"
 # A commit message with a terminal escape in it, through the real claude-pull
-GP=$(mktemp -d)
-( export HOME=$GP GIT_CONFIG_NOSYSTEM=1
+GP=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
+# (set -e, and every git told which copy it works in: a step that fails stops
+# here, never committing or pushing in the folder the test was started from)
+( set -e
+  export HOME=$GP GIT_CONFIG_NOSYSTEM=1
   git config --global user.name t; git config --global user.email t@e; git config --global init.defaultBranch main; git config --global commit.gpgsign false
   git init -q --bare "$GP/s.git"; git clone -q "$GP/s.git" "$GP/a" 2>/dev/null
-  cd "$GP/a" && git commit -q --allow-empty -m first && git push -q origin main
+  git -C "$GP/a" commit -q --allow-empty -m first; git -C "$GP/a" push -q origin main
   git clone -q "$GP/s.git" "$GP/b" 2>/dev/null
-  git commit -q --allow-empty -m "$(printf 'evil\033]52;c;x\007done')" && git push -q origin main
-  cd "$GP/b" && bash "$HERE/bin/claude-pull" </dev/null >"$GP/out" 2>&1 )
+  git -C "$GP/a" commit -q --allow-empty -m "$(printf 'evil\033]52;c;x\007done')"; git -C "$GP/a" push -q origin main
+  cd "$GP/b"; bash "$HERE/bin/claude-pull" </dev/null >"$GP/out" 2>&1 )
 check "claude-pull shows the commit" grep -q 'evil' "$GP/out"
 check "...without the terminal escape in its message" bash -c '! LC_ALL=C grep -q "$(printf "\033")" "$1"' _ "$GP/out"
 rm -rf "$GP"

@@ -7,7 +7,7 @@
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 set +e +o pipefail
 
-ST=$(mktemp -d)
+ST=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
 trap 'rm -rf "$ST"' EXIT
 mkdir -p "$ST/pkg"
 LOG=$ST/log

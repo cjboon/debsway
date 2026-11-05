@@ -7,7 +7,7 @@
 # Run by test.sh, or:  bash tools/test-apt-repo.sh
 # shellcheck disable=SC2016  # the inner shells expand their own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-T=$(mktemp -d)
+T=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
 # (gpg never looks in your own ~/.gnupg)
 export GNUPGHOME=$T/.gnupg-default
 mkdir -m 700 "$GNUPGHOME"

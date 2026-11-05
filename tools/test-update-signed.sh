@@ -8,7 +8,7 @@
 # shellcheck disable=SC2016  # the inner shells and pretend programs expand their own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 
-T=$(mktemp -d)
+T=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
 G=(gpg --homedir "$T/gh" --batch --quiet --pinentry-mode loopback --passphrase '')
 trap 'gpgconf --homedir "$T/gh" --kill all 2>/dev/null; rm -rf "$T"' EXIT
 fails=0

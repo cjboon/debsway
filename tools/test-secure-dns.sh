@@ -15,7 +15,7 @@ HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 . "$HERE/lib/secure-dns.sh"
 set +e +o pipefail
 
-T=$(mktemp -d)
+T=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
 trap 'rm -rf "$T"' EXIT
 fails=0
 check() { # DESCRIPTION CONDITION-COMMAND...

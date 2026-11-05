@@ -9,7 +9,7 @@
 # shellcheck disable=SC2016  # the pretend programs expand their own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 command -v gpg >/dev/null || { echo "  ok    skipped: gpg isn't installed"; exit 0; }
-T=$(mktemp -d)
+T=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
 # (gpg never looks in your own ~/.gnupg)
 export GNUPGHOME=$T/.gnupg-default
 mkdir -m 700 "$GNUPGHOME"
