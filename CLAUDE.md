@@ -4,23 +4,41 @@ Wren Linux is shell scripts that turn a bare Debian 13 install into a small sway
 desktop. Be plain about what was tested and what wasn't, and say which user runs which
 command.
 
-**For now Claude runs on the owner's own PC, not in a VM.** This is the installed
-Wren Linux desktop: sway is running, there is a real GPU and `/dev/kvm`, the extras are
-installed (`~/.local/bin`), and other users exist (e.g. `onion-site`). So:
+**Claude runs in `claude-vm`, a disposable Debian VM on the owner's computer**
+(`extras/claude-vm.sh`), not on the owner's desktop. The VM is walled off from it:
+no shared folder, no reach into the owner's machine or local network, only the
+internet. So:
 
-- Anything you run acts on the owner's real system and session. Don't run install,
-  `--remove`, `update.sh` or `bin/*` commands, change system settings, or stop/start
-  services and VMs unless the owner asks; say the command and let them run it.
-- sudo asks for a password, so it can't run unattended. Never try to get around that.
-- The home folder holds private files (password database, keys, `~/.gnupg`, notes,
-  logs). Read nothing outside `~/wren-linux` and the scratchpad unless the owner points you
-  to a specific file.
-- `~/wren-linux` is a git repo tracking `origin/main` (https://github.com/cjboon/wren-linux.git).
-  There is no `~/.ssh` here; pushing uses the owner's own credential, so the owner pushes.
-  Commit each finished item of work as soon as its tests pass (one commit per item);
-  push only when the owner asks.
-- The test suite works in a temp folder with a pretend sudo. Still check a test doesn't
-  touch the real home or desktop before running it here.
+- This VM is yours to change. You have sudo without a password: install what you need
+  and test real installs here (extras, firewalls, users, services, VMs inside it with
+  `/dev/kvm`). The owner can reset or rebuild it, so nothing kept only here is safe.
+- It is a bare Debian 13 server, not the Wren Linux desktop: no sway, no screen, and
+  the base parts aren't installed. Say which results came from here and which still
+  need the owner's machine (a window on the desktop, prompts typed by hand, the
+  owner's real extras).
+- `~/projects/wren-linux` tracks `origin/main` (https://github.com/cjboon/wren-linux.git).
+  The VM's ssh key is a deploy key with write access. Commit each finished item as soon
+  as its tests pass (one commit per item), then push to a `claude/NAME` branch, never
+  to `main`: `main`'s newest commit must carry Wren Linux's signature or every computer
+  with the pin refuses updates. The owner reviews, merges and signs with
+  `tools/git-push.sh`. Push only when the owner asks.
+- Things this VM needs or does differently:
+  - Before the first test run: `sudo apt install gnupg gpgv acl sway rsync nftables
+    xclip cage socat keepassxc lintian`, and `PATH=$PATH:/usr/sbin` (nft, visudo).
+    Without `gpg-agent` (in `gnupg`) a dozen groups fail on key making and signing.
+  - Expected failures here, not bugs: the three DNS-over-TLS checks (port 853 is
+    blocked from this VM) and one `setup-vps` check (it assumes no ssh login above it;
+    you are logged in over ssh).
+  - Scripts call `sudo -v`, which asks for a password here despite NOPASSWD:
+    `echo 'Defaults verifypw=any' | sudo tee /etc/sudoers.d/zz-claude-verifypw`.
+  - **Never turn on ufw (or any input firewall) in this VM.** The owner's `claude-vm`
+    command logs in over ssh to the guest's port 22; blocking it locks them out of
+    this VM (your own session survives, which hides it).
+  - Base parts aren't installed, so e.g. `parts/sandbox-dns.sh` isn't running: a
+    sandbox's `resolvers` set stays empty unless you fill it
+    (`sudo bash bin/sandbox-dns-update`).
+- The test suite works in a temp folder with a pretend sudo. A few tests could reach
+  the real sudo: here that changes only this VM, but say so if it happened.
 
 ## Working
 
@@ -64,11 +82,15 @@ installed (`~/.local/bin`), and other users exist (e.g. `onion-site`). So:
 
 ## Safety
 
-- This is the owner's own account, with their private files. Do not run downloaded binaries
-  or large third-party programs under it. Read code you fetch before using it, in its own
-  folder in the scratchpad, and say what you found.
-- Work leaves this PC only by the owner's commit and push; the owner reviews. Don't send
-  repo content or anything from this machine to outside services.
-- Security-relevant claims need a test or a reason. If a path was not actually run (real
-  sudo, a change you left for the owner to apply), say so in the report instead of
-  implying it works.
+- The owner's private files are not here, and nothing here should become theirs
+  without review. Read code you fetch before using it, in its own folder in the
+  scratchpad, and say what you found. Run downloaded programs only in this VM, never
+  in anything you hand back.
+- Work leaves this VM only by pushing to a `claude/` branch; the owner reviews before
+  merging. Don't send repo content or anything else to other outside services.
+- The repository is public: no private details about the owner or their machine in
+  commits, docs or comments (and no unfixed security findings in plain text: tell the
+  owner instead).
+- Security-relevant claims need a test or a reason. If a path was not actually run (a
+  desktop window here, a change the owner must apply on their machine), say so in the
+  report instead of implying it works.
