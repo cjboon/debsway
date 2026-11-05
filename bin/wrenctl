@@ -33,10 +33,11 @@ usage: wrenctl [OPTION]
   --status     show what Wren Linux has set up on this computer
   --git [DIR]  set git up for you: your name and email, and how it logs in to
                push, for DIR or the repository you are in (git-helper.sh)
-  --gh [rulesets [OWNER/REPO] | --logout]
+  --gh [rulesets [OWNER/REPO] | deploy-key [OWNER/REPO] [--account NAME] | --logout]
                GitHub's gh, with a token you make (nothing saved unless you
                say so); rulesets: only you update main, nobody force-pushes or
-               deletes it (gh-helper.sh)
+               deletes it; deploy-key: add the claude-vm VM's ssh key to a
+               repository so the agent can push, no browser (gh-helper.sh)
   --test       check that the scripts, packages, downloads and keys still work
   --wifi [on|off]       switch Wi-Fi on or off (no word: say whether it is on)
   --bluetooth [on|off]  the same for Bluetooth

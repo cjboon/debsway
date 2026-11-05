@@ -14,7 +14,7 @@ claude                 Claude Code; asks which if you set up more than one (Ente
 claude-vm              Claude Code inside the VM (boots it; powers it off when you exit)
 claude-vm shell        a plain shell in the VM
 claude-vm status | stop
-claude-vm pubkey       the VM's ssh public key (add it on your git host)
+claude-vm pubkey       the VM's ssh public key (add it on your git host; wrenctl gh deploy-key does it for GitHub)
 claude-vm rebuild      throw the VM away and build a fresh one
 claude-vm reset        back to how it was built (faster than rebuild; asks first)
 claude-pull            in your copy of a repository: shows what the agent pushed, brings it in on y

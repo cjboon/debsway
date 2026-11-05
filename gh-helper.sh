@@ -14,6 +14,10 @@
 # Usage: bash gh-helper.sh                       install gh; save a token, or not
 #        bash gh-helper.sh rulesets [OWNER/REPO] the rules on main (default: this
 #                                              copy's GitHub repository)
+#        bash gh-helper.sh deploy-key [OWNER/REPO] [--account NAME]
+#                                              add the claude-vm VM's ssh key to the
+#                                              repository (so the agent can push),
+#                                              without a browser
 #        bash gh-helper.sh --logout              forget a saved token
 # (wrenctl gh runs it)
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
@@ -146,11 +150,89 @@ EOF
     fi
 }
 
+# deploy_key [OWNER/REPO] [--account NAME]: adds the claude-vm VM's ssh public
+# key to the repository as a deploy key that can write (so the agent can push).
+# The key is public; the token that adds it stays on this computer, never in the
+# VM. A deploy key reaches one repository only, and the branch rules (rulesets)
+# keep it off main, so it can push its own branch and nothing else.
+deploy_key() {
+    local repo="" account="" tok="" key existing applied t
+    while [ $# -gt 0 ]; do
+        case $1 in
+            --account) [ $# -ge 2 ] || die "--account needs a name"; account=$2; shift 2 ;;
+            -*) die "Usage: bash gh-helper.sh deploy-key [OWNER/REPO] [--account NAME]" ;;
+            *) [ -z "$repo" ] || die "Usage: bash gh-helper.sh deploy-key [OWNER/REPO] [--account NAME]"; repo=$1; shift ;;
+        esac
+    done
+    [ -n "$account" ] && [[ ! $account =~ ^[a-z][a-z0-9]{0,14}$ ]] &&
+        die "An account name is small letters and digits, a letter first."
+    repo=${repo:-$(this_repo)}
+    [ -n "$repo" ] || die "Which repository? wrenctl gh deploy-key OWNER/REPO"
+    [[ $repo =~ ^[A-Za-z0-9-]{1,39}/[A-Za-z0-9._-]{1,100}$ ]] || die "\"$repo\" isn't OWNER/REPO."
+    have_gh
+
+    # The VM's public key, from the VM command (the key is public; a test points
+    # WREN_CLAUDE_VM at a pretend one)
+    local claude_vm=${WREN_CLAUDE_VM:-$HOME/.local/bin/claude-vm}
+    [ -x "$claude_vm" ] ||
+        die "The claude-vm sandbox isn't set up here, so there is no VM key to add. Set it up first: wrenctl install claude-vm${account:+ --account $account}"
+    key=$("$claude_vm" ${account:+--account "$account"} pubkey 2>/dev/null | grep -m1 -E '^(ssh-ed25519|ssh-rsa|ecdsa-sha2-[a-z0-9-]+|sk-ssh-ed25519@openssh\.com) ') ||
+        die "Couldn't read the VM's public key (claude-vm${account:+ --account $account} pubkey). Is the VM built? Try: claude-vm${account:+ --account $account} rebuild"
+    # The type and base64 body only (GitHub needs no comment). It holds nothing
+    # but safe characters, so no quote or backslash in a comment could break out
+    # of the JSON this becomes; it is also what GitHub stores and compares.
+    local body
+    body=$(awk '{print $1 " " $2}' <<<"$key")
+    [[ $body =~ ^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp[0-9]+|sk-ssh-ed25519@openssh.com)\ [A-Za-z0-9+/]+=*$ ]] ||
+        die "That doesn't look like a single ssh public key; nothing was sent to GitHub."
+
+    if ! logged_in; then
+        say "A token for this, used now and not saved"
+        token_help "Administration, Read and write"
+        secret tok "    Token: "
+        token_ok "$tok" || die "That isn't a GitHub token; nothing was changed."
+    fi
+    gh_() { if [ -n "$tok" ]; then GH_TOKEN=$tok "$GH" "$@"; else "$GH" "$@"; fi; }
+
+    say "The claude-vm key on $repo"
+    # Already there? (match on the type and body, not the comment)
+    existing=$(gh_ api "repos/$repo/keys" --jq '.[].key') ||
+        die "GitHub didn't list $repo's deploy keys (the token needs Administration, Read and write, on $repo). Nothing was changed."
+    if grep -qxF "$body" <(awk '{print $1 " " $2}' <<<"$existing"); then
+        note "The VM's key is already a deploy key on $repo; nothing was added."
+    else
+        local title="wren-claude-vm${account:+-$account}"
+        gh_ api -X POST "repos/$repo/keys" --input - >/dev/null <<EOF ||
+{"title":"$title","key":"$body","read_only":false}
+EOF
+            die "GitHub didn't add the key (a deploy key works on one repository only: is this key on another?). Nothing was changed. See: https://github.com/$repo/settings/keys"
+        note "Added the VM's key as a deploy key on $repo (it can push, so the agent's work reaches you)."
+    fi
+
+    # Is main protected, so this write key can't reach it? (the rules rulesets adds)
+    applied=$(gh_ api "repos/$repo/rules/branches/main" --jq '.[].type' 2>/dev/null) || applied=
+    local main_open=false
+    for t in update non_fast_forward deletion; do
+        grep -qx "$t" <<<"$applied" || main_open=true
+    done
+    if $main_open; then
+        warn "main is not fully protected yet, so this key could push to main too."
+        warn "Protect it first of all: wrenctl gh rulesets $repo"
+    else
+        note "main is protected (wrenctl gh rulesets): this key can push its own branch, never main."
+    fi
+    note "The VM pushes to the branch claude; you bring its work in with claude-pull, after reviewing it."
+    if [ -n "$tok" ]; then
+        note "The token wasn't saved. Made for this alone? Delete it: https://github.com/settings/personal-access-tokens"
+    fi
+}
+
 case ${1:-} in
     "") setup ;;
     rulesets) shift; [ $# -le 1 ] || die "Usage: bash gh-helper.sh rulesets [OWNER/REPO]"; rulesets "$@" ;;
+    deploy-key | deploy_key) shift; deploy_key "$@" ;;
     --logout)
         command -v "$GH" >/dev/null || { note "gh isn't installed: nothing saved."; exit 0; }
         if logged_in; then "$GH" auth logout --hostname github.com; else note "gh has no token saved."; fi ;;
-    *) die "Usage: bash gh-helper.sh [rulesets [OWNER/REPO] | --logout]" ;;
+    *) die "Usage: bash gh-helper.sh [rulesets [OWNER/REPO] | deploy-key [OWNER/REPO] [--account NAME] | --logout]" ;;
 esac

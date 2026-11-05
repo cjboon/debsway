@@ -270,7 +270,9 @@ After that, `update.sh` (or `claude-pull`) shows what's new and asks before
 bringing it in; plain `git pull` works too. (`claude-pull` is installed by the Claude Code
 sandboxes, `extras/claude-code.sh` and `extras/claude-vm.sh`.) If Claude Code
 pushes to the repository, add the ssh key its sandbox prints as a deploy key
-on GitHub (with write access), replacing the old install's.
+on GitHub (with write access), replacing the old install's. `wrenctl gh
+deploy-key` does it from the command line, no browser: it reads the VM's key
+and adds it, with a token that stays on your computer, never in the VM.
 
 ## The `wrenctl` command
 

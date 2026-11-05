@@ -114,6 +114,11 @@ Wren Linux from a stick is connected to the published one.
 .RB [ rulesets
 .RI [ OWNER/REPO ]
 |
+.B deploy\-key
+.RI [ OWNER/REPO ]
+.RB [ \-\-account
+.IR NAME ]
+|
 .BR \-\-logout ]
 GitHub's gh
 .RB ( gh\-helper.sh ),
@@ -122,6 +127,10 @@ say so.
 .B rulesets
 adds the rules that keep a repository's main branch yours: only its admins
 update it, and nobody force-pushes or deletes it.
+.B deploy\-key
+adds the claude\-vm VM's ssh key to a repository as a deploy key that can
+write, so the agent can push, without a browser; the token stays on this
+computer, never in the VM, and the branch rules keep the key off main.
 \fB\-\-logout\fR forgets a saved token.
 .TP
 .B \-\-test

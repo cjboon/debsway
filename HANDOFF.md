@@ -27,7 +27,10 @@ Done in that session:
   EXIT trap fixed (every successful run used to end in an error).
 - Wallets: Tor offered before a wallet's first run (Feather, Sparrow, Electrum).
 - claude-vm: memory and disk chosen within what the computer can spare
-  (`/etc/wren/claude-vm-size`, root's).
+  (`/etc/wren/claude-vm-size`, root's; a typed value is trimmed of spaces).
+- `wrenctl gh deploy-key [OWNER/REPO] [--account NAME]`: adds the claude-vm VM's ssh
+  key to the repo as a writable deploy key, no browser; token stays on the host, and
+  it warns if `main` isn't ruleset-protected yet (gh-helper.sh).
 - Firefox: `firefox-esr` opens the sandbox, Firefox as you is `firefox-unsafe`
   (dpkg-divert); no password-saving prompts (KeePassXC keeps them); a read-only
   "Learn (Wren Linux)" bookmarks folder; 34 ready-made profiles

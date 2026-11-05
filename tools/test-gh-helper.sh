@@ -33,6 +33,8 @@ case "$*" in
     "auth logout --hostname github.com") rm -f "$S/logged-in" ;;
     "api repos/"*"/rulesets --jq .[].name") cat "$S/have-rules" 2>/dev/null; true ;;
     "api -X POST repos/"*"/rulesets --input -") cat >"$S/input.$n"; [ ! -e "$S/refuse" ] ;;
+    "api repos/"*"/keys --jq .[].key") cat "$S/have-keys" 2>/dev/null; true ;;
+    "api -X POST repos/"*"/keys --input -") cat >"$S/input.$n"; [ ! -e "$S/refuse-key" ] ;;
     "api repos/"*"/rules/branches/main --jq .[].type") cat "$S/applied" 2>/dev/null; true ;;
     *) exit 3 ;;
 esac
@@ -121,5 +123,99 @@ check "...not on its command line" not grep -q "$TOK |" "$T/s/calls"
 run /dev/null --logout >/dev/null
 check "--logout: gh forgets it" bash -c 'grep -q "auth logout" "$1" && [ ! -e "$2/logged-in" ]' _ "$T/s/calls" "$T/s"
 check "wrenctl gh runs it" bash -c 'grep -q "gh-helper.sh" "$1"' _ "$HERE/bin/wrenctl"
+
+# ---- deploy-key: the claude-vm key as a deploy key ----
+# A pretend claude-vm that prints a public key (from $T/vmkey; another for an account)
+cat >"$T/bin/claude-vm" <<'CV'
+#!/bin/sh
+case "$*" in
+    "pubkey") cat "${WREN_TEST_VMKEY:?}" ;;
+    "--account "*" pubkey") printf 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIACCOUNTKEYBODYxxxxxxxxxxxxxxxxxxxxxxxxx account@vm\n' ;;
+    *) exit 2 ;;
+esac
+CV
+chmod +x "$T/bin/claude-vm"
+VMKEY='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIVMKEYBODYxxxxxxxxxxxxxxxxxxxxxxxxxxxxx claude-vm@wren'
+printf '%s\n' "$VMKEY" >"$T/vmkey"
+dk() { # ANSWERS-FILE ARGS...: deploy_key, with the pretend VM and gh
+    local a=$1
+    shift
+    rm -f "$T/s/calls" "$T/s"/input.*
+    GH_STATE=$T/s WREN_GH=$T/bin/gh WREN_CLAUDE_VM=$T/bin/claude-vm WREN_TEST_VMKEY=$T/vmkey \
+        WREN_TEST_ANSWERS=$a bash "$C/gh-helper.sh" deploy-key "$@" 2>&1
+}
+
+# not logged in, main protected, the key not there yet: it is added, writable
+fresh
+cp "$T/all-applied" "$T/s/applied"
+out=$(dk "$T/tok")
+check "deploy-key: this copy's GitHub repository" grep -q 'api -X POST repos/someone/wren-linux/keys' "$T/s/calls"
+check "...the token reaches gh in its environment, never a command line" bash -c 'grep -q "token=$2" "$1" && ! grep -q "$2 |" "$1"' _ "$T/s/calls" "$TOK"
+jk=$(grep -l '"key"' "$T/s"/input.*)
+check "...the VM's key, writable (read_only false), with a wren title" bash -c '
+    python3 -I -c "import json,sys; r=json.load(open(sys.argv[1]))
+assert r[\"key\"].startswith(\"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIVMKEYBODY\")
+assert r[\"read_only\"] is False
+assert r[\"title\"]==\"wren-claude-vm\"" "$1"' _ "$jk"
+check "...and it says the key was added, and that main is protected" bash -c '
+    grep -q "Added the VM.s key" <<<"$1" && grep -q "main is protected" <<<"$1"' _ "$out"
+
+# the key is already a deploy key there: nothing added
+fresh
+cp "$T/all-applied" "$T/s/applied"
+printf '%s\n' "$VMKEY" >"$T/s/have-keys"
+out=$(dk "$T/tok")
+check "the VM's key already a deploy key: nothing is added, and it says so" bash -c '
+    ! grep -q "api -X POST" "$1" && grep -q "already a deploy key" <<<"$2"' _ "$T/s/calls" "$out"
+# the same key with a different comment counts as the same
+fresh
+cp "$T/all-applied" "$T/s/applied"
+printf 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIVMKEYBODYxxxxxxxxxxxxxxxxxxxxxxxxxxxxx someone-else\n' >"$T/s/have-keys"
+out=$(dk "$T/tok")
+check "...a different comment on the same key still counts as there" not grep -q "api -X POST" "$T/s/calls"
+
+# main not protected: the key is added, with a warning to set the rules
+fresh
+printf '%s\n' non_fast_forward deletion >"$T/s/applied"
+out=$(dk "$T/tok")
+check "main not fully protected: it warns this key could reach main, and points to rulesets" bash -c '
+    grep -q "could push to main" <<<"$1" && grep -q "wrenctl gh rulesets" <<<"$1"' _ "$out"
+
+# GitHub refuses the key (a deploy key is one repo only): said, nothing claimed
+fresh
+cp "$T/all-applied" "$T/s/applied"
+: >"$T/s/refuse-key"
+out=$(dk "$T/tok") && rc=0 || rc=$?
+check "GitHub refuses the key: it says so and fails, claiming nothing" bash -c '
+    [ "$1" -ne 0 ] && grep -q "didn.t add the key" <<<"$2" && ! grep -q "Added the VM" <<<"$2"' _ "$rc" "$out"
+
+# no claude-vm here: nothing asked of GitHub
+fresh
+out=$(GH_STATE=$T/s WREN_GH=$T/bin/gh WREN_CLAUDE_VM=$T/none WREN_TEST_ANSWERS=/dev/null bash "$C/gh-helper.sh" deploy-key 2>&1) && rc=0 || rc=$?
+check "no claude-vm set up: it says so, and asks nothing of GitHub" bash -c '
+    [ "$1" -ne 0 ] && grep -q "claude-vm sandbox isn.t set up" <<<"$2" && [ ! -s "$3/calls" ]' _ "$rc" "$out" "$T/s"
+
+# the VM prints something that isn't a key: nothing is sent to GitHub
+fresh
+cp "$T/all-applied" "$T/s/applied"
+printf 'not a key; rm -rf /\n' >"$T/vmkey"
+out=$(dk "$T/tok") && rc=0 || rc=$?
+check "the VM's key isn't a single ssh key: nothing is sent to GitHub" bash -c '
+    [ "$1" -ne 0 ] && [ ! -s "$3/calls" ]' _ "$rc" "$out" "$T/s"
+printf '%s\n' "$VMKEY" >"$T/vmkey"
+
+# --account NAME: that account's VM key, titled for it
+fresh
+cp "$T/all-applied" "$T/s/applied"
+out=$(dk "$T/tok" --account work)
+jk=$(grep -l '"key"' "$T/s"/input.*)
+check "deploy-key --account NAME: the account VM's key, titled wren-claude-vm-NAME" bash -c '
+    python3 -I -c "import json,sys; r=json.load(open(sys.argv[1]))
+assert \"ACCOUNTKEYBODY\" in r[\"key\"]
+assert r[\"title\"]==\"wren-claude-vm-work\"" "$1"' _ "$jk"
+out=$(dk /dev/null --account '../x' 2>&1) || true
+check "a bad account name is refused" grep -q "account name is" <<<"$out"
+out=$(dk /dev/null '../x/y' 2>&1) || true
+check "deploy-key with a bad OWNER/REPO: refused" grep -q "isn't OWNER/REPO" <<<"$out"
 
 [ "$fails" -eq 0 ]
