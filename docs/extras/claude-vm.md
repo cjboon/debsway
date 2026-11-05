@@ -24,8 +24,8 @@ Claude Code inside a disposable Debian virtual machine (QEMU/KVM), so a
 kernel bug that would get out of a user-level sandbox only reaches a VM you
 can delete. A locked user, `claude-vm` (no password, no login), runs the one
 QEMU process; the guest's disk is its own and there is no shared folder: the
-agent hands work back only by pushing to a git host, which you bring into your
-own copy with `claude-pull`. QEMU's user-mode networking turns the guest's
+agent hands work back only by pushing to a git host (to a branch `claude`, so your own
+branch stays yours), which you bring into your own copy with `claude-pull`. QEMU's user-mode networking turns the guest's
 traffic into ordinary sockets owned by `claude-vm`, so a firewall rule on that
 user (`data/claude-vm-firewall.nft`) governs the guest: the internet yes, your
 router, printers and local services no, except the guest's own ssh console on
@@ -50,7 +50,7 @@ space (several GB) and memory while it runs.
 - A bug in QEMU or KVM could reach this computer; a VM is a stronger wall than a user, not a perfect one.
 - It reaches the internet, so what it reads can leave the VM.
 - Treat what it pushes as untrusted until you have read it (`claude-pull` shows it first).
-- Its ssh key on your git host can push wherever you allow: a deploy key on one repository is the narrowest.
+- Its ssh key on your git host can push wherever you allow: a deploy key on one repository is the narrowest, and a rule on the host that only your signed commits go into your main branch keeps it to its `claude` branch.
 - Two accounts' VMs are as far apart as two VMs on one computer: a bug in QEMU or KVM is the way between them too.
 
 ## MANUAL INSTALL

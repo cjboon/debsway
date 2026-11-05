@@ -29,9 +29,11 @@ That is deliberate: it keeps their files and keys out of your reach.
   offer to remove it. Never suggest switching the check off, and never
   suggest `safe.directory '*'`.
 - **How your work reaches them:** keep your own clone in `~/projects/NAME`,
-  commit and push there (run the project's tests first). Their copy lives
-  outside `~/projects`, where you can't reach it, and they bring your work in
-  with `claude-pull`, which shows your commits and asks before it merges.
+  commit and push there (run the project's tests first), to a branch named
+  `claude` started from their branch as it is on the server, never to their
+  own branch. Their copy lives outside `~/projects`, where you can't reach it,
+  and they bring your work in with `claude-pull`, which takes the branch
+  `claude`, shows your commits and asks before it merges.
   Don't suggest pulling automatically, git hooks, or making their `.git`
   writable for you: each would let your changes run as them unread.
 - They run what you write in `~/projects` as themselves, so keep scripts

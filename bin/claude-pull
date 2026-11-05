@@ -3,6 +3,9 @@
 # Brings what Claude pushed to GitHub into your own copy of a repository
 # (default: the one you're in), after showing you what it changes. Nothing
 # comes in unless you say yes, and only on top of what you have.
+# Claude's work comes from the branch "claude" when the server has one (your
+# own branch then stays yours: Claude can't push to it, only you, signed);
+# otherwise from the branch yours tracks.
 set -euo pipefail
 
 die() { printf 'claude-pull: %s\n' "$*" >&2; exit 1; }
@@ -12,17 +15,25 @@ git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "$PWD is not a git re
 # A hooks folder that came in with the pull would run as you
 [ -z "$(git config core.hooksPath)" ] || die "core.hooksPath is set here; remove it first: git config --unset core.hooksPath"
 git fetch --quiet
-if [ -z "$(git rev-list 'HEAD..@{upstream}')" ]; then
+remote=$(git config "branch.$(git rev-parse --abbrev-ref HEAD).remote" 2>/dev/null || echo origin)
+git fetch --quiet "$remote" claude 2>/dev/null || true
+if git rev-parse --verify --quiet "refs/remotes/$remote/claude" >/dev/null; then
+    from=$remote/claude
+else
+    from='@{upstream}'
+fi
+if [ -z "$(git rev-list "HEAD..$from")" ]; then
     echo "Up to date: nothing new on GitHub."
     exit 0
 fi
 # (without control characters: a commit message from the VM could steer your terminal)
 # (the 8-bit controls too, in their UTF-8 form: some terminals obey those as well)
-git --no-pager log --stat --format='%n%h %s%n%b' 'HEAD..@{upstream}' | LC_ALL=C sed 's/\xc2[\x80-\x9f]//g' | LC_ALL=C tr -d '\000-\010\013-\037\177'
+git --no-pager log --stat --format='%n%h %s%n%b' "HEAD..$from" | LC_ALL=C sed 's/\xc2[\x80-\x9f]//g' | LC_ALL=C tr -d '\000-\010\013-\037\177'
 echo
-echo "Every changed line: git diff HEAD..@{upstream}"
+echo "From $from. Every changed line: git diff HEAD...$from"
 read -rp "Bring these in? [y/N] " answer
 case $answer in
-    [yY]*) git merge --ff-only '@{upstream}' ;;
+    [yY]*) git merge --ff-only "$from" ||
+        die "Not brought in: $from isn't on top of what you have. Ask Claude to start again from your branch as it is on the server." ;;
     *) echo "Nothing changed." ;;
 esac

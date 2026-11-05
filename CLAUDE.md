@@ -16,13 +16,17 @@ internet. So:
   the base parts aren't installed. Say which results came from here and which still
   need the owner's machine (a window on the desktop, prompts typed by hand, the
   owner's real extras).
-- `~/projects/wren-linux` tracks `origin/main` (https://github.com/cjboon/wren-linux.git).
-  The VM's ssh key is a deploy key with write access. Commit each finished item as soon
-  as its tests pass (one commit per item), then push to `main`, as the owner asks: they
-  pull it (`claude-pull`), review it, and sign on top with `tools/git-push.sh` (or
-  `wren-release`). Until they do, `main`'s newest commit is unsigned, so computers with
-  the pin refuse the update: that is expected. Don't push while the owner is in the
-  middle of publishing (their `git-push.sh` stops if the server has commits they don't).
+- `~/projects/wren-linux` is a clone of https://github.com/cjboon/wren-linux.git (push
+  over ssh: `git@github.com:cjboon/wren-linux.git`). The VM's ssh key is a deploy key.
+  **Push only to the branch `claude`, never to `main`**: `main` holds only what the owner
+  reviewed and signed, and GitHub refuses anything else there. Start each piece of work
+  from `origin/main` as it is (`git fetch origin && git checkout -B claude origin/main`,
+  when nothing of yours is waiting unpulled), so `claude` sits on top of the owner's
+  signed commit. Commit each finished item as soon as its tests pass (one commit per
+  item), then `git push origin claude`. The owner runs `claude-pull` (it brings in
+  `claude`, after showing it) and `wren-release`, which signs on top and pushes `main`.
+  If `claude` isn't on top of their `main`, `claude-pull` refuses: rebase onto
+  `origin/main` and push again (`--force-with-lease`, on `claude` only).
 - Things this VM needs or does differently:
   - Before the first test run: `sudo apt install gnupg gpgv acl sway rsync nftables
     xclip cage socat keepassxc lintian`, and `PATH=$PATH:/usr/sbin` (nft, visudo).
@@ -30,6 +34,8 @@ internet. So:
   - Expected failures here, not bugs: the three DNS-over-TLS checks (port 853 is
     blocked from this VM) and one `setup-vps` check (it assumes no ssh login above it;
     you are logged in over ssh).
+  - Run the suite with the default `TMPDIR` (`/tmp`): a longer temp path breaks
+    gpg-agent's socket, and the signing-key checks fail.
   - Scripts call `sudo -v`, which asks for a password here despite NOPASSWD:
     `echo 'Defaults verifypw=any' | sudo tee /etc/sudoers.d/zz-claude-verifypw`.
   - **Never turn on ufw (or any input firewall) in this VM.** The owner's `claude-vm`
@@ -90,8 +96,8 @@ internet. So:
   without review. Read code you fetch before using it, in its own folder in the
   scratchpad, and say what you found. Run downloaded programs only in this VM, never
   in anything you hand back.
-- Work leaves this VM only by pushing to `main`; the owner reviews it before they sign
-  and publish it. Don't send repo content or anything else to other outside services.
+- Work leaves this VM only by pushing to the branch `claude`; the owner reviews it before
+  they sign it into `main` and publish it. Don't send repo content or anything else to other outside services.
 - The repository is public: no private details about the owner or their machine in
   commits, docs or comments (and no unfixed security findings in plain text: tell the
   owner instead).

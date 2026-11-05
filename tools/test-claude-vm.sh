@@ -309,6 +309,7 @@ check "a clean snapshot after install and rebuild" test "$(grep -c '^        cle
 check "reset asks first, and no answer changes nothing" bash -c 'grep -q "Nothing was changed" "$1" && grep -q "\[y/N\]" "$1"' _ "$HERE/bin/claude-vm"
 # A commit message with a terminal escape in it, through the real claude-pull
 GP=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
+# shellcheck disable=SC2030,SC2031  # each ( ) sets its own HOME, on purpose
 # (set -e, and every git told which copy it works in: a step that fails stops
 # here, never committing or pushing in the folder the test was started from)
 ( set -e
@@ -321,6 +322,28 @@ GP=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)";
   cd "$GP/b"; bash "$HERE/bin/claude-pull" </dev/null >"$GP/out" 2>&1 )
 check "claude-pull shows the commit" grep -q 'evil' "$GP/out"
 check "...without the terminal escape in its message" bash -c '! LC_ALL=C grep -q "$(printf "\033")" "$1"' _ "$GP/out"
+# shellcheck disable=SC2030,SC2031  # each ( ) sets its own HOME, on purpose
+# A branch "claude" on the server: that is what comes in, the owner's own branch
+# on the server isn't touched; and one that isn't on top of theirs: refused
+( set -e
+  export HOME=$GP GIT_CONFIG_NOSYSTEM=1
+  git -C "$GP/b" merge -q --ff-only origin/main
+  git -C "$GP/a" checkout -q -b claude; git -C "$GP/a" commit -q --allow-empty -m from-claude-branch
+  git -C "$GP/a" push -q origin claude
+  git -C "$GP/a" checkout -q main; git -C "$GP/a" commit -q --allow-empty -m on-main-only; git -C "$GP/a" push -q origin main
+  cd "$GP/b"; echo y | bash "$HERE/bin/claude-pull" >"$GP/out2" 2>&1 )
+check "claude-pull: with a branch claude on the server, that is what it shows and brings in" bash -c '
+    grep -q from-claude-branch "$1" && ! grep -q on-main-only "$1" &&
+    [ "$(git -C "$2" log -1 --format=%s)" = from-claude-branch ]' _ "$GP/out2" "$GP/b"
+# shellcheck disable=SC2031
+( export HOME=$GP GIT_CONFIG_NOSYSTEM=1
+  set -e
+  git -C "$GP/b" commit -q --allow-empty -m signed-by-owner
+  git -C "$GP/a" checkout -q claude; git -C "$GP/a" reset -q --hard HEAD~1
+  git -C "$GP/a" commit -q --allow-empty -m not-on-top; git -C "$GP/a" push -q -f origin claude
+  cd "$GP/b"; echo y | bash "$HERE/bin/claude-pull" >"$GP/out3" 2>&1 || true )
+check "...one not on top of what you have: refused, and says so" bash -c '
+    grep -q "isn.t on top of what you have" "$1" && [ "$(git -C "$2" log -1 --format=%s)" = signed-by-owner ]' _ "$GP/out3" "$GP/b"
 rm -rf "$GP"
 
 [ "$fails" -eq 0 ]
