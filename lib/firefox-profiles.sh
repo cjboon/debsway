@@ -138,3 +138,16 @@ remove_profile() {
         fi
     fi
 }
+
+# The ready-made profiles (data/firefox-profiles.list)
+FX_CATALOG=$WREN_DIR/data/firefox-profiles.list
+# fx_catalog NAME: "URL FAST TOOLBARS SOUND COOKIES ALLOW" of the ready-made
+# profile NAME, or nothing (and status 1) when there is none by that name
+fx_catalog() {
+    awk -v n="$1" '!/^#/ && $1 == n { print $2, $3, $4, $5, $6, $7; f = 1; exit } END { exit !f }' "$FX_CATALOG"
+}
+# fx_catalog_list: the ready-made profiles, by kind, each with what it is
+fx_catalog_list() {
+    awk '/^# [A-Z]/ && !/^# [A-Z]+ +[A-Z]/ { if (NR > 15) printf "\n%s\n", substr($0, 3); next }
+         !/^#/ && NF { d = $0; sub(/^[^#]*# /, "", d); printf "  %-14s %s\n", $1, d }' "$FX_CATALOG"
+}

@@ -4,11 +4,15 @@
 
 ```
 firefox --profiles                        the profiles there are: command, address, choices
-firefox --new-profile [NAME URL [...]]    make one (asks, without NAME and URL); Tab completes
+firefox --new-profile NAME                a ready-made one: github, tutamail, chess, youtube... (34)
+firefox --new-profile --list              the ready-made ones, by kind, with what each is
+firefox --new-profile [NAME URL [...]]    your own (asks, without NAME and URL); Tab completes
 firefox --remove-profile NAME             remove one (asks before deleting its logins and user)
 firefox --profile NAME [URL]              open one (its own command, below, does the same)
 
-bash ~/wren/extras/firefox-profiles/new-profile.sh                      the same, by the script: asks for the name and address
+bash ~/wren/extras/firefox-profiles/new-profile.sh                      the same, by the script: asks (a ready-made one, or yours)
+bash ~/wren/extras/firefox-profiles/new-profile.sh NAME                 a ready-made one
+bash ~/wren/extras/firefox-profiles/new-profile.sh --list               the ready-made ones
 bash ~/wren/extras/firefox-profiles/new-profile.sh NAME URL [--fast-js] [--show-toolbars] [--no-sound] [--delete-cookies]
 bash ~/wren/extras/firefox-profiles/new-profile.sh --remove NAME        asks before deleting its logins and user
 bash ~/wren/extras/firefox-profiles/new-profile.sh --manual             print the manual steps below
@@ -32,7 +36,16 @@ window shows only the page, without tabs, address bar or bookmarks bar
 sound). Its cookies and site data are kept, so you stay logged in;
 `--delete-cookies` deletes them when it closes (run without NAME and URL it
 asks, fast JavaScript and sound too). `--fast-js` turns the JavaScript JIT back on
-for that profile only, for heavy web apps.
+for that profile only, for heavy web apps. Ready-made ones (`data/firefox-profiles.list`, 34 of them: mail, AI chat,
+code, video, adult, chess, social, chat, shopping, reference) come with
+settings chosen for their site: mail and code keep you logged in; video,
+adult and chess sites forget everything when they close; video, chess and
+chat apps get fast JavaScript; code and shopping show the address bar. Sites
+that load their own code from a second domain (GitHub from
+githubassets.com, YouTube from ytimg.com) would break in uBlock's medium
+mode, so making one of those also runs `ublock-allow` for that site only;
+removing the profile leaves that exception. None is made until you ask for
+it: each is a Linux user of its own.
 
 ## LIMITS
 

@@ -8,7 +8,9 @@
 # sandboxed Firefox (extras/firefox-sandbox.sh), and offers to set that up.
 # The window shows only the page: no tabs, address bar or bookmarks bar.
 #
-#   bash new-profile.sh                       asks for the name and address
+#   bash new-profile.sh                       asks: a ready-made one, or your own name and address
+#   bash new-profile.sh NAME                  a ready-made one (github, tutamail, chess...)
+#   bash new-profile.sh --list                the ready-made ones (data/firefox-profiles.list)
 #   bash new-profile.sh NAME URL [--fast-js] [--show-toolbars] [--no-sound] [--delete-cookies]
 #                                             e.g. bash new-profile.sh bank https://mybank.example
 #   bash new-profile.sh --remove NAME         removes its command; asks whether to delete the profile and its user
@@ -21,6 +23,9 @@
 # --delete-cookies: its cookies, site data and cache go when it closes (logged
 # out each time); without it they are kept, so you stay logged in.
 # Run without NAME and URL, it asks, fast JavaScript, sound and cookies included.
+# A ready-made one comes with settings chosen for its site, and the sites
+# uBlock's medium mode would break it on are allowed (ublock-allow): those
+# load their own code from a second domain. Removing the profile leaves them.
 . "$(dirname -- "${BASH_SOURCE[0]}")/../../lib.sh"
 . "$WREN_DIR/lib/firefox-sandbox.sh"
 . "$WREN_DIR/lib/firefox-profiles.sh"
@@ -37,8 +42,24 @@ if [ "${1:-}" = --remove ]; then
     exit
 fi
 
-fast=no toolbars=hidden sound=yes cookies=keep
-if [ $# -ge 2 ]; then
+if [ "${1:-}" = --list ]; then
+    echo "Ready-made profiles (bash new-profile.sh NAME):"
+    fx_catalog_list
+    exit
+fi
+
+fast=no toolbars=hidden sound=yes cookies=keep allow=-
+args=$#
+# ready NAME: the ready-made profile NAME's settings, or fails
+ready() {
+    local line
+    line=$(fx_catalog "$1") || return 1
+    name=$1
+    read -r url fast toolbars sound cookies allow <<<"$line"
+}
+if [ $# -eq 1 ]; then
+    ready "$1" || die "There is no ready-made profile called \"$1\" (bash new-profile.sh --list). For your own: bash new-profile.sh NAME URL"
+elif [ $# -ge 2 ]; then
     name=$1 url=$2
     shift 2
     for opt in "$@"; do
@@ -51,8 +72,14 @@ if [ $# -ge 2 ]; then
         esac
     done
 else
-    note "A name for the profile: lowercase letters, digits and dashes, e.g. bank."
+    note "Ready-made: $(awk '!/^#/ && NF { printf "%s ", $1 }' "$FX_CATALOG")"
+    note "(what each is: bash new-profile.sh --list)"
+    note "Type one of those, or a name of your own (lowercase letters, digits and dashes, e.g. bank)."
     tty_read name "    name> "
+fi
+if [ "$args" -eq 0 ] && ready "$name"; then
+    note "$name: the ready-made settings."
+elif [ "$args" -eq 0 ]; then
     tty_read url "    address (e.g. https://mybank.example)> "
     note "Fast JavaScript makes heavy sites quicker (web mail, office, chat), but the"
     note "part that does it (the JIT) is where many browser attacks happen. Off, the"
@@ -74,3 +101,14 @@ valid_name "$name" || die "\"$name\" isn't a usable name: lowercase letters, dig
 valid_url "$url" || die "\"$url\" doesn't look like a web address."
 
 make_profile "$name" "$url" "$fast" "$toolbars" "$sound" "$cookies"
+
+# Sites this one needs to load other sites' scripts on (uBlock's medium mode;
+# a test puts a pretend ublock-allow in its place)
+UBLOCK_ALLOW=${WREN_UBLOCK_ALLOW:-/usr/local/bin/ublock-allow}
+if [ "$allow" != - ]; then
+    for site in ${allow//,/ }; do
+        if [ -x "$UBLOCK_ALLOW" ]; then
+            "$UBLOCK_ALLOW" "$site" >/dev/null && note "uBlock: $site may load its own code from its other domains (ublock-allow --list)."
+        fi
+    done
+fi
