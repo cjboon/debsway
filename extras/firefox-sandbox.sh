@@ -59,6 +59,14 @@ UNIT=/etc/systemd/system/wren-firefox-firewall.service
 DESKTOP="$HOME/.local/share/applications/wren-firefox.desktop"
 # firefox's Tab completion (its options and the profiles), where bash-completion looks
 COMPLETION="${XDG_DATA_HOME:-$HOME/.local/share}/bash-completion/completions/firefox"
+# Firefox run as you, by name: firefox-unsafe while this is installed (Debian's
+# /usr/bin/firefox-esr moved there with dpkg-divert, so its updates land there
+# too); firefox-esr itself, and Debian's /usr/bin/firefox and x-www-browser
+# that run it, open the sandboxed Firefox instead. The menu entry Debian's
+# package gives Firefox (it names the program itself) is hidden for you.
+UNSAFE=/usr/bin/firefox-unsafe
+ESR=/usr/bin/firefox-esr
+ESR_HIDE="${XDG_DATA_HOME:-$HOME/.local/share}/applications/firefox-esr.desktop"
 
 if [ "${1:-}" = --remove ]; then
     fx_sandbox_unused
@@ -82,9 +90,15 @@ if [ "${1:-}" = --remove ]; then
     sudo systemctl daemon-reload >/dev/null 2>&1 || true
     sudo rmdir "$SHARE" /usr/local/libexec /etc/wren 2>/dev/null || true
     sudo rm -rf /dev/shm/firefox-run
-    # links open in firefox-esr again
+    # links open in firefox-esr again, and firefox-esr is Firefox as you again
     unset_default_app wren-firefox.desktop
     rm -f "$DESKTOP" "$COMPLETION"
+    if [ "$(dpkg-divert --truename "$ESR" 2>/dev/null)" = "$UNSAFE" ]; then
+        sudo rm -f "$ESR"
+        sudo dpkg-divert --quiet --local --rename --remove "$ESR"
+        note "firefox-esr runs Firefox as you again (firefox-unsafe is gone)."
+    fi
+    if grep -qs '^# Written by Wren Linux extras/firefox-sandbox.sh' "$ESR_HIDE"; then rm -f "$ESR_HIDE"; fi
     if id "$NAME" >/dev/null 2>&1; then
         sudo pkill -KILL -u "$NAME" 2>/dev/null || true
         sudo userdel "$NAME"
@@ -234,13 +248,31 @@ else
     note "Links from other programs open as before (not in the sandboxed Firefox)."
 fi
 
+say "firefox-esr opens the sandboxed Firefox"
+# (a program that wants Firefox as you by name: firefox-unsafe)
+if [ "$(dpkg-divert --truename "$ESR")" != "$UNSAFE" ]; then
+    sudo dpkg-divert --quiet --local --rename --divert "$UNSAFE" --add "$ESR"
+fi
+printf '%s\n' '#!/bin/sh' '# Written by Wren Linux extras/firefox-sandbox.sh: firefox-esr, and what runs it' \
+    '# by name (/usr/bin/firefox, x-www-browser), opens the sandboxed Firefox.' \
+    '# Firefox run as you, with all your files: firefox-unsafe' \
+    'exec /usr/local/bin/firefox "$@"' | sudo tee "$ESR.wren-new" >/dev/null
+sudo chmod 0755 "$ESR.wren-new"
+sudo mv "$ESR.wren-new" "$ESR"
+mkdir -p "${ESR_HIDE%/*}"
+printf '%s\n' '# Written by Wren Linux extras/firefox-sandbox.sh: Debian'"'"'s menu entry for' \
+    '# Firefox run as you, hidden while the sandboxed one is here (firefox-unsafe runs it)' \
+    '[Desktop Entry]' 'Type=Application' 'Name=Firefox ESR' 'Hidden=true' >"$ESR_HIDE"
+note "firefox-esr (and firefox, x-www-browser) open the sandboxed Firefox. Firefox as you, with"
+note "all your files: firefox-unsafe."
+
 say "incognito"
 note "incognito opens a throwaway Firefox as a separate, locked-down user, with"
 note "its own clipboard, no shared folders, sound and video, and nothing kept."
 bash "$WREN_DIR/parts/incognito.sh" ||
     warn "incognito didn't finish setting up; run it again with: bash $WREN_DIR/parts/incognito.sh"
 
-note "Run it with: firefox   (or Super+d). firefox-esr runs Firefox as you instead."
+note "Run it with: firefox   (or Super+d). firefox-unsafe runs Firefox as you instead."
 note "It cannot reach your router or local services; to allow that for a while:"
 note "  sudo systemctl stop wren-firefox-firewall"
 note "Downloads go to ~/Downloads, shared with you. Copy and paste works while its window has focus."

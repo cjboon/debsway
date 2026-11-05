@@ -15,7 +15,8 @@
 #   own services (data/firefox-firewall.nft). To use one for a while:
 #   sudo systemctl stop wren-firefox-firewall
 # - Links from other programs open in the Firefox that is already running.
-# firefox-esr runs Firefox as you, with all your files and no such rules.
+# firefox-unsafe runs Firefox as you, with all your files and no such rules
+# (extras/firefox-sandbox.sh moves Debian's firefox-esr there; firefox-esr opens this).
 # - A profile made with new-profile.sh has a user of its own (fx-NAME), its own
 #   downloads folder (~/Downloads/NAME) and runs next to the others:
 #   firefox --profile NAME   (its own command, NAME or firefox-NAME, does this)
@@ -117,7 +118,7 @@ done
 SESSION=/usr/local/libexec/firefox-session
 # The one command your user may run as that user (see /etc/sudoers.d)
 sudo -n -u "$user" -l "$SESSION" >/dev/null 2>&1 ||
-    die "your user isn't set up to start it. Run: wrenctl install firefox-sandbox${name:+  (or new-profile.sh for the profile $name)}  (firefox-esr runs Firefox as you.)"
+    die "your user isn't set up to start it. Run: wrenctl install firefox-sandbox${name:+  (or new-profile.sh for the profile $name)}  (firefox-unsafe runs Firefox as you.)"
 command -v flock >/dev/null || die "flock is missing (package util-linux)."
 
 # Already open? Then the link (or a new window) goes to that Firefox.

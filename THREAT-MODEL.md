@@ -244,7 +244,9 @@ With the extras:
   password; from your own copy in `~/wren` it could.) `claude-regular`
   (`extras/claude-regular.sh`) and `mullvad-browser-regular` run as you on
   purpose, for ease: a hacked page in Mullvad Browser reaches your files, and
-  so does `firefox-esr` started by name. `claude-regular`'s
+  so does `firefox-unsafe` (Debian's `firefox-esr`, moved there when the
+  sandboxed Firefox is installed, so that `firefox-esr` by name opens the
+  sandbox; without the sandbox, `firefox-esr` itself). `claude-regular`'s
   sandbox and deny rules are Claude Code's own: it enforces them, they
   name only some folders, and you can turn them off in it.
 - **Someone at the computer while you're logged in**, with autologin

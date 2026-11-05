@@ -8,7 +8,8 @@ wrenctl remove firefox-sandbox                      remove it (asks about incogn
 wrenctl manual firefox-sandbox                      print the manual steps (firefox.md's, then these)
 
 firefox [URL]       the sandboxed Firefox, as a normal window (links from other programs open in it)
-firefox-esr         the same Firefox run as you, with everything you can reach
+firefox-unsafe      the same Firefox run as you, with everything you can reach
+firefox-esr         (Debian's name, and /usr/bin/firefox, x-www-browser): the sandboxed one
 ```
 
 The `firefox` command opens Firefox as a normal window on your sway, but it
@@ -59,7 +60,8 @@ with `extras/firefox-profiles/new-profile.sh` each get a user like it.
 - No WebRTC and no microphone or camera, here and in the profiles: video calls
   and browser-to-browser file transfers don't work.
 - It shares your kernel: a kernel bug could let a page out of its user.
-- It's your network and your address; and `firefox-esr` runs as you, without any of this.
+- It's your network and your address; and `firefox-unsafe` runs as you, without any of this.
+- `firefox-esr` opening the sandbox stops a program (or a habit) that starts Firefox by name; one that wants Firefox as you can still run `/usr/lib/firefox-esr/firefox-esr` itself.
 
 ## MANUAL INSTALL
 
@@ -122,6 +124,12 @@ grep -qx '\[Default Applications\]' ~/.config/mimeapps.list || echo '[Default Ap
 for t in x-scheme-handler/http x-scheme-handler/https; do
     sed -i "\\|^$t=|d; /^\\[Default Applications\\]\$/a $t=wren-firefox.desktop" ~/.config/mimeapps.list
 done
+# Debian's firefox-esr becomes firefox-unsafe (its updates land there too), and
+# firefox-esr by name (and /usr/bin/firefox, x-www-browser) opens the sandbox
+sudo dpkg-divert --local --rename --divert /usr/bin/firefox-unsafe --add /usr/bin/firefox-esr
+printf '#!/bin/sh\nexec /usr/local/bin/firefox "$@"\n' | sudo tee /usr/bin/firefox-esr >/dev/null
+sudo chmod 0755 /usr/bin/firefox-esr
+printf '[Desktop Entry]\nType=Application\nName=Firefox ESR\nHidden=true\n' >~/.local/share/applications/firefox-esr.desktop
 firefox
 ```
 
@@ -136,6 +144,10 @@ sudo systemctl daemon-reload
 sudo rm /etc/sudoers.d/wren-firefox /etc/security/limits.d/50-wren-firefox.conf
 sudo rm /usr/local/bin/firefox /usr/local/libexec/firefox-session /usr/local/share/wren/firefox-user.js /etc/wren/firefox.conf
 sudo rm -rf /dev/shm/firefox-run
+# firefox-esr is Firefox as you again
+sudo rm /usr/bin/firefox-esr
+sudo dpkg-divert --local --rename --remove /usr/bin/firefox-esr
+rm ~/.local/share/applications/firefox-esr.desktop
 # Links open in firefox-esr again
 sed -i '/=wren-firefox\.desktop$/d' ~/.config/mimeapps.list
 rm ~/.local/share/applications/wren-firefox.desktop

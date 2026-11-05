@@ -22,7 +22,7 @@ Removing an app never deletes its data: wallets, chats and keyrings stay.
 | `one-workspace.sh` | One workspace: Super+1 … 0 and Super+Shift+1 … 0 do nothing and the bar shows no workspace buttons, so no window ends up out of sight (`make-install-iso.sh --simplesway` ticks it in the first install list) |
 | `webcam.sh` | A webcam switch: a USB camera (most laptops' built-in ones) starts **off** at every boot and when plugged in, and the Wren menu gets a Webcam line (`wrenctl --camera on\|off`). Off disconnects its USB device, as if unplugged. A root helper does it; your user may run it with `on` or `off` only. See [extras/webcam.md](extras/webcam.md) |
 | `phone-tethering.sh` | Use a phone's mobile data over the USB cable (usbmuxd and the iPhone pairing tools; Android needs nothing but its own "USB tethering" switch). Switch Wi-Fi off from the menu to use only the phone |
-| `firefox-sandbox.sh` | `firefox`: Firefox as its own locked-down user (`firefox`), as a normal window. Your logins and history are kept in that user's home, not yours; a hacked page reaches only that, not your files. Clipboard shared while it has focus; `~/Downloads` shared both ways; sound through a pipe (it cannot hear your microphone); firewalled off your router and local services; links from other programs open in the running window. `firefox-esr` still runs Firefox as you. See the section below |
+| `firefox-sandbox.sh` | `firefox`: Firefox as its own locked-down user (`firefox`), as a normal window. Your logins and history are kept in that user's home, not yours; a hacked page reaches only that, not your files. Clipboard shared while it has focus; `~/Downloads` shared both ways; sound through a pipe (it cannot hear your microphone); firewalled off your router and local services; links from other programs open in the running window. `firefox-unsafe` runs Firefox as you; `firefox-esr` (and `x-www-browser`) open the sandboxed one. See the section below |
 | `pdf-viewer.sh` | zathura PDF viewer, in a sandbox |
 | `gimp.sh` | GIMP image editor, in a sandbox: `~/Pictures` to open and save in, no network |
 | `archive-tools.sh` | unzip, zip, 7z, bzip2 and zstd for archives |
@@ -186,8 +186,11 @@ It also becomes your **default browser**: links from other programs (a terminal,
 manager) open in it, because the desktop entry `wren-firefox.desktop` is set as the
 handler for web links in `~/.config/mimeapps.list` (undone by `--remove`).
 
-`firefox-esr` runs the same Firefox as you, with everything you can reach, if the
-sandbox is ever in the way; it stays installed, and starting it by name still works.
+`firefox-unsafe` runs the same Firefox as you, with everything you can reach, if the
+sandbox is ever in the way: Debian's `firefox-esr` is moved there (with `dpkg-divert`,
+so its updates land there too), and `firefox-esr` by name, `/usr/bin/firefox` and
+`x-www-browser` open the sandboxed Firefox, so nothing starts the unsandboxed one by
+accident. `--remove` puts `firefox-esr` back.
 Profiles made with `firefox-profiles/new-profile.sh` each get a user of their own like
 this one (`fx-NAME`), so a hacked page in one reaches neither your files nor the other
 profiles; they share the one firewall rule through the group `wren-fx`.
@@ -281,7 +284,7 @@ that's useful.
 
 Installs Firefox ESR with the video codecs and uBlock Origin, runs the
 hardening below, runs it as its own locked-down user (`firefox`), and sets up
-`incognito` too. `firefox-esr` still runs the same Firefox as you, for the odd
+`incognito` too. `firefox-unsafe` runs the same Firefox as you, for the odd
 page the sandbox's firewall blocks (your router's, say).
 `wrenctl remove firefox-sandbox` takes all of it out again (it asks
 about incognito; your profiles stay).

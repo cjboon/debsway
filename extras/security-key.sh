@@ -6,7 +6,8 @@
 #    itself: no rules from the maker are needed. Other users get none.
 #  - SSH: a key whose file is only a handle, every login needing the key and a
 #    touch (ssh-keygen -t ed25519-sk; tools/vps-client.sh ssh-key --security-key).
-#  - Websites: two-factor login (WebAuthn) works in firefox-esr. The sandboxed
+#  - Websites: two-factor login (WebAuthn) works in Firefox run as you (firefox-esr,
+#    or firefox-unsafe with the sandboxed Firefox installed). The sandboxed
 #    Firefox runs as other users; if you say yes, a udev rule lets them (the
 #    group wren-fx) reach the key too (data/security-key-firefox.rules).
 #  - sudo, if you say yes (or later: --sudo): your password AND a touch of the
@@ -150,7 +151,7 @@ apt_install libfido2-1 fido2-tools libpam-u2f pamu2fcfg pamtester acl
 note "Linux lets you, at the keyboard, use the key by itself; other users get none."
 
 say "Website logins in the sandboxed Firefox"
-note "Two-factor login with the key (WebAuthn) works in firefox-esr. The sandboxed Firefox"
+note "Two-factor login with the key (WebAuthn) works in Firefox run as you. The sandboxed Firefox"
 note "runs as other users, which can't reach the key unless you let them: then any of its"
 note "profiles can ask for a login with it, and each one still needs a touch."
 if ask "Let the sandboxed Firefox use the key for website logins?" y; then

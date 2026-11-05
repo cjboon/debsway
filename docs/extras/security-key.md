@@ -22,8 +22,8 @@ a key by itself, so no rules from its maker are needed, and other users get
 none. The script installs `libfido2` and its tools, and asks two things. First,
 whether the sandboxed Firefox may use the key for website logins (WebAuthn):
 its users are others than you, so a udev rule (`data/security-key-firefox.rules`)
-lets the group `wren-fx` reach the key; `firefox-esr`, which runs as you, can
-anyway. Second, whether sudo should take your password and a touch of the key
+lets the group `wren-fx` reach the key; Firefox run as you (`firefox-esr`, or
+`firefox-unsafe` with the sandboxed Firefox installed) can anyway. Second, whether sudo should take your password and a touch of the key
 (`pam_u2f`). The keys it accepts are listed in `/etc/wren/u2f_keys`, which only
 root can change, so nothing running as you can add one of its own; the setting
 is tried in a PAM service of its own first, and the change to sudo undoes itself

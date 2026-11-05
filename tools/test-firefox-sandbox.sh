@@ -294,7 +294,21 @@ s = open(sys.argv[1]).read()
 assert s.index("unexpected downloads folder") < s.index("\nneed_noabs\n")
 ' "$HERE/bin/firefox-session"
 check "it starts Firefox inside the abstract-socket wrapper" grep -q '"\$noabs" bash -c' "$HERE/bin/firefox-session"
-check "links go to the running Firefox through a private bus, also under the wrapper" grep -q '"\$noabs" firefox-esr --profile' "$HERE/bin/firefox-session"
+check "links go to the running Firefox through a private bus, also under the wrapper" grep -q '"\$noabs" /usr/lib/firefox-esr/firefox-esr --profile' "$HERE/bin/firefox-session"
+# firefox-esr by name opens the sandbox, so the sandboxes start Firefox itself
+# by its path: by name they would start the sandbox again from inside it
+check "the sandboxes start Firefox by its path, never firefox-esr by name (that is the sandbox now)" \
+    bash -c '! grep -nE "(^|[[:space:]\"])firefox-esr( |\$)" "$1" "$2" && grep -q "/usr/lib/firefox-esr/firefox-esr --profile" "$1" && grep -q "cage -d -- /usr/lib/firefox-esr/firefox-esr" "$2"' _ "$HERE/bin/firefox-session" "$HERE/bin/incognito-session"
+X=$HERE/extras/firefox-sandbox.sh
+check "firefox-esr moves to firefox-unsafe with dpkg-divert (so Debian's updates land there), and a script in its place opens the sandbox" \
+    bash -c 'grep -q "dpkg-divert --quiet --local --rename --divert \"\$UNSAFE\" --add \"\$ESR\"" "$1" && grep -qF "'"'"'exec /usr/local/bin/firefox \"\$@\"'"'"'" "$1" && grep -q "^UNSAFE=/usr/bin/firefox-unsafe$" "$1"' _ "$X"
+check "...Debian's menu entry, which names the program itself, is hidden for you" grep -q "'Hidden=true'" "$X"
+check "...and --remove undoes it, before Firefox's packages may go" python3 -I -c '
+import sys
+s = open(sys.argv[1]).read()
+r = s[s.index("= --remove ]"):]
+assert r.index("dpkg-divert --quiet --local --rename --remove") < r.index("apt_purge")
+' "$X"
 check "no 'open' without a running Firefox" grep -q 'Firefox is not running' "$HERE/bin/firefox-session"
 
 # 5. the firewall mirrors incognito's, for the other user

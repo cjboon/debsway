@@ -152,7 +152,7 @@ start='
             waitfor "$XDG_RUNTIME_DIR/pulse/native" || true
         fi
     fi
-    exec cage -d -- firefox-esr --no-remote --profile "$INCOGNITO_PROFILE" "$@"'
+    exec cage -d -- /usr/lib/firefox-esr/firefox-esr --no-remote --profile "$INCOGNITO_PROFILE" "$@"'
 setsid env -i \
     PATH="$PATH" LANG=C.UTF-8 \
     HOME="$base/home" TMPDIR="$base/tmp" XDG_RUNTIME_DIR="$base/run" \
