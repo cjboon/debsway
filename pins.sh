@@ -22,8 +22,9 @@ TB_KEY_URL=https://keys.openpgp.org/vks/v1/by-fingerprint/EF6E286DDA85EA2A4BA7DE
 # data/tor-browser-safest.js copies the Safest prefs of this Tor
 # Browser version (SecurityLevel.sys.mjs). Re-check them when the first
 # number changes.
-# checked: 2026-10-26  Tor Browser 15.0.26 (Whonix's 15.0.25 identical)
-TB_SAFEST_VERSION=15
+# checked: 2026-11-05  Tor Browser 16.0 (signed by TB_FPR): its SecurityLevel.sys.mjs's
+#   Safest column and slider pref names are the same as 15's
+TB_SAFEST_VERSION=16
 
 # Whonix (extras/whonix.sh). Patrick Schleizer, signs all Whonix releases.
 # checked: 2026-10-26  whonix.org signing key page; keys.openpgp.org
