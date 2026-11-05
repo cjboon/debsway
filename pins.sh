@@ -47,6 +47,19 @@ DEBIAN_CD_KEY_URL='https://keyring.debian.org/pks/lookup?op=get&search=0xDF9B9C4
 TAILS_FPR=A490D0F4D311A4153E2BB7CADBB802B258ACD84F
 TAILS_KEY_URL=https://tails.net/tails-signing.key
 
+# Kali Linux (extras/distro-vm.sh). Kali's archive key, which also signs the
+# SHA256SUMS of every image in cdimage.kali.org/current (rsa4096, 2025).
+# checked: 2026-11-04  kali.org/docs/introduction/download-official-kali-linux-images;
+#   archive.kali.org/archive-key.asc; keyserver.ubuntu.com; a good signature on 2026.3's SHA256SUMS
+KALI_FPR=827C8569F2518CC677FECA1AED65462EC8D5E4C5
+KALI_KEY_URL=https://archive.kali.org/archive-key.asc
+
+# Arch Linux's install image (extras/distro-vm.sh). Pierre Schmitz, who signs
+# every monthly ISO; archlinux.org's release list names him as its signer.
+# checked: 2026-11-04  archlinux.org/download; archlinux.org/releng/releases/json; WKD pierre@archlinux.org
+ARCH_ISO_FPR=3E80CA1A8B89F69CBA57D98A76A5EF9054449A5C
+ARCH_ISO_KEY_URL=https://keys.openpgp.org/vks/v1/by-fingerprint/3E80CA1A8B89F69CBA57D98A76A5EF9054449A5C
+
 # yt-dlp (extras/yt-dlp.sh). Simon Sawicki (yt-dlp signing key), which signs the
 # SHA2-256SUMS of every release (rsa4096, 2023-02-26). Fetched from
 # keys.openpgp.org, not from the GitHub repository whose releases it signs.

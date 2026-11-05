@@ -52,6 +52,7 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 - [Claude Code inside a disposable virtual machine](claude-vm.md)
 - [opencode inside a disposable virtual machine](opencode-vm.md)
 - [A disposable practice server](mockvps-kvm.md)
+- [Kali, Tails and Arch in VMs kept off your network](distro-vm.md)
 - [Images and video in a sandbox](media.md)
 - [yt-dlp as its own locked-down user](yt-dlp.md)
 

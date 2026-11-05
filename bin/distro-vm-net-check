@@ -1,0 +1,33 @@
+#!/bin/bash
+# distro-vm-net-check direct|tor: written by Wren Linux extras/distro-vm.sh
+# Run by bin/distro-vm-session, as the VM's user, so it sees what QEMU would see,
+# before every start and every few seconds while the VM runs. The guest has root,
+# so this firewall is what keeps it off your network, and a service saying
+# "active" isn't enough: a "flush ruleset" (Debian's own nftables.service does
+# one) takes the table away and leaves the service active.
+#   direct  a closed port on this computer must say "no route" (the rule's
+#           admin-prohibited), not "refused"
+#   tor     UDP out must be refused by the rule, and TCP to anywhere (here a
+#           closed port on this computer) must land in Tor's TransPort
+#   exit 0  as it should be; 1  the firewall isn't there; 2  Tor doesn't answer
+set -euo pipefail
+case ${1:-} in direct | tor) ;; *) echo "usage: distro-vm-net-check direct|tor" >&2; exit 1 ;; esac
+exec python3 -I - "$1" <<'PY'
+import errno, socket, sys
+def tcp(port):
+    with socket.socket() as s:
+        s.settimeout(5)
+        return s.connect_ex(("127.0.0.1", port))
+if sys.argv[1] == "direct":
+    sys.exit(0 if tcp(9) == errno.EHOSTUNREACH else 1)
+# Tor only: the rule refuses UDP that isn't DNS at once (EPERM, as it is sent)
+with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as u:
+    try:
+        u.sendto(b"x", ("192.0.2.1", 9))
+        sys.exit(1)
+    except PermissionError:
+        pass
+    except OSError:
+        sys.exit(1)
+sys.exit(0 if tcp(9) == 0 else 2)
+PY

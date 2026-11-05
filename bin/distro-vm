@@ -1,0 +1,66 @@
+#!/bin/bash
+# distro-vm [NAME [open|update|stop|status|reset]]: written by Wren Linux
+# extras/distro-vm.sh
+# Other Linux distributions in throwaway VMs: Kali, Tails and Arch, as you
+# chose at install. Each VM runs as its own user, behind a firewall that keeps
+# it off your computer and your local network (and on Tor only, if you chose
+# that for it). Its screen opens in a window here (remote-viewer); no
+# clipboard, files or USB devices cross.
+#   distro-vm               what is set up, and how
+#   distro-vm NAME          start it and open its window; closing the window powers it off
+#   distro-vm NAME update   download its newest image (checked against its signing key)
+#   distro-vm NAME stop     power it off
+#   distro-vm NAME status   running or not, which image, which network
+#   distro-vm NAME reset    throw its disk away (Kali and Arch; asks first)
+set -euo pipefail
+
+SESSION=/usr/local/libexec/distro-vm-session
+CONF=/etc/wren/distro-vm.conf
+
+die() { printf 'distro-vm: %s\n' "$*" >&2; exit 1; }
+[ "$(id -u)" -ne 0 ] || die "run it as your normal user, not root."
+[ -x "$SESSION" ] && [ -f "$CONF" ] || die "not set up. Run: wrenctl install distro-vm"
+
+as_vm() { sudo -n -u "dvm-$1" "$SESSION" "${@:2}"; }
+
+if [ $# -eq 0 ]; then
+    found=false
+    while read -r name mode; do
+        case $name in kali | tails | arch) ;; *) continue ;; esac
+        found=true
+        printf '  %-6s %s, %s\n' "$name" "$(as_vm "$name" status 2>/dev/null | head -2 | paste -sd, | sed 's/,/, /')" \
+            "$([ "$mode" = tor ] && echo "Tor only" || echo "internet, not your network")"
+    done <"$CONF"
+    $found || echo "  No distributions set up. Choose some with: wrenctl install distro-vm"
+    echo "  Open one with: distro-vm NAME   (update, stop, status, reset after the name)"
+    exit 0
+fi
+
+name=$1
+case $name in kali | tails | arch) ;; *) die "no such distribution here: $name (distro-vm lists them)" ;; esac
+grep -q "^$name " "$CONF" || die "$name isn't set up. Add it with: wrenctl install distro-vm"
+
+case ${2:-open} in
+    open)
+        if ! as_vm "$name" status 2>/dev/null | grep -qx 'image: .*\.iso'; then
+            echo "No image of $name yet; downloading it first."
+            as_vm "$name" fetch
+        fi
+        as_vm "$name" start
+        sock=$(as_vm "$name" socket)
+        echo "Opening $name. Closing the window powers the VM off."
+        # The viewer runs as you; the guest reaches it only through QEMU's screen
+        remote-viewer --title "$name (distro-vm)" "spice+unix://$sock" 2>/dev/null || true
+        as_vm "$name" stop
+        ;;
+    update) as_vm "$name" fetch ;;
+    stop) as_vm "$name" stop ;;
+    status) as_vm "$name" status ;;
+    reset)
+        [ "$name" != tails ] || die "Tails keeps nothing; there is no disk to reset."
+        read -rp "Throw $name's disk away, with everything installed or saved on it? [y/N] " a
+        [[ $a =~ ^[Yy] ]] || { echo "Nothing changed."; exit 0; }
+        as_vm "$name" reset
+        ;;
+    *) die "usage: distro-vm NAME [open|update|stop|status|reset]" ;;
+esac

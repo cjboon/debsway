@@ -1,0 +1,67 @@
+# Keeps the distro-vm users (dvm-kali, dvm-tails, dvm-arch), and so their VMs,
+# off your computer and your local network (Wren Linux extras/distro-vm.sh).
+# Only their traffic is touched.
+#
+# Each VM is one qemu-system-x86_64 process run by its own user. QEMU's
+# user-mode networking turns the guest's traffic into ordinary sockets of
+# that user, so this rule governs the guest too. extras/distro-vm.sh adds each
+# user to one of two sets, as you chose at install:
+#   direct  the internet, but not your router, printers, other computers or
+#           the services listening on this computer
+#   tor     Tor only: every TCP connection is sent into the system Tor's
+#           TransPort and DNS into its DNSPort (both only on 127.0.0.1); all
+#           else is refused. If Tor isn't running, nothing gets out.
+# Tails is always direct: it brings its own Tor.
+# Unlike the older sandbox rules, nothing here lets answers out: QEMU listens
+# for nothing on the network (the screen is a Unix socket), so a VM can't stand
+# in for a service on this computer.
+# DNS (direct) goes only to the resolver this computer uses (parts/sandbox-dns.sh).
+
+table inet wren_distro_vm
+delete table inet wren_distro_vm
+
+table inet wren_distro_vm {
+    # The resolver this computer uses, kept up to date by wren-sandbox-dns
+    set resolvers {
+        type ipv4_addr
+    }
+    set direct {
+        typeof meta skuid
+    }
+    set tor {
+        typeof meta skuid
+    }
+
+    chain nat_output {
+        type nat hook output priority -100; policy accept;
+        meta skuid @tor udp dport 53 redirect to :9054
+        meta skuid @tor meta l4proto tcp redirect to :9041
+    }
+
+    chain output {
+        type filter hook output priority 0; policy accept;
+        meta skuid @direct jump direct
+        meta skuid @tor jump tor
+    }
+
+    chain direct {
+        ip daddr @resolvers udp dport 53 accept
+        ip daddr @resolvers tcp dport 53 accept
+        # Anything addressed to this computer itself goes out through "lo",
+        # whichever of its addresses is used, so this catches them all
+        # (admin-prohibited: how bin/distro-vm-net-check tells this from a closed port)
+        oifname "lo" reject with icmpx admin-prohibited
+        ip daddr { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8,
+                   169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16,
+                   224.0.0.0/4, 255.255.255.255 } reject with icmpx admin-prohibited
+        # No IPv6 at all (as the other sandboxes)
+        meta nfproto ipv6 reject with icmpx admin-prohibited
+    }
+
+    chain tor {
+        # (after the redirect above, this is where every connection is headed)
+        ip daddr 127.0.0.1 tcp dport 9041 accept
+        ip daddr 127.0.0.1 udp dport 9054 accept
+        reject with icmpx admin-prohibited
+    }
+}

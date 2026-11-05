@@ -21,7 +21,7 @@ SERVICE=/etc/systemd/system/wren-sandbox-dns.service
 WATCH=/etc/systemd/system/wren-sandbox-dns.path
 # The sandboxes' firewall services, set up now or later by their scripts
 FIREWALLS=(wren-firefox-firewall wren-incognito-firewall wren-ytdlp-firewall wren-claude-firewall
-    wren-claude-vm-firewall wren-opencode-vm-firewall wren-onion-site-firewall)
+    wren-claude-vm-firewall wren-opencode-vm-firewall wren-onion-site-firewall wren-distro-vm-firewall)
 DROPIN=60-wren-sandbox-dns.conf
 
 if [ "${1:-}" = --remove ]; then

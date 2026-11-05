@@ -166,6 +166,9 @@ dev_test claude "The claude command and the sandboxed Claude Code, with a preten
 dev_test claude-vm "The claude-vm command (Claude Code in a VM), with a pretend sudo" "claude-vm checks"
 
 # --------------------------------------------------------------------
+dev_test distro-vm "Distributions in VMs (extras/distro-vm.sh): the firewall in a network namespace, the downloads' signatures" "distro-vm checks"
+
+# --------------------------------------------------------------------
 dev_test git-guard "The git guard for ~/projects (bin/git), with real git" "git guard checks"
 
 # --------------------------------------------------------------------

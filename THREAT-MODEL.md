@@ -211,6 +211,14 @@ With the extras:
   checked at every start, and an ssh login that forwards nothing. A bug in QEMU or
   KVM could still get out, and it reaches the internet, so nothing private belongs
   in the VM. Read what it pushes.
+- **What runs in the distribution VMs** (`extras/distro-vm.sh`: Kali, Tails,
+  Arch). Each VM is one QEMU process of its own locked user, under QEMU's syscall
+  filter, behind a firewall checked before every start and every few seconds while
+  it runs: the internet but not this computer or your network, or (Kali and Arch,
+  if you chose it) Tor only. A bug in QEMU or KVM could still get out, and the
+  screen reaches you through `remote-viewer`, which runs as you. Tor only hides
+  your address; Kali and Arch aren't built for anonymity (Whonix is). Tails in a
+  VM is weaker than Tails on its own stick: this computer sees all it does.
 - **Anything running as you.** If you run a malicious program, or an
   attack escapes the browser, it can read all your files, every Firefox
   profile's logins and your wallets (except those kept in the wallet sandbox,

@@ -1,0 +1,287 @@
+#!/bin/bash
+# distro-vm-session SUBCOMMAND: written by Wren Linux extras/distro-vm.sh
+# Installed as /usr/local/libexec/distro-vm-session. Your user may run exactly
+# this, as one distribution's own user (dvm-kali, dvm-tails, dvm-arch), and
+# nothing else (a rule in /etc/sudoers.d). The distro-vm command calls it.
+#   fetch    download the newest image, and keep it only if its signature is good
+#   start    boot the VM (one qemu-system-x86_64 process), its screen on a SPICE socket
+#   stop     power it off (asks the guest first, then ends QEMU)
+#   status   running or not, and the image it boots
+#   reset    throw the VM's own disk away (Kali and Arch; Tails has none)
+#   socket   where the screen is, for the viewer
+# Running as that user is what keeps the guest off your network: QEMU's sockets
+# are that user's, and a firewall rule on it (data/distro-vm-firewall.nft) gives
+# it the internet only, or Tor only, as /etc/wren/distro-vm.conf says. That file,
+# the keys beside it and this script are root's; nothing here is taken from you.
+set -euo pipefail
+
+CONF=${DISTRO_VM_CONF:-/etc/wren/distro-vm.conf}
+KEYS=${DISTRO_VM_KEYS:-/etc/wren/distro-vm}
+NETCHECK=${DISTRO_VM_NETCHECK:-/usr/local/libexec/distro-vm-net-check}
+NOABS=/usr/local/libexec/wren-no-abstract-sockets
+
+die() { printf 'distro-vm-session: %s\n' "$*" >&2; exit 1; }
+say() { printf '  %s\n' "$*"; }
+
+# conf_field NAME FIELD: the root-written line "NAME MODE" (or "owner USER") from
+# CONF, field 2: what was set up at install, never what the caller says
+conf_field() { awk -v n="$1" '$1 == n { print $2; exit }' "$CONF" 2>/dev/null || true; }
+
+# ---- what each distribution publishes, and how it is checked
+# release_info NAME DIR: writes DIR/release ("VERSION URL SHA256 SIZE", SIZE 0 if
+# not given) from the project's own release list over https, and fetches what the
+# signature check needs into DIR. A signature alone would also take an older,
+# genuinely signed image with known holes, so the newest version comes from the
+# project's list over https, and the signature makes sure the file is theirs.
+release_info() {
+    local name=$1 d=$2
+    case $name in
+        tails)
+            wget -qO "$d/latest.json" https://tails.net/install/v2/Tails/amd64/stable/latest.json ||
+                die "couldn't fetch Tails' release list."
+            python3 -I - "$d/latest.json" >"$d/release" <<'PY' || die "Tails' release list isn't as expected."
+import json, re, sys
+inst = json.load(open(sys.argv[1]))["installations"][0]
+v = inst["version"]
+f = [p for p in inst["installation-paths"] if p["type"] == "iso"][0]["target-files"][0]
+url, sha, size = f["url"], f["sha256"], int(f["size"])
+assert re.fullmatch(r"[0-9]+(\.[0-9]+)+", v), v
+assert url == "https://download.tails.net/tails/stable/tails-amd64-%s/tails-amd64-%s.iso" % (v, v), url
+assert re.fullmatch(r"[0-9a-f]{64}", sha), sha
+assert 500 * 2**20 < size < 8 * 2**30, size
+print(v, url, sha, size)
+PY
+            ;;
+        arch)
+            wget -qO "$d/releases.json" https://archlinux.org/releng/releases/json/ ||
+                die "couldn't fetch Arch's release list."
+            python3 -I - "$d/releases.json" >"$d/release" <<'PY' || die "Arch's release list isn't as expected."
+import json, re, sys
+r = [x for x in json.load(open(sys.argv[1]))["releases"] if x["available"]][0]
+v, sha = r["version"], r["sha256_sum"]
+assert re.fullmatch(r"20[0-9]{2}\.[01][0-9]\.[0-3][0-9]", v), v
+assert re.fullmatch(r"[0-9a-f]{64}", sha), sha
+assert r["iso_url"] == "/iso/%s/archlinux-%s-x86_64.iso" % (v, v), r["iso_url"]
+print(v, "https://geo.mirror.pkgbuild.com/iso/%s/archlinux-%s-x86_64.iso" % (v, v), sha, 0)
+PY
+            ;;
+        kali)
+            wget -qO "$d/SHA256SUMS" https://cdimage.kali.org/current/SHA256SUMS &&
+                wget -qO "$d/SHA256SUMS.gpg" https://cdimage.kali.org/current/SHA256SUMS.gpg ||
+                die "couldn't fetch Kali's checksum list."
+            # The list is what is signed here: checked before anything is read from it.
+            # The installer ISO: Kali's live ISO comes only as a torrent now.
+            good_sig "$d/SHA256SUMS.gpg" "$d/SHA256SUMS" || die "Kali's checksum list isn't signed by Kali's key."
+            python3 -I - "$d/SHA256SUMS" >"$d/release" <<'PY' || die "Kali's checksum list isn't as expected."
+import re, sys
+m = [re.fullmatch(r"([0-9a-f]{64})  (kali-linux-(20[0-9]{2}\.[0-9]+[a-z]?)-installer-amd64\.iso)", l.strip())
+     for l in open(sys.argv[1])]
+m = [x for x in m if x]
+assert len(m) == 1, len(m)
+sha, f, v = m[0].groups()
+print(v, "https://cdimage.kali.org/current/" + f, sha, 0)
+PY
+            ;;
+        *) die "unknown distribution: $name" ;;
+    esac
+}
+
+# sig_url NAME URL: where the image's own signature is (Kali signs its list instead)
+sig_url() {
+    case $1 in
+        tails) echo "https://tails.net/torrents/files/${2##*/}.sig" ;;
+        arch) echo "$2.sig" ;;
+    esac
+}
+
+# good_sig SIG DATA: a good signature, by the one key root put in KEYS for this
+# distribution (its fingerprint is the second line of KEYS/NAME.fpr's file). As
+# in lib/appimage.sh: VALIDSIG names the key, GOODSIG says it hasn't expired or
+# been revoked; only that key is in the keyring.
+good_sig() {
+    local g fpr rc=0
+    fpr=$(cat "$KEYS/$NAME.fpr")
+    [[ $fpr =~ ^[0-9A-F]{40}$ ]] || die "no pinned key for $NAME in $KEYS."
+    g=$(mktemp -d)
+    gpg --homedir "$g" --batch --quiet --import "$KEYS/$NAME.gpg" 2>/dev/null || true
+    gpg --homedir "$g" --batch --status-file "$g/status" --verify "$1" "$2" 2>/dev/null || true
+    grep -aq "^\[GNUPG:\] VALIDSIG .* $fpr\$" "$g/status" && grep -aq '^\[GNUPG:\] GOODSIG ' "$g/status" || rc=1
+    gpgconf --homedir "$g" --kill all 2>/dev/null || true
+    rm -rf "$g"
+    return "$rc"
+}
+
+# image_ok FILE SHA256 SIZE [SIG]: the file is exactly the one the release list
+# names, and (for Tails and Arch) its own signature is good
+image_ok() {
+    [ "$3" = 0 ] || [ "$(stat -c %s "$1")" = "$3" ] || { echo "its size isn't the one the release list gives"; return 1; }
+    echo "$2  $1" | sha256sum -c --quiet - >/dev/null 2>&1 || { echo "its SHA-256 isn't the one in the release list"; return 1; }
+    [ -z "${4:-}" ] || good_sig "$4" "$1" || { echo "its signature isn't by $NAME's key"; return 1; }
+}
+
+# tidy FILE: only FILE is kept among the images, and no download left half done
+tidy() { find "$IMAGES" -maxdepth 1 \( -name '*.iso' -o -name '*.iso.part' \) ! -name "$1" -delete; }
+
+current_image() { local f; f=$(cat "$IMAGES/current" 2>/dev/null) || return 1; [ -s "$IMAGES/$f" ] && echo "$IMAGES/$f"; }
+
+fetch() {
+    local d v url sha size sig file why
+    netcheck_or_die
+    d=$(mktemp -d "$HOME/fetch.XXXXXX")
+    trap 'rm -rf "$d"' RETURN
+    release_info "$NAME" "$d"
+    read -r v url sha size <"$d/release"
+    file=${url##*/}
+    if [ "$(cat "$IMAGES/current" 2>/dev/null)" = "$file" ] && [ -s "$IMAGES/$file" ]; then
+        say "$file is the newest; nothing to download."
+        tidy "$file"
+        return 0
+    fi
+    say "Downloading $file ($( [ "$size" = 0 ] && echo "a few GB" || echo "$((size / 1048576)) MB"))"
+    install -d -m 0700 "$IMAGES"
+    # -c: an interrupted download goes on where it stopped
+    wget -q --show-progress -c -O "$IMAGES/$file.part" "$url" || die "the download stopped; run it again to go on."
+    sig=
+    if s=$(sig_url "$NAME" "$url") && [ -n "$s" ]; then
+        sig=$d/image.sig
+        wget -qO "$sig" "$s" || die "couldn't fetch the image's signature."
+    fi
+    if ! why=$(image_ok "$IMAGES/$file.part" "$sha" "$size" "$sig"); then
+        rm -f "$IMAGES/$file.part"
+        die "$file was thrown away: $why. Nothing was changed."
+    fi
+    mv "$IMAGES/$file.part" "$IMAGES/$file"
+    printf '%s\n' "$file" >"$IMAGES/current"
+    tidy "$file"
+    say "$NAME $v is checked and ready."
+}
+
+# ---- the VM
+netcheck_or_die() {
+    local rc=0
+    "$NETCHECK" "$MODE" || rc=$?
+    case $rc in
+        0) ;;
+        2) die "Tor isn't running, so the VM (set to Tor only) wasn't started. Run: sudo systemctl restart tor@default" ;;
+        *) die "the firewall that keeps the VM off your network isn't active, so nothing was started. Run: sudo systemctl restart wren-distro-vm-firewall" ;;
+    esac
+}
+
+running() { [ -s "$RUN/qemu.pid" ] && kill -0 "$(cat "$RUN/qemu.pid")" 2>/dev/null; }
+
+# qmp COMMAND: one command to QEMU's control socket (only this user can reach it)
+qmp() {
+    python3 -I - "$RUN/qmp.sock" "$1" <<'PY'
+import json, socket, sys
+s = socket.socket(socket.AF_UNIX)
+s.settimeout(5)
+s.connect(sys.argv[1])
+f = s.makefile("rw")
+f.readline()
+for cmd in ("qmp_capabilities", sys.argv[2]):
+    f.write(json.dumps({"execute": cmd}) + "\n")
+    f.flush()
+    f.readline()
+PY
+}
+
+start() {
+    local img mem smp args owner
+    running && { say "$NAME is already running."; return 0; }
+    img=$(current_image) || die "no image of $NAME yet. Download it with: distro-vm $NAME update"
+    netcheck_or_die
+    owner=$(conf_field owner)
+    id "$owner" >/dev/null 2>&1 || die "no owner in $CONF."
+    install -d -m 0700 "$RUN"
+    rm -f "$RUN/spice.sock" "$RUN/qmp.sock" "$RUN/qemu.pid"
+    # A quarter of this computer's memory, 2 to 4 GB
+    mem=$(awk '/^MemTotal:/ { m = int($2 / 4096); print (m < 2048 ? 2048 : (m > 4096 ? 4096 : m)) }' /proc/meminfo)
+    smp=$(($(nproc) > 1 ? 2 : 1))
+    args=(-name "$NAME,process=qemu-$ME" -machine "q35,accel=kvm" -cpu host -smp "$smp" -m "$mem"
+        # QEMU's own syscall filter: the guest is the untrusted side
+        -sandbox "on,obsolete=deny,elevateprivileges=deny,spawn=deny,resourcecontrol=deny"
+        -drive "file=$img,media=cdrom,readonly=on,if=ide,index=2"
+        # User-mode networking: the guest's traffic leaves as this user's own sockets.
+        # restrict=off is the default; no forwards in, so nothing on the host listens for it.
+        -nic "user,model=virtio-net-pci,ipv6=off"
+        # The screen, on a socket only this user and you can open. No agent channel,
+        # so no clipboard or files cross; no USB redirection, no sound.
+        -vga virtio -display none
+        -spice "unix=on,addr=$RUN/spice.sock,disable-ticketing=on,image-compression=off"
+        -qmp "unix:$RUN/qmp.sock,server=on,wait=off"
+        -pidfile "$RUN/qemu.pid")
+    if [ "$NAME" != tails ]; then
+        # Its own disk, to install to (Tails stays amnesic: none)
+        [ -s "$HOME/disk.qcow2" ] || qemu-img create -q -f qcow2 "$HOME/disk.qcow2" 40G
+        args+=(-drive "file=$HOME/disk.qcow2,if=virtio,format=qcow2" -boot "order=cd,menu=on")
+    else
+        args+=(-boot order=d)
+    fi
+    # In the background by setsid, not -daemonize: the syscall filter's spawn=deny
+    # refuses the fork that -daemonize makes
+    setsid qemu-system-x86_64 "${args[@]}" </dev/null >"$RUN/qemu.log" 2>&1 &
+    for _ in $(seq 50); do
+        [ -S "$RUN/spice.sock" ] && running && break
+        kill -0 $! 2>/dev/null || break
+        /bin/sleep 0.2
+    done
+    [ -S "$RUN/spice.sock" ] && running || die "QEMU didn't start: $(tail -3 "$RUN/qemu.log")"
+    # You, and only you, may open the screen's socket (through this user's folders)
+    setfacl -m "u:$owner:--x" "$HOME" "$RUN"
+    setfacl -m "u:$owner:rw-" "$RUN/spice.sock"
+    # shellcheck disable=SC2016  # the inner shell expands its own arguments
+    # While it runs: if the firewall goes (a "flush ruleset", say), the VM goes too
+    setsid bash -c 'pid=$(cat "$1/qemu.pid"); while kill -0 "$pid" 2>/dev/null; do
+        "$2" "$3" || { kill "$pid"; echo "$(date): the firewall or Tor went away; the VM was ended." >>"$1/qemu.log"; exit; }
+        /bin/sleep 5; done' _ "$RUN" "$NETCHECK" "$MODE" </dev/null >/dev/null 2>&1 &
+}
+
+stop() {
+    local i
+    running || { say "$NAME isn't running."; return 0; }
+    # The guest first (an installed system closes its files), then QEMU itself
+    qmp system_powerdown 2>/dev/null || true
+    for i in $(seq 30); do running || break; /bin/sleep 1; done
+    running && { qmp quit 2>/dev/null || kill "$(cat "$RUN/qemu.pid")"; }
+    rm -f "$RUN/spice.sock" "$RUN/qmp.sock"
+    say "$NAME is off."
+}
+
+# ---- who we are
+ME=$(id -un)
+[[ $ME =~ ^dvm-(kali|tails|arch)$ ]] || die "only for the distro-vm users."
+NAME=${ME#dvm-}
+HOME=$(getent passwd "$ME" | cut -d: -f6) || true
+[ "$HOME" = "/var/lib/wren-distro-vm/$NAME" ] || [ -n "${DISTRO_VM_TEST:-}" ] || die "unexpected home folder for $ME."
+MODE=$(conf_field "$NAME")
+[[ $MODE =~ ^(direct|tor)$ ]] || die "$NAME isn't set up; run: wrenctl install distro-vm"
+[ "$NAME" != tails ] || MODE=direct
+IMAGES=$HOME/images RUN=$HOME/run
+export HOME PATH=/usr/sbin:/usr/bin:/sbin:/bin LANG=C.UTF-8
+
+# Run again without a way to reach XWayland's abstract socket (QEMU inherits this)
+if [ -z "${WREN_NOABS:-}" ] && [ -z "${DISTRO_VM_TEST:-}" ]; then
+    [ -x "$NOABS" ] || die "$NOABS is missing. Run: wrenctl install distro-vm"
+    export WREN_NOABS=1
+    exec "$NOABS" "$0" "$@"
+fi
+cd "$HOME"
+
+case ${1:-} in
+    fetch) fetch ;;
+    start) start ;;
+    stop) stop ;;
+    status)
+        if running; then echo "running"; else echo "off"; fi
+        img=$(current_image) && echo "image: ${img##*/}" || echo "image: none yet"
+        echo "network: $([ "$MODE" = tor ] && echo "Tor only" || echo "the internet, not your network")"
+        ;;
+    reset)
+        [ "$NAME" != tails ] || die "Tails keeps nothing; there is no disk to reset."
+        stop >/dev/null
+        rm -f "$HOME/disk.qcow2"
+        say "$NAME's disk is gone; the next start gets a blank one."
+        ;;
+    socket) echo "$RUN/spice.sock" ;;
+    *) die "usage: distro-vm-session fetch|start|stop|status|reset|socket" ;;
+esac

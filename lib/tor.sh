@@ -240,7 +240,7 @@ remove_torproject_repo_if_unused() {
 # The Wren Linux scripts that use the system tor service (tor@default), each
 # marked by a file in /etc/tor. OnionShare runs its own tor and masks the system
 # one, but only while none of these needs it.
-TOR_SERVICE_MARKS=".wren-apt-tor .wren-remote-access .wren-onion-site .wren-wallet-sandbox"
+TOR_SERVICE_MARKS=".wren-apt-tor .wren-remote-access .wren-onion-site .wren-wallet-sandbox .wren-distro-vm"
 
 # system_tor_wanted [MARK]: one of them, other than MARK (the script asking,
 # while it removes itself), is set up. WREN_ETC is where /etc is, for tests.
