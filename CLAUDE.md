@@ -22,16 +22,11 @@ installed (`~/.local/bin`), and other users exist (e.g. `onion-site`). So:
 - The test suite works in a temp folder with a pretend sudo. Still check a test doesn't
   touch the real home or desktop before running it here.
 
-## Efficiency
+## Working
 
-- When a job is self-contained and cheap to check, hand it to a smaller model through a
-  helper agent: read-only searches over many files, summarizing long test or log output,
-  drafting boilerplate (tests, docs) from a clear spec that you then review. Use only its
-  short result.
-- Don't hand off: firewall, sudo, sshd, signature or key code; anything that edits the
-  repo as the final word; anything about git or pushing. Check what a helper returns
-  before relying on it. Start few helpers: each begins with no memory of the session.
-- Don't re-read a file you already have; send small edits; read only the part you need.
+- If you use a helper agent, don't hand it: firewall, sudo, sshd, signature or key code;
+  anything that edits the repo as the final word; anything about git or pushing. Check
+  what a helper returns before relying on it.
 - `bash test.sh --offline` takes a few minutes. Run it once per finished piece, not after
   every edit; run the single `tools/test-*.sh` for what you changed. Run slow things in
   the background writing to a file in the scratchpad, then poll it with short checks.
