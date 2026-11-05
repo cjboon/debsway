@@ -9,7 +9,7 @@
 #   bash tools/test-whonix-feather.sh
 # shellcheck disable=SC2016  # the inner shells and pretend programs expand their own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-T=$(mktemp -d)
+T=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
 trap 'rm -rf "$T"' EXIT
 fails=0
 check() { # DESCRIPTION CONDITION-COMMAND...
@@ -80,5 +80,16 @@ check "...and the install puts both, executable, and the menu entry in the Works
     grep -qF -- "--exec \"\$work/feather.AppImage\" /usr/local/lib/feather/feather.AppImage" "$1" &&
     grep -qF -- "--exec \"\$WREN_DIR/data/whonix-feather\" /usr/local/bin/feather" "$1" &&
     grep -qF "/usr/local/share/applications/feather.desktop" "$1"' _ "$HERE/extras/whonix.sh"
+
+# The saved download, as the install looks for it: in strict mode (set -euo
+# pipefail, as lib.sh runs every script), with none saved yet the install must
+# go on to download it, not end there without a word
+mkdir -p "$T/saved"
+sa() { bash -c 'set -euo pipefail; SAVED=$1 EDITION=LXQt
+    eval "$(sed -n "/^saved_archive() {/,/^}/p" "$2")"; a=$(saved_archive); echo "on:$a"' _ "$T/saved" "$HERE/extras/whonix.sh"; }
+check "no Whonix saved yet: the install goes on (to download it)" test "$(sa)" = "on:"
+: >"$T/saved/Whonix-LXQt-18.1.Intel_AMD64.qcow2.libvirt.xz"
+: >"$T/saved/Whonix-LXQt-18.2.4.2.Intel_AMD64.qcow2.libvirt.xz"
+check "...two saved: the newest is used" test "$(sa)" = "on:$T/saved/Whonix-LXQt-18.2.4.2.Intel_AMD64.qcow2.libvirt.xz"
 
 [ "$fails" -eq 0 ]

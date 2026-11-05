@@ -53,10 +53,13 @@ defined() { "${VIRSH[@]}" dominfo "$1" >/dev/null 2>&1; }
 
 # ---- download and check ----
 
+# saved_archive: the newest download kept in SAVED, or nothing. (With none there,
+# the loop's last test fails; under pipefail that failed the whole line, and
+# set -e ended the install without a word, before the download.)
 saved_archive() {
     local f
     for f in "$SAVED"/Whonix-"$EDITION"-*.Intel_AMD64.qcow2.libvirt.xz; do
-        [ -f "$f" ] && echo "$f"
+        if [ -f "$f" ]; then echo "$f"; fi
     done | sort -V | tail -1
 }
 
