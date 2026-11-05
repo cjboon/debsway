@@ -11,7 +11,7 @@
 #   timer stop                  stop the sound of an alarm that is ringing (else: cancel)
 #   timer clock                 whether the bar shows the date (the time is always am/pm)
 #   timer clock date on|date off
-#   timer lock [MINUTES]        lock the screen after MINUTES idle (1 to 120; alone: how long now)
+#   timer lock [MINUTES]        screen off after MINUTES idle, locked a minute later (1 to 120; alone: how long now)
 #
 # A timer or alarm rings with a notification that stays until you dismiss it
 # and a sound: an alarm repeats it for up to 5 minutes (to wake you), a timer for
@@ -328,7 +328,7 @@ lock_cmd() {
         return 1
     fi
     if [ -z "${1:-}" ]; then
-        echo "The screen locks after $("$IDLE" --minutes) minutes idle. Change it: timer lock MINUTES (1 to 120)"
+        echo "The screen turns off after $("$IDLE" --minutes) minutes idle and locks a minute later. Change it: timer lock MINUTES (1 to 120)"
         return 0
     fi
     m=${1%[mM]}
@@ -338,13 +338,13 @@ lock_cmd() {
     fi
     m=$((10#$m))
     mkdir -p "${LOCK_CONF%/*}"
-    printf '# Written by Wren Linux timer lock: minutes idle before the screen locks\nminutes=%s\n' "$m" >"$LOCK_CONF"
+    printf '# Written by Wren Linux timer lock: minutes idle before the screen turns off (it locks a minute later)\nminutes=%s\n' "$m" >"$LOCK_CONF"
     # swayidle keeps the timeouts it started with, so start it again
     if [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null; then
         pkill -x swayidle 2>/dev/null
         swaymsg exec "$IDLE" >/dev/null 2>&1
     fi
-    echo "The screen now locks after $m minutes idle (fading down for the 30 seconds before)."
+    echo "The screen now turns off after $m minutes idle (fading down for the 30 seconds before) and locks a minute later."
 }
 
 # --- the menu's screen -------------------------------------------------------
@@ -516,7 +516,7 @@ draw_screen() {
     two '7:30  7am    7:30pm' 'an alarm, at the next 7:30'
     two 'c    cancel one' 's    stop a ringing alarm'
     if [ -x "$IDLE" ]; then
-        two 'f    date in the bar' "l    lock after $("$IDLE" --minutes) min idle"
+        two 'f    date in the bar' "l    dark after $("$IDLE" --minutes) min idle"
     else
         two 'f    date in the bar' ''
     fi
@@ -565,7 +565,7 @@ menu() {
             f | format | clock) echo; clock_cmd ;;
             l | lock)
                 n=${2:-}
-                [ -n "$n" ] || read -r -p "  Lock after how many minutes idle (1 to 120)? " n || continue
+                [ -n "$n" ] || read -r -p "  Screen off after how many minutes idle, locked a minute later (1 to 120)? " n || continue
                 [ -z "$n" ] || lock_cmd "$n" ;;
             *) set_cmd "$@" ;;
         esac

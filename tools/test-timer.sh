@@ -248,11 +248,11 @@ for c in swayidle swaymsg pkill; do
     chmod +x "$T/fake/$c"
 done
 export WREN_IDLE=$IDLE
-check "with nothing set the screen locks after 5 minutes (sway's own default)" test "$("$IDLE" --minutes)" = 5
+check "with nothing set the screen turns off after 5 minutes (sway's own default)" test "$("$IDLE" --minutes)" = 5
 check "timer lock alone says how long" grep -q 'after 5 minutes' <<<"$(t lock)"
 : >"$T/calls"
 out=$(SWAYSOCK=/pretend t lock 10 2>&1)
-check "timer lock 10 says so" grep -q 'now locks after 10 minutes' <<<"$out"
+check "timer lock 10 says so, and when it locks" grep -q 'now turns off after 10 minutes .* and locks a minute later' <<<"$out"
 check "...and wren-idle reads 10" test "$("$IDLE" --minutes)" = 10
 check "...and swayidle is started again with it (sway keeps the old timeouts otherwise)" \
     bash -c 'grep -q "^pkill -x swayidle" "$1" && grep -q "^swaymsg exec .*wren-idle" "$1"' _ "$T/calls"
@@ -268,13 +268,13 @@ check "without the idle lock set up it says how to get it" \
 t lock 10 >/dev/null
 "$IDLE"
 run=$(grep '^swayidle ' "$T/calls")
-check "swayidle fades 30 seconds before the lock (570 s)" grep -q 'timeout 570 .*dim-warning start' <<<"$run"
-check "...locks at 600 s (after the on-lock programs)" grep -qF "; swaylock -f -c \$(~/.local/bin/theme get LOCK 2>/dev/null || echo 000000)" <<<"$(grep -o "timeout 600 .*" <<<"$run")"
-check "...turns the screen off 5 minutes later (900 s)" grep -q 'timeout 900 swaymsg "output \* power off"' <<<"$run"
+check "swayidle fades 30 seconds before the screen turns off (570 s)" grep -q 'timeout 570 .*dim-warning start' <<<"$run"
+check "...turns the screen off at 600 s" grep -q 'timeout 600 swaymsg "output \* power off"' <<<"$run"
+check "...locks a minute later, at 660 s (after the on-lock programs)" grep -qF "; swaylock -f -c \$(~/.local/bin/theme get LOCK 2>/dev/null || echo 000000)" <<<"$(grep -o "timeout 660 .*" <<<"$run")"
 check "...and locks before sleep (after them too)" grep -qF '; swaylock -f -c $(~/.local/bin/theme get LOCK 2>/dev/null || echo 000000)' <<<"$(grep -o 'before-sleep .*on-lock.d.*' <<<"$run")"
 printf 'minutes=500\n' >"$T/config/wren/lock"
 check "a time out of range in the file falls back to 5" test "$("$IDLE" --minutes)" = 5
-check "the timer menu offers it" grep -q 'lock after $("$IDLE" --minutes) min idle' "$TIMER"
+check "the timer menu offers it" grep -q 'dark after $("$IDLE" --minutes) min idle' "$TIMER"
 check "parts/swayidle.sh starts swayidle through wren-idle" grep -qx 'IDLE_CMD="$HOME/.local/bin/wren-idle"' "$HERE/parts/swayidle.sh"
 
 # the menu's screen: one box with this month (ncal's cal) and the timers, centred

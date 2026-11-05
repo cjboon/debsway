@@ -351,9 +351,10 @@ With the extras:
 - **Wi-Fi login pages may ask again** after reconnecting, because of the
   random MAC address. Switch to one made-up address per network in
   `/etc/NetworkManager/conf.d/90-wren-random-mac.conf` (`stable`).
-- **The screen locks by itself only after 5 minutes idle**, so a laptop
-  left open is usable by whoever sits down until then. Lock it yourself
-  when you step away (Super+Escape), or make the wait shorter:
-  `timer lock 2`.
+- **The screen locks by itself only 6 minutes after you stop using it**
+  (it turns off after 5, and stays unlocked in the dark for one more
+  minute, so you can come back without your password), so a laptop left
+  open is usable by whoever sits down until then. Lock it yourself when
+  you step away (Super+Escape), or make the wait shorter: `timer lock 2`.
 - **Security fixes install themselves.** Rarely, an update changes
   something you relied on; the log is in `/var/log/unattended-upgrades/`.

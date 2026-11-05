@@ -86,8 +86,9 @@
     timer stop             end the sound of a ringing alarm (or click/dismiss its notice)
     timer clock            show or hide the date in the bar
 @if wren-idle
-    timer lock 10          lock the screen after 10 minutes idle (1 to 120; it
-                           fades for 30 seconds first). timer lock: how long now
+    timer lock 10          screen off after 10 minutes idle (1 to 120; it fades
+                           for 30 seconds first), locked a minute later. timer
+                           lock: how long now
 @end
 
   NOTIFICATIONS

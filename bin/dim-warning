@@ -1,8 +1,8 @@
 #!/bin/bash
 # dim-warning start|stop: written by Wren Linux parts/swayidle.sh
-# A warning before the screen locks. swayidle runs "start" 30 seconds before the
-# lock: the screen fades down slowly to 10% and a notification says it is about
-# to lock. Any key or mouse movement makes swayidle run "stop", which puts the
+# A warning before the screen turns off (it locks a minute after that). swayidle
+# runs "start" 30 seconds before: the screen fades down slowly to 10% and a
+# notification says so. Any key or mouse movement makes swayidle run "stop", which puts the
 # brightness back exactly where it was. A screen with no backlight (a desktop
 # monitor) can't be dimmed, so it only gets the notification.
 #   WREN_DIM_SECONDS  how long the fade takes (default 30)
@@ -46,7 +46,7 @@ case ${1:-} in
     start)
         if command -v notify-send >/dev/null; then
             notify-send -a wren -u critical -t $((SECONDS_TOTAL * 1000)) \
-                "Locking soon" "Move the mouse or press a key to stay unlocked." 2>/dev/null
+                "Screen going dark" "Move the mouse or press a key to keep it on. It locks a minute after it goes dark." 2>/dev/null
         fi
         backlight || exit 0
         [ ! -f "$STATE.saved" ] || stop   # a fade still running from before: start over

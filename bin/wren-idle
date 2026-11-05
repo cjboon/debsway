@@ -1,16 +1,18 @@
 #!/bin/sh
 # wren-idle: written by Wren Linux parts/swayidle.sh
-# Runs swayidle with Wren Linux's timeouts. The screen locks after the minutes set
-# with  timer lock MINUTES  (5 unless you changed it, as in sway's own config; 1 to 120); for the 30
-# seconds before that it fades down with a notice (bin/dim-warning), and it
-# turns off 5 minutes after the lock. It always locks before the laptop sleeps.
-# Just before each lock it runs every program in ~/.config/wren/on-lock.d
-# (each for at most 10 seconds): the vault closes its folder there, and
-# KeePassXC locks. Super+Escape, the power menu and the lid run them through
-# bin/wren-lock, just after they lock.
+# Runs swayidle with Wren Linux's timeouts. After the minutes set with
+#  timer lock MINUTES  (5 unless you changed it, as in sway's own config; 1 to 120)
+# the screen turns off, but doesn't lock: any key or mouse movement brings it
+# back, no password. One minute later it locks, and the on-lock programs run
+# (the vault closes its folder, KeePassXC locks). Most short breaks away from the
+# computer end within that time (developers' average is about 4 minutes), so you
+# rarely see the lock; the minute in the dark lets you come back without it.
+# For the 30 seconds before the screen turns off it fades down with a notice
+# (bin/dim-warning). It always locks before the laptop sleeps, at once.
+# Super+Escape, the power menu and the lid lock at once too, through bin/wren-lock.
 # sway starts it (~/.config/sway/config.d/idle.conf); timer lock restarts it.
 #   wren-idle              run swayidle
-#   wren-idle --minutes    print the minutes until the lock
+#   wren-idle --minutes    print the minutes until the screen turns off
 conf=${XDG_CONFIG_HOME:-$HOME/.config}/wren/lock
 
 minutes=$(sed -n 's/^minutes=//p' "$conf" 2>/dev/null | tail -n 1)
@@ -22,9 +24,10 @@ if [ "${1:-}" = --minutes ]; then
     exit 0
 fi
 
-lock=$((minutes * 60))
-dim=$((lock - 30))
-off=$((lock + 300))
+off=$((minutes * 60))
+dim=$((off - 30))
+# the minute in the dark, then the lock
+lock=$((off + 60))
 DIM=$HOME/.local/bin/dim-warning
 # the same as LOCK_CMD in lib/sway.sh (test.sh checks)
 # shellcheck disable=SC2016  # expanded where it runs; one word: a checked color
@@ -33,6 +36,6 @@ hooks=${XDG_CONFIG_HOME:-$HOME/.config}/wren/on-lock.d
 case $hooks in *"'"*) HOOKS=: ;; *) HOOKS="for h in '$hooks'/*; do [ -x \"\$h\" ] && timeout 10 \"\$h\"; done" ;; esac
 exec swayidle -w \
     timeout "$dim" "$DIM start" resume "$DIM stop" \
-    timeout "$lock" "$HOOKS; $LOCK" \
     timeout "$off" 'swaymsg "output * power off"' resume 'swaymsg "output * power on"' \
+    timeout "$lock" "$HOOKS; $LOCK" \
     before-sleep "$HOOKS; $LOCK"

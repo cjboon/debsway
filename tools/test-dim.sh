@@ -35,7 +35,7 @@ dim() { bash "$DIM" "$@"; }
 
 echo 80 >"$T/level"; : >"$T/log"; : >"$T/notified"
 dim start
-check "start tells you it is about to lock" grep -q 'Locking soon' "$T/notified"
+check "start tells you the screen is going dark, and when it locks" grep -q 'Screen going dark.*locks a minute after' "$T/notified"
 sleep 0.15
 check "the screen is dimmed part of the way while it fades" test "$(level)" -lt 80 -a "$(level)" -gt 10
 sleep 0.6
@@ -76,32 +76,44 @@ dim stop
 # no backlight (a desktop monitor): only the notification
 rm -f "$T/level"; : >"$T/notified"
 dim start
-check "without a backlight it still warns" grep -q 'Locking soon' "$T/notified"
+check "without a backlight it still warns" grep -q 'Screen going dark' "$T/notified"
 check "...and changes nothing" test ! -e "$T/level"
 dim stop
 
 check "an unknown word is refused" not dim nonsense
 
 # the idle setup: bin/wren-idle starts swayidle with the fade 30 seconds before
-# the lock (5 minutes when nothing is set), here with a pretend swayidle
+# the screen turns off (5 minutes when nothing is set), and the lock a minute
+# after that, here with a pretend swayidle
 mkdir -p "$T/idlebin" "$T/idleconf"
 printf '#!/bin/sh\nprintf "%%s\\n" "$@" >"%s/swayidle-args"\n' "$T" >"$T/idlebin/swayidle"
 chmod +x "$T/idlebin/swayidle"
 PATH="$T/idlebin:$PATH" XDG_CONFIG_HOME="$T/idleconf" sh "$HERE/bin/wren-idle"
 args=$(paste -sd' ' "$T/swayidle-args")
-check "swayidle starts the fade 30 seconds before the lock (270 s, lock at 300 s)" \
-    grep -q 'timeout 270 .*/dim-warning start resume .*/dim-warning stop timeout 300 .*swaylock' <<<"$args"
+# shellcheck disable=SC2016  # swaymsg's and swaylock's words, as written
+check "swayidle: the fade at 270 s, the screen off at 300 s (back on at any key), locked at 360 s" bash -c '
+    t=$(sed -n "/^timeout\$/{n;p}" "$1" | paste -sd" ")
+    [ "$t" = "270 300 360" ] &&
+    [ "$(sed -n "/^timeout\$/{n;/^300\$/{n;p;n;n;p}}" "$1" | paste -sd"|")" = "swaymsg \"output * power off\"|swaymsg \"output * power on\"" ] &&
+    sed -n "/^timeout\$/{n;/^360\$/{n;p}}" "$1" | grep -q "; swaylock -f "' _ "$T/swayidle-args"
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+check "...the screen turning off doesn't lock (no swaylock until the lock)" bash -c '
+    ! sed -n "/^timeout\$/{n;/^\(270\|300\)\$/{n;p;n;n;p}}" "$1" | grep -q swaylock' _ "$T/swayidle-args"
 # The on-lock programs run just before the lock, and before sleep, each at most 10 s
 mkdir -p "$T/idleconf/wren/on-lock.d"
 printf '#!/bin/sh\necho ran >>"%s/hook-ran"\n' "$T" >"$T/idleconf/wren/on-lock.d/a"
 printf 'not run\n' >"$T/idleconf/wren/on-lock.d/b"
 chmod +x "$T/idleconf/wren/on-lock.d/a"
-lockcmd=$(sed -n '/^timeout$/{n;/^300$/{n;p}}' "$T/swayidle-args")
+lockcmd=$(sed -n '/^timeout$/{n;/^360$/{n;p}}' "$T/swayidle-args")
 sleepcmd=$(sed -n '/^before-sleep$/{n;p}' "$T/swayidle-args")
 # shellcheck disable=SC2016  # the inner shell expands its own variables
 check "...running the on-lock programs first, then swaylock" bash -c '[[ $1 == *"on-lock.d"*"; swaylock -f -c \$(~/.local/bin/theme get LOCK 2>/dev/null || echo 000000)" ]] && [ "$1" = "$2" ]' _ "$lockcmd" "$sleepcmd"
 PATH="$T/idlebin:$PATH" sh -c "${lockcmd%; swaylock*}"
 check "...each executable one, once (not the others)" test "$(cat "$T/hook-ran")" = ran
-check "...and turns the screen off 5 minutes after the lock (600 s)" grep -q 'timeout 600 swaymsg' <<<"$args"
+check "...and before sleep the same, at once" grep -q "before-sleep .*on-lock.d.*; swaylock" <<<"$args"
+printf 'minutes=12\n' >"$T/idleconf/wren/lock"
+PATH="$T/idlebin:$PATH" XDG_CONFIG_HOME="$T/idleconf" sh "$HERE/bin/wren-idle"
+check "timer lock 12: the fade, the dark and the lock all follow (690, 720, 780 s)" \
+    test "$(sed -n '/^timeout$/{n;p}' "$T/swayidle-args" | paste -sd' ')" = "690 720 780"
 
 [ "$fails" -eq 0 ]

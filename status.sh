@@ -166,7 +166,7 @@ echo "Screen lock:"
 if ! command -v swaylock >/dev/null; then
     echo "  NONE: swaylock isn't installed, so the screen never locks (put it back: bash parts/swaylock.sh)"
 elif [ -x "$HOME/.local/bin/wren-idle" ] && [ -f "$SWAY_SNIPPETS/idle.conf" ]; then
-    echo "  after $("$HOME/.local/bin/wren-idle" --minutes) minutes idle (change it: timer lock MINUTES)"
+    echo "  screen off after $("$HOME/.local/bin/wren-idle" --minutes) minutes idle, locked a minute later (change it: timer lock MINUTES)"
 elif [ -f "$SWAY_SNIPPETS/idle.conf" ]; then
     echo "  after 5 minutes idle (to change it with timer lock: bash parts/swayidle.sh again)"
 else
