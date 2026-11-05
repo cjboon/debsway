@@ -8,20 +8,21 @@ wrenctl remove get-iso                        remove it (offers to delete the im
 wrenctl manual get-iso                        print the manual steps below
 
 get-iso                 pick a system, download (or reuse) and check it, then offer a USB stick
-get-iso NAME            the same for NAME: debian, tails, kicksecure, kali, parrot-security, parrot-home, arch
+get-iso NAME            the same for NAME: debian, tails, kicksecure, qubes, kali, parrot-security, parrot-home, arch
 get-iso --list          what each is
 ```
 
 The `get-iso` command (`bin/get-iso`) fetches the install image of another
-system: Debian 13's network installer, Tails, Kicksecure, Kali (the
-installer), Parrot Security and Parrot Home, and Arch. It finds the newest
+system: Debian 13's network installer, Tails, Kicksecure, Qubes OS 4.3,
+Kali (the installer), Parrot Security and Parrot Home, and Arch. It finds the newest
 release in the project's own release list or folder over HTTPS, and downloads
 it through Tor when the system tor service runs here (apt over Tor, remote
 access, the onion site), so your network can't see which one you fetch. It
 keeps the image only if it is that newest release and either its own
 signature or a signed list of checksums that names it is by the project's key
 pinned in `pins.sh`: Debian's CD key (`DEBIAN_CD_FPR`), the Tails signing key
-(`TAILS_FPR`), Patrick Schleizer's for Kicksecure (`WHONIX_FPR`), Kali's
+(`TAILS_FPR`), Patrick Schleizer's for Kicksecure (`WHONIX_FPR`), the Qubes 4.3 release
+key (`QUBES_FPR`, certified by the Qubes master key), Kali's
 (`KALI_FPR`), the Parrot Project's (`PARROT_FPR`) and Arch's release signer
 (`ARCH_ISO_FPR`). A download that fails the checks is deleted. The checked
 image is kept in `~/ISOs/NAME` (the newest only) and checked again before
@@ -35,6 +36,7 @@ stick's name, writes the image and reads it back to check (the same code as
 - Without Tor here, your network sees which system you download (not what you do with it later).
 - A good signature says the project made the image, not that the system is safe to use: each has its own threat model (Kali and Parrot Security are toolboxes, not private desktops).
 - Kali's live image comes only as a torrent, so get-iso fetches Kali's installer.
+- Qubes signs each release series (4.3, 4.4...) with a key of its own: get-iso fetches only the series whose key is pinned (`QUBES_SERIES`), until a Wren Linux update pins the next one.
 - Writing a stick erases everything on it.
 - A stick left with someone can be swapped or changed: keep it with you, and remake it from a checked image if in doubt.
 

@@ -63,6 +63,17 @@ KALI_KEY_URL=https://archive.kali.org/archive-key.asc
 ARCH_ISO_FPR=3E80CA1A8B89F69CBA57D98A76A5EF9054449A5C
 ARCH_ISO_KEY_URL=https://keys.openpgp.org/vks/v1/by-fingerprint/3E80CA1A8B89F69CBA57D98A76A5EF9054449A5C
 
+# Qubes OS 4.3 (extras/get-iso.sh). The Qubes OS Release 4.3 Signing Key, which
+# signs each 4.3.x ISO; it is certified by the Qubes Master Signing Key
+# (427F11FD0FAA4B080123F01CDDFA1A3E36879494). A new release series (4.4) has a
+# new key: pin that one then, after checking it is certified by the master key.
+# checked: 2026-11-05  keys.qubes-os.org (release and master keys; the master key's
+#   certification is good); doc.qubes-os.org verifying-signatures (master key
+#   fingerprint); qubes-os.org/downloads; a good signature on Qubes-R4.3.2-x86_64.iso.asc
+QUBES_FPR=F3FA3F99D6281F7B3A3E5E871C3D9B627F3FADA4
+QUBES_KEY_URL=https://keys.qubes-os.org/keys/qubes-release-4.3-signing-key.asc
+QUBES_SERIES=4.3
+
 # Parrot OS (extras/get-iso.sh). The Parrot Project's key, which signs each
 # release's signed-hashes.txt (and its apt repository); expires 2028-11-03.
 # checked: 2026-11-05  deb.parrot.sh/parrot/misc/parrotsec.gpg; docs.parrot.sh

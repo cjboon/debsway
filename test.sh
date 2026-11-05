@@ -530,6 +530,7 @@ if online; then
     check_key "Kali" "$KALI_FPR" "$KALI_KEY_URL"
     check_key "Arch Linux" "$ARCH_ISO_FPR" "$ARCH_ISO_KEY_URL"
     check_key "Parrot" "$PARROT_FPR" "$PARROT_KEY_URL"
+    check_key "Qubes 4.3" "$QUBES_FPR" "$QUBES_KEY_URL"
     check_key "yt-dlp" "$YTDLP_FPR" "$YTDLP_KEY_URL"
     # ----------------------------------------------------------------
     section "Newest releases: found, and signed by the pinned key"

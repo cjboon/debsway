@@ -32,7 +32,7 @@ sign() { "${G[@]}" --yes --local-user "${2:-project@test}" --detach-sign -o "$1.
 # A copy of this checkout whose pins are the test key (served at keys.test)
 mkdir "$T/W"
 (cd "$HERE" && git ls-files -co --exclude-standard | tar -cf - -T -) | tar -C "$T/W" -xf -
-for v in DEBIAN_CD KALI PARROT WHONIX ARCH_ISO TAILS; do
+for v in DEBIAN_CD KALI PARROT WHONIX ARCH_ISO TAILS QUBES; do
     sed -i "s|^${v}_FPR=.*|${v}_FPR=$GOOD|; s|^${v}_KEY_URL=.*|${v}_KEY_URL=https://keys.test/key.asc|" "$T/W/pins.sh"
 done
 M=$T/mirror
@@ -78,6 +78,13 @@ sign "$AI"
 printf '{"releases": [{"version": "2026.11.01", "available": true, "sha256_sum": "%s", "iso_url": "/iso/2026.11.01/archlinux-2026.11.01-x86_64.iso"}]}\n' \
     "$(sha256sum <"$AI" | cut -d' ' -f1)" >"$M/archlinux.org/releng/releases/json/index.html"
 
+# Qubes: 4.3.1 and 4.3.10 of the pinned series, and a 4.4 whose key isn't pinned
+Q=$M/mirrors.edge.kernel.org/qubes/iso
+mkdir -p "$Q"
+printf '<a href="Qubes-R4.3.1-x86_64.iso">x</a> <a href="Qubes-R4.3.10-x86_64.iso">x</a> <a href="Qubes-R4.3.10-x86_64.iso.asc">x</a> <a href="Qubes-R4.4.0-x86_64.iso">x</a>\n' >"$Q/index.html"
+echo "qubes" >"$Q/Qubes-R4.3.10-x86_64.iso"
+sign "$Q/Qubes-R4.3.10-x86_64.iso" project@test asc
+
 # ---- the release each finds ----
 rel() { # NAME: its DIR/release line, or "failed"
     (cd "$T/W" && . ./lib.sh && . lib/appimage.sh && . lib/tails.sh && . lib/get-iso.sh && set +e &&
@@ -93,6 +100,8 @@ check "Parrot: the newest folder (7.10, not 7.4), from the signed list" \
 check "...a line outside the signed text is never read (Parrot Home isn't in the signed part)" test "$(rel parrot-home)" = failed
 check "Kicksecure: the newest version on its page (18.10.1, not 18.2.4.2), with the image's own signature" \
     test "$(rel kicksecure)" = "18.10.1 https://www.kicksecure.com/download/iso/18.10.1/Kicksecure-LXQt-18.10.1.Intel_AMD64.iso sig"
+check "Qubes: the newest of the pinned key's series (4.3.10, not 4.3.1, nor 4.4.0 whose key isn't pinned)" \
+    test "$(rel qubes)" = "4.3.10 https://mirrors.edge.kernel.org/qubes/iso/Qubes-R4.3.10-x86_64.iso sig"
 check "Arch: the release list's newest, with the image's own signature" \
     test "$(rel arch)" = "2026.11.01 https://geo.mirror.pkgbuild.com/iso/2026.11.01/archlinux-2026.11.01-x86_64.iso sig"
 check "a name it doesn't know is refused" test "$(rel ../../etc)" = failed
@@ -134,7 +143,7 @@ ARGS=arch out=$(gi n)
 check "...and with its own good signature it is kept" test -s "$ISOS/arch/archlinux-2026.11.01-x86_64.iso"
 ARGS=nothing out=$(gi n) && rc=0 || rc=$?
 check "get-iso NAME it doesn't know: says which it knows" bash -c '[ "$1" -ne 0 ] && grep -q "It knows: debian tails" <<<"$2"' _ "$rc" "$out"
-check "--list names every one" bash -c 'o=$(bash "$1/extras/get-iso.sh" --list); for n in debian tails kicksecure kali parrot-security parrot-home arch; do grep -q "^  $n " <<<"$o" || exit 1; done' _ "$T/W"
+check "--list names every one" bash -c 'o=$(bash "$1/extras/get-iso.sh" --list); for n in debian tails kicksecure qubes kali parrot-security parrot-home arch; do grep -q "^  $n " <<<"$o" || exit 1; done' _ "$T/W"
 check "the stick is written with the shared code (lib/usb-stick.sh), after you say yes" \
     bash -c 'grep -q "^    stick_write \"\$img\" \"\$min\"" "$1" && grep -q "ask \"Write it to a USB stick now (everything on the stick is erased)?\" n" "$1"' _ "$HERE/extras/get-iso.sh"
 

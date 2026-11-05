@@ -13,6 +13,7 @@
 ISO_LIST=$'debian\tDebian 13, the network installer (what Wren Linux is built on)
 tails\tTails: a whole system on a USB stick, everything through Tor, forgets on shutdown
 kicksecure\tKicksecure: hardened Debian from the makers of Whonix (live and installer)
+qubes\tQubes OS: everything in its own VM (needs a computer made for it; an 8.5 GB image, a 16 GB stick)
 kali\tKali Linux: security testing tools (the installer)
 parrot-security\tParrot Security: security testing tools, live and installer
 parrot-home\tParrot Home: an everyday desktop with privacy tools, live and installer
@@ -90,6 +91,17 @@ iso_release() {
                 { warn "Couldn't fetch Kicksecure's signing key or the image's signature."; return 1; }
             echo "$WHONIX_FPR" >"$d/fpr"
             echo "$v $url sig -" >"$d/release" ;;
+        qubes)
+            # The newest of the series whose key is pinned (QUBES_SERIES)
+            local base=https://mirrors.edge.kernel.org/qubes/iso series=${QUBES_SERIES//./\\.}
+            iso_get "$base/" "$d/index" || { warn "Couldn't read Qubes' download folder."; return 1; }
+            file=$(grep -oE "Qubes-R${series}\.[0-9]+-x86_64\.iso\"" "$d/index" | tr -d '"' | sort -uV | tail -1)
+            [ -n "$file" ] || { warn "Qubes' download folder has no $QUBES_SERIES image."; return 1; }
+            v=${file#Qubes-R}; v=${v%-x86_64.iso}
+            iso_get "$QUBES_KEY_URL" "$d/key.asc" && iso_get "$base/$file.asc" "$d/image.sig" ||
+                { warn "Couldn't fetch Qubes' signing key or the image's signature."; return 1; }
+            echo "$QUBES_FPR" >"$d/fpr"
+            echo "$v $base/$file sig -" >"$d/release" ;;
         kali)
             local base=https://cdimage.kali.org/current
             iso_get "$KALI_KEY_URL" "$d/key.asc" && iso_get "$base/SHA256SUMS" "$d/SHA256SUMS" &&

@@ -1,7 +1,7 @@
 #!/bin/bash
 # get-iso: downloads another system's install image and checks it, then offers
 # to write it to a USB stick. It sets up the command get-iso, which:
-#  - offers Debian, Tails, Kicksecure, Kali, Parrot (Security and Home) and Arch;
+#  - offers Debian, Tails, Kicksecure, Qubes OS, Kali, Parrot (Security and Home) and Arch;
 #  - finds the newest release in the project's own release list or folder;
 #  - downloads it through Tor when Tor runs here (apt over Tor, remote access,
 #    the onion site), so your network can't see what you fetch; otherwise it

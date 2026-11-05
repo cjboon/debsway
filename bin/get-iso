@@ -1,7 +1,7 @@
 #!/bin/sh
 # get-iso: written by Wren Linux extras/get-iso.sh
-# Downloads another system's install image (Debian, Tails, Kicksecure, Kali,
-# Parrot, Arch: get-iso --list), through Tor when Tor runs here; keeps it in
+# Downloads another system's install image (Debian, Tails, Kicksecure, Qubes,
+# Kali, Parrot, Arch: get-iso --list), through Tor when Tor runs here; keeps it in
 # ~/ISOs only if its project's pinned key vouches for it and it is the newest
 # release; and offers to write it to a USB stick you pick and type the name of.
 #   get-iso [NAME]    get-iso --list
