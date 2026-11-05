@@ -16,7 +16,7 @@ _wren_firefox() {
             done ;;
         *)
             [ "$COMP_CWORD" -eq 1 ] || return 0
-            words=(--profiles --new-profile --remove-profile --profile --no-audio) ;;
+            words=(--profiles --new-profile --remove-profile --choose-profiles --profile --no-audio) ;;
     esac
     [ ${#words[@]} -gt 0 ] || return 0
     mapfile -t COMPREPLY < <(compgen -W "${words[*]}" -- "$cur")

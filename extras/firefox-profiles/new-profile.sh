@@ -11,6 +11,9 @@
 #   bash new-profile.sh                       asks: a ready-made one, or your own name and address
 #   bash new-profile.sh NAME                  a ready-made one (github, tutamail, chess...)
 #   bash new-profile.sh --list                the ready-made ones (data/firefox-profiles.list)
+#   bash new-profile.sh --choose              check boxes for the ready-made ones: ticked are
+#                                             made, unticked ones you have are removed (each
+#                                             asks before deleting its logins); yours aren't listed
 #   bash new-profile.sh NAME URL [--fast-js] [--show-toolbars] [--no-sound] [--delete-cookies]
 #                                             e.g. bash new-profile.sh bank https://mybank.example
 #   bash new-profile.sh --remove NAME         removes its command; asks whether to delete the profile and its user
@@ -29,6 +32,7 @@
 . "$(dirname -- "${BASH_SOURCE[0]}")/../../lib.sh"
 . "$WREN_DIR/lib/firefox-sandbox.sh"
 . "$WREN_DIR/lib/firefox-profiles.sh"
+. "$WREN_DIR/lib/checklist.sh"
 if [ "${1:-}" = --manual ]; then print_manual firefox-profiles; exit; fi
 not_root
 
@@ -46,6 +50,43 @@ if [ "${1:-}" = --list ]; then
     echo "Ready-made profiles (bash new-profile.sh NAME):"
     fx_catalog_list
     exit
+fi
+
+# --choose: the check boxes. Each change runs this script again (NAME, or
+# --remove NAME), so a ready-made profile is made the one way it always is.
+if [ "${1:-}" = --choose ]; then
+    { : </dev/tty; } 2>/dev/null || die "There is no terminal to ask on. Run it in one: firefox --choose-profiles"
+    have() { [ -f "$FX_PROFILE_DIR/$1.conf" ]; }
+    ITEMS=() names=()
+    while IFS= read -r line; do
+        case $line in
+            "## "*) ITEMS+=("~${#ITEMS[@]}" "== ${line#\#\# } ==" OFF) ;;
+            "#"* | "") ;;
+            *) read -r name _ <<<"$line"
+                what=${line#*# }
+                names+=("$name")
+                if have "$name"; then ITEMS+=("$name" "* $what" ON); else ITEMS+=("$name" "  $what" OFF); fi ;;
+        esac
+    done <"$FX_CATALOG"
+    say "Ready-made Firefox profiles"
+    CL_TITLE="Ready-made Firefox profiles"
+    CL_TEXT="Each is a Firefox of its own for one site, run as a Linux user of its own.\n* = made already. Check the ones you want; unchecking one you have removes it\n(it asks before deleting its logins). Your own profiles aren't listed, and stay."
+    CL_OK=Apply CL_CANCEL=Cancel
+    chosen=()
+    checklist || { note "Nothing changed."; exit 0; }
+    make=() drop=()
+    for name in "${names[@]}"; do
+        if printf '%s\n' "${chosen[@]}" | grep -qxF -- "$name"; then
+            have "$name" || make+=("$name")
+        elif have "$name"; then
+            drop+=("$name")
+        fi
+    done
+    [ ${#make[@]} -gt 0 ] || [ ${#drop[@]} -gt 0 ] || { note "Nothing changed."; exit 0; }
+    for name in "${make[@]}"; do bash "$0" "$name" || warn "$name wasn't made; try again: firefox --new-profile $name"; done
+    for name in "${drop[@]}"; do bash "$0" --remove "$name" || warn "$name wasn't removed; try again: firefox --remove-profile $name"; done
+    note "Later, to make or remove them: firefox --choose-profiles"
+    exit 0
 fi
 
 fast=no toolbars=hidden sound=yes cookies=keep allow=-

@@ -82,4 +82,46 @@ out=$(np --list)
 check "--list: each ready-made one, by kind, with what it is" \
     bash -c 'grep -q "^  github  *GitHub$" <<<"$1" && grep -q "^Mail$" <<<"$1" && [ "$(grep -c "^  [a-z]" <<<"$1")" = "$(awk "!/^#/ && NF" "$2" | wc -l)" ]' _ "$out" "$L"
 
+# ---- the check boxes (--choose) ----
+# A pretend checklist: writes down what it was shown, and "ticks" $T/tick
+cat >>"$T/W/lib/checklist.sh" <<EOF
+checklist() {
+    printf '%s|%s|%s\\n' "\${ITEMS[@]}" >"$T/shown"
+    [ -e "$T/tick" ] || return 1
+    mapfile -t chosen <"$T/tick"
+}
+EOF
+cat >>"$T/W/lib/firefox-profiles.sh" <<EOF
+remove_profile() { echo "remove_profile \$*" >>"$T/calls"; }
+EOF
+mkdir -p "$T/profiles"
+: >"$T/profiles/github.conf"
+: >"$T/profiles/bank.conf"
+# (with a terminal of its own: the boxes are only drawn on one)
+choose() {
+    : >"$T/calls"
+    script -qec "env HOME=$T WREN_FX_PROFILE_DIR=$T/profiles WREN_UBLOCK_ALLOW=$T/ublock-allow bash $T/W/extras/firefox-profiles/new-profile.sh --choose" /dev/null 2>&1
+}
+printf '%s\n' github chess >"$T/tick"
+out=$(choose)
+check "--choose: the ready-made ones as boxes, by kind; the ones you have ticked, marked *" \
+    bash -c 'grep -q "^~[0-9]*|== Mail ==|OFF$" "$1" && grep -q "^github|\* GitHub|ON$" "$1" && grep -q "^chess|  Chess.com, forgotten when it closes|OFF$" "$1"' _ "$T/shown"
+check "...your own profiles aren't among them (bank)" not grep -q '^bank|' "$T/shown"
+check "...a newly ticked one is made, with its settings and uBlock exception; one kept is left as it is" \
+    bash -c '[ "$(cat "$1")" = "$(printf "make_profile chess https://www.chess.com yes hidden yes delete\nublock-allow chess.com")" ]' _ "$T/calls"
+check "...and it says how to come back to it" grep -q 'firefox --choose-profiles' <<<"$out"
+# (as the real make_profile would have left it)
+: >"$T/profiles/chess.conf"
+printf '%s\n' chess >"$T/tick"
+out=$(choose)
+check "...an unticked one you have is removed (remove_profile asks about its logins), yours untouched" \
+    bash -c '[ "$(cat "$1")" = "remove_profile github" ]' _ "$T/calls"
+rm -f "$T/tick"
+out=$(choose)
+check "...Cancel changes nothing" bash -c '[ ! -s "$1" ] && grep -q "Nothing changed" <<<"$2"' _ "$T/calls" "$out"
+X=$HERE/extras/firefox-sandbox.sh
+check "the sandboxed Firefox's install asks once (default no), then says the command" \
+    bash -c 'grep -qF "Make some ready-made profiles now (a Firefox of its own for GitHub, mail, chess...)?\" n" "$1" && grep -qF "if [ ! -e \"\$ASKED_PROFILES\" ]" "$1" && grep -qF "note \"Ready-made profiles, to make or remove later: firefox --choose-profiles\"" "$1"' _ "$X"
+check "firefox --choose-profiles opens them" grep -q 'new_profile --choose' "$HERE/bin/firefox"
+
 [ "$fails" -eq 0 ]

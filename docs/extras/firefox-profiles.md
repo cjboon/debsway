@@ -4,6 +4,7 @@
 
 ```
 firefox --profiles                        the profiles there are: command, address, choices
+firefox --choose-profiles                 check boxes for the ready-made ones: tick to make, untick to remove
 firefox --new-profile NAME                a ready-made one: github, tutamail, chess, youtube... (34)
 firefox --new-profile --list              the ready-made ones, by kind, with what each is
 firefox --new-profile [NAME URL [...]]    your own (asks, without NAME and URL); Tab completes
@@ -13,6 +14,7 @@ firefox --profile NAME [URL]              open one (its own command, below, does
 bash ~/wren/extras/firefox-profiles/new-profile.sh                      the same, by the script: asks (a ready-made one, or yours)
 bash ~/wren/extras/firefox-profiles/new-profile.sh NAME                 a ready-made one
 bash ~/wren/extras/firefox-profiles/new-profile.sh --list               the ready-made ones
+bash ~/wren/extras/firefox-profiles/new-profile.sh --choose             their check boxes
 bash ~/wren/extras/firefox-profiles/new-profile.sh NAME URL [--fast-js] [--show-toolbars] [--no-sound] [--delete-cookies]
 bash ~/wren/extras/firefox-profiles/new-profile.sh --remove NAME        asks before deleting its logins and user
 bash ~/wren/extras/firefox-profiles/new-profile.sh --manual             print the manual steps below
@@ -45,7 +47,10 @@ that load their own code from a second domain (GitHub from
 githubassets.com, YouTube from ytimg.com) would break in uBlock's medium
 mode, so making one of those also runs `ublock-allow` for that site only;
 removing the profile leaves that exception. None is made until you ask for
-it: each is a Linux user of its own.
+it: each is a Linux user of its own. `firefox --choose-profiles` shows them as
+check boxes, the ones you have ticked: tick to make, untick to remove (it
+asks before deleting a profile's logins); your own profiles aren't listed.
+Installing the sandboxed Firefox asks once whether to open it (default no).
 
 ## LIMITS
 

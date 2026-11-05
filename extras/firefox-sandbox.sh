@@ -273,7 +273,17 @@ bash "$WREN_DIR/parts/incognito.sh" ||
     warn "incognito didn't finish setting up; run it again with: bash $WREN_DIR/parts/incognito.sh"
 
 note "Run it with: firefox   (or Super+d). firefox-unsafe runs Firefox as you instead."
-note "A Firefox of its own for one site (github, tutamail, chess...): firefox --new-profile --list"
+# Asked once (update.sh runs this again after changes): the line below stays
+ASKED_PROFILES=${XDG_CONFIG_HOME:-$HOME/.config}/wren/firefox-profiles-asked
+if [ ! -e "$ASKED_PROFILES" ]; then
+    mkdir -p "${ASKED_PROFILES%/*}"
+    : >"$ASKED_PROFILES"
+    if ask "Make some ready-made profiles now (a Firefox of its own for GitHub, mail, chess...)?" n; then
+        bash "$WREN_DIR/extras/firefox-profiles/new-profile.sh" --choose ||
+            warn "The profiles didn't all finish; try again: firefox --choose-profiles"
+    fi
+fi
+note "Ready-made profiles, to make or remove later: firefox --choose-profiles"
 note "It cannot reach your router or local services; to allow that for a while:"
 note "  sudo systemctl stop wren-firefox-firewall"
 note "Downloads go to ~/Downloads, shared with you. Copy and paste works while its window has focus."

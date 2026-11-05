@@ -148,6 +148,6 @@ fx_catalog() {
 }
 # fx_catalog_list: the ready-made profiles, by kind, each with what it is
 fx_catalog_list() {
-    awk '/^# [A-Z]/ && !/^# [A-Z]+ +[A-Z]/ { if (NR > 15) printf "\n%s\n", substr($0, 3); next }
+    awk '/^## / { printf "%s%s\n", (n++ ? "\n" : ""), substr($0, 4); next }
          !/^#/ && NF { d = $0; sub(/^[^#]*# /, "", d); printf "  %-14s %s\n", $1, d }' "$FX_CATALOG"
 }

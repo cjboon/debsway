@@ -2,6 +2,7 @@
 # --list). Each is made only when you ask for it: a locked-down user of its own
 # (fx-NAME) and a command, NAME (firefox-NAME when a program is called NAME).
 #
+# "## Kind" lines head each group. Then, one profile a line:
 # NAME URL FAST-JS TOOLBARS SOUND COOKIES ALLOW # what it is
 #   FAST-JS   yes: the JavaScript JIT on for this profile (heavy apps, video, chess)
 #   TOOLBARS  hidden (only the page) or shown (where seeing the address matters)
@@ -13,47 +14,47 @@
 #             ytimg.com...), comma-separated; - for none. Checked 2026-11-05 from
 #             each site's page; one that still breaks: ublock-allow SITE.
 #
-# Mail
+## Mail
 tutamail https://app.tuta.com no hidden no keep - # Tuta (Tutanota) mail, end-to-end encrypted
 protonmail https://mail.proton.me no hidden no keep - # Proton Mail, end-to-end encrypted
 gmail https://mail.google.com no hidden no keep mail.google.com # Gmail
 yahoomail https://mail.yahoo.com no hidden no keep mail.yahoo.com # Yahoo Mail
 outlook https://outlook.live.com no hidden no keep outlook.live.com # Outlook.com mail
-# AI chat
+## AI chat
 duckai https://duck.ai no hidden no delete - # DuckDuckGo's AI chat: no account, nothing kept
 claudefx https://claude.ai no hidden no keep claude.ai # Claude on the web (claude is Claude Code's command)
 chatgpt https://chatgpt.com no hidden no keep chatgpt.com # ChatGPT
 lechat https://chat.mistral.ai no hidden no keep - # Mistral's Le Chat
-# Code
+## Code
 github https://github.com no shown no keep github.com # GitHub
 gitlab https://gitlab.com no shown no keep - # GitLab
 codeberg https://codeberg.org no shown no keep - # Codeberg, a non-profit Git host
 stackoverflow https://stackoverflow.com no shown no delete stackoverflow.com # Stack Overflow
-# Video
+## Video
 youtube https://www.youtube.com yes hidden yes delete youtube.com # YouTube, forgotten when it closes
 odysee https://odysee.com yes hidden yes delete odysee.com # Odysee
 peertube https://framatube.org yes hidden yes delete - # PeerTube (Framasoft's; other instances work too)
-# Adult
+## Adult
 pornhub https://www.pornhub.com no hidden yes delete pornhub.com # forgotten when it closes
 xvideos https://www.xvideos.com no hidden yes delete xvideos.com # forgotten when it closes
-# Games
+## Games
 chess https://www.chess.com yes hidden yes delete chess.com # Chess.com, forgotten when it closes
 lichess https://lichess.org yes hidden yes delete - # Lichess, free and open source chess
-# Social: each company's trackers see only their own site
+## Social: each company's trackers see only their own site
 facebook https://www.facebook.com no hidden yes keep facebook.com # Facebook
 instagram https://www.instagram.com no hidden yes keep instagram.com # Instagram
 xcom https://x.com no hidden yes keep x.com # X (Twitter)
 reddit https://www.reddit.com no hidden yes keep reddit.com # Reddit
 linkedin https://www.linkedin.com no hidden no keep linkedin.com # LinkedIn
 mastodon https://mastodon.social no hidden yes keep - # Mastodon (mastodon.social; change it to your own server)
-# Chat
+## Chat
 discord https://discord.com/app yes hidden yes keep discord.com # Discord
 element https://app.element.io yes hidden yes keep - # Element (Matrix), end-to-end encrypted
 whatsapp https://web.whatsapp.com yes hidden yes keep web.whatsapp.com # WhatsApp Web
-# Shopping: their trackers kept to themselves
+## Shopping: their trackers kept to themselves
 amazon https://www.amazon.com no shown no keep amazon.com # Amazon
 ebay https://www.ebay.com no shown no keep ebay.com # eBay
-# Reference
+## Reference
 archive https://archive.org no shown yes delete - # The Internet Archive and its Wayback Machine
 osm https://www.openstreetmap.org no shown no delete - # OpenStreetMap
 search https://duckduckgo.com no shown no delete - # DuckDuckGo search, nothing kept between searches
