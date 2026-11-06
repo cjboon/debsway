@@ -292,9 +292,10 @@ There's nothing to break into but ssh and the web server.
 3. **DNS:** a registrar that supports DNSSEC; turn it on.
    - CAA records naming your certificate authority only.
    - A domain that doesn't depend on any one free service.
-   - Computers contact the repository regularly, so a rare domain would mark them as Wren Linux's
-     to anyone watching their network. Decide this before the server goes up: the repository on
-     an onion address (`parts/wren-repo.sh` allows it), or somewhere with plenty of other traffic.
+   - **The apt repository goes on an onion address (decided):** computers contact it regularly, so
+     a rare domain would mark them as Wren Linux's to anyone watching their network.
+     `parts/wren-repo.sh` already takes one. So a computer that takes the package needs the
+     system Tor running, and a failure to reach it mustn't quietly stop updates.
 4. **Content:**
    - What Wren Linux is, the threat model in plain words, screenshots.
    - Install steps, and verification steps: check the ISO's checksum, and
