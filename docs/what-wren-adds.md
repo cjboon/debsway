@@ -32,8 +32,8 @@ Everyone who installs Wren Linux gets these. The script named in each row does i
 | Automatic updates are a choice, and not on the live image | On, every day | `parts/unattended-upgrades.sh` | `systemctl status apt-daily.timer` |
 | A daily update that can't reach any server still counts as done, and says nothing | The bar says so at once, if you're online | `parts/unattended-upgrades.sh` | `cat /run/wren-updates/state` |
 | Nothing lists programs still running old, unfixed libraries | They're listed after every apt run | `parts/needrestart.sh` | `sudo needrestart` |
-| Updates to scripts come from wherever you got them | `update.sh` takes only what Wren Linux's key signed, checked with the pin you already have | `update.sh` | `grep WREN_SIGNING_FPR pins.sh` |
-| Anything you download by hand is on you | Everything from outside Debian is checked against a key pinned in `pins.sh` | `lib/appimage.sh` | `bash test.sh` |
+| Updates to scripts come from wherever you got them | `update.sh` takes only what Wren Linux's key signed, checked with the pin you already have | `update.sh` | `grep WREN_SIGNING_FPR ~/wren/pins.sh` |
+| Anything you download by hand is on you | Programs the extras download from outside Debian are checked against a signing key pinned in `pins.sh` | `lib/appimage.sh` | `less ~/wren/pins.sh` |
 
 ### Network
 
@@ -41,9 +41,10 @@ Everyone who installs Wren Linux gets these. The script named in each row does i
 |---|---|---|---|
 | No firewall set up | Nothing comes in unless you allow it | `parts/ufw.sh` | `sudo ufw status` |
 | DNS goes to the network's server, unencrypted | Unbound checks answers with DNSSEC, and asks a resolver you pick, over TLS. It fails closed, with a switch for sign-in pages | `parts/secure-dns.sh` | `cat /etc/resolv.conf` |
-| dhcpcd and dhclient send this computer's name to each network | They don't | `parts/dhcp-no-name.sh` | `grep hostname /etc/dhcpcd.conf` |
+| dhcpcd and dhclient send this computer's name to each network | They don't | `parts/dhcp-no-name.sh` | `grep 'no name sent' /etc/dhcpcd.conf` |
 | Wi-Fi uses the card's real hardware address, with NetworkManager's defaults | A made-up address at each connection, no name sent, temporary IPv6 addresses | `parts/random-mac.sh` | `ip link` |
 | The live image installs avahi, which announces this computer's name on every network, and hw-probe | Taken out, with printing unless you print | `parts/no-live-extras.sh` | `systemctl status avahi-daemon` |
+| Wren Linux's sandboxes don't exist | DNS from its sandbox users goes only to the resolver this computer uses, so a hacked sandbox can't reach what else listens on port 53 nearby. It can still send data out | `parts/sandbox-dns.sh` | `sudo nft list ruleset \| grep -A3 resolvers` |
 | NetworkManager connects a new USB network device by itself | It asks first, for the drivers phones use | `parts/tether.sh` | `cat /etc/NetworkManager/conf.d/90-wren-tether.conf` |
 
 ### The kernel
@@ -84,7 +85,7 @@ Rare network protocols and old filesystems (`dccp`, `sctp`, `rds`, `tipc`, `cram
 |---|---|---|---|
 | sudo remembers your password for 15 minutes | For 1 minute, in that terminal only | `parts/sudo-timeout.sh` | `sudo -l` |
 | New users' home folders are private, but new files can be read by others, so a folder opened to a sandbox would show them | New files are private (`umask 077`), and everything directly in your home is closed to others | `parts/home-private.sh` | `umask` |
-| A screen lock is up to your desktop, and a bare install has none | Locks when idle, and before suspend | `parts/swayidle.sh` | `timer lock` |
+| A screen lock is up to your desktop, and a bare install has none | Locks when idle, and before suspend | `parts/swayidle.sh`, `parts/swaylock.sh` | `timer lock` |
 | USB sticks are mounted as root if you `sudo mount` them | Mounted as you, with `nosuid,nodev,noexec` | `parts/usb.sh` | `usb` |
 | Shutting down takes a command, or a desktop's menu | A power menu on a key combination: shutting down is the safe state for a laptop you're leaving | `parts/power-menu.sh` | Super+Shift+Escape |
 
@@ -95,7 +96,7 @@ These are extras (`wrenctl --apps`). `wrenctl manual NAME` shows each step by ha
 | Extra | What it adds |
 |---|---|
 | `firefox-sandbox` | Firefox as its own locked-down user, with uBlock Origin, HTTPS-Only Mode, no JavaScript JIT, and `incognito`, a throwaway one |
-| `claude-vm`, `claude-code` | A coding agent in a disposable VM, or as its own user, off your files and network |
+| `claude-vm`, `claude-code` | A coding agent in a disposable VM, or as its own user, walled off from your files |
 | `media`, `pdf-viewer`, `gimp` | Opening pictures, video and PDFs in a sandbox |
 | `yt-dlp` | A video downloader as its own locked user |
 | `tor-browser`, `whonix`, `onionshare`, `onion-site` | Tor, with bridges, checked downloads, and Tor Browser at Safest |

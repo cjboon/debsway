@@ -15,8 +15,8 @@ check() { # DESCRIPTION CONDITION-COMMAND...
 D=$HERE/docs/what-wren-adds.md
 missing=$(grep -oE '`(parts|extras|lib|bin|data)/[A-Za-z0-9_./-]+|`[a-z-]+\.sh`' "$D" | tr -d '`' | sort -u | while read -r f; do [ -e "$HERE/$f" ] || echo "$f"; done | paste -sd' ')
 check "every script it names is there${missing:+: missing $missing}" test -z "$missing"
-# (these make the desktop work; they change nothing about security or privacy)
-NOT_SECURITY=' core-commands clock wmenu brightnessctl wl-clipboard mako foot-config autostart wallpaper theme power-profiles-daemon wren-menu command-hints console-tmux grub-colors network-manager sandbox-dns swaylock '
+# (these are here to make the desktop work, not for security or privacy)
+NOT_SECURITY=' core-commands clock wmenu brightnessctl wl-clipboard mako foot-config autostart wallpaper theme power-profiles-daemon wren-menu command-hints console-tmux grub-colors network-manager '
 . "$HERE/packages.sh"
 left=
 for p in "${PARTS[@]}"; do
