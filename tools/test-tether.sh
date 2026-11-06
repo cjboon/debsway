@@ -45,6 +45,11 @@ noclients() { rm -f "$B/dhcpcd" "$B/dhclient" "$B/busybox" "$B/nmcli"; }
 chmod +x "$B/sudo" "$B/ip" "$B/swaymsg"
 R=$T/resolv.conf
 echo 'nameserver 192.0.2.53' >"$R"
+# Settings like Debian's
+export WREN_ETC=$T/etc
+mkdir -p "$T/etc/dhcp"
+printf '# dhcpcd\nhostname\n#hostname in a comment\noption rapid_commit\noption domain_name_servers, ntp_servers\n' >"$T/etc/dhcpcd.conf"
+printf '# dhclient\nsend host-name = gethostname();\nrequest subnet-mask, routers, ntp-servers;\n' >"$T/etc/dhcp/dhclient.conf"
 
 t() { # ANSWER ARGS...: tether, answered on a terminal, its screen in $T/out
     local a=$1
@@ -102,8 +107,10 @@ noclients; client dhcpcd dhclient busybox
 t y
 check "yes, with dhcpcd: that device comes up, and dhcpcd gets it" bash -c '
     grep -q "^sudo ip link set enx1a2b3c up" "$1/calls" && grep -q "^sudo dhcpcd .*enx1a2b3c" "$1/calls" && ! grep -qE "^(sudo )?(dhclient|busybox)" "$1/calls"' _ "$T"
-check "...with settings of its own, without the hostname line of Debian's" bash -c '
-    grep -q "^sudo dhcpcd .*-f /run/wren-tether-dhcpcd.conf" "$1/calls" && [ -s "$1/run/wren-tether-dhcpcd.conf" ] && ! grep -q hostname "$1/run/wren-tether-dhcpcd.conf"' _ "$T"
+check "...with Debian's settings, without their hostname line" bash -c '
+    grep -q "^sudo dhcpcd .*-f /run/wren-tether-dhcpcd.conf" "$1/calls" && ! grep -qx hostname "$1/run/wren-tether-dhcpcd.conf"' _ "$T"
+check "...and asking the network what Debian's dhcpcd asks, nothing changed" bash -c '
+    grep -qx "option rapid_commit" "$1" && grep -qx "option domain_name_servers, ntp_servers" "$1" && grep -q "^#hostname in a comment" "$1"' _ "$T/run/wren-tether-dhcpcd.conf"
 check "...DNS left to it while secure DNS is off" not called "--nohook"
 check "...and it says it connected" said "Connected through enx1a2b3c"
 
@@ -114,8 +121,9 @@ echo 'nameserver 192.0.2.53' >"$R"
 
 noclients; client dhclient busybox
 t y
-check "no dhcpcd: dhclient, with settings of its own that send no name" bash -c '
-    grep -q "^sudo dhclient -4 -1 -cf /run/wren-tether-dhclient.conf enx1a2b3c" "$1/calls" && ! grep -q send "$1/run/wren-tether-dhclient.conf"' _ "$T"
+check "no dhcpcd: dhclient, with Debian's settings, without its send host-name" bash -c '
+    grep -q "^sudo dhclient -4 -1 -cf /run/wren-tether-dhclient.conf enx1a2b3c" "$1/calls" && ! grep -q send "$1/run/wren-tether-dhclient.conf" &&
+        grep -qx "request subnet-mask, routers, ntp-servers;" "$1/run/wren-tether-dhclient.conf"' _ "$T"
 
 noclients; client busybox
 t y

@@ -21,6 +21,7 @@ export PATH=${WREN_TETHER_PATH:-/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin}
 # (a test points these elsewhere)
 SYS=${WREN_SYS:-/sys}
 RESOLV=${WREN_RESOLV:-/etc/resolv.conf}
+ETC=${WREN_ETC:-/etc}
 COOLDOWN=${WREN_TETHER_COOLDOWN:-30}
 DRIVERS='rndis_host cdc_ether cdc_ncm ipheth'
 
@@ -65,20 +66,24 @@ connect_nm() {
         nmcli connection up "tether-$1" >/dev/null
 }
 
-# connect_dhcp IF: as root, the first client there is. Left to their own settings,
+# connect_dhcp IF: as root, the first client there is. Left to Debian's settings,
 # dhcpcd and dhclient send this computer's name (seen in a DHCP server's log), so
-# each gets a settings file of its own, without that. busybox sends none.
+# each gets a copy of those without that line, and nothing else changed: what else a
+# client asks a network for can tell it apart, so it should ask what Debian's do. busybox
+# sends no name.
 connect_dhcp() {
     local ifc=$1 opts=()
     sudo ip link set "$ifc" up || return 1
     if command -v dhcpcd >/dev/null; then
         # (while secure DNS is on, resolv.conf stays pointed at it)
         if secure_dns_on; then opts+=(--nohook resolv.conf); fi
-        printf 'option domain_name_servers, routers, subnet_mask\nnoipv4ll\n' | sudo tee /run/wren-tether-dhcpcd.conf >/dev/null
+        { grep -vE '^[[:space:]]*hostname[[:space:]]*$' "$ETC/dhcpcd.conf" 2>/dev/null; echo noipv4ll; } |
+            sudo tee /run/wren-tether-dhcpcd.conf >/dev/null
         sudo dhcpcd -4 -w -t 30 -f /run/wren-tether-dhcpcd.conf "${opts[@]}" "$ifc"
     elif command -v dhclient >/dev/null; then
         # (dhclient's own script reads the same "make_resolv_conf" hook secure DNS sets)
-        printf 'request subnet-mask, broadcast-address, routers, domain-name-servers;\n' | sudo tee /run/wren-tether-dhclient.conf >/dev/null
+        { grep -vE '^[[:space:]]*send host-name' "$ETC/dhcp/dhclient.conf" 2>/dev/null || true; } |
+            sudo tee /run/wren-tether-dhclient.conf >/dev/null
         sudo dhclient -4 -1 -cf /run/wren-tether-dhclient.conf "$ifc"
     elif command -v busybox >/dev/null; then
         sudo tee /run/wren-tether-udhcpc.sh >/dev/null <<'SCRIPT'
