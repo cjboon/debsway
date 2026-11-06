@@ -12,34 +12,38 @@ wrenctl git [DIR]                       your name, email and push login (DIR, or
 wrenctl gh rulesets [OWNER/REPO]        on GitHub: only you update main, nobody force-pushes or deletes it
 ```
 
-git keeps the history of a folder of files; it comes from Debian. GitHub's
-command line tool, gh, isn't installed: git needs only a token to push, and
-pull requests, issues and the like are on GitHub's site, in the browser. The
-script installs git and makes
-`main` the first branch of new repositories. It asks nothing else: your name
-and email on commits, and how git logs in to push, are `git-helper.sh`'s, run
-when you want them (`wrenctl git`). It asks for your name and email (and, for GitHub, offers
-your no-reply address, looked up from your public profile, since GitHub
-refuses pushes that carry an email you keep private), then how git logs in
-over https: a token you paste at each push (nothing saved), the same kept in
-memory for an hour, or, if you installed gh yourself, gh's login through a
-web page (saved in plain text).
-`wrenctl git DIR`, or `wrenctl git` inside a repository, does this for any
-repository of yours, on any server. `wrenctl gh` (`gh-helper.sh`) installs gh,
-from Debian, when you want it, with a fine-grained token you make for the job:
-nothing is saved unless you say so. `wrenctl gh rulesets` gives a GitHub
-repository's main branch the rules that keep it yours: only you (its admins)
-update it, so a deploy key you gave a helper can push its own branch and never
-main, and nobody force-pushes or deletes it. The token for that needs
-Administration, Read and write, on that repository alone; made for this, a day's
-expiry is enough, and it is asked for hidden and not saved.
+git keeps the history of a folder of files; it comes from Debian. GitHub's command line tool, gh,
+isn't installed: git needs only a token to push, and pull requests, issues and the like are on
+GitHub's site, in the browser.
+
+The script installs git and makes `main` the first branch of new repositories. It asks nothing else:
+your name and email on commits, and how git logs in to push, are `git-helper.sh`'s, run when you
+want them (`wrenctl git`).
+
+It asks for your name and email (and, for GitHub, offers your no-reply address, looked up from your
+public profile, since GitHub refuses pushes that carry an email you keep private), then how git logs
+in over https: a token you paste at each push (nothing saved), the same kept in memory for an hour,
+or, if you installed gh yourself, gh's login through a web page (saved in plain text).
+
+`wrenctl git DIR`, or `wrenctl git` inside a repository, does this for any repository of yours, on
+any server. `wrenctl gh` (`gh-helper.sh`) installs gh, from Debian, when you want it, with a
+fine-grained token you make for the job: nothing is saved unless you say so.
+
+`wrenctl gh rulesets` gives a GitHub repository's main branch the rules that keep it yours: only you
+(its admins) update it, so a deploy key you gave a helper can push its own branch and never main,
+and nobody force-pushes or deletes it.
+
+The token for that needs Administration, Read and write, on that repository alone; made for this, a
+day's expiry is enough, and it is asked for hidden and not saved.
 
 ## LIMITS
 
 - A repository you clone can hold scripts and build files: read what you download before you run it.
 - Your name and email on a commit are no proof of who made it.
 - Anything you push to a public site is public, and history keeps it after you delete the file.
-- Anything running as you can read gh's GitHub login in `~/.config/gh`, if you installed gh and chose it. A token kept in memory can be read by a program of yours in that hour; one pasted at each push is in no file, but in whatever you copy it from.
+- Anything running as you can read gh's GitHub login in `~/.config/gh`, if you installed gh and
+  chose it. A token kept in memory can be read by a program of yours in that hour; one pasted at
+  each push is in no file, but in whatever you copy it from.
 
 ## MANUAL INSTALL
 

@@ -24,32 +24,35 @@ NAME                open that site in its own profile (Super+d finds it too);
   the window shows only the page: Alt+Left back, Alt+Right forward, F5 reload, Ctrl+W close
 ```
 
-For a site you stay logged in to (a bank, email, shopping), a Firefox of its
-own with a command named after it (`github`; `firefox-NAME` when a program has
-that name already, since `~/.local/bin` comes first and the command would
-stand in for it): its own cookies, logins and history, run as
-its own locked-down Linux user, `fx-NAME`, like the sandboxed Firefox's
-(`extras/firefox-sandbox.sh`, which it needs), so a hacked page in one profile
-reaches neither your files nor the other profiles. Only the clipboard and
-`~/Downloads/NAME` are shared with you. Its address and choices are in
-`/etc/wren/firefox-profiles/NAME.conf`, a file only root can write. The
-window shows only the page, without tabs, address bar or bookmarks bar
-(`--show-toolbars` keeps them). `--no-sound` keeps it silent (a bank needs no
-sound). Its cookies and site data are kept, so you stay logged in;
-`--delete-cookies` deletes them when it closes (run without NAME and URL it
-asks, fast JavaScript and sound too). `--fast-js` turns the JavaScript JIT back on
-for that profile only, for heavy web apps. Ready-made ones (`data/firefox-profiles.list`, 34 of them: mail, AI chat,
-code, video, adult, chess, social, chat, shopping, reference) come with
-settings chosen for their site: mail and code keep you logged in; video,
-adult and chess sites forget everything when they close; video, chess and
-chat apps get fast JavaScript; code and shopping show the address bar. Sites
-that load their own code from a second domain (GitHub from
-githubassets.com, YouTube from ytimg.com) would break in uBlock's medium
-mode, so making one of those also runs `ublock-allow` for that site only;
-removing the profile leaves that exception. None is made until you ask for
-it: each is a Linux user of its own. `firefox --choose-profiles` shows them as
-check boxes, the ones you have ticked: tick to make, untick to remove (it
-asks before deleting a profile's logins); your own profiles aren't listed.
+For a site you stay logged in to (a bank, email, shopping), a Firefox of its own with a command
+named after it (`github`; `firefox-NAME` when a program has that name already, since `~/.local/bin`
+comes first and the command would stand in for it): its own cookies, logins and history, run as its
+own locked-down Linux user, `fx-NAME`, like the sandboxed Firefox's (`extras/firefox-sandbox.sh`,
+which it needs), so a hacked page in one profile reaches neither your files nor the other profiles.
+
+Only the clipboard and `~/Downloads/NAME` are shared with you. Its address and choices are in
+`/etc/wren/firefox-profiles/NAME.conf`, a file only root can write. The window shows only the page,
+without tabs, address bar or bookmarks bar (`--show-toolbars` keeps them).
+
+`--no-sound` keeps it silent (a bank needs no sound). Its cookies and site data are kept, so you
+stay logged in; `--delete-cookies` deletes them when it closes (run without NAME and URL it asks,
+fast JavaScript and sound too).
+
+`--fast-js` turns the JavaScript JIT back on for that profile only, for heavy web apps.
+
+Ready-made ones (`data/firefox-profiles.list`, 34 of them: mail, AI chat, code, video, adult, chess,
+social, chat, shopping, reference) come with settings chosen for their site: mail and code keep you
+logged in; video, adult and chess sites forget everything when they close; video, chess and chat
+apps get fast JavaScript; code and shopping show the address bar.
+
+Sites that load their own code from a second domain (GitHub from githubassets.com, YouTube from
+ytimg.com) would break in uBlock's medium mode, so making one of those also runs `ublock-allow` for
+that site only; removing the profile leaves that exception.
+
+None is made until you ask for it: each is a Linux user of its own. `firefox --choose-profiles`
+shows them as check boxes, the ones you have ticked: tick to make, untick to remove (it asks before
+deleting a profile's logins); your own profiles aren't listed.
+
 Installing the sandboxed Firefox asks once whether to open it (default no).
 
 ## LIMITS
@@ -57,14 +60,15 @@ Installing the sandboxed Firefox asks once whether to open it (default no).
 - Everything in the sandboxed Firefox's LIMITS applies to each profile.
 - Without an address bar you can't see which page you're on: follow only links you expect.
 - `--fast-js` brings back what most serious Firefox exploits target, for that site.
-- A profile's command takes a name no program has when it is made. A package installed later with the same name is hidden behind it until you remove the profile (`type -a NAME` shows both).
-- Kept cookies (the default) let the site recognise you on every visit; that is how you stay logged in.
+- A profile's command takes a name no program has when it is made. A package installed later with
+  the same name is hidden behind it until you remove the profile (`type -a NAME` shows both).
+- Kept cookies (the default) let the site recognise you on every visit; that is how you stay logged
+  in.
 
 ## MANUAL INSTALL
 
-Set up the sandboxed Firefox first ([firefox-sandbox.md](firefox-sandbox.md)).
-These steps make a profile called `bank`; use your own name (lowercase
-letters, digits and dashes) and address.
+Set up the sandboxed Firefox first ([firefox-sandbox.md](firefox-sandbox.md)). These steps make a
+profile called `bank`; use your own name (lowercase letters, digits and dashes) and address.
 
 ```
 NAME=bank URL=https://mybank.example

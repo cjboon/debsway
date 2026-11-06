@@ -12,61 +12,70 @@ firefox-unsafe      the same Firefox run as you, with everything you can reach
 firefox-esr         (Debian's name, and /usr/bin/firefox, x-www-browser): the sandboxed one
 ```
 
-The `firefox` command opens Firefox as a normal window on your sway, but it
-runs as a different user, `firefox`, with no password, no login and none of
-your files, so a hacked page reaches only that user's own profile
-(`/var/lib/wren-firefox`: your logins, history and bookmarks), not your
-documents, keys or passwords. The clipboard is shared while its window has
-focus, and `~/Downloads` both ways (a file there opens in it too:
-`firefox file://$HOME/Downloads/page.html`; nothing else of yours does). Its sound goes through a pipe into a
-player of yours, so it can't hear your microphone, and it gets a restricted
-Wayland socket. A firewall rule on its group, `wren-fx`
-(`data/firefox-firewall.nft`), keeps it off your router, printers and this
-computer's own services; DNS stays open. Your user may run exactly one thing
-as it, the session script `bin/firefox-session`, through a rule in
-`/etc/sudoers.d`, and a limit on processes keeps a runaway page from filling
-the machine. Its install asks six things, remembered in
-`/etc/wren/firefox.conf` (which only root can write) and asked again when
-you run it again in a terminal: fast JavaScript (the JIT; default no, since
-it is where many browser attacks happen), sound (default yes), whether it is
-your default browser, so links from other programs open in it (default yes),
-and uBlock Origin's mode: medium (default: other sites' scripts blocked too;
-you allow sites with `ublock-allow`) or standard (ads, trackers and malware
-sites blocked, sites work), and, for when secure DNS is switched
-off, Firefox's own encrypted DNS to Quad9: strict (default: never plain
-DNS) or with fallback to the network's; and whether its cookies, site data
-and cache are deleted when it closes (default delete), so websites and the
-ad and tracker companies behind them can't recognise you from one visit to
-the next: you are then logged out of every site at each close, except sites
-you allow under Firefox's Settings > Privacy & Security > Cookies and Site
-Data > Manage Exceptions. History, bookmarks and saved passwords stay either
-way (no website can read them), and saved passwords fill in when you click a
-login box, not as the page loads (tracking scripts have read what Firefox
-filled into hidden boxes). Per-site profiles keep their cookies: that is
-what they are for. It follows Wren Linux's light or dark theme
-(`theme`), and a JPEG or PNG in `~/Pictures/wren/firefox` replaces the fox
-behind its New Tab page: your `firefox` command hands it a checked copy, which
-only the `firefox` user can read, at each start, so it never sees your
-pictures folder. It also sets up Firefox's
-hardening and `incognito` ([firefox.md](firefox.md)), and the profiles made
-with `extras/firefox-profiles/new-profile.sh` each get a user like it.
+The `firefox` command opens Firefox as a normal window on your sway, but it runs as a different
+user, `firefox`, with no password, no login and none of your files, so a hacked page reaches only
+that user's own profile (`/var/lib/wren-firefox`: your logins, history and bookmarks), not your
+documents, keys or passwords.
+
+The clipboard is shared while its window has focus, and `~/Downloads` both ways (a file there opens
+in it too: `firefox file://$HOME/Downloads/page.html`; nothing else of yours does).
+
+Its sound goes through a pipe into a player of yours, so it can't hear your microphone, and it gets
+a restricted Wayland socket.
+
+A firewall rule on its group, `wren-fx` (`data/firefox-firewall.nft`), keeps it off your router,
+printers and this computer's own services; DNS stays open.
+
+Your user may run exactly one thing as it, the session script `bin/firefox-session`, through a rule
+in `/etc/sudoers.d`, and a limit on processes keeps a runaway page from filling the machine.
+
+Its install asks six things, remembered in `/etc/wren/firefox.conf` (which only root can write) and
+asked again when you run it again in a terminal: fast JavaScript (the JIT; default no, since it is
+where many browser attacks happen), sound (default yes), whether it is your default browser, so
+links from other programs open in it (default yes), and uBlock Origin's mode: medium (default: other
+sites' scripts blocked too; you allow sites with `ublock-allow`) or standard (ads, trackers and
+malware sites blocked, sites work), and, for when secure DNS is switched off, Firefox's own
+encrypted DNS to Quad9: strict (default: never plain DNS) or with fallback to the network's; and
+whether its cookies, site data and cache are deleted when it closes (default delete), so websites
+and the ad and tracker companies behind them can't recognise you from one visit to the next: you are
+then logged out of every site at each close, except sites you allow under Firefox's Settings >
+Privacy & Security > Cookies and Site Data > Manage Exceptions.
+
+History, bookmarks and saved passwords stay either way (no website can read them), and saved
+passwords fill in when you click a login box, not as the page loads (tracking scripts have read what
+Firefox filled into hidden boxes).
+
+Per-site profiles keep their cookies: that is what they are for.
+
+It follows Wren Linux's light or dark theme (`theme`), and a JPEG or PNG in
+`~/Pictures/wren/firefox` replaces the fox behind its New Tab page: your `firefox` command hands it
+a checked copy, which only the `firefox` user can read, at each start, so it never sees your
+pictures folder.
+
+It also sets up Firefox's hardening and `incognito` ([firefox.md](firefox.md)), and the profiles
+made with `extras/firefox-profiles/new-profile.sh` each get a user like it.
 
 ## LIMITS
 
-- With secure DNS switched off, and with strict DNS (the default), a Wi-Fi sign-in page (cafés, hotels) won't load in any of Wren Linux's Firefoxes, and on a network that blocks encrypted DNS no site will: run this again and choose fallback.
+- With secure DNS switched off, and with strict DNS (the default), a Wi-Fi sign-in page (cafés,
+  hotels) won't load in any of Wren Linux's Firefoxes, and on a network that blocks encrypted DNS no
+  site will: run this again and choose fallback.
 - What lands in `~/Downloads` comes from the web: treat it as untrusted.
-- With cookies deleted on close (the default), every site logs you out when Firefox closes, and a few forget settings or ask about cookies again; allow the sites you want to stay logged in to under Manage Exceptions, or choose keep.
+- With cookies deleted on close (the default), every site logs you out when Firefox closes, and a
+  few forget settings or ask about cookies again; allow the sites you want to stay logged in to
+  under Manage Exceptions, or choose keep.
 - The clipboard is shared while its window has focus.
-- No WebRTC and no microphone or camera, here and in the profiles: video calls
-  and browser-to-browser file transfers don't work.
+- No WebRTC and no microphone or camera, here and in the profiles: video calls and
+  browser-to-browser file transfers don't work.
 - It shares your kernel: a kernel bug could let a page out of its user.
 - It's your network and your address; and `firefox-unsafe` runs as you, without any of this.
-- `firefox-esr` opening the sandbox stops a program (or a habit) that starts Firefox by name; one that wants Firefox as you can still run `/usr/lib/firefox-esr/firefox-esr` itself.
+- `firefox-esr` opening the sandbox stops a program (or a habit) that starts Firefox by name; one
+  that wants Firefox as you can still run `/usr/lib/firefox-esr/firefox-esr` itself.
 
 ## MANUAL INSTALL
 
-Do the steps in [firefox.md](firefox.md) first: Firefox's hardening, then
-incognito. (`--manual` prints them above these.)
+Do the steps in [firefox.md](firefox.md) first: Firefox's hardening, then incognito. (`--manual`
+prints them above these.)
 
 ```
 # Firefox, video codecs, uBlock, acl for sharing the socket and ~/Downloads,

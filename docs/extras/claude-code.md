@@ -16,35 +16,47 @@ claude-unsandboxed               Claude Code as you, with all your files
 claude-pull                      in your copy of a repository: shows what Claude pushed, brings it in on y
 ```
 
-Claude Code, Anthropic's coding assistant for the terminal, from Anthropic's
-signed apt repository (its key must be exactly `ANTHROPIC_FPR` in `pins.sh`;
-unattended-upgrades installs its updates). `claude-sandbox` (or `claude`) runs it as its own user,
-`claude-agent`, which has no password and no login and can't read your home
-folder, keys, passwords or browser profiles. It works in `~/projects`, which
-you share with it through ACLs. Your user may run exactly one thing as it,
-the script that starts Claude Code (`bin/claude-session`, through a rule in
-`/etc/sudoers.d`), and a firewall rule matching only that user
-(`data/claude-firewall.nft`, loaded at every boot) keeps it off this computer
-and your local network: it can reach the internet, nothing else. It gets its
-own ssh key and git identity, and Debian's git, ssh, ripgrep, jq, shellcheck
-and python venv. Because it can change any file in `~/projects`, your own git
-gets a guard there (`bin/git`) that refuses a bare repository you did not name, and a repository whose `.git/config`
-or hooks could run a program as you. This is the lighter of the two Claude
-Code sandboxes: it shares your kernel; `extras/claude-vm.sh` is the stronger.
-Another account (a second Claude login: work and personal, say) gets a user
-of its own, `claude-agent-NAME`, with its own home (login, settings,
-memories), ssh key, sudo rule and firewall line, and its own folder,
-`~/projects-NAME`: no account can enter another's home or folder, the first
-one's included.
+Claude Code, Anthropic's coding assistant for the terminal, from Anthropic's signed apt repository
+(its key must be exactly `ANTHROPIC_FPR` in `pins.sh`; unattended-upgrades installs its updates).
+
+`claude-sandbox` (or `claude`) runs it as its own user, `claude-agent`, which has no password and no
+login and can't read your home folder, keys, passwords or browser profiles. It works in
+`~/projects`, which you share with it through ACLs.
+
+Your user may run exactly one thing as it, the script that starts Claude Code (`bin/claude-session`,
+through a rule in `/etc/sudoers.d`), and a firewall rule matching only that user
+(`data/claude-firewall.nft`, loaded at every boot) keeps it off this computer and your local
+network: it can reach the internet, nothing else.
+
+It gets its own ssh key and git identity, and Debian's git, ssh, ripgrep, jq, shellcheck and python
+venv.
+
+Because it can change any file in `~/projects`, your own git gets a guard there (`bin/git`) that
+refuses a bare repository you did not name, and a repository whose `.git/config` or hooks could run
+a program as you.
+
+This is the lighter of the two Claude Code sandboxes: it shares your kernel; `extras/claude-vm.sh`
+is the stronger.
+
+Another account (a second Claude login: work and personal, say) gets a user of its own,
+`claude-agent-NAME`, with its own home (login, settings, memories), ssh key, sudo rule and firewall
+line, and its own folder, `~/projects-NAME`: no account can enter another's home or folder, the
+first one's included.
 
 ## LIMITS
 
-- Signing in: the sandboxed Firefox can't finish the link that comes back to this computer (`localhost`); its firewall is what stops it. Open the link printed in the terminal instead and paste the code it gives you (it says so before the first sign-in, and waits for Enter). `firefox-esr` works too, but runs as you.
+- Signing in: the sandboxed Firefox can't finish the link that comes back to this computer
+  (`localhost`); its firewall is what stops it.
+
+  Open the link printed in the terminal instead and paste the code it gives you (it says so before
+  the first sign-in, and waits for Enter). `firefox-esr` works too, but runs as you.
 - It shares your kernel: a kernel bug could let it out of its user.
 - It reaches the internet, so what it reads in `~/projects` can leave this computer.
-- Treat what it leaves in `~/projects` as untrusted before you run it; the git guard checks git's own files, not the code.
+- Treat what it leaves in `~/projects` as untrusted before you run it; the git guard checks git's
+  own files, not the code.
 - `/usr/bin/git` skips the guard, and `claude-unsandboxed` has all your files.
-- Accounts are kept apart by Linux users, on one kernel: the same kernel-bug limit applies between them. Anything you copy from one account's folder to another's crosses over.
+- Accounts are kept apart by Linux users, on one kernel: the same kernel-bug limit applies between
+  them. Anything you copy from one account's folder to another's crosses over.
 
 ## MANUAL INSTALL
 
@@ -147,10 +159,9 @@ rm /tmp/wren-claude-NAME
 cd ~/projects-NAME && mkdir -p X && cd X && claude --account NAME
 ```
 
-To undo an account: `sudo rm /etc/sudoers.d/wren-claude-NAME`, its
-`setfacl -x` on `~` and `~/projects-NAME` (as below, with its user name),
-`sudo pkill -KILL -u claude-agent-NAME`, `sudo userdel -r claude-agent-NAME`,
-then its line out of `/etc/wren/claude.nft` and
+To undo an account: `sudo rm /etc/sudoers.d/wren-claude-NAME`, its `setfacl -x` on `~` and
+`~/projects-NAME` (as below, with its user name), `sudo pkill -KILL -u claude-agent-NAME`,
+`sudo userdel -r claude-agent-NAME`, then its line out of `/etc/wren/claude.nft` and
 `sudo systemctl restart wren-claude-firewall`. `~/projects-NAME` stays.
 
 To undo:

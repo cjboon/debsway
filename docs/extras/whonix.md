@@ -15,63 +15,90 @@ whonix stop        shut both down, right away and cleanly: save your work inside
 whonix stop --force   the same, and one still running after 30 seconds is switched off
 ```
 
-Whonix runs Tor in one virtual machine, the Gateway, and your programs in
-another, the Workstation, whose only network is the Gateway, so even a hacked
-browser in the Workstation can't learn your real address. Everything runs as
-your user under KVM (libvirt's `qemu:///session`), with no root daemon or host
-network setup. The download (about 1.9 GB) is checked against Whonix's signing
-key, pinned in `pins.sh` (`WHONIX_FPR`), and kept in `offline/whonix`. Before
-the first boot, Wren Linux writes into the images, without mounting them (with
-qemu-img and debugfs): in both, a rule for acpid so that the power button, which
-`whonix stop` presses, shuts the VM down cleanly (left to Whonix's desktop, it
-opens a dialog); a bridge for the Gateway if you need one (obfs4 or
-webtunnel lines you paste, or Snowflake), so its very first connection uses it, or Tor kept
-off until you turn it on (`--bridges` chooses again later); and in the Workstation, Tor Browser at Safest with
-JavaScript off (`data/tor-browser-safest.js`) and the Feather wallet for Monero:
-Feather's own build for Tails and Whonix, which has no Tor of its own and uses
-the Gateway's, checked against the hash list signed by Feather's key
-(`FEATHER_FPR`), as the Feather extra checks it. Electrum, for Bitcoin, comes
-with Whonix. If Feather can't be downloaded or checked, Whonix is installed
-without it. For wallets, Whonix is the safest choice Wren Linux has: a wallet in
-the Workstation can't reach this computer's files or its real address, even if
-it is hacked.
+Whonix runs Tor in one virtual machine, the Gateway, and your programs in another, the Workstation,
+whose only network is the Gateway, so even a hacked browser in the Workstation can't learn your real
+address.
 
-The Gateway's way out is a network card of Wren Linux's, joined to a passt that
-`whonix` starts before the Gateway. Whonix's own file gives it libvirt's, and
-libvirt can't give passt any option: with passt's defaults the Gateway's address
-for your router leads to this computer's own loopback instead (every port of it:
-Tor's port, the VMs' consoles, a local server), and nothing answers DNS, so
-Snowflake never gets past "broker failure" at 10%. Wren Linux's passt has
-Whonix's fixed addresses (the Gateway 10.0.2.15, its gateway 10.0.2.2), IPv4
-only, no DHCP, nothing of this computer mapped in (`--no-map-gw`), and one
-address, 10.0.2.3, where only DNS goes on, to the resolver this computer uses
-(Unbound with secure DNS on, so encrypted). The Gateway's own DNS stays off, as
-Whonix ships it, except for a bridge that has to look names up (Snowflake,
-webtunnel): then its `/etc/resolv.conf.whonix` gets `nameserver 10.0.2.3`.
-webtunnel is experimental here: Whonix ships no program for it, so Wren Linux
-installs lyrebird on this computer from the Tor Project's repository (its key
-pinned, `TORPROJECT_FPR`, and an apt pin that lets nothing else come from
-there), where its updates install themselves, and copies it into the Gateway
-as `/usr/bin/lyrebird`; Tor's AppArmor profile in Whonix 18 already lets Tor
-run it. Installed before
-this? Running `wrenctl install whonix` again (with the Gateway shut down)
-gives it the new card; `--bridges` then sets the DNS for the bridge you choose.
+Everything runs as your user under KVM (libvirt's `qemu:///session`), with no root daemon or host
+network setup. The download (about 1.9 GB) is checked against Whonix's signing key, pinned in
+`pins.sh` (`WHONIX_FPR`), and kept in `offline/whonix`.
+
+Before the first boot, Wren Linux writes into the images, without mounting them (with qemu-img and
+debugfs): in both, a rule for acpid so that the power button, which `whonix stop` presses, shuts the
+VM down cleanly (left to Whonix's desktop, it opens a dialog); a bridge for the Gateway if you need
+one (obfs4 or webtunnel lines you paste, or Snowflake), so its very first connection uses it, or Tor
+kept off until you turn it on (`--bridges` chooses again later); and in the Workstation, Tor Browser
+at Safest with JavaScript off (`data/tor-browser-safest.js`) and the Feather wallet for Monero:
+Feather's own build for Tails and Whonix, which has no Tor of its own and uses the Gateway's,
+checked against the hash list signed by Feather's key (`FEATHER_FPR`), as the Feather extra checks
+it.
+
+Electrum, for Bitcoin, comes with Whonix. If Feather can't be downloaded or checked, Whonix is
+installed without it.
+
+For wallets, Whonix is the safest choice Wren Linux has: a wallet in the Workstation can't reach
+this computer's files or its real address, even if it is hacked.
+
+The Gateway's way out is a network card of Wren Linux's, joined to a passt that `whonix` starts
+before the Gateway.
+
+Whonix's own file gives it libvirt's, and libvirt can't give passt any option: with passt's defaults
+the Gateway's address for your router leads to this computer's own loopback instead (every port of
+it: Tor's port, the VMs' consoles, a local server), and nothing answers DNS, so Snowflake never gets
+past "broker failure" at 10%.
+
+Wren Linux's passt has Whonix's fixed addresses (the Gateway 10.0.2.15, its gateway 10.0.2.2), IPv4
+only, no DHCP, nothing of this computer mapped in (`--no-map-gw`), and one address, 10.0.2.3, where
+only DNS goes on, to the resolver this computer uses (Unbound with secure DNS on, so encrypted).
+
+The Gateway's own DNS stays off, as Whonix ships it, except for a bridge that has to look names up
+(Snowflake, webtunnel): then its `/etc/resolv.conf.whonix` gets `nameserver 10.0.2.3`. webtunnel is
+experimental here: Whonix ships no program for it, so Wren Linux installs lyrebird on this computer
+from the Tor Project's repository (its key pinned, `TORPROJECT_FPR`, and an apt pin that lets
+nothing else come from there), where its updates install themselves, and copies it into the Gateway
+as `/usr/bin/lyrebird`; Tor's AppArmor profile in Whonix 18 already lets Tor run it.
+
+Installed before this? Running `wrenctl install whonix` again (with the Gateway shut down) gives it
+the new card; `--bridges` then sets the DNS for the bridge you choose.
 
 ## LIMITS
 
 - A bug in KVM or QEMU could reach this computer from a VM.
-- What you type into a site still identifies you if it's about you; Tor hides the address, not the person.
-- `whonix stop` doesn't ask inside the VMs: what isn't saved there is lost. The same goes for the power button of a VM's own window. Tried here on Whonix 18.2.4.2, without a Tor connection or programs open: both VMs were off in 5 seconds, their disks clean.
-- VMs installed before this have no such rule: `whonix stop` opens their shutdown dialog and leaves them running until you choose Shutdown there. `--bridges` gives the Gateway the rule, but nothing gives it to a Workstation that is already installed: back up what you keep in it, then `wrenctl remove whonix` (saying yes to deleting the disks) and `wrenctl install whonix`.
-- `whonix stop --force` switches off a VM still running after 30 seconds, as if its power button were held, which can leave its disk needing repair at the next boot.
-- Wren Linux doesn't update Feather in the Workstation after the install: Feather says when a newer version is out, and its guide for Whonix (docs.featherwallet.org) shows how to replace it. Whonix updates Electrum with its other packages.
-- Feather inside the Workstation hasn't been tried in a real Whonix VM yet: the files are put in place and checked, but not run there.
+- What you type into a site still identifies you if it's about you; Tor hides the address, not the
+  person.
+- `whonix stop` doesn't ask inside the VMs: what isn't saved there is lost. The same goes for the
+  power button of a VM's own window. Tried here on Whonix 18.2.4.2, without a Tor connection or
+  programs open: both VMs were off in 5 seconds, their disks clean.
+
+- VMs installed before this have no such rule: `whonix stop` opens their shutdown dialog and leaves
+  them running until you choose Shutdown there.
+
+  `--bridges` gives the Gateway the rule, but nothing gives it to a Workstation that is already
+  installed: back up what you keep in it, then `wrenctl remove whonix` (saying yes to deleting the
+  disks) and `wrenctl install whonix`.
+- `whonix stop --force` switches off a VM still running after 30 seconds, as if its power button
+  were held, which can leave its disk needing repair at the next boot.
+- Wren Linux doesn't update Feather in the Workstation after the install: Feather says when a newer
+  version is out, and its guide for Whonix (docs.featherwallet.org) shows how to replace it. Whonix
+  updates Electrum with its other packages.
+- Feather inside the Workstation hasn't been tried in a real Whonix VM yet: the files are put in
+  place and checked, but not run there.
 - Whonix's own updates run inside the VMs: update them there.
-- With Snowflake, the Gateway looks up its broker and STUN servers through this computer's resolver (encrypted, with secure DNS on); the resolver sees those names, and your network sees you reach them, as with Snowflake anywhere. Whonix's page on Gateway DNS knows of no risk in having it on.
-- Started any other way than `whonix` (virt-manager, `virsh start`), the Gateway has no network: its passt isn't running.
-- webtunnel's copy of lyrebird in the Gateway isn't updated by Whonix. `whonix` says when the one on this computer is newer; then `whonix stop` and `wrenctl install whonix --bridges` copy it in again. Until you do, the Gateway runs the older one.
-- A disk switched off without shutting down (as `whonix stop --force` can do) isn't edited: `--bridges` asks you to start the Gateway once and shut it down from inside first, so its journal is replayed.
-- The Gateway's own network was tried here with Whonix 18.2.4.2 under passt (its outside card is eth0, Tor reaches its relays), and Snowflake through it connected on a real install. webtunnel was tried here only up to lyrebird starting and looking up a bridge's address: a real webtunnel bridge (from bridges.torproject.org) is yours to try.
+- With Snowflake, the Gateway looks up its broker and STUN servers through this computer's resolver
+  (encrypted, with secure DNS on); the resolver sees those names, and your network sees you reach
+  them, as with Snowflake anywhere. Whonix's page on Gateway DNS knows of no risk in having it on.
+- Started any other way than `whonix` (virt-manager, `virsh start`), the Gateway has no network: its
+  passt isn't running.
+- webtunnel's copy of lyrebird in the Gateway isn't updated by Whonix. `whonix` says when the one on
+  this computer is newer; then `whonix stop` and `wrenctl install whonix --bridges` copy it in
+  again. Until you do, the Gateway runs the older one.
+- A disk switched off without shutting down (as `whonix stop --force` can do) isn't edited:
+  `--bridges` asks you to start the Gateway once and shut it down from inside first, so its journal
+  is replayed.
+- The Gateway's own network was tried here with Whonix 18.2.4.2 under passt (its outside card is
+  eth0, Tor reaches its relays), and Snowflake through it connected on a real install. webtunnel was
+  tried here only up to lyrebird starting and looking up a bridge's address: a real webtunnel bridge
+  (from bridges.torproject.org) is yours to try.
 
 ## MANUAL INSTALL
 

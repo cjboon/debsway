@@ -21,46 +21,61 @@ claude-pull            in your copy of a repository: shows what the agent pushed
 claude-vm --account NAME [shell|status|stop|pubkey|rebuild]   the same, for that account's VM
 ```
 
-Claude Code inside a disposable Debian virtual machine (QEMU/KVM), so a
-kernel bug that would get out of a user-level sandbox only reaches a VM you
-can delete. A locked user, `claude-vm` (no password, no login), runs the one
-QEMU process; the guest's disk is its own and there is no shared folder: the
-agent hands work back only by pushing to a git host (to a branch `claude`, so your own
-branch stays yours), which you bring into your own copy with `claude-pull`. QEMU's user-mode networking turns the guest's
-traffic into ordinary sockets owned by `claude-vm`, so a firewall rule on that
-user (`data/claude-vm-firewall.nft`) governs the guest: the internet yes, your
-router, printers and local services no, except the guest's own ssh console on
-127.0.0.1:2242. The guest is built unattended with the bundled mockvps-kvm,
-its installer checked against Debian's signed lists, then provisioned
-(`data/claude-vm-provision.sh`) with Claude Code from Anthropic's apt
-repository, checked against the same pinned key (`ANTHROPIC_FPR`), and its
-own git identity and ssh key. Your user may run exactly one thing as
-`claude-vm`, the `claude-vm-session` script, through a rule in
-`/etc/sudoers.d`. It needs KVM. Another account (a second Claude login)
-gets a VM of its own, run by its own locked user, `claude-vm-NAME`: its own
-disk, keys and login, its own console port (2250-2299, written by root in
-`/etc/wren/claude-vm-ports`), a sudo rule, and firewall lines that let
-that user reach its own port and nobody else's. Each VM takes its own disk
-space (several GB) and memory while it runs. How much (`lib/vm-size.sh`): the
-first time, it shows this computer's memory and free disk and suggests a size
-(a third of the memory, 2 to 8 GB; a 40 GB disk), Enter taking the suggestion;
-it refuses more than this computer can spare (at most half the memory, always
-4 GB left for the computer; at most the free disk less 20 GB, since the VM's
-disk file grows as it fills), and builds no VM at all on a computer with less
-than 4 GB of memory or 25 GB of free disk. `--memory` and `--disk` change it later: memory
-from the VM's next start, the disk from its next build (`claude-vm rebuild`).
-The choice is kept in `/etc/wren/claude-vm-size`, which only root can change.
+Claude Code inside a disposable Debian virtual machine (QEMU/KVM), so a kernel bug that would get
+out of a user-level sandbox only reaches a VM you can delete.
+
+A locked user, `claude-vm` (no password, no login), runs the one QEMU process; the guest's disk is
+its own and there is no shared folder: the agent hands work back only by pushing to a git host (to a
+branch `claude`, so your own branch stays yours), which you bring into your own copy with
+`claude-pull`.
+
+QEMU's user-mode networking turns the guest's traffic into ordinary sockets owned by `claude-vm`, so
+a firewall rule on that user (`data/claude-vm-firewall.nft`) governs the guest: the internet yes,
+your router, printers and local services no, except the guest's own ssh console on 127.0.0.1:2242.
+
+The guest is built unattended with the bundled mockvps-kvm, its installer checked against Debian's
+signed lists, then provisioned (`data/claude-vm-provision.sh`) with Claude Code from Anthropic's apt
+repository, checked against the same pinned key (`ANTHROPIC_FPR`), and its own git identity and ssh
+key.
+
+Your user may run exactly one thing as `claude-vm`, the `claude-vm-session` script, through a rule
+in `/etc/sudoers.d`. It needs KVM.
+
+Another account (a second Claude login) gets a VM of its own, run by its own locked user,
+`claude-vm-NAME`: its own disk, keys and login, its own console port (2250-2299, written by root in
+`/etc/wren/claude-vm-ports`), a sudo rule, and firewall lines that let that user reach its own port
+and nobody else's.
+
+Each VM takes its own disk space (several GB) and memory while it runs.
+
+How much (`lib/vm-size.sh`): the first time, it shows this computer's memory and free disk and
+suggests a size (a third of the memory, 2 to 8 GB; a 40 GB disk), Enter taking the suggestion; it
+refuses more than this computer can spare (at most half the memory, always 4 GB left for the
+computer; at most the free disk less 20 GB, since the VM's disk file grows as it fills), and builds
+no VM at all on a computer with less than 4 GB of memory or 25 GB of free disk.
+
+`--memory` and `--disk` change it later: memory from the VM's next start, the disk from its next
+build (`claude-vm rebuild`). The choice is kept in `/etc/wren/claude-vm-size`, which only root can
+change.
 
 ## LIMITS
 
-- Updates install themselves in a VM built since this was added: Debian's and Claude Code's. An older VM needs `claude-vm rebuild`, or `sudo apt update && sudo apt upgrade` in `claude-vm shell`.
-- The agent has sudo without a password in the VM, so treat everything in it as under its control, including what the VM tells you. A VM built before this has no such rule and no clean snapshot: `claude-vm rebuild` adds both, and deletes what isn't pushed.
-- QEMU runs under its own syscall filter, and the VM won't start unless the firewall is active, and an ssh login that forwards nothing. Its terminal output still reaches your terminal.
-- A bug in QEMU or KVM could reach this computer; a VM is a stronger wall than a user, not a perfect one.
+- Updates install themselves in a VM built since this was added: Debian's and Claude Code's. An
+  older VM needs `claude-vm rebuild`, or `sudo apt update && sudo apt upgrade` in `claude-vm shell`.
+- The agent has sudo without a password in the VM, so treat everything in it as under its control,
+  including what the VM tells you. A VM built before this has no such rule and no clean snapshot:
+  `claude-vm rebuild` adds both, and deletes what isn't pushed.
+- QEMU runs under its own syscall filter, and the VM won't start unless the firewall is active, and
+  an ssh login that forwards nothing. Its terminal output still reaches your terminal.
+- A bug in QEMU or KVM could reach this computer; a VM is a stronger wall than a user, not a perfect
+  one.
 - It reaches the internet, so what it reads can leave the VM.
 - Treat what it pushes as untrusted until you have read it (`claude-pull` shows it first).
-- Its ssh key on your git host can push wherever you allow: a deploy key on one repository is the narrowest, and a rule on the host that only your signed commits go into your main branch keeps it to its `claude` branch.
-- Two accounts' VMs are as far apart as two VMs on one computer: a bug in QEMU or KVM is the way between them too.
+- Its ssh key on your git host can push wherever you allow: a deploy key on one repository is the
+  narrowest, and a rule on the host that only your signed commits go into your main branch keeps it
+  to its `claude` branch.
+- Two accounts' VMs are as far apart as two VMs on one computer: a bug in QEMU or KVM is the way
+  between them too.
 
 ## MANUAL INSTALL
 
@@ -124,8 +139,8 @@ sudo -u claude-vm /usr/local/libexec/claude-vm-session pubkey
 claude-vm
 ```
 
-The `sed` line fills the placeholders in `data/claude-vm-provision.sh` with
-the pinned key; `--manual` prints it with the pinned values in place.
+The `sed` line fills the placeholders in `data/claude-vm-provision.sh` with the pinned key;
+`--manual` prints it with the pinned values in place.
 
 Another account, NAME (small letters and digits), after the steps above:
 
@@ -152,9 +167,8 @@ claude-vm --account NAME
 ```
 
 To undo an account: `sudo rm /etc/sudoers.d/wren-claude-vm-NAME`,
-`sudo pkill -KILL -u claude-vm-NAME`, `sudo userdel -r claude-vm-NAME` (its
-VM goes with it), its line out of `/etc/wren/claude-vm-ports` and its two
-lines out of `/etc/wren/claude-vm.nft`, then
+`sudo pkill -KILL -u claude-vm-NAME`, `sudo userdel -r claude-vm-NAME` (its VM goes with it), its
+line out of `/etc/wren/claude-vm-ports` and its two lines out of `/etc/wren/claude-vm.nft`, then
 `sudo systemctl restart wren-claude-vm-firewall`.
 
 To undo:

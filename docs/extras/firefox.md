@@ -14,32 +14,36 @@ wifi-signin                   the Wi-Fi sign-in window: the same, for a café's 
 ```
 
 The sandboxed Firefox sets up Firefox ESR the Wren Linux way for every profile
-(`parts/firefox-hardening.sh`): uBlock Origin from Debian, in the mode chosen
-at install: standard (ads, trackers and known malware sites blocked) or medium
-(scripts and frames from other sites blocked too, which is where most malicious
-ads come from); the JavaScript JIT off, which most serious Firefox exploits
-target; HTTPS-Only Mode; Firefox's DNS encrypted (the system's while secure DNS
-is on, else its own to Quad9, strict or with fallback); a New Tab with no
-shortcuts, sponsored items or weather;
-and a notice when Firefox was updated while running and needs a restart. The
-prefs are `data/firefox-hardening.js`, the policies come from
-`bin/ublock-allow`. It also sets up `incognito` (`parts/incognito.sh`): a
-throwaway Firefox in cage, a tiny compositor shown as one window, as a locked
-user with no home, no files of yours, no shared clipboard and only a
-restricted Wayland socket; its profile lives in memory and is deleted when the
-window closes. Its sound goes through a pipe into a player of yours, so it
-can't hear your microphone, and a firewall rule on that user
-(`data/incognito-firewall.nft`) keeps it off your network. The Wi-Fi sign-in
-window (`wifi-signin`) is the same throwaway Firefox as a second such user,
+(`parts/firefox-hardening.sh`): uBlock Origin from Debian, in the mode chosen at install: standard
+(ads, trackers and known malware sites blocked) or medium (scripts and frames from other sites
+blocked too, which is where most malicious ads come from); the JavaScript JIT off, which most
+serious Firefox exploits target; HTTPS-Only Mode; Firefox's DNS encrypted (the system's while secure
+DNS is on, else its own to Quad9, strict or with fallback); a New Tab with no shortcuts, sponsored
+items or weather; and a notice when Firefox was updated while running and needs a restart.
+
+The prefs are `data/firefox-hardening.js`, the policies come from `bin/ublock-allow`.
+
+It also sets up `incognito` (`parts/incognito.sh`): a throwaway Firefox in cage, a tiny compositor
+shown as one window, as a locked user with no home, no files of yours, no shared clipboard and only
+a restricted Wayland socket; its profile lives in memory and is deleted when the window closes.
+
+Its sound goes through a pipe into a player of yours, so it can't hear your microphone, and a
+firewall rule on that user (`data/incognito-firewall.nft`) keeps it off your network.
+
+The Wi-Fi sign-in window (`wifi-signin`) is the same throwaway Firefox as a second such user,
 `wifi-signin`, with the network's own DNS and plain http allowed; its rule
-(`data/wifi-signin-firewall.nft`) lets it reach the local network, where sign-in
-pages often are, but not this computer. That user runs only that window.
+(`data/wifi-signin-firewall.nft`) lets it reach the local network, where sign-in pages often are,
+but not this computer.
+
+That user runs only that window.
 
 ## LIMITS
 
-- uBlock's medium mode, if chosen, breaks some sites until you allow them; the JIT being off makes heavy sites slower.
+- uBlock's medium mode, if chosen, breaks some sites until you allow them; the JIT being off makes
+  heavy sites slower.
 - `incognito` is still your network and your address: use Tor Browser or a VPN for that.
-- The Wi-Fi sign-in window can reach your local network (router, printers, other computers) while it is open: use it for sign-in pages only.
+- The Wi-Fi sign-in window can reach your local network (router, printers, other computers) while it
+  is open: use it for sign-in pages only.
 - `incognito` has no WebRTC: video calls and browser-to-browser file transfers don't work there.
 - Any window, `incognito` included, can be captured by screenshots.
 - Both share your kernel: a kernel bug could get out of them.

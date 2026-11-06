@@ -13,30 +13,45 @@ ssh-keygen -t ed25519-sk -f ~/.ssh/NAME   an SSH key that needs the security key
 fido2-token -L                            the keys plugged in
 ```
 
-A FIDO2 security key (YubiKey, Nitrokey, SoloKey, Google Titan and others)
-makes its secret inside the chip and never lets it out, and signs only when you
-touch it: malware on the computer can neither copy it nor use it for you, and a
-fake website gets nothing, because the key signs only for the site it was
-registered with. Linux (udev 244 and later) lets you, at the keyboard, use such
-a key by itself, so no rules from its maker are needed, and other users get
-none. The script installs `libfido2` and its tools, and asks two things. First,
-whether the sandboxed Firefox may use the key for website logins (WebAuthn):
-its users are others than you, so a udev rule (`data/security-key-firefox.rules`)
-lets the group `wren-fx` reach the key; Firefox run as you (`firefox-esr`, or
-`firefox-unsafe` with the sandboxed Firefox installed) can anyway. Second, whether sudo should take your password and a touch of the key
-(`pam_u2f`). The keys it accepts are listed in `/etc/wren/u2f_keys`, which only
-root can change, so nothing running as you can add one of its own; the setting
-is tried in a PAM service of its own first, and the change to sudo undoes itself
-after three minutes unless a new sudo, with your password and a touch, works.
+A FIDO2 security key (YubiKey, Nitrokey, SoloKey, Google Titan and others) makes its secret inside
+the chip and never lets it out, and signs only when you touch it: malware on the computer can
+neither copy it nor use it for you, and a fake website gets nothing, because the key signs only for
+the site it was registered with.
+
+Linux (udev 244 and later) lets you, at the keyboard, use such a key by itself, so no rules from its
+maker are needed, and other users get none. The script installs `libfido2` and its tools, and asks
+two things.
+
+First, whether the sandboxed Firefox may use the key for website logins (WebAuthn): its users are
+others than you, so a udev rule (`data/security-key-firefox.rules`) lets the group `wren-fx` reach
+the key; Firefox run as you (`firefox-esr`, or `firefox-unsafe` with the sandboxed Firefox
+installed) can anyway.
+
+Second, whether sudo should take your password and a touch of the key (`pam_u2f`).
+
+The keys it accepts are listed in `/etc/wren/u2f_keys`, which only root can change, so nothing
+running as you can add one of its own; the setting is tried in a PAM service of its own first, and
+the change to sudo undoes itself after three minutes unless a new sudo, with your password and a
+touch, works.
+
 SSH keys of the `ed25519-sk` kind need the key for every login;
 `tools/vps-client.sh ssh-key --security-key` makes one for the Wren Linux VPS.
 
 ## LIMITS
 
-- Lose the key and what needs it is closed to you: register a second key as a backup everywhere (sites, SSH servers, sudo), and keep it somewhere else.
-- With sudo taking the key, losing every registered key means no sudo. To get back in: at the boot menu press `e`, add `init=/bin/bash` to the line that starts with `linux`, press Ctrl+X, type the disk passphrase, then `mount -o remount,rw /`, take the two lines marked "Wren Linux extras/security-key.sh" out of `/etc/pam.d/sudo`, and restart.
-- It protects logging in, not what happens after: a program running as you can use a session that is already open (a sudo still remembered, a site you are logged in to).
-- Letting the sandboxed Firefox use the key means a hacked page in any of its profiles can ask for a login with it; each still needs your touch, and the key still signs only for the site Firefox names.
+- Lose the key and what needs it is closed to you: register a second key as a backup everywhere
+  (sites, SSH servers, sudo), and keep it somewhere else.
+
+- With sudo taking the key, losing every registered key means no sudo.
+
+  To get back in: at the boot menu press `e`, add `init=/bin/bash` to the line that starts with
+  `linux`, press Ctrl+X, type the disk passphrase, then `mount -o remount,rw /`, take the two lines
+  marked "Wren Linux extras/security-key.sh" out of `/etc/pam.d/sudo`, and restart.
+- It protects logging in, not what happens after: a program running as you can use a session that is
+  already open (a sudo still remembered, a site you are logged in to).
+- Letting the sandboxed Firefox use the key means a hacked page in any of its profiles can ask for a
+  login with it; each still needs your touch, and the key still signs only for the site Firefox
+  names.
 - The disk passphrase isn't replaced: unlocking the disk with the key isn't set up.
 
 ## MANUAL INSTALL

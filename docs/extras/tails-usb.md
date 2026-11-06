@@ -10,24 +10,29 @@ wrenctl manual tails-usb                      print the manual steps below
 tails-usb          download (or reuse) the newest Tails, check it, write it to a stick you pick
 ```
 
-Tails is a whole operating system that runs from a USB stick, sends
-everything through Tor and forgets everything when you shut it down. The
-`tails-usb` command (`bin/tails-usb`) finds the newest Tails in Tails' own
-release file and downloads the USB image, through Tor when the system tor
-service runs here (apt over Tor, remote access, the onion site), so your
-network can't see you fetch it. It uses the image only if it is signed by the
-Tails signing key, pinned in `pins.sh` (`TAILS_FPR`), and is exactly the image
-the release file names for the newest version, so an older signed Tails can't
-be slipped in. The verified copy is kept in `offline/tails` for the next stick.
-It lists only USB sticks, never the disk this system runs from, asks you to
-type the stick's name, writes Tails onto it and reads it back to check.
+Tails is a whole operating system that runs from a USB stick, sends everything through Tor and
+forgets everything when you shut it down.
+
+The `tails-usb` command (`bin/tails-usb`) finds the newest Tails in Tails' own release file and
+downloads the USB image, through Tor when the system tor service runs here (apt over Tor, remote
+access, the onion site), so your network can't see you fetch it.
+
+It uses the image only if it is signed by the Tails signing key, pinned in `pins.sh` (`TAILS_FPR`),
+and is exactly the image the release file names for the newest version, so an older signed Tails
+can't be slipped in.
+
+The verified copy is kept in `offline/tails` for the next stick. It lists only USB sticks, never the
+disk this system runs from, asks you to type the stick's name, writes Tails onto it and reads it
+back to check.
+
 Writing a stick erases everything on it, Persistent Storage included.
 
 ## LIMITS
 
 - Without Tor here, your network sees you download Tails (not what you do with it later).
 - Tails protects what you do while running it, not this computer.
-- A stick left with someone can be swapped or changed: keep it with you, and remake it from a checked image if in doubt.
+- A stick left with someone can be swapped or changed: keep it with you, and remake it from a
+  checked image if in doubt.
 
 ## MANUAL INSTALL
 
@@ -75,8 +80,8 @@ sha256sum tails-amd64-$V.img
 sudo head -c $(stat -c %s tails-amd64-$V.img) $DEV | sha256sum
 ```
 
-Then shut down, start the computer from the stick (its boot menu key is
-often F12, F9 or Esc), and choose Tails.
+Then shut down, start the computer from the stick (its boot menu key is often F12, F9 or Esc), and
+choose Tails.
 
 To undo:
 

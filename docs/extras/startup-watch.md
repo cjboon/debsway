@@ -12,29 +12,34 @@ sudo wren-watch diff               the changes themselves
 sudo wren-watch accept [FILE...]   take them as yours (all, or those files)
 ```
 
-A program running as you that wants to start again at every login has to
-change one of a few files: your shell's startup files (`~/.profile`,
-`~/.bashrc`, ...), tmux's, vim's, curl's and wget's settings, sway's config, `~/.config/autostart`, systemd user units,
-`~/.local/bin`, mako's config, `.desktop` files and default apps, Wren Linux's
-on-lock programs, your list of what opens at login, `~/.ssh/config`, `rc` and
-`authorized_keys`, and git's and gpg-agent's settings (`wren-watch --help` lists
-them). This keeps their
-fingerprints, and a copy of each text file, where nothing running as you can
-change them: root's, in `/var/lib/wren-watch`. A root timer compares them at
-boot and every 15 minutes, following no link and reading regular files only,
-and writes what changed where you can read it but not change it. The bar then
-shows "startup changed", with a notification; a click shows the list and the
-changes. `sudo wren-watch accept` takes them as yours, with your password, so
-a program running as you can't accept its own change without it. `sudo
-wren-watch diff` reads your files as they are now with your rights, not root's,
-and follows no link, so a link planted there can't show it a root-only file.
-`wrenctl install`, `part`, `remove` and `update` take what their own run changed as Wren
-Linux's, except a file that had changed before the run, which is left for you.
+A program running as you that wants to start again at every login has to change one of a few files:
+your shell's startup files (`~/.profile`, `~/.bashrc`, ...), tmux's, vim's, curl's and wget's
+settings, sway's config, `~/.config/autostart`, systemd user units, `~/.local/bin`, mako's config,
+`.desktop` files and default apps, Wren Linux's on-lock programs, your list of what opens at login,
+`~/.ssh/config`, `rc` and `authorized_keys`, and git's and gpg-agent's settings (`wren-watch --help`
+lists them).
+
+This keeps their fingerprints, and a copy of each text file, where nothing running as you can change
+them: root's, in `/var/lib/wren-watch`.
+
+A root timer compares them at boot and every 15 minutes, following no link and reading regular files
+only, and writes what changed where you can read it but not change it.
+
+The bar then shows "startup changed", with a notification; a click shows the list and the changes.
+`sudo wren-watch accept` takes them as yours, with your password, so a program running as you can't
+accept its own change without it.
+
+`sudo wren-watch diff` reads your files as they are now with your rights, not root's, and follows no
+link, so a link planted there can't show it a root-only file.
+
+`wrenctl install`, `part`, `remove` and `update` take what their own run changed as Wren Linux's,
+except a file that had changed before the run, which is left for you.
 
 ## LIMITS
 
 - It notices, it doesn't prevent: the change is made, and works, until you see it and undo it.
-- It sees only the files it watches. A program can also start from a file it doesn't watch, or run on in memory until you log out.
+- It sees only the files it watches. A program can also start from a file it doesn't watch, or run
+  on in memory until you log out.
 - Up to 15 minutes pass before a change shows (and until the next login, if you log out first).
 - What a change made while `wrenctl` runs, to a file that run also changes, is taken with it.
 
