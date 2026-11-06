@@ -292,6 +292,9 @@ There's nothing to break into but ssh and the web server.
 3. **DNS:** a registrar that supports DNSSEC; turn it on.
    - CAA records naming your certificate authority only.
    - A domain that doesn't depend on any one free service.
+   - Computers contact the repository regularly, so a rare domain would mark them as Wren Linux's
+     to anyone watching their network. Decide this before the server goes up: the repository on
+     an onion address (`parts/wren-repo.sh` allows it), or somewhere with plenty of other traffic.
 4. **Content:**
    - What Wren Linux is, the threat model in plain words, screenshots.
    - Install steps, and verification steps: check the ISO's checksum, and
@@ -385,6 +388,29 @@ Not "install it fresh at every boot" either: that downloads packages each
 time (slow, impossible offline, and visible to the network). Revisit if
 people who use Wren Linux ask for it and someone can rebuild the image
 often; the amnesic mode (4b) covers much of the same need meanwhile.
+
+### 4d. Tor first (an idea, not a plan)
+
+Worth looking at again some day, as a choice at install. It isn't the default, and it isn't Tails:
+it could say your network can't see what you install, not that you are anonymous.
+
+Snowflake needs no line from you, so it could make the first connection. Over Tor, `lyrebird` then
+comes from the Tor Project's repository and you get a webtunnel line (a CAPTCHA, by hand: the Tor
+Project guards bridges against collection, and Wren Linux shouldn't get around that). Tor then
+switches to webtunnel, with Snowflake as its fallback, for apt and whatever else takes Tor.
+
+What stands in the way:
+
+- **"Nothing connects first" needs a firewall from the first boot,** and plain NTP (`parts/clock.sh`)
+  has to wait, though Tor needs a roughly right clock to connect. Wi-Fi and DHCP can't be hidden.
+- **The first moment still looks like Snowflake.** Someone in a risky place should bring a webtunnel
+  line from another device instead.
+- **A dead bridge mustn't quietly stop security updates,** so it needs a warning.
+- **Other things go direct today:** other apt repositories, and what's fetched with `wget`.
+- **webtunnel is still experimental** here, and has yet to be tried with a real bridge.
+- **It doesn't hide traffic patterns.** Mullvad's DAITA does that with Maybenot (open source), but
+  that needs both ends, and a Wren Linux-only pattern would make its users easier to spot: it belongs
+  in Tor itself, if and when Tor ships it.
 
 ---
 
