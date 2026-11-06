@@ -25,6 +25,11 @@ Ticking "No wallpapers downloaded, I'll find my own" downloads nothing and only 
 and its README. Pictures of your own (an image search, saved through Firefox into `~/Downloads`) can
 go in the same folder: Wren Linux never changes or removes them.
 
+Pexels has more for your own screen: <https://www.pexels.com/search/desktop%20wallpaper/>. They're free to
+use there with no credit needed, but its terms don't allow passing them on as they are, so Wren Linux
+doesn't ship any. Its licence, which can change: <https://www.pexels.com/license/>. Wren Linux only names
+the site: nothing here opens or fetches it.
+
 Super+] and Super+[ step through the folder as your wallpaper, and `wallpaper pick` lists it by name
 (`parts/wallpaper.sh`). `README.txt` there says the same.
 

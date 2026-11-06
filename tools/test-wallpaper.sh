@@ -233,6 +233,8 @@ check "...two pictures with the same name both kept, under their own names" \
     test "$(find "$W" -name 'budgie_*1920x1080.jpg' | wc -l)" = 2
 check "...the downloads are on the list" grep -qx budgie_big.png "$W/.wren-wallpapers"
 check "...a README, which says your own pictures can go there too" bash -c '[ ! -e "$1/personal" ] && grep -q "Your own pictures" "$1/README.txt"' _ "$W"
+check "...and where to find more for your own screen, with its licence" \
+    bash -c 'grep -q "https://www.pexels.com/search/desktop%20wallpaper/" "$1/README.txt" && grep -q "https://www.pexels.com/license/" "$1/README.txt"' _ "$W"
 check "...and the run succeeds" test "$rc" -eq 0
 n=$(find "$W" -type f | wc -l)
 xw

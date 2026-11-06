@@ -63,6 +63,11 @@ save them through Firefox into ~/Downloads, then move them here, with a name
 you will recognise. Wren Linux never changes or removes them. Pictures from the
 web are often copyrighted: fine on your own screen, but don't share them on.
 
+More to choose from: https://www.pexels.com/search/desktop%20wallpaper/
+Free for your own screen, and no credit needed. Their terms don't allow passing the
+pictures on as they are, so don't share them as wallpapers. Their licence, which can
+change: https://www.pexels.com/license/
+
 wrenctl install wallpapers fetches Budgie's again;
 wrenctl remove wallpapers takes out what it downloaded, nothing of yours.
 EOF
