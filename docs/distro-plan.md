@@ -313,10 +313,15 @@ There's nothing to break into but ssh and the web server.
 The aim: boot the ISO, answer a few questions, and end with Debian 13 and
 Wren Linux's base on an encrypted disk.
 
-- **Build on Debian's own installer:** debian-installer with a preseed file
-  (answers built in), packed with `simple-cdd` or by repacking Debian's
-  netinst ISO. Wren Linux already has `prep/make-install-iso.sh` (a preseeded
-  install from Debian's live image) and an offline install path to start from.
+- **Build on Debian's live standard image:** `prep/make-install-iso.sh` repacks it with a preseed
+  file (answers built in), and that's the choice for now. Its list (13.7.0) has `wpasupplicant`,
+  `iw`, `dhcpcd` and the Wi-Fi firmware in the system it copies to disk, so `wifi.sh` should get a
+  computer online with nothing added: to be tried on a real laptop, with a `--public` image, since
+  a personal one carries saved packages that would hide the answer. Netinst (0.8 GB) left a
+  Wi-Fi-only install without the standard utilities, and DVD-1 (4 GB) still has no sway or foot,
+  so neither makes the base installable offline. If people ask for that, the image could carry the
+  base's packages with a list signed by Wren Linux's key (Debian's own go stale in about
+  a week), at the cost of packages that age. `simple-cdd` stays an option for full control.
 - **The preseed:**
   - Encrypted LVM as the default, and the Wren Linux repository and its key.
   - A late command that installs the `wrenctl` package and runs the base at
