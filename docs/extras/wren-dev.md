@@ -9,6 +9,7 @@ wrenctl manual wren-dev                      print the manual steps below
 
 bash test.sh                   in ~/wren-linux: every check, shellcheck on every script included
 bash extras/signing-key.sh     the key to sign Wren Linux with, if you publish it
+wren-release --username        change the GitHub username it pushes as (it asks once, and remembers)
 wren-release                   from any folder: publish, then install here (--local: install only)
 bash tools/git-push.sh         publish: signs, checks, asks, pushes
 bash tools/build-deb.sh        build the package; lintian checks it

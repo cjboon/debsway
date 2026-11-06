@@ -9,8 +9,10 @@
 #    say), it signs it, with an empty commit on top that vouches for those below.
 #  - It says what CI thinks of it, and asks first if CI failed or hasn't finished.
 #  - It checks that signature as a computer updating would, then asks before it pushes.
+#  - Pushing to GitHub over https, it asks your GitHub username once, and shows it each time.
 # It only ever pushes main, and never forces.
 # Usage: bash tools/git-push.sh
+#        bash tools/git-push.sh --username [NAME]   change that name, and do nothing else
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$WREN_DIR/lib/appimage.sh"
 . "$WREN_DIR/lib/update.sh"
@@ -18,6 +20,55 @@ not_root
 
 g() { git -C "$WREN_DIR" "$@"; }
 PRINT=${XDG_DATA_HOME:-$HOME/.local/share}/wren/signing-key/fingerprint
+
+# The name git gives GitHub at a push over https. It is an ordinary git setting in your own
+# ~/.gitconfig, the one wrenctl git makes, and no secret. Your token is: git still asks for
+# that at each push, and nothing here sees it or keeps it.
+USERNAME_SETTING=credential.https://github.com.username
+username_command() {
+    if command -v wren-release >/dev/null; then echo "wren-release --username"; else echo "bash $WREN_DIR/tools/release.sh --username"; fi
+}
+# GitHub's own rule for names. It also catches a token pasted by mistake (they are longer, or
+# have a _), so what fails it is never kept or shown back.
+username_ok() { [[ $1 =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?$ ]] && [[ $1 != *--* ]]; }
+# ask_username: asks until it has a good name and keeps it; Enter leaves things as they are.
+ask_username() {
+    local name
+    while :; do
+        tty_read name "GitHub username (only your name, not your token; Enter to skip): "
+        [ -n "$name" ] || { note "No name kept: git will ask for it at the push."; return 0; }
+        if username_ok "$name"; then
+            git config --global "$USERNAME_SETTING" "$name" || die "Couldn't save it in your git settings."
+            note "Saved: $name. To change it: $(username_command)"
+            return 0
+        fi
+        warn "That isn't a GitHub username (letters, numbers and single hyphens), so it wasn't kept."
+    done
+}
+# github_username: asks the first time, then reminds you. Only for a push that uses it: an ssh
+# address or another server doesn't, nor a login like gh's, which gives git the name itself.
+github_username() {
+    local name helper
+    case $(g config --get remote.origin.url) in https://github.com/*) ;; *) return 0 ;; esac
+    helper=$(g config --get-urlmatch credential.helper https://github.com || true)
+    case $helper in "" | cache*) ;; *) return 0 ;; esac
+    name=$(g config --get-urlmatch credential.username https://github.com || true)
+    if [ -z "$name" ]; then
+        ask_username
+    else
+        note "Pushing to GitHub as $(printable <<<"$name"). To change it: $(username_command)"
+    fi
+}
+if [ "${1:-}" = --username ]; then
+    if [ -z "${2:-}" ]; then
+        ask_username
+    else
+        username_ok "$2" || die "That isn't a GitHub username (letters, numbers and single hyphens), so it wasn't kept."
+        git config --global "$USERNAME_SETTING" "$2" || die "Couldn't save it in your git settings."
+        note "Saved: $2"
+    fi
+    exit 0
+fi
 
 # ci_says REPO COMMIT: what GitHub's CI says of it: passed, failed, running or nothing
 # known. Read only, with no login. CI vouches for nothing: what goes out is what you read and
@@ -93,6 +144,8 @@ if ! grep -qx "WREN_SIGNING_FPR=$fpr" "$WREN_DIR/pins.sh"; then
     g commit --quiet -m 'Wren Linux is signed with its own key now' || die "The commit wasn't made (did the key sign it?). Nothing was pushed."
 fi
 WREN_SIGNING_FPR=$fpr
+
+github_username
 
 if [ "$(g rev-list --count origin/main..HEAD)" = 0 ]; then
     note "Nothing to push: the server has all of this."

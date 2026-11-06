@@ -67,6 +67,7 @@ git config --global user.email "you@example.org"
 # user name (a token: github.com/settings/personal-access-tokens/new)
 git config --global --replace-all credential.https://github.com.helper ''
 git config --global credential.https://github.com.username NAME
+# (wren-release asks for this once if it's missing: wren-release --username changes it)
 # ...or kept in memory for an hour after you paste it:
 git config --global --add credential.https://github.com.helper 'cache --timeout=3600'
 # ...or, with gh installed by you, its login instead (saved in plain text in

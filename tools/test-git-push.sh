@@ -184,4 +184,53 @@ commit 'not on GitHub'; rm -f "$T/ci-asked"
 gp y y
 check "a server that isn't GitHub: nothing is asked" test ! -e "$T/ci-asked"
 
+# The name git gives GitHub over https: asked once, remembered in your own git settings, and shown
+# on each run with the command to change it. Nothing here reaches GitHub: git is told that its
+# address means the pretend server.
+export GIT_CONFIG_GLOBAL=$T/gitconfig
+name_set() { git config --global credential.https://github.com.username; }
+gp
+check "a server that isn't GitHub: no name asked for" not grep -q 'GitHub username' "$T/out"
+check "...and none kept" not name_set
+git config --global url."$T/O.git".insteadOf https://github.com/someone/wren.git
+git -C "$T/L" remote set-url origin https://github.com/someone/wren.git
+gp ''
+check "GitHub: the first run asks" grep -q 'GitHub username' "$T/out"
+check "...Enter skips it, and nothing is kept" not name_set
+gp 'github_pat_11ABCDEFG' '-bad' 'a--b' someone-1
+check "a pasted token is refused, and not kept" bash -c '[ "$(git config --global credential.https://github.com.username)" = someone-1 ]'
+check "...nor shown back" not grep -q 'github_pat' "$T/out"
+check "...nor written anywhere in the repository" not git -C "$T/L" config --local --get-regexp username
+check "...it says the name, and how to change it" bash -c 'grep -q "someone-1" "$1" && grep -q -- "--username" "$1"' _ "$T/out"
+gp
+check "the next run asks nothing" not grep -q 'GitHub username' "$T/out"
+check "...and reminds you of the name and the command" bash -c 'grep -q "as someone-1" "$1" && grep -q -- "--username" "$1"' _ "$T/out"
+commit 'pushed as a name'; before=$(server)
+gp y y
+check "...it still pushes, your way, with the name set" test "$(server)" = "$(head_)"
+bash "$T/L/tools/git-push.sh" --username other-name >"$T/out" 2>&1
+check "--username NAME: changes it" test "$(name_set)" = other-name
+check "...and says so" grep -q 'other-name' "$T/out"
+commit 'not pushed by --username'; before=$(server)
+: >"$T/calls"; bash "$T/L/tools/git-push.sh" --username third >"$T/out" 2>&1
+check "...and publishes nothing, signs nothing" bash -c '[ "$1" = "$2" ] && [ ! -s "$3" ]' _ "$(server)" "$before" "$T/calls"
+bash "$T/L/tools/git-push.sh" --username 'ghp_notaname' >"$T/out" 2>&1 && rc=0 || rc=$?
+check "--username with a token: refused" bash -c '[ "$1" != 0 ] && [ "$(git config --global credential.https://github.com.username)" = third ]' _ "$rc"
+check "...not shown back" not grep -q ghp_ "$T/out"
+printf 'asked\n' >"$T/answers"; WREN_TEST_ANSWERS=$T/answers bash "$T/L/tools/git-push.sh" --username >"$T/out" 2>&1
+check "--username alone: asks for the new one" test "$(name_set)" = asked
+git config --global --unset credential.https://github.com.username
+git config --global credential.https://github.com.helper '!/usr/bin/gh auth git-credential'
+gp y y
+check "with gh's login: git has the name already, so none is asked for" not grep -q 'GitHub username' "$T/out"
+git config --global --unset-all credential.https://github.com.helper
+git config --global --add credential.https://github.com.helper ''
+git config --global --add credential.https://github.com.helper 'cache --timeout=3600'
+gp ''
+check "with the token kept for an hour: still asked" grep -q 'GitHub username' "$T/out"
+git config --global url."$T/O.git".insteadOf git@github.com:someone/wren.git
+git -C "$T/L" remote set-url origin git@github.com:someone/wren.git
+gp
+check "over ssh: not asked" not grep -q 'GitHub username' "$T/out"
+
 [ "$fails" -eq 0 ]

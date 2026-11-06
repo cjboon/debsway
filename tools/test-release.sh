@@ -122,4 +122,7 @@ check "...it names release.sh" grep -q 'tools/release.sh' "$HERE/tools/git-push.
 
 check "...git-push.sh leaves that line out when told" grep -q 'WREN_RELEASING:-}" \] || note "Pushed' "$HERE/tools/git-push.sh"
 
+release --username somebody >/dev/null 2>&1
+check "--username goes to git-push.sh with its name, and nothing is built or installed" test "$(cat "$T/ran")" = push
+
 [ "$fails" -eq 0 ]

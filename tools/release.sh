@@ -15,6 +15,7 @@
 #        bash tools/release.sh --tag     the same, and a signed release of what it published
 #        bash tools/release.sh --local   install here only, nothing is pushed (to try
 #                                     the last commit; what isn't committed stays out)
+#        bash tools/release.sh --username [NAME]   change your GitHub username, nothing else
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 not_root
 
@@ -27,7 +28,8 @@ case ${1:-} in
     "") ;;
     --local) local_only=true ;;
     --tag) tag=true ;;
-    *) die "Usage: bash tools/release.sh [--tag | --local]" ;;
+    --username) exec bash "$WREN_DIR/tools/git-push.sh" "$@" ;;
+    *) die "Usage: bash tools/release.sh [--tag | --local | --username [NAME]]" ;;
 esac
 g rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "$WREN_DIR isn't a git copy (wrenctl install wren-dev gets one)."
 

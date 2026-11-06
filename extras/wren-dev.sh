@@ -71,6 +71,7 @@ cat <<EOF2
 
     How to use them, in $DEV:
       wren-release                   publish, then install here (--local: install only)
+      wren-release --username        change the GitHub username it pushes as
       bash test.sh                   every check, shellcheck on every script included
       bash extras/signing-key.sh     the key to sign Wren Linux with, if you publish it
       bash tools/git-push.sh         publish: signs, checks, asks, pushes
