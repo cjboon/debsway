@@ -13,6 +13,7 @@ claude                           Claude Code; asks which if you set up more than
 cd ~/projects/NAME && claude-sandbox   Claude Code as claude-agent, in that folder
 cd ~/projects-NAME/X && claude-sandbox --account NAME   the other account, in its own folder
 claude-unsandboxed               Claude Code as you, with all your files
+claude-share PATH...             give Claude files to look at, on a public branch (it shows them and asks); --done deletes them
 claude-pull                      in your copy of a repository: shows what Claude pushed, brings it in on y
 ```
 
@@ -125,7 +126,7 @@ sudo install -o root -g root -m 0440 /tmp/wren-claude /etc/sudoers.d/wren-claude
 rm /tmp/wren-claude
 
 # The commands, and the git guard for ~/projects
-for c in claude claude-sandbox claude-unsandboxed claude-pull git; do install -D -m 0755 @WREN_DIR@/bin/$c ~/.local/bin/$c; done
+for c in claude claude-sandbox claude-unsandboxed claude-pull claude-share git; do install -D -m 0755 @WREN_DIR@/bin/$c ~/.local/bin/$c; done
 
 # Its public key, to add on GitHub (a deploy key on one repository is the narrowest)
 sudo cat /home/claude-agent/.ssh/id_ed25519.pub
@@ -167,8 +168,8 @@ To undo an account: `sudo rm /etc/sudoers.d/wren-claude-NAME`, its `setfacl -x` 
 To undo:
 
 ```
-# The commands and the git guard (keep claude-pull if claude-vm is set up)
-rm ~/.local/bin/claude ~/.local/bin/claude-unsandboxed ~/.local/bin/claude-pull ~/.local/bin/git
+# The commands and the git guard (keep claude-pull and claude-share if claude-vm is set up)
+rm ~/.local/bin/claude ~/.local/bin/claude-unsandboxed ~/.local/bin/claude-pull ~/.local/bin/claude-share ~/.local/bin/git
 # The firewall rule
 sudo systemctl disable --now wren-claude-firewall.service
 sudo rm /etc/systemd/system/wren-claude-firewall.service /etc/wren/claude.nft

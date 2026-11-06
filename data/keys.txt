@@ -116,6 +116,7 @@
 @end
 @if claude-pull
     claude-pull            see what Claude pushed, bring it in if you say y
+    claude-share PATH      give Claude files to look at, on a public branch
 @end
 @if nmtui
     nmtui                  pick a Wi-Fi network (or click its name in the bar)

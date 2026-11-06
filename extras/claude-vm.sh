@@ -245,9 +245,9 @@ if [ "${1:-}" = --remove ]; then
     vm_size_remove claude-vm
     remove_bin claude-vm
     remove_claude_chooser
-    # claude-pull is shared with extras/claude-code.sh; keep it if that
+    # claude-pull and claude-share are shared with extras/claude-code.sh; keep them if that
     # sandbox is still set up (its session wrapper is the tell)
-    [ -e /usr/local/libexec/claude-session ] || remove_bin claude-pull
+    [ -e /usr/local/libexec/claude-session ] || { remove_bin claude-pull; remove_bin claude-share; }
     sudo systemctl disable --now wren-claude-vm-firewall.service >/dev/null 2>&1 || true
     sudo nft delete table inet wren_claude_vm 2>/dev/null || true
     sudo rm -f "$SUDOERS" "$SESSION" "$MOCKVPS" "$FIREWALL" "$UNIT"
@@ -320,6 +320,7 @@ install_bin claude
 # How you bring the agent's pushed work into your own copy, after reviewing
 # it. Shared with extras/claude-code.sh, which installs the same command.
 install_bin claude-pull
+install_bin claude-share
 
 vm_size_choose "$AGENT" "$SIZE_MEM" "$SIZE_DISK"
 build_vm

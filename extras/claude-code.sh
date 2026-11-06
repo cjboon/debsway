@@ -234,9 +234,9 @@ if [ "${1:-}" = --remove ]; then
     remove_bin claude-sandbox
     remove_bin claude-unsandboxed
     remove_claude_chooser
-    # claude-pull is shared with extras/claude-vm.sh; keep it if that sandbox
+    # claude-pull and claude-share are shared with extras/claude-vm.sh; keep them if that sandbox
     # is still set up (its session wrapper is the tell)
-    [ -e /usr/local/libexec/claude-vm-session ] || remove_bin claude-pull
+    [ -e /usr/local/libexec/claude-vm-session ] || { remove_bin claude-pull; remove_bin claude-share; }
     remove_bin git
     sudo systemctl disable --now wren-claude-firewall.service >/dev/null 2>&1 || true
     sudo nft delete table inet wren_claude 2>/dev/null || true
@@ -308,6 +308,7 @@ install_bin claude-sandbox
 install_bin claude
 install_bin claude-unsandboxed
 install_bin claude-pull
+install_bin claude-share
 install_bin git
 
 cat <<EOF

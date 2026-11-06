@@ -17,6 +17,7 @@ claude-vm status | stop
 claude-vm pubkey       the VM's ssh public key (add it on your git host; wrenctl gh deploy-key does it for GitHub)
 claude-vm rebuild      throw the VM away and build a fresh one (asks first; offers its new key to GitHub)
 claude-vm reset        back to how it was built (faster than rebuild; asks first)
+claude-share PATH...   give the agent files to look at, on a public branch (it shows them and asks); --done deletes them
 claude-pull            in your copy of a repository: shows what the agent pushed, brings it in on y
 claude-vm --account NAME [shell|status|stop|pubkey|rebuild]   the same, for that account's VM
 ```
@@ -129,6 +130,7 @@ rm /tmp/wren-claude-vm
 install -D -m 0755 @WREN_DIR@/bin/claude-vm ~/.local/bin/claude-vm
 install -D -m 0755 @WREN_DIR@/bin/claude ~/.local/bin/claude
 install -D -m 0755 @WREN_DIR@/bin/claude-pull ~/.local/bin/claude-pull
+install -D -m 0755 @WREN_DIR@/bin/claude-share ~/.local/bin/claude-share
 
 # Build the VM (unattended, 10-20 minutes), then show its ssh key for your git host
 # Its size in MiB (memory, disk), if not the engine's 2048 and 20000; leave
@@ -174,8 +176,8 @@ line out of `/etc/wren/claude-vm-ports` and its two lines out of `/etc/wren/clau
 To undo:
 
 ```
-# The commands (keep claude-pull if claude-code is set up)
-rm ~/.local/bin/claude-vm ~/.local/bin/claude-pull
+# The commands (keep claude-pull and claude-share if claude-code is set up)
+rm ~/.local/bin/claude-vm ~/.local/bin/claude-pull ~/.local/bin/claude-share
 # (the claude command only if no other Claude Code is set up)
 rm ~/.local/bin/claude
 # The firewall rule
