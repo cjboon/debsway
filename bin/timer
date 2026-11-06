@@ -410,7 +410,7 @@ lock_cmd() {
 #   this month (ncal's cal, today highlighted) | the timers and alarms running
 #   what to type, on a grid of two columns, and how to close it
 
-BOX_W=72 BOX_H=19 CAL_W=24
+BOX_W=72 BOX_H=20 CAL_W=24
 if [[ ${LC_ALL:-${LC_CTYPE:-${LANG:-}}} =~ [Uu][Tt][Ff]-?8 ]]; then
     B_H=─ B_V=│ B_TL=╭ B_TR=╮ B_BL=╰ B_BR=╯ B_L=├ B_R=┤ B_T=┬ B_B=┴
 else
@@ -575,6 +575,7 @@ draw_screen() {
     else
         two 'f    date in the bar' ''
     fi
+    two 'a    choose its sound' ''
     line "$DIM$(center 'Esc or q   close' "$in")$OFF"
     printf '%s%s%s%s\n' "$MARGIN" "$B_BL" "$(rule "$in")" "$B_BR"
 }

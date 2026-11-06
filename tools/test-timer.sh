@@ -328,7 +328,7 @@ widths() { python3 -I -c 'import sys; print(" ".join(sorted({str(len(l)) for l i
 # shape TEXT: "ROWS WIDTHS LEFT-MARGIN" of the screen, without colours
 shape() { local p; p=$(plain <<<"$1"); printf '%s %s %s' "$(grep -c . <<<"$p")" "$(LANG=C.UTF-8 widths <<<"$p")" "$(grep -m1 . <<<"$p" | grep -o '^ *' | tr -d '\n' | wc -c)"; }
 out=$(LANG=C.UTF-8 scr)
-check "the screen is one box of 19 rows, every row the same width, centred (14 + 72 + 14)" test "$(shape "$out")" = "19 86 14"
+check "the screen is one box of 20 rows, every row the same width, centred (14 + 72 + 14)" test "$(shape "$out")" = "20 86 14"
 check "...and centred in the window's height too (30 rows: 4 above it)" bash -c '[ "$(sed -n "1,4p" <<<"$1" | grep -c .)" = 0 ] && sed -n 5p <<<"$1" | grep -q "╭"' _ "$out"
 check "it shows this month from cal" grep -q 'October 2026' <<<"$(plain <<<"$out")"
 today=$(date +%-d)
@@ -338,15 +338,17 @@ check "the date and time are at the top, beside the title" grep -qE 'TIMER AND A
 bash "$TIMER" cancel all >/dev/null 2>&1
 out=$(LANG=C.UTF-8 scr)
 check "with nothing set it says so" grep -q 'Nothing set yet' <<<"$(plain <<<"$out")"
-check "...and the box keeps its shape" test "$(shape "$out")" = "19 86 14"
+check "...and the box keeps its shape" test "$(shape "$out")" = "20 86 14"
+check "the big window offers the choice of sound" grep -q 'a    choose its sound' <<<"$(scr)"
+check "...and it fits a screen of exactly the box's height (20 + 2), not the small layout" grep -q 'TIMER AND ALARM' <<<"$(R=22 scr)"
 out=$(LANG=C.UTF-8 env PATH="$T/fake:/usr/bin:/bin" COLUMNS=100 LINES=30 bash "$TIMER" screen 2>&1)
 if ! command -v cal >/dev/null; then
     check "without cal it says how to get it" grep -q 'wrenctl --update' <<<"$out"
-    check "...in the same shape" test "$(shape "$out")" = "19 86 14"
+    check "...in the same shape" test "$(shape "$out")" = "20 86 14"
 fi
 out=$(LANG=C scr)
 check "without UTF-8 the box is drawn with plain + - |" bash -c '! grep -q "╭" <<<"$1" && grep -q "^ *+---" <<<"$1"' _ "$out"
-check "...in the same shape" test "$(shape "$out")" = "19 86 14"
+check "...in the same shape" test "$(shape "$out")" = "20 86 14"
 # A window too small for the box (a small screen, a VM's window): the plain
 # layout, every line within the window, so nothing wraps (the box did, in a VM)
 fits() { # COLS TEXT: no line wider than COLS, no box drawn
