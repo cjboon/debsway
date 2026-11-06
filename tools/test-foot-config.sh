@@ -45,4 +45,11 @@ printf '2 foot\n5 other\n' >"$T/home/.config/wren/autostart"
 fc --remove >/dev/null
 check "--remove takes the terminal out of your list" bash -c '! grep -qx "2 foot" "$1" && grep -qx "5 other" "$1"' _ "$T/home/.config/wren/autostart"
 
+# A program in the terminal could otherwise read the clipboard, and write it: a VM's guest over
+# its ssh window, or a sandboxed user. Your own paste and copy aren't this: foot does those.
+check "foot.ini: programs in the terminal get no clipboard (OSC 52)" bash -c 'sed -n "/^\[security\]/,/^\[/p" "$1" | grep -qx "osc52=disabled"' _ "$HERE/data/foot.ini"
+if command -v foot >/dev/null; then
+    check "...and foot accepts it" foot -C -c "$HERE/data/foot.ini"
+fi
+
 [ "$fails" -eq 0 ]

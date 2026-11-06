@@ -266,8 +266,9 @@ With the extras:
   nothing marks them as local.
 
 - **The agent in `claude-vm`, with root in its VM.** It has sudo without a password there, on
-  purpose. What holds it is the VM, QEMU's syscall filter, a firewall checked at every start, and an
-  ssh login that forwards nothing.
+  purpose. What holds it is the VM, QEMU's syscall filter, a firewall checked at every start, an
+  ssh login that forwards nothing, and a terminal that gives programs in it no clipboard
+  (`data/foot.ini`; a `foot.ini` of your own has to say `osc52=disabled` too).
 
   A bug in QEMU or KVM could still get out, and it reaches the internet, so nothing private belongs
   in the VM. Read what it pushes.
