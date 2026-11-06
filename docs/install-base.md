@@ -265,9 +265,9 @@ Super+m (again closes it), for a black-and-gray menu in a floating window over w
 - **What you pick** runs in that window, which closes when it ends. The install and update screens wait
   for Enter first if they did something.
 
-Its first screen stays the same whatever is installed:
+Its first screen stays nearly the same whatever is installed:
 
-- Web browser (the one links open in, or the first installed; with none, it offers to install one)
+- Web browser (the one links open in, or the first installed; with none, no line: a host may do without one)
 - Password manager (KeePassXC; with none, it offers to install one)
 - Terminal (as Super+Enter opens; only inside sway)
 - Apps, Wi-Fi, Settings, System and Power, the lists below

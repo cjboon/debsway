@@ -196,7 +196,6 @@ if __name__ == "__main__":
         "early-resize": [("early", 40, 120), "q"],
         "q": ["q"],
         "sway-terminal": [click_on("Terminal")],
-        "sway-install-browser": [click_on("Web browser")],
         "sway-install-passwords": [click_on("Password manager")],
         "sway-tor": [APPS, click_on("Tor Browser")],
         "sway-whonix": [APPS, click_on("Whonix")],
@@ -266,10 +265,7 @@ check "Space on an entry that isn't a switch opens nothing" not grep -q "swaymsg
 menu sway-click-terminal
 check "...also with a click" grep -qx 'swaymsg exec foot' "$T/ran"
 check "no editor installed: no line for it" not grep -qE '^DREWAPPS.*Text editor' <<<"$out"
-menu sway-install-browser
-# shellcheck disable=SC2016  # the inner shell expands its own variables
-check "no browser installed: Web browser stays on the first screen, and offers to install one" \
-    bash -c 'grep -q "Web browser: install one" "$1" && grep -qxF "$2/wren|install-extras.sh|pause=1" "$3"' _ "$T/screen" "$T" "$T/ran"
+check "no browser installed: no line for it (a host may do without one on purpose)" not grep -q 'Web browser' "$T/screen"
 menu sway-install-passwords
 # shellcheck disable=SC2016  # the inner shell expands its own variables
 check "...and so does Password manager" \

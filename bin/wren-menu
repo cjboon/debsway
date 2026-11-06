@@ -230,7 +230,7 @@ fi
 [ "$1" = --tui ] || { echo "usage: wren-menu [--tui | --pager FILE]" >&2; exit 2; }
 
 # ---- the menu ----
-# The first screen stays the same whatever is installed: what you open most, then
+# The first screen stays nearly the same whatever is installed: what you open most, then
 # the lists (Apps, Wi-Fi, Settings, System, Power), in words a newcomer would look
 # for. ids say what an entry does; items are what it shows. Esc, or Back, goes from a
 # list to the first screen.
@@ -326,9 +326,9 @@ build() {
     ids=() items=()
     case $level in
         top)
-            # Inside sway, these two stay even before they are installed, to say how
-            if [ -n "$BROWSER" ]; then entry browser "Web browser"
-            elif [ -n "$IN_SWAY" ] && [ -n "$HAS_UPDATE" ]; then entry browser "Web browser: install one"; fi
+            # (no browser, no line: a host may do without one on purpose; Install apps has them)
+            entry browser "Web browser" "$BROWSER"
+            # Inside sway, this one stays even before it is installed, to say how
             if [ -n "$PASSWORDS_CMD" ]; then entry passwords "Password manager"
             elif [ -n "$IN_SWAY" ] && [ -n "$HAS_UPDATE" ]; then entry passwords "Password manager: install one"; fi
             entry terminal Terminal "$IN_SWAY"
@@ -528,9 +528,11 @@ run_choice() {
         terminal)
             swaymsg exec foot >/dev/null 2>&1
             exit 0 ;;
-        browser | passwords)
-            local cmd=$BROWSER
-            [ "${ids[sel]}" = browser ] || cmd=$PASSWORDS_CMD
+        browser)
+            swaymsg exec "$BROWSER" >/dev/null 2>&1
+            exit 0 ;;
+        passwords)
+            local cmd=$PASSWORDS_CMD
             if [ -z "$cmd" ]; then
                 # not installed yet: the list to install it from
                 ids[sel]=apps-install
