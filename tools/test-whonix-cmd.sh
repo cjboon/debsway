@@ -47,6 +47,7 @@ reset() { : >"$T/calls"; rm -f "$T/state/"* "$T/obeys" "$T/broken" "$T/wren-net"
 
 reset
 w start
+/bin/sleep 0.3   # (virt-manager runs on its own, and the suite's sleep is a no-op)
 check "start starts the Gateway, then the Workstation, then opens both" \
     bash -c 'grep "^virsh start\|^virt-manager" "$1" | paste -sd";" | grep -qx "virsh start Whonix-Gateway;virsh start Whonix-Workstation;virt-manager -c qemu:///session --show-domain-console Whonix-Gateway;virt-manager -c qemu:///session --show-domain-console Whonix-Workstation"' _ "$T/calls"
 
@@ -182,6 +183,40 @@ print(" ".join(sorted(out)) + " | " + str(here))'
         check "...with one-workspace: both on the one screen" \
             test "$(where)" = "1:Whonix-Gateway 1:Whonix-Workstation | 1"
         rm -rf "$T/home/.config"
+        clear_all
+        # As the real one does on a desktop: it stays in front until its window closes,
+        # and the first window can take longer than you'd think
+        cat >"$S/bin/virt-manager" <<VM
+#!/bin/sh
+[ ! -e "$S/no-window" ] || exit 1
+echo \$\$ >>"$S/windows"
+[ "\$4" != Whonix-Gateway ] || /bin/sleep "\$(cat "$S/delay")"
+exec foot --title="\$4 on QEMU/KVM User session" /bin/sleep 60
+VM
+        printf '#!/bin/sh\necho "$*" >>"%s/notified"\n' "$S" >"$S/bin/notify-send"
+        chmod +x "$S/bin/virt-manager" "$S/bin/notify-send"
+        # (timeout: whonix waiting on a window is the bug these look for)
+        swt() { XDG_RUNTIME_DIR=$S SWAYSOCK=$sock WAYLAND_DISPLAY=$disp HOME=$T/home PATH="$S/bin:$PATH" timeout 30 sh "$HERE/bin/whonix" "$@"; }
+        echo 0.5 >"$S/delay"
+        began=$(date +%s); swt start; rc=$?; took=$(($(date +%s) - began))
+        check "virt-manager stays in front: whonix still places both, you with the Workstation" \
+            test "$(where)" = "1:Whonix-Gateway 2:Whonix-Workstation | 2"
+        check "...and gives your terminal back, the windows left open" bash -c '[ "$1" = 0 ] && [ "$2" -lt 25 ]' _ "$rc" "$took"
+        clear_all
+        echo 12 >"$S/delay"
+        swt start; rc=$?
+        check "the Gateway's window takes 12 seconds: still moved, and the Workstation still opens" \
+            bash -c '[ "$1" = 0 ] && [ "$2" = "1:Whonix-Gateway 2:Whonix-Workstation | 2" ]' _ "$rc" "$(where)"
+        clear_all
+        echo 0.5 >"$S/delay"
+        swt gateway; rc=$?
+        check "whonix gateway gives your terminal back too" bash -c '[ "$1" = 0 ] && [ "$2" = "1:Whonix-Gateway | 1" ]' _ "$rc" "$(where)"
+        clear_all
+        : >"$S/no-window"
+        out=$(WHONIX_WINDOW_WAIT=1 swt start 2>&1); rc=$?
+        check "no window ever appears: it fails, and says which and where to look" bash -c '
+            [ "$1" -ne 0 ] && grep -q "couldn.t open the window of Whonix-Gateway" <<<"$2" && grep -q "Whonix-Gateway-console.log" <<<"$2"' _ "$rc" "$out"
+        rm -f "$S/no-window"
         clear_all
     else
         check "a headless sway starts for the workspace checks" false

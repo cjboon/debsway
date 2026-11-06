@@ -43,17 +43,31 @@ up() {
     # shellcheck disable=SC2069  # this order on purpose: keeps the error, drops the output
     err=$($v start "$1" 2>&1 >/dev/null) || fail "couldn't start $1: $err"
 }
-# console VM: its window. virt-manager goes into the background by itself, and
-# a second one hands its window to the first.
+# console VM: its window, and back once that is open. virt-manager can stay in
+# front until its window closes, so it runs on its own, with what it says in a
+# file (mostly noise about audio). A second one hands its window to the first,
+# which has to be up by then: outside sway, where nothing shows that, it gets a moment.
 console() {
     command -v virt-manager >/dev/null || fail "virt-manager is missing. Run: wrenctl install whonix"
-    virt-manager -c qemu:///session --show-domain-console "$1" || fail "couldn't open the window of $1."
+    mkdir -p "$GW_NET"
+    log=$GW_NET/$1-console.log
+    setsid virt-manager -c qemu:///session --show-domain-console "$1" >"$log" 2>&1 </dev/null &
+    if ! in_sway; then
+        sleep 3
+        return 0
+    fi
+    end=$(($(date +%s) + ${WHONIX_WINDOW_WAIT:-60}))
+    until sway_ask open "$1"; do
+        [ "$(date +%s)" -lt "$end" ] || fail "couldn't open the window of $1. What virt-manager said: $log"
+        sleep 0.25
+    done
 }
 
+in_sway() { [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null; }
 # In sway, with workspaces (not extras/one-workspace.sh: there the two share
 # the one screen), each window gets an empty workspace of its own
 spread() {
-    [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null || return 1
+    in_sway || return 1
     [ ! -e "${XDG_CONFIG_HOME:-$HOME/.config}/sway/config.d/one-workspace.conf" ]
 }
 # sway_ask empty [AFTER]: the number of an empty workspace (1-10). Without
