@@ -67,9 +67,11 @@ mkdir -p "$A/bin"
 printf '#!/bin/sh\n[ "$1" = apparmor_parser ] && { echo "$*" >>"%s/parsed"; exit 0; }\nexec "$@"\n' "$A" >"$A/bin/sudo"
 chmod +x "$A/bin/sudo"
 : >"$A/profile"
+mkdir "$A/apparmorfs"   # (AppArmor's folder, which a container may not have)
 printf '%s\n' '# by hand' 'owner @{torbrowser_home_dir}/TorBrowser/Tor/geoip r,' >"$A/local"
 aa() { PATH="$A/bin:$PATH" bash -c 'note() { :; }
-    eval "$(sed -n "/^TOR_PROFILE=/,/geoip6 r,.)$/p; /^fix_apparmor_dns() {/,/^}/p; /^unfix_apparmor_dns() {/,/^}/p" "$1")"
+    eval "$(sed -n "/^TOR_PROFILE=/,/geoip6 r,.)$/p; /^fix_apparmor_dns() {/,/^}/p; /^unfix_apparmor_dns() {/,/^}/p" "$1" |
+        sed "s|/sys/kernel/security/apparmor|$2/apparmorfs|")"
     TOR_PROFILE=$2/profile TOR_LOCAL=$2/local; '"$1" _ "$HERE/extras/tor-browser.sh" "$A"; }
 aa fix_apparmor_dns
 aa fix_apparmor_dns
