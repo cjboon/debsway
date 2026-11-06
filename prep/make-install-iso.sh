@@ -230,6 +230,8 @@ xorriso -indev "$iso" -outdev "$out" \
     -map "$stage/md5sum.txt" /md5sum.txt \
     -boot_image any replay -end >"$work/xorriso.log" 2>&1 || { tail -5 "$work/xorriso.log" >&2; die "xorriso couldn't build the image."; }
 note "Built: $out ($(du -h "$out" | cut -f1)), SHA-256 $(sha256sum "$out" | cut -c1-16)..."
+# (tools/publish-image.sh gets Debian's source for exactly this image)
+if $public; then echo "$name" >"$(dirname -- "$out")/DEBIAN-BASE.txt"; fi
 
 cat <<EOF
 

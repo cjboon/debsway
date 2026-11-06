@@ -109,6 +109,12 @@ for people who use Wren Linux: what changed for them, and what they should do.
 `make-install-iso.sh --public`, which puts nothing of this computer's on the image, signs
 `SHA256SUMS`, checks that, and copies them to `/srv/wren-images/VERSION` on the server, as
 `images/VERSION/` on the site, beside `RELEASE-NOTES.txt`. It never replaces what's there.
+
+The image hands out Debian's programs, many under the GPL, which asks that their source be offered
+too. So Debian's source for that exact image goes beside it (about 3 GB), checked against Debian's
+signed list, with a `SOURCE.txt`, and without it nothing is published. Keep each image's source
+up for as long as the image is. This is a good-faith reading of the licence, not legal advice.
+
 A server set up before this needs `setup-vps.sh` run again for that folder.
 
 Neither can run by itself. The key signs only after your sudo password, on purpose: a script

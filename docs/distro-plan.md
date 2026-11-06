@@ -326,6 +326,15 @@ Wren Linux's base on an encrypted disk.
 - **Releases:** publish the ISO with `SHA256SUMS` and `SHA256SUMS.sign`
   (signed with your key), checked by the steps on the website. Build it
   reproducibly from a tagged release.
+- **Licensing:** an image hands out Debian's programs, many under the GPL, so their source has to be
+  offered too, and for those exact versions: a link to Debian's newest won't stay right.
+  `tools/publish-image.sh` publishes Debian's source for that image beside it (about 3 GB per
+  release, so plan the server's disk). That's a good-faith reading, not legal advice: ask someone
+  who knows (the Software Freedom Conservancy helps projects like this) before the first public
+  image. The name and wording stay within Debian's trademark policy (debian.org/trademark):
+  "Debian" names what it's based on, is never in the product's name, and implies no endorsement.
+- **What the image holds:** `make-install-iso.sh --public` has nothing of the builder's on it. Still
+  to do: the installer asks the username and time zone, instead of the fixed `user` and UTC.
 - **Testing:** install it in a VM for every release (Wren Linux's QEMU tooling
   from claude-vm can drive that), once with UEFI and once with Secure Boot.
 

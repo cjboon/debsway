@@ -14,6 +14,56 @@ live_name() {
     sed -nE 's/^[0-9a-f]{128}  (debian-live-[0-9]+(\.[0-9]+)+-amd64-standard\.iso)$/\1/p' "$1" | head -1
 }
 
+# debian_live_source IMAGE-NAME DIR: Debian's source for that live image, for that exact
+# version, into DIR (the .tar and .contents): the GPL asks whoever hands out an image to
+# offer its source too. Debian keeps the newest in current-live and older ones in its archive.
+# Only files with the checksum in a list the Debian CD signing key signed are kept. A
+# saved copy that still checks out isn't fetched again. (WREN_WGET: a test's pretend wget)
+debian_live_source() {
+    local name=$1 dir=$2 ver stem where url f list ok=false site=https://cdimage.debian.org
+    [[ $name =~ ^debian-live-([0-9]+(\.[0-9]+)+)-amd64-standard\.iso$ ]] || {
+        warn "\"$name\" isn't the name of a Debian live image."
+        return 1
+    }
+    ver=${BASH_REMATCH[1]} stem=debian-live-$ver-source-standard
+    list=$(mktemp -d)
+    for where in debian-cd/current-live cdimage/archive/$ver-live; do
+        url=$site/$where/source/tar
+        "${WREN_WGET:-wget}" -q -O "$list/SHA512SUMS" "$url/SHA512SUMS" &&
+            "${WREN_WGET:-wget}" -q -O "$list/SHA512SUMS.sign" "$url/SHA512SUMS.sign" || continue
+        if ! verify_detached "$DEBIAN_CD_FPR" "$DEBIAN_CD_KEY_URL" "$list/SHA512SUMS.sign" "$list/SHA512SUMS"; then
+            warn "Debian's list of source checksums at $where isn't signed by the Debian CD signing key."
+            rm -rf "$list"
+            return 1
+        fi
+        # (current-live has moved on from this version: its archive is next)
+        grep -qE "^[0-9a-f]{128}  $stem\.tar\$" "$list/SHA512SUMS" || continue
+        ok=true
+        break
+    done
+    if ! $ok; then
+        warn "Couldn't find the source of Debian $ver at $site."
+        rm -rf "$list"
+        return 1
+    fi
+    for f in "$stem.tar" "$stem.contents"; do
+        if [ -f "$dir/$f" ] && debian_cd_image_ok "$list/SHA512SUMS" "$dir/$f" "$f"; then continue; fi
+        "${WREN_WGET:-wget}" -q --show-progress -c -O "$dir/$f.part" "$url/$f" || {
+            warn "The download of $f didn't finish; run this again to go on."
+            rm -rf "$list"
+            return 1
+        }
+        if ! debian_cd_image_ok "$list/SHA512SUMS" "$dir/$f.part" "$f"; then
+            rm -f "$dir/$f.part"
+            warn "$f doesn't have the checksum in Debian's signed list, so it was deleted."
+            rm -rf "$list"
+            return 1
+        fi
+        mv "$dir/$f.part" "$dir/$f"
+    done
+    rm -rf "$list"
+}
+
 # The kernel arguments that start the automatic install
 AUTO_ARGS="auto=true priority=critical preseed/file=/cdrom/wren-install/preseed.cfg"
 
