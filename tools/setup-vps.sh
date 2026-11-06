@@ -423,7 +423,9 @@ session() {
     if [ -n "${SSH_CONNECTION:-}" ]; then echo "$SSH_CONNECTION"; return; fi
     local pid=$$ found
     while [ "${pid:-1}" -gt 1 ]; do
-        found=$(tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null | sed -n 's/^SSH_CONNECTION=//p' | head -n1)
+        # (a process this can't read is passed over; the shell opens the file, so the
+        # braces are what keep its error quiet, and || keeps set -e from ending this)
+        found=$({ tr '\0' '\n' <"/proc/$pid/environ"; } 2>/dev/null | sed -n 's/^SSH_CONNECTION=//p' | head -n1) || found=
         if [ -n "$found" ]; then echo "$found"; return; fi
         pid=$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')
     done

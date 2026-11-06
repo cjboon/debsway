@@ -1,4 +1,5 @@
-# Runs shellcheck on every push and pull request.
+# Runs shellcheck and the tests on every push and pull request, on Debian 13: what
+# Wren Linux is written for. (GitHub's own Ubuntu has a different sudo and more.)
 name: shellcheck
 on: [push, pull_request]
 permissions:
@@ -6,13 +7,26 @@ permissions:
 jobs:
   shellcheck:
     runs-on: ubuntu-latest
+    container:
+      # Pinned to its digest: a tag can be moved to a different image. Debian's own
+      # updates still reach it, through apt, below. Privileged: the tests run firewall
+      # rules in network namespaces, and a headless sway.
+      image: debian:trixie@sha256:bfc36aecdece0387418759dba474aa856c026ca8087da3606b41b90ab0509c99
+      options: --privileged
     steps:
-      # Pinned to a commit: a tag can be moved to different code
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
-      - run: sudo apt-get update && sudo apt-get install -y shellcheck
       # What the tests use, as on a Wren Linux computer with the developer extra
       # (gpg-agent makes and checks keys, nftables runs the firewall rules in a
-      # network namespace, lintian checks the package)
-      - run: sudo apt-get install -y gnupg gpgv acl sway rsync nftables xclip cage socat keepassxc lintian python3 wget
+      # network namespace, lintian checks the package). Git first, for the checkout.
+      - run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git sudo shellcheck gnupg gpgv gpg-agent acl sway foot rsync nftables xclip cage socat keepassxc lintian python3 wget iproute2 util-linux procps ca-certificates file xz-utils bsdextrautils openssh-client apparmor
+      # Pinned to a commit: a tag can be moved to different code
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1 (Node 24)
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - run: shellcheck $(git ls-files '*.sh' 'bin/*')
-      - run: bash test.sh --offline
+      # As a normal user with sudo: the scripts refuse to run as root
+      - run: |
+          useradd -m tester
+          echo 'tester ALL=(ALL) NOPASSWD:ALL' >/etc/sudoers.d/tester
+          chown -R tester: "$GITHUB_WORKSPACE"
+          su tester -c 'PATH=$PATH:/usr/sbin bash test.sh --offline'
