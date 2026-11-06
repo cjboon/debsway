@@ -54,6 +54,7 @@
   WORKSPACES
     Super+1 … 0            go to workspace 1 … 10
     Super+Shift+1 … 0      send the window to workspace 1 … 10
+    Super+the key left of 1   the next empty workspace, just your wallpaper
 @end
 
   SCREEN AND SOUND

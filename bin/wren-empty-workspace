@@ -1,0 +1,28 @@
+#!/bin/sh
+# wren-empty-workspace: written by Wren Linux parts/core-commands.sh
+# Super + the key left of 1: the workspace after the highest one in use, empty, with just your
+# wallpaper: somewhere to think about what to run next. With 1, 2, 4 and 5 in use, that is 6.
+# Workspace 10 in use: there is no next one, so you stay, and it says so. It does nothing with
+# the one-workspace extra, which has no workspaces to go to.
+[ ! -e "${XDG_CONFIG_HOME:-$HOME/.config}/sway/config.d/one-workspace.conf" ] || exit 0
+
+# (the highest number with a window on it; 0: none. The scratchpad has number -1.)
+highest=$(swaymsg -t get_tree | python3 -I -c '
+import json, sys
+top = 0
+def walk(n, ws=None):
+    global top
+    if n.get("type") == "workspace":
+        ws = n.get("num", -1)
+    if n.get("pid") and ws is not None and ws > top:
+        top = ws
+    for c in n.get("nodes", []) + n.get("floating_nodes", []):
+        walk(c, ws)
+walk(json.load(sys.stdin))
+print(top)') || exit 1
+
+if [ "$highest" -ge 10 ]; then
+    notify-send -a wren "No empty workspace" "Workspace 10 is in use, so there is no next one." 2>/dev/null || true
+    exit 0
+fi
+exec swaymsg -q "workspace number $((highest + 1))"

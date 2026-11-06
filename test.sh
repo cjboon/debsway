@@ -406,6 +406,7 @@ dev_test mpv-notice "mpv's one-time note when there is no sound" "mpv notice che
 
 # --------------------------------------------------------------------
 dev_test keys "The key cheat sheet shows only what is installed (bin/keys)" "cheat sheet checks"
+dev_test empty-workspace "The next empty workspace (bin/wren-empty-workspace), in a real sway" "empty workspace checks"
 
 # --------------------------------------------------------------------
 dev_test wifi-remove "wifi.sh --remove (lib/net.sh), on a pretend /etc" "wifi remove checks"
