@@ -378,7 +378,9 @@ Workstation's Tor Browser. Then `whonix` starts both and opens each on an empty 
 Gateway on yours if it is empty, else the next empty one; the Workstation on the one after, where
 you are left), `whonix gateway` opens the Gateway's Tor settings, `whonix stop` shuts both down,
 right away and cleanly (save your work inside first; `--force` switches off one still running after
-30 seconds).
+60 seconds).
+`whonix update` updates both and Tor Browser, keeping your bookmarks; a week after the last one that
+worked, the bar says so, and `whonix stop` asks whether to update first.
 
 **OnionShare.** Debian's package pulls in the system tor service, which would connect to Tor
 directly the moment it's installed, so the script masks it first (unless apt over Tor or remote

@@ -12,7 +12,8 @@ wrenctl manual whonix                      print the manual steps below
 whonix             start both VMs and open both, each on an empty workspace (or Super+d)
 whonix gateway     start the Gateway and open it (Tor settings, bridges)
 whonix stop        shut both down, right away and cleanly: save your work inside first
-whonix stop --force   the same, and one still running after 30 seconds is switched off
+whonix stop --force   the same, and one still running after 60 seconds is switched off
+whonix update      update both VMs and Tor Browser, keeping your bookmarks; they power off when done
 ```
 
 Whonix runs Tor in one virtual machine, the Gateway, and your programs in another, the Workstation,
@@ -58,6 +59,30 @@ from the Tor Project's repository (its key pinned, `TORPROJECT_FPR`, and an apt 
 nothing else come from there), where its updates install themselves, and copies it into the Gateway
 as `/usr/bin/lyrebird`; Tor's AppArmor profile in Whonix 18 already lets Tor run it.
 
+`whonix update` updates everything in one go, over Tor, with both VMs shut down first. It starts
+the Gateway, which updates and powers off; then starts it as usual, for the Workstation to update
+its packages and Tor Browser. You see it in their windows, and both end up off.
+
+Nothing starts by itself: it runs when you run it. A week after the last update that worked, the bar
+shows `whonix update` (a click runs it), and from then on `whonix stop` asks whether to update before
+shutting down. Only an update that worked starts the week again.
+
+How the VMs know: `whonix update` starts each with a note in its firmware (an SMBIOS OEM string, for a
+service written into the images at install, `data/whonix-update.service`). The VM's saved settings
+aren't changed, so with no update running a VM boots as ever, and the service does nothing.
+
+Whonix's `update-torbrowser` is a downloader rather than an updater: it deletes the browser's folder
+and puts a new one there, which would lose your bookmarks, settings and downloads. So
+`data/whonix-update-browser`, running as the user and never as root, moves the old folder aside, runs
+it, and moves your profile and downloads into the new one. It runs it only for a newer version: with
+no one to ask, it would install an older one too, which could be an attack. If anything fails, the old
+folder goes back whole, and a power cut is put right by the next update. Anything else in the old
+folder that the new one doesn't have, such as a page you saved beside Downloads, is kept in
+`~/.tb/left-from-browser-VERSION`.
+
+Config files you or Wren Linux changed stay as they are (`--force-confold`). Whonix's own
+`apt-get-noninteractive` would replace them, which would stop bridges connecting.
+
 Installed before this? Running `wrenctl install whonix` again (with the Gateway shut down) gives it
 the new card; `--bridges` then sets the DNS for the bridge you choose.
 
@@ -76,14 +101,39 @@ the new card; `--bridges` then sets the DNS for the bridge you choose.
   `--bridges` gives the Gateway the rule, but nothing gives it to a Workstation that is already
   installed: back up what you keep in it, then `wrenctl remove whonix` (saying yes to deleting the
   disks) and `wrenctl install whonix`.
-- `whonix stop --force` switches off a VM still running after 30 seconds, as if its power button
+- `whonix stop --force` switches off a VM still running after 60 seconds, as if its power button
   were held, which can leave its disk needing repair at the next boot.
+- A VM still starting doesn't hear its power button (a Workstation here, for about its first 70
+  seconds), so `whonix stop` presses it again every 5 seconds: right after a start it takes longer.
 - Wren Linux doesn't update Feather in the Workstation after the install: Feather says when a newer
   version is out, and its guide for Whonix (docs.featherwallet.org) shows how to replace it. Whonix
   updates Electrum with its other packages.
 - Feather inside the Workstation hasn't been tried in a real Whonix VM yet: the files are put in
   place and checked, but not run there.
-- Whonix's own updates run inside the VMs: update them there.
+- `whonix update` was tried on Whonix 18.2.4.2, installed by this script, with real libvirt, each VM
+  at its 2 GB, in a VM with 5.4 GB of memory and no screen, and no bridge. Both VMs updated over Tor
+  (24 minutes, with a new kernel). Tor Browser went from 15.0.25 to 16.0, and on a profile made
+  beforehand a bookmark, a setting, a download and a page saved beside Downloads all survived; Safest
+  stayed on. Everything the Gateway sent went to Tor relays in its own list, with no DNS. An ordinary
+  start afterwards stayed up and ran no update, and the saved settings hadn't changed. The windows
+  opened and closed in a real sway with no screen, and closing the terminal didn't stop the update.
+
+  Not tried: a real screen and keyboard, a bridge during an update, a real power cut (only stopped
+  by force in a test with pretend programs), a bad signature on a real download.
+- An update doesn't clean a VM that is already hacked: something running as root inside it could
+  fake the result, or undo the update. What a VM says only decides whether the reminder stays.
+- `whonix update` connects to Tor, as Whonix does: your network sees that as it sees any start of
+  the Gateway, through your bridge if you set one. With Tor held off until you choose a bridge, the
+  update fails after about 20 minutes, without connecting.
+- Whonix installed before `whonix update` can't use it, and shows no reminder: nothing inside the VMs
+  could answer. Back up what you keep in them, then `wrenctl remove whonix` (saying yes to deleting the
+  disks) and `wrenctl install whonix`. Until then, update inside the VMs.
+- Feather and webtunnel's lyrebird aren't updated by it: they aren't from apt. Feather says when a
+  newer version is out, and `whonix` says when lyrebird is.
+- Tor Browser's own updater also runs while you browse, and keeps your things too. `whonix update`
+  is for when it hasn't had the chance.
+- An update stopped from outside (this computer shut down, `whonix stop --force`) can leave packages half
+  installed. The next `whonix update` finishes them first, if the VM still boots.
 - With Snowflake, the Gateway looks up its broker and STUN servers through this computer's resolver
   (encrypted, with secure DNS on); the resolver sees those names, and your network sees you reach
   them, as with Snowflake anywhere. Whonix's page on Gateway DNS knows of no risk in having it on.
@@ -211,6 +261,13 @@ put ws.qcow2 feather.AppImage /usr/local/lib/feather/feather.AppImage 755
 put ws.qcow2 whonix-feather /usr/local/bin/feather 755
 put ws.qcow2 whonix-feather.desktop /usr/local/share/applications/feather.desktop
 put gw.qcow2 50_user.conf /usr/local/etc/torrc.d/50_user.conf
+# What whonix update runs, in both (the service does nothing without the host's note)
+for i in gw.qcow2 ws.qcow2; do
+    put $i @WREN_DIR@/data/whonix-update /usr/local/libexec/wren-update 755
+    put $i @WREN_DIR@/data/whonix-update.service /etc/systemd/system/wren-update.service
+    put $i @WREN_DIR@/data/whonix-update-wants.conf /etc/systemd/system/multi-user.target.d/wren-update.conf
+done
+put ws.qcow2 @WREN_DIR@/data/whonix-update-browser /usr/local/libexec/wren-update-browser 755
 # (each must end without "Couldn't write"; stop here if one does)
 
 # The VMs, as your user: the storage pool, the disks, the definitions
@@ -242,6 +299,8 @@ passt --quiet --one-off --socket ~/.local/state/wren/whonix-gateway-net.sock \
 
 # The whonix command
 install -D -m 0755 @WREN_DIR@/bin/whonix ~/.local/bin/whonix
+# When the last update worked: the install counts (whonix update needs this file)
+touch ~/.local/state/wren/whonix-updated
 cd ~ && rm -rf ~/whonix-download
 whonix
 ```
@@ -257,7 +316,7 @@ virsh -c qemu:///session undefine Whonix-Gateway
 # Their disks, and everything saved inside the VMs
 rm ~/.local/share/libvirt/images/Whonix-Gateway.qcow2 ~/.local/share/libvirt/images/Whonix-Workstation.qcow2
 # The command
-rm ~/.local/bin/whonix
+rm ~/.local/bin/whonix ~/.local/state/wren/whonix-updated
 # KVM, libvirt and virt-manager, marked "automatic": autoremove takes them out
 # only if nothing (mockvps-kvm, claude-vm, the onion site) needs them
 sudo apt-mark auto qemu-system-x86 qemu-system-gui qemu-system-modules-spice qemu-utils libvirt-daemon \

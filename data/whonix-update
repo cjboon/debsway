@@ -1,0 +1,74 @@
+#!/bin/bash
+# Written by Wren Linux extras/whonix.sh: updates this VM, then powers it off.
+#
+# Runs as root at boot, before the desktop, and only when the host asks: `whonix
+# update` starts the VM with a note in its firmware (data/whonix-update.service
+# won't start without it). What it does shows on the VM's own screen. Its last
+# line on the serial port is how the host learns the result.
+#
+# Both VMs: apt. The Workstation: Tor Browser too, which apt doesn't update
+# (data/whonix-update-browser, as the user, never as root).
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+# As Whonix's own apt-get-noninteractive sets them. Daemons aren't restarted during
+# the upgrade (the VM powers off after it). Not that command itself: its
+# --force-confnew would undo a config file Wren Linux edited (the Gateway's
+# /etc/resolv.conf.whonix, which bridges need).
+export DEBIAN_FRONTEND=noninteractive DEBIAN_PRIORITY=critical DEBCONF_NOWARNINGS=yes
+export APT_LISTCHANGES_FRONTEND=text NEEDRESTART_MODE=l
+export POLICYRCD=/usr/share/helper-scripts/policy-rc.d
+keep_config=(--force-confdef --force-confold)
+
+outs=()
+for out in /dev/tty1 /dev/ttyS0; do
+    if [ -w "$out" ]; then outs+=("$out"); fi
+done
+exec > >(tee -a "${outs[@]}") 2>&1 </dev/null
+
+say() { printf '\n==> %s\n' "$*"; }
+
+# result WORDS: the last thing this says. The host counts the update as done only
+# for the exact line "WREN-RESULT: ok". (The serial port can lose what is still
+# waiting when the power goes: hence the sync and the pause.)
+result() {
+    printf '\nWREN-RESULT: %s\n' "$1"
+    sync
+    sleep "${WREN_UPDATE_PAUSE:-3}"
+    exit 0
+}
+
+# Tor may still be connecting. Error-Mode (Whonix sets it too): a server out of
+# reach is a failure, not an empty success, so an update that never connected
+# isn't counted as one.
+fetch_lists() {
+    local tries=0 most=${WREN_UPDATE_TRIES:-40}
+    until apt-get update -q -o APT::Update::Error-Mode=any; do
+        tries=$((tries + 1))
+        [ "$tries" -lt "$most" ] || return 1
+        say "No connection yet; trying again in 30 seconds ($tries of $most)"
+        sleep "${WREN_UPDATE_WAIT:-30}"
+    done
+}
+
+say "Updating this VM. Please leave this running: it powers off by itself."
+# (an update cut off by a power cut is finished first)
+dpkg "${keep_config[@]}" --configure -a || true
+fetch_lists || result "failed: no connection to the update servers"
+# (--yes never removes an essential package: apt stops instead)
+apt-get -y -q -o "Dpkg::Options::=${keep_config[0]}" -o "Dpkg::Options::=${keep_config[1]}" full-upgrade ||
+    result "failed: apt"
+
+# Only the Workstation has Tor Browser
+if [ ! -x /usr/bin/update-torbrowser ]; then result ok; fi
+
+say "Tor Browser"
+TB_USER=user
+# Before the first login there is no home folder yet
+if [ ! -d "/home/$TB_USER" ]; then mkhomedir_helper "$TB_USER" 027 || result "failed: no home folder for $TB_USER"; fi
+# -l: a real login session, which update-torbrowser's check that Tor is up needs
+# (Whonix's privleap). -s: this script is the "shell", so what is in ~/.profile doesn't
+# run here: a hacked browser could have written it, and this output is what the host reads.
+if runuser -l "$TB_USER" -s /usr/local/libexec/wren-update-browser; then
+    result ok
+fi
+result "failed: Tor Browser"

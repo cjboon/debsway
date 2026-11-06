@@ -117,6 +117,14 @@ updates() {
     [ "${up:-0}" -ge 43200 ] || return 0
     [ -n "$(find "$UPDATE_STAMP" -mmin -4320 2>/dev/null)" ] || echo "updates old"
 }
+# whonix: says so once Whonix hasn't had an update that worked in a week (the file is
+# bin/whonix's). A click runs it, in a window that stays until you've read how it went.
+WHONIX_STAMP=$HOME/.local/state/wren/whonix-updated
+whonix_due() {
+    [ -e "$WHONIX_STAMP" ] && [ -x "$HOME/.local/bin/whonix" ] || return 0
+    [ -z "$(find "$WHONIX_STAMP" -mmin +$((${WHONIX_UPDATE_DAYS:-7} * 1440)) 2>/dev/null)" ] || echo "whonix update"
+}
+if [ "${1:-}" = --whonix ]; then whonix_due; exit 0; fi
 UPDATE_HELP="Security updates aren't reaching this computer. To see why: sudo apt update. If apt goes through Tor, its bridge may be down: bash parts/apt-tor.sh chooses again."
 if [ "${1:-}" = --updates ]; then updates; exit 0; fi
 # json TEXT: TEXT made safe to put inside a JSON string (a network name can hold quotes)
@@ -164,7 +172,7 @@ fi
 if [ "${1:-}" = --tmux ]; then
     TMUX_BAR=1
     printf '#[range=user|menu]Wren Menu#[norange]%s%s%s%s%s%s%s' \
-        "$(block wifi "$(wifi)")" "$(alert updates "$(updates)")$(alert startup "$(startup)")$(block dns "$(dns)")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
+        "$(block wifi "$(wifi)")" "$(alert updates "$(updates)")$(alert whonix "$(whonix_due)")$(alert startup "$(startup)")$(block dns "$(dns)")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
         "$(block bat "$(battery)")" "$(block timer "$(timer_text)")" "$(block date "$(date +"$(clock_format)")")"
     exit 0
 fi
@@ -244,6 +252,11 @@ while read -r event <&3; do
             open_or_close wren-timer foot -o colors.alpha=0.85 --app-id=wren-timer "$HOME/.local/bin/timer" ;;
         *'"name":"updates"'*'"button":1,'*)
             command -v notify-send >/dev/null && notify-send -a wren -u critical "Security updates" "$UPDATE_HELP" ;;
+        *'"name":"whonix"'*'"button":1,'*)
+            # (never closed by another click: that can't cut off an update, but it would hide it)
+            # shellcheck disable=SC2016  # expanded by the inner sh, on purpose
+            setsid -f foot -o colors.alpha=0.85 --app-id=wren-whonix sh -c \
+                '"$HOME/.local/bin/whonix" update; echo; printf "Press Enter to close. "; read -r _' >/dev/null 2>&1 ;;
         *'"name":"startup"'*'"button":1,'*)
             # shellcheck disable=SC2016  # expanded by the inner sh, on purpose
             open_or_close wren-watch foot -o colors.alpha=0.85 --app-id=wren-watch sh -c \
@@ -281,7 +294,7 @@ while :; do
     fi
     dns_was=$dns_now
     printf '[{"name":"menu","full_text":"Wren Menu","separator":false,"separator_block_width":0}%s%s%s%s%s%s%s],\n' \
-        "$(block wifi "$(wifi)")" "$(alert updates "$updates_now")$(alert startup "$startup_now")$(block dns "$dns_now")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
+        "$(block wifi "$(wifi)")" "$(alert updates "$updates_now")$(alert whonix "$(whonix_due)")$(alert startup "$startup_now")$(block dns "$dns_now")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
         "$(block bat "$(battery)")" "$(block timer "$(timer_text)")" "$(block date "$(date +"$(clock_format)")")"
     # wait returns early when SIGUSR1 arrives; the sleep ends by itself
     sleep 5 &

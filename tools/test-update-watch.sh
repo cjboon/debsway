@@ -61,8 +61,8 @@ check "the state can be read by you" test "$(stat -c %a "$T/run/state")" = 644
 
 S=$HERE/bin/sway-status
 check "the bar shows it, and the startup watch's, in a colour you can't miss" bash -c '
-    grep -qF "\$(alert updates \"\$updates_now\")\$(alert startup \"\$startup_now\")" "$1" && grep -qF "\"color\":\"#ffd000\",\"urgent\":true" "$1"' _ "$S"
-check "...in tmux's bar too" grep -qF '$(alert updates "$(updates)")$(alert startup "$(startup)")' "$S"
+    grep -qF "\$(alert updates \"\$updates_now\")\$(alert whonix \"\$(whonix_due)\")\$(alert startup \"\$startup_now\")" "$1" && grep -qF "\"color\":\"#ffd000\",\"urgent\":true" "$1"' _ "$S"
+check "...in tmux's bar too" grep -qF '$(alert updates "$(updates)")$(alert whonix "$(whonix_due)")$(alert startup "$(startup)")' "$S"
 check "a notification too, once, and a click says what to do" bash -c '
     grep -q "updates_was=\$updates_now" "$1" && grep -qF "\"name\":\"updates\"" "$1" && grep -q "sudo apt update" "$1"' _ "$S"
 P=$HERE/parts/unattended-upgrades.sh

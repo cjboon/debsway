@@ -178,6 +178,10 @@ With the extras:
 - **A hacked browser revealing your real IP address**: Whonix (`extras/whonix.sh`) runs the browser
   in a virtual machine whose only way out is Tor.
 
+  `whonix update` runs only when you start it, over the same Tor. An older Tor Browser than yours is
+  refused. It can't clean a VM that is already hacked, and what a VM reports about its update is
+  believed only as far as the reminder in the bar: a hacked VM could quiet that.
+
   The Gateway (the VM that runs Tor) reaches the network through a passt of Wren Linux's that maps
   nothing of this computer into it: only DNS, at one address, goes on to this computer's resolver,
   for bridges that look names up (Snowflake).

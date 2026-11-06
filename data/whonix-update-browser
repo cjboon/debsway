@@ -1,0 +1,128 @@
+#!/bin/bash
+# Written by Wren Linux extras/whonix.sh: updates Tor Browser in the Workstation,
+# keeping your bookmarks, settings and downloads. data/whonix-update runs this as
+# the user: never as root, since a hacked browser can write in these folders.
+#
+# Whonix's update-torbrowser is a downloader, not an updater: it deletes
+# ~/.tb/tor-browser and puts a new one in its place. So:
+#   1. It only runs for a newer version. --noask would install an older one without
+#      asking, and an old version, with its old holes, is what an attacker would offer.
+#   2. The old folder is moved aside, whole: no copying, no room needed, and a
+#      failure puts back exactly what was there.
+#   3. The new folder gets your profile and downloads from the old one. Anything else
+#      there that the new one doesn't have (a page you saved beside Downloads, say) goes
+#      to ~/.tb/left-from-browser-VERSION: kept, but out of the folder that runs.
+#   4. The old folder goes.
+# A power cut at any point is put right by the next run (resume).
+set -u
+set -o pipefail
+
+TB=$HOME/.tb/tor-browser
+KEEP=$TB.wren-keep
+READY=$KEEP/.new-browser-ready
+# The old folder on its way out: nothing in it counts any more
+GONE=$TB.wren-gone
+FEED=https://aus1.torproject.org/torbrowser/update_3/release/download-linux-x86_64.json
+# What is yours, under Browser/ (a new copy has empty ones)
+YOURS=(TorBrowser/Data/Browser Downloads)
+
+# version_in: the version in the JSON on standard input, only if it looks like one
+version_in() {
+    python3 -I -c '
+import json, re, sys
+v = json.load(sys.stdin)["version"]
+if not (isinstance(v, str) and len(v) <= 20 and re.fullmatch(r"[0-9]+(\.[0-9]+)+", v)):
+    sys.exit(1)
+print(v)' 2>/dev/null
+}
+version_here() { { version_in <"$TB/Browser/tbb_version.json"; } 2>/dev/null; }
+
+# roll_back: the old folder back, whole, and whatever the update left gone
+roll_back() {
+    rm -rf "$TB"
+    mv "$KEEP" "$TB"
+}
+
+# keep_the_rest: what is in the old browser's folder and not in the new one's, out of it.
+# Some of this may only be old program files; nothing runs from there either way.
+keep_the_rest() {
+    local old left f moved=false
+    old=$({ version_in <"$KEEP/Browser/tbb_version.json"; } 2>/dev/null) || old=old
+    left=$HOME/.tb/left-from-browser-$old
+    while IFS= read -r -d '' f; do
+        [ ! -e "$TB/Browser/${f##*/}" ] && [ ! -L "$TB/Browser/${f##*/}" ] || continue
+        # (the program's own traces, not your files: what you browsed shouldn't stay behind)
+        case ${f##*/} in .cache | .local) continue ;; esac
+        mkdir -p "$left"
+        mv --backup=numbered "$f" "$left/" || return 1
+        moved=true
+    done < <(find "$KEEP/Browser" -mindepth 1 -maxdepth 1 -print0)
+    if $moved; then echo "Files that aren't part of the new Tor Browser are kept in $left"; fi
+}
+
+# bring_yours: from the old folder to the new one, then the old one goes. Each item
+# moves in one step, and one moved already is skipped, so this can run again. The old
+# folder changes its name, in one step, before it is deleted: a delete cut off halfway
+# may have taken the marker first, and that must not read as "not found good" (resume
+# would then delete the new browser, with your things in it).
+bring_yours() {
+    local item
+    for item in "${YOURS[@]}"; do
+        [ -e "$KEEP/Browser/$item" ] || continue
+        rm -rf "${TB:?}/Browser/$item"
+        mkdir -p "$(dirname -- "$TB/Browser/$item")"
+        mv "$KEEP/Browser/$item" "$TB/Browser/$item" || return 1
+    done
+    keep_the_rest || return 1
+    mv "$KEEP" "$GONE" || return 1
+    rm -rf "$GONE"
+}
+
+# resume: an earlier run was cut off. With the new browser found good, carry on
+# bringing your things over; before that, back to how it was.
+resume() {
+    rm -rf "$GONE"
+    [ -d "$KEEP" ] || return 0
+    echo "An earlier update was cut off: putting that right first."
+    if [ -e "$READY" ]; then bring_yours; else roll_back; fi
+}
+
+resume || { echo "Couldn't put right the earlier update; your things are in $KEEP"; exit 1; }
+
+have=$(version_here) || have=
+# (through the Gateway's Tor: the Workstation has no other way out)
+new=$(curl --fail --silent --show-error --proto =https --tlsv1.2 --max-time 600 --max-filesize 1048576 "$FEED" | version_in) ||
+    { echo "Couldn't read Tor Browser's newest version."; exit 1; }
+
+if [ -n "$have" ] && dpkg --compare-versions "$have" eq "$new"; then
+    echo "Tor Browser $have is the newest: your copy isn't touched."
+    exit 0
+fi
+if [ -n "$have" ] && dpkg --compare-versions "$have" gt "$new"; then
+    echo "You have Tor Browser $have, and the server says the newest is $new. An older one isn't installed:"
+    echo "that could be an attack. Try again later, on another Tor circuit."
+    exit 1
+fi
+
+echo "Tor Browser ${have:-(none yet)} to $new. Your bookmarks, settings and downloads are kept."
+if [ -d "$TB" ]; then mv "$TB" "$KEEP" || { echo "Couldn't move the old Tor Browser aside."; exit 1; }; fi
+
+# (it checks the signature itself)
+update-torbrowser --noask --noaskstart --input none
+rc=$?
+now=$(version_here) || now=
+# It says it worked and the version is really higher (the server was asked again: it
+# could have changed its answer), or everything goes back as it was
+if [ "$rc" -ne 0 ] || [ -z "$now" ] || { [ -n "$have" ] && ! dpkg --compare-versions "$now" gt "$have"; }; then
+    echo "The update didn't work (update-torbrowser: $rc; version now: ${now:-none}). Your Tor Browser stays as it was."
+    if [ -d "$KEEP" ]; then roll_back; else rm -rf "$TB"; fi
+    exit 1
+fi
+if [ -d "$KEEP" ]; then
+    sync
+    : >"$READY"
+    sync
+    bring_yours || { echo "Couldn't bring your profile over; it is in $KEEP"; exit 1; }
+fi
+sync
+echo "Tor Browser is $now now."

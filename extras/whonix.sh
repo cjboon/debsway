@@ -16,6 +16,8 @@
 #   Workstation: Tor Browser at Safest with JavaScript off, and Feather
 #                (Monero; Feather's build for Tails and Whonix, its signature
 #                checked). Electrum (Bitcoin) comes with Whonix.
+#   Both:        what `whonix update` runs: a service that does nothing unless the
+#                host starts the VM with a note in its firmware.
 # Nothing is mounted: the images are edited with qemu-img and debugfs.
 #
 # The download (about 1.9 GB) is checked against Whonix's signing key and
@@ -34,6 +36,8 @@
 # The Gateway's network card of Wren Linux's (see "the Gateway's outside network")
 GW_NET_SOCK="$HOME/.local/state/wren/whonix-gateway-net.sock"
 GW_NET_MAC=52:54:00:57:52:4e
+# When the last update worked (bin/whonix, and the bar); an install counts as one
+WHONIX_STAMP="$HOME/.local/state/wren/whonix-updated"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
@@ -344,7 +348,8 @@ gateway_config() {
     fi >"$work/40_tor_control_panel.conf"
     GW_FILES=("$work/50_user.conf" /usr/local/etc/torrc.d/50_user.conf
         "$work/40_tor_control_panel.conf" /usr/local/etc/torrc.d/40_tor_control_panel.conf
-        "$WREN_DIR/data/whonix-power-button" /etc/acpi/events/wren-power-button)
+        "$WREN_DIR/data/whonix-power-button" /etc/acpi/events/wren-power-button
+        "${UPDATE_FILES[@]}")
     if bridge_needs_dns; then
         GW_FILES+=(--edit /etc/resolv.conf.whonix 's/^#nameserver 10\.0\.2\.3$/nameserver 10.0.2.3/')
     else
@@ -352,6 +357,12 @@ gateway_config() {
     fi
     gateway_lyrebird
 }
+
+# What `whonix update` runs, for both images (the Workstation gets
+# data/whonix-update-browser too)
+UPDATE_FILES=(--exec "$WREN_DIR/data/whonix-update" /usr/local/libexec/wren-update
+    "$WREN_DIR/data/whonix-update.service" /etc/systemd/system/wren-update.service
+    "$WREN_DIR/data/whonix-update-wants.conf" /etc/systemd/system/multi-user.target.d/wren-update.conf)
 
 # ---- remove ----
 
@@ -377,7 +388,7 @@ if [ "${1:-}" = --remove ]; then
         note "Kept the disks in $IMAGES. Installing again asks before replacing them."
     fi
     remove_bin whonix
-    rm -f "$LYREBIRD_COPY"
+    rm -f "$LYREBIRD_COPY" "$WHONIX_STAMP"
     # KVM and virt-manager go too, unless mockvps-kvm or another script needs them
     apt_purge
     remove_torproject_repo_if_unused
@@ -497,7 +508,8 @@ else
 fi
 
 say "Workstation: Tor Browser and the wallets"
-ws_files=("$WREN_DIR/data/tor-browser-safest.js" /usr/local/etc/torbrowser.d/user.js "$WREN_DIR/data/whonix-power-button" /etc/acpi/events/wren-power-button)
+ws_files=("$WREN_DIR/data/tor-browser-safest.js" /usr/local/etc/torbrowser.d/user.js "$WREN_DIR/data/whonix-power-button" /etc/acpi/events/wren-power-button
+    "${UPDATE_FILES[@]}" --exec "$WREN_DIR/data/whonix-update-browser" /usr/local/libexec/wren-update-browser)
 if workstation_feather "$work"; then
     ws_files+=(--exec "$work/feather.AppImage" /usr/local/lib/feather/feather.AppImage
         --exec "$WREN_DIR/data/whonix-feather" /usr/local/bin/feather
@@ -525,6 +537,8 @@ mv "$work/ws.qcow2" "$IMAGES/$WS.qcow2"
 gateway_net_define "$work/$GW.xml"
 "${VIRSH[@]}" define "$work/$WS.xml" >/dev/null
 install_bin whonix
+mkdir -p "${WHONIX_STAMP%/*}"
+touch "$WHONIX_STAMP"
 
 note "Installed. Start Whonix with: whonix   (or Super+d, then whonix)"
-note "Change Tor settings with: whonix gateway    Shut down: whonix stop"
+note "Change Tor settings with: whonix gateway    Shut down: whonix stop    Update: whonix update"

@@ -1,0 +1,17 @@
+# Written by Wren Linux extras/whonix.sh: updates this VM at boot, before the desktop,
+# then powers it off. Only when the host asks: `whonix update` starts the VM with
+# a note in its firmware (an SMBIOS OEM string), which systemd reads as the credential
+# wren.update. Nothing inside the VM can set that, and without it this does nothing.
+[Unit]
+Description=Wren Linux: update this VM, because the host asked
+ConditionCredential=wren.update
+After=network.target tor.service tor@default.service
+Before=display-manager.service getty@tty1.service
+
+[Service]
+Type=oneshot
+StandardInput=null
+# (longer than the slowest update over Tor: and however it ends, the VM powers off)
+TimeoutStartSec=3h
+ExecStart=/usr/local/libexec/wren-update
+ExecStopPost=/usr/bin/systemctl poweroff --no-block
