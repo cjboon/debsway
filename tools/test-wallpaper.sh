@@ -288,6 +288,19 @@ check "...but the folder, its README and its list are set up (the extra counts a
     bash -c '[ -f "$1/README.txt" ] && [ -f "$1/.wren-wallpapers" ] && [ -z "$(find "$1" -name "*.jpg")" ]' _ "$H2/Pictures/Wallpapers"
 check "...and it says where your own pictures go" grep -q "Put pictures (JPEG or PNG) in" "$T/out"
 
+# ---- the pictures that ship with Wren Linux: each named in the credits, with its author,
+# page and licence, or it can't be shipped
+PICS=$HERE/data/wallpapers
+uncredited=
+for f in "$PICS"/*.jpg "$PICS"/*.jpeg "$PICS"/*.png; do
+    [ -e "$f" ] || continue
+    awk -v n="${f##*/}" '$0 == n { on = 1; next } /^$/ { on = 0 } on' "$PICS/CREDITS.txt" >"$T/credit" 2>/dev/null
+    grep -q '^Author: ' "$T/credit" && grep -q '^Source: https://' "$T/credit" && grep -q '^Licence: ' "$T/credit" || uncredited+=" ${f##*/}"
+done
+check "every picture in data/wallpapers has its author, page and licence in CREDITS.txt${uncredited:+: not$uncredited}" test -z "$uncredited"
+check "...there is at least the wren" test -f "$PICS/eurasian-wren.jpg"
+check "...and the README says the MIT licence doesn't cover them" grep -q 'data/wallpapers/' "$HERE/README.md"
+
 check "the summary fits the list (52 characters)" bash -c '[ "$(sed -n "s/^# summary: //p" "$1" | wc -m)" -le 53 ]' _ "$HERE/extras/wallpapers.sh"
 
 [ "$fails" -eq 0 ]

@@ -534,3 +534,6 @@ main ones:
 
 [MIT](LICENSE), for all of Wren Linux (`vendor/mockvps-kvm/` keeps its own
 copy of the same license).
+
+The pictures in `data/wallpapers/` aren't under it: each keeps its own licence, named with its author in
+`data/wallpapers/CREDITS.txt`.

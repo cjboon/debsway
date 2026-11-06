@@ -1,0 +1,9 @@
+Pictures that ship with Wren Linux. Each keeps its own licence: the MIT licence
+of Wren Linux's scripts doesn't cover them. If you share one, credit it as below.
+
+eurasian-wren.jpg
+Title: Troglodyte mignon (Troglodytes troglodytes), Parc de Woluwe, Bruxelles
+Author: Frank Vassen, from Brussels, Belgium
+Source: https://commons.wikimedia.org/wiki/File:Troglodyte_mignon_(Troglodytes_troglodytes),_Parc_de_Woluwe,_Bruxelles_(51983216895).jpg
+Licence: CC BY 2.0, https://creativecommons.org/licenses/by/2.0/
+Changes: none
