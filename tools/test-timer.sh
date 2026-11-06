@@ -103,7 +103,8 @@ t fire "$id"
 check "a timer rings the sound twice (about 20 seconds)" test "$(grep -c "^pw-play $T/sounds/alarm.wav" "$T/calls")" -eq 2
 check "...and the notification has no apology" bash -c "! grep -q '(no sound' '$T/calls'"
 
-# choosing the sound (bin/alarm-sounds is real here, and makes real files)
+# choosing the sound (lib/alarm-sounds.py is real here, and makes real files)
+cp "$HERE/lib/alarm-sounds.py" "$T/sounds/"
 : >"$T/calls"
 out=$(t sound chimes)
 check "timer sound NAME: chosen, and you hear it" bash -c 'grep -q "^pw-play $1/sounds/alarms/chimes.wav" "$1/calls"' _ "$T"
@@ -131,9 +132,10 @@ check "timer sound bell: back to the first one" bash -c 'grep -q "^pw-play $1/so
 out=$(t sound list)
 check "timer sound list: all of them, the chosen one marked" bash -c 'for n in bell chimes wren beeps rising gong; do grep -q "$n" <<<"$1" || exit 1; done; grep -q "^\* .*bell" <<<"$1"' _ "$out"
 check "the sounds differ from each other, and each is made by arithmetic alone" bash -c '
-    d=$(mktemp -d); python3 -I "$1/bin/alarm-sounds" make "$d" && [ "$(sha256sum "$d"/*.wav | cut -d" " -f1 | sort -u | wc -l)" = 5 ]; r=$?; rm -rf "$d"; exit $r' _ "$HERE"
-check "...nothing from the network or outside the standard library" bash -c '! grep -qE "^(import|from) +(requests|urllib|numpy|socket)" "$1"' _ "$HERE/bin/alarm-sounds"
-check "the base part installs the sound maker" grep -q 'alarm-sounds' "$HERE/parts/core-commands.sh"
+    d=$(mktemp -d); python3 -I "$1/lib/alarm-sounds.py" make "$d" && [ "$(sha256sum "$d"/*.wav | cut -d" " -f1 | sort -u | wc -l)" = 5 ]; r=$?; rm -rf "$d"; exit $r' _ "$HERE"
+check "...nothing from the network or outside the standard library" bash -c '! grep -qE "^(import|from) +(requests|urllib|numpy|socket)" "$1"' _ "$HERE/lib/alarm-sounds.py"
+check "the base part installs the sound maker" grep -q 'lib/alarm-sounds.py' "$HERE/parts/core-commands.sh"
+check "no python in bin/, which is all shell" bash -c '! grep -lqE "^#!.*python" "$1"/bin/* 2>/dev/null || [ -z "$(grep -lE "^#!.*python" "$1"/bin/*)" ]' _ "$HERE"
 
 # (the real /bin/sleep below: the pretend sleep above does not wait)
 # 7b. an alarm rings long, and there are three ways to stop it. These use a player that

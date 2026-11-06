@@ -294,7 +294,7 @@ next() {
 }
 
 # --- which sound it rings with ---------------------------------------
-# bell is data/alarm.wav. The others are made by bin/alarm-sounds, into SOUND_DIR/alarms
+# bell is data/alarm.wav. The others are made by lib/alarm-sounds.py, into SOUND_DIR/alarms
 # the first time they're wanted.
 
 # sound_file: the chosen sound, or the bell if its file is gone: never silence
@@ -310,15 +310,15 @@ sound_file() {
 
 sound_cmd() {
     local maker names=(bell) name n i
-    maker=$(dirname -- "$SELF")/alarm-sounds
-    if [ -x "$maker" ] && command -v python3 >/dev/null; then mapfile -t -O 1 names < <("$maker" list); fi
+    maker=$SOUND_DIR/alarm-sounds.py
+    if [ -r "$maker" ] && command -v python3 >/dev/null; then mapfile -t -O 1 names < <(python3 -I "$maker" list); fi
     # choose NAME: it's kept and played
     choose() {
         local c found=
         for c in "${names[@]}"; do [ "$c" != "$1" ] || found=1; done
         [ -n "$found" ] || { err "there is no sound \"$1\". They are: ${names[*]}"; return 1; }
         if [ "$1" != bell ] && [ ! -r "$SOUND_DIR/alarms/$1.wav" ]; then
-            "$maker" make "$SOUND_DIR/alarms" || { err "couldn't make the sound."; return 1; }
+            python3 -I "$maker" make "$SOUND_DIR/alarms" || { err "couldn't make the sound."; return 1; }
         fi
         conf_set sound "$1"
         echo "Rings with: $1"

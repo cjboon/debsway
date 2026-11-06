@@ -8,12 +8,12 @@
 # documentation into ~/Documents/wren-docs.
 # Usage: bash core-commands.sh [--remove]
 # status: bin:timer
-# files: data/keys.txt data/alarm.wav bin/keys bin/wren-welcome bin/timer bin/alarm-sounds bin/display-scale bin/sway-status
+# files: data/keys.txt data/alarm.wav bin/keys bin/wren-welcome bin/timer lib/alarm-sounds.py bin/display-scale bin/sway-status
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
 KEYS="$HOME/.local/share/wren/keys.txt"
-COMMANDS=(keys wren-welcome timer alarm-sounds display-scale sway-status)
+COMMANDS=(keys wren-welcome timer display-scale sway-status)
 # The documentation, easy to find: links to the docs of the Wren Linux in use
 DOCS="$HOME/Documents/wren-docs"
 
@@ -36,7 +36,8 @@ docs_links() {
 if [ "${1:-}" = --remove ]; then
     warn "These are what the desktop's keys, bar and first-login screen run."
     for c in "${COMMANDS[@]}"; do remove_bin "$c"; done
-    rm -f "$KEYS" "${KEYS%/*}/alarm.wav"
+    rm -f "$KEYS" "${KEYS%/*}/alarm.wav" "${KEYS%/*}/alarm-sounds.py"
+    rm -rf "${KEYS%/*}/alarms"
     if [ -e "$DOCS/.wren-docs" ]; then
         rm -f "$DOCS/README.md" "$DOCS/THREAT-MODEL.md" "$DOCS/guides" "$DOCS/.wren-docs"
         rmdir "$DOCS" 2>/dev/null || true
@@ -54,4 +55,6 @@ install -m 0644 "$WREN_DIR/data/keys.txt" "$KEYS"
 note "Cheat sheet: $KEYS"
 # The sound timer and alarm clock ring with: three short beeps (tools/make-alarm-sound.py)
 install -m 0644 "$WREN_DIR/data/alarm.wav" "${KEYS%/*}/alarm.wav"
+# (it makes the other sounds timer can ring with, when one is first chosen: timer sound)
+install -m 0644 "$WREN_DIR/lib/alarm-sounds.py" "${KEYS%/*}/alarm-sounds.py"
 docs_links

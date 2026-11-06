@@ -1,9 +1,8 @@
-#!/usr/bin/python3 -I
-"""alarm-sounds: written by Wren Linux parts/core-commands.sh
+"""lib/alarm-sounds.py: put in ~/.local/share/wren by parts/core-commands.sh.
 Makes the sounds timer can ring with (timer sound lets you hear and choose them), from
 nothing but arithmetic, so each can be read here and nothing comes from anywhere else.
-    alarm-sounds list            their names
-    alarm-sounds make DIR        writes DIR/NAME.wav for each (mono, 16-bit, 8 seconds)"""
+    python3 -I alarm-sounds.py list         their names
+    python3 -I alarm-sounds.py make DIR     writes DIR/NAME.wav for each (mono, 16-bit, 8 seconds)"""
 import math
 import os
 import struct

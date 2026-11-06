@@ -28,7 +28,7 @@
    `timer at 7:30`, `timer list`, `timer cancel`. The next one shows in the bar.
    `timer lock 10` (or `l` in the timer menu) sets how many minutes idle before the screen turns off; it locks a minute later.
    `timer sound` (or `a` in the timer menu) lets you hear and choose what it rings with, sounds
-   made on your computer by `alarm-sounds`.
+   made on your computer by `lib/alarm-sounds.py`.
    `timer stop`, clicking the notification or dismissing it ends the ringing (an alarm repeats a gentle bell phrase for up to 5 minutes, to wake you; a timer rings about 20 seconds). `timer clock` chooses whether the bar shows the date (the time is always am/pm)
    (`~/.config/wren/clock`). Timers last until logout or reboot, and a
    laptop that is asleep does not wake for them.
