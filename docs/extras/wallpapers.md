@@ -35,6 +35,9 @@ the site: nothing here opens or fetches it.
 Super+] and Super+[ step through the folder as your wallpaper, and `wallpaper pick` lists it by name
 (`parts/wallpaper.sh`). `README.txt` there says the same.
 
+`wrenctl remove wallpapers` brings back the default wren if one of its pictures is your wallpaper, or if you
+chose "No wallpaper". A picture of your own that you chose stays up.
+
 ## LIMITS
 
 - Most need a credit if you share them on, and some must be shared under the same licence:
@@ -53,4 +56,11 @@ cp -n @WREN_DIR@/data/wallpapers/*.jpg @WREN_DIR@/data/wallpapers/*.png \
 # cp -n @WREN_DIR@/data/wallpapers/shock/*.jpg ~/Pictures/Wallpapers/
 ```
 
-To undo: delete the pictures you copied, from `~/Pictures/Wallpapers`.
+To undo: delete the pictures you copied, from `~/Pictures/Wallpapers`. If one of them is your wallpaper, or
+you chose "No wallpaper", this brings back the default wren (with your own pictures in the desktop folder,
+the newest of those instead):
+
+```
+rm -f ~/Pictures/wren/desktop/chosen.jpg ~/Pictures/wren/desktop/chosen.png ~/.cache/wren/chosen-wallpaper
+swaymsg reload
+```

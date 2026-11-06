@@ -15,7 +15,8 @@
 # A picture chosen with next, previous or pick is copied into the desktop
 # folder as chosen.jpg (or .png), so it is the newest there and stays after a
 # reboot; a picture you copy in yourself later wins over it. "No wallpaper"
-# stays the same way: until you choose one, or copy a newer picture in.
+# stays the same way: until you choose one, or copy a newer picture in, or
+# wrenctl remove wallpapers ends it (extras/wallpapers.sh).
 set -uo pipefail
 
 DIR=${WREN_WALLPAPER_DIR:-$HOME/Pictures/wren/desktop}

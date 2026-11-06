@@ -5,7 +5,8 @@
 # A list asks which: basic (wrens, art, Earth and space), and, if this copy has it,
 # strong: real violence and death, and nudity. Strong is never on unless you tick it.
 # Your own pictures can go there too: --remove takes out only what it put there, and
-# a picture you already have isn't replaced. Run it again to choose again.
+# a picture you already have isn't replaced. Run it again to choose again. --remove
+# also ends "no wallpaper", or a choice of one of its pictures: the default wren is back.
 # Usage: bash wallpapers.sh [--remove | --manual]
 # summary: Wallpapers to pick from: wrens, art, Earth, space
 # security: some
@@ -31,7 +32,25 @@ forget() {
     done
 }
 
+# back_to_default: "no wallpaper", or one of these pictures as the wallpaper (bin/wallpaper
+# keeps a copy), ends with them. Fails if there is nothing to end. A picture of your own
+# stays chosen, and so does a chosen.jpg that isn't a copy of that picture any more.
+back_to_default() {
+    local state=${XDG_CACHE_HOME:-$HOME/.cache}/wren/chosen-wallpaper desk=$HOME/Pictures/wren/desktop chose f
+    chose=$(head -c 256 "$state" 2>/dev/null)
+    if [ "$chose" != none ]; then
+        [ -n "$chose" ] && grep -qxFs -- "$chose" "$SHIPPED" || return 1
+        for f in "$desk/chosen.jpg" "$desk/chosen.png"; do
+            if cmp -s -- "$DEST/$chose" "$f"; then rm -f -- "$f"; fi
+        done
+    fi
+    rm -f -- "$state"
+}
+
 if [ "${1:-}" = --remove ]; then
+    # (before the pictures go: it compares with them)
+    ended=
+    if back_to_default; then ended=1; fi
     if [ -f "$LIST" ]; then
         while IFS= read -r f; do
             # only plain names: nothing outside the folder, nor in a folder in it
@@ -53,6 +72,7 @@ if [ "${1:-}" = --remove ]; then
         [ -s "$DEST/CREDITS.txt" ] || rm -f "$DEST/CREDITS.txt"
     fi
     note "Removed the wallpapers it put there; pictures of your own in $DEST are still there."
+    if [ -n "$ended" ]; then reload_sway; fi
     exit
 fi
 
@@ -84,7 +104,8 @@ pictures on as they are, so don't share them as wallpapers. Their licence, which
 change: https://www.pexels.com/license/
 
 wrenctl install wallpapers asks again which to have;
-wrenctl remove wallpapers takes out what it put here, nothing of yours.
+wrenctl remove wallpapers takes out what it put here, nothing of yours. If one of its
+pictures is your wallpaper, or you chose "No wallpaper", the default wren comes back.
 EOF
 }
 

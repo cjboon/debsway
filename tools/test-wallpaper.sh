@@ -318,4 +318,35 @@ check "...and the README says the MIT licence doesn't cover them" grep -q 'data/
 
 check "the summary fits the list (52 characters)" bash -c '[ "$(sed -n "s/^# summary: //p" "$1" | wc -m)" -le 53 ]' _ "$HERE/extras/wallpapers.sh"
 
+# --remove: what you chose ends with the pictures, and the default wren is back
+H4=$T/h4
+W4=$H4/Pictures/Wallpapers
+DESK4=$H4/Pictures/wren/desktop
+STATE4=$H4/.cache/wren/chosen-wallpaper
+x4() { : >"$T/sway"; env SWAYSOCK=/nonexistent WP_TEST_PATH="$T/fake:$PATH" HOME="$H4" XDG_CACHE_HOME="$H4/.cache" bash "$R3/extras/wallpapers.sh" "$@" >"$T/out" 2>&1; }
+fresh4() { rm -rf "$H4"; mkdir -p "$DESK4" "$H4/.cache/wren"; x4; }
+fresh4
+echo none >"$STATE4"
+x4 --remove
+check "--remove with \"no wallpaper\" set: that goes, so the default wren can come back" test ! -e "$STATE4"
+check "...and it is back at once: sway reloads" grep -q 'reload' "$T/sway"
+fresh4
+cp "$W4/wren.jpg" "$DESK4/chosen.jpg"; echo wren.jpg >"$STATE4"
+x4 --remove
+check "--remove with one of its pictures chosen: the copy and the choice go" bash -c '[ ! -e "$1/chosen.jpg" ] && [ ! -e "$2" ]' _ "$DESK4" "$STATE4"
+check "...and sway reloads" grep -q 'reload' "$T/sway"
+fresh4
+jpg "$W4/mine.jpg" 2000; cp "$W4/mine.jpg" "$DESK4/chosen.jpg"; echo mine.jpg >"$STATE4"
+x4 --remove
+check "a picture of your own chosen from that folder: the copy and the choice stay" bash -c '[ -f "$1/chosen.jpg" ] && [ "$(cat "$2")" = mine.jpg ] && [ -f "$3/mine.jpg" ]' _ "$DESK4" "$STATE4" "$W4"
+check "...and sway is left alone" not grep -q 'reload' "$T/sway"
+fresh4
+jpg "$DESK4/chosen.jpg" 3000; echo wren.jpg >"$STATE4"
+x4 --remove
+check "a chosen.jpg that isn't that picture any more (you put your own there) stays" test -f "$DESK4/chosen.jpg"
+fresh4
+jpg "$DESK4/mine.jpg" 2000
+x4 --remove
+check "nothing chosen: your pictures in the desktop folder stay, and sway is left alone" bash -c '[ -f "$1/mine.jpg" ] && ! grep -q reload "$2"' _ "$DESK4" "$T/sway"
+
 [ "$fails" -eq 0 ]
