@@ -31,7 +31,7 @@ You get the `mullvad` command, the service it talks to, and the graphical app
 - Mullvad sees where your traffic goes instead of your ISP: you trust Mullvad.
 - A site you log in to still knows who you are.
 - Without lockdown mode, traffic goes out unprotected while the VPN is off or reconnecting.
-- It isn't Tor: one company, one hop.
+- It isn't Tor: one company, one hop. With Tor and Whonix: [A VPN before Tor](../vpn-before-tor.md).
 
 ## MANUAL INSTALL
 

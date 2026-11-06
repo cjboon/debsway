@@ -266,6 +266,8 @@ yours.
   tracking by cookies or browser fingerprints.
 - Use its "kill switch" (Mullvad: lockdown mode) if you never want traffic to
   leave outside the tunnel.
+- With Tor, it can reduce what your internet provider has to hand over, but it
+  doesn't make Tor more anonymous: see [A VPN before Tor](vpn-before-tor.md).
 
 ### Tor: what it does and doesn't
 
