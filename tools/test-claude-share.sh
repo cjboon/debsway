@@ -81,11 +81,31 @@ echo n | bash "$SHARE" "$HOME/pics" >"$T/out" 2>&1
 check "a file name can't steer your terminal" not grep -q "$(printf '\033')" "$T/out"
 rm "$HOME/pics"/evil*
 
-(cd "$T" && bash "$SHARE" "$HOME/pics" </dev/null >"$T/out" 2>&1)
-check "outside a git copy, with no ~/wren: it says so" grep -q "isn't a git copy" "$T/out"
-git clone -q "$T/server.git" "$HOME/wren"
-(cd "$T" && echo n | bash "$SHARE" "$HOME/pics" >"$T/out" 2>&1)
-check "...with ~/wren it uses that" grep -q ANYONE "$T/out"
+# Where it goes, outside a git copy. A loose copy of the script, so this test's own
+# repository (the real one) can't be picked up
+mkdir -p "$T/loose" "$T/fakebin"
+cp "$SHARE" "$T/loose/claude-share"
+LOOSE=$T/loose/claude-share
+printf '#!/bin/sh\nexit 1\n' >"$T/fakebin/wrenctl"
+chmod +x "$T/fakebin/wrenctl"
+(cd "$T" && PATH=$T/fakebin:$PATH bash "$LOOSE" "$HOME/pics" </dev/null >"$T/out" 2>&1)
+check "outside a git copy, with no Wren Linux folder: it says so" grep -q "isn't a git copy" "$T/out"
+git init -q --bare "$T/wren.git"
+git clone -q "$T/wren.git" "$T/wren-copy" 2>/dev/null
+printf '#!/bin/sh\necho "%s"\n' "$T/wren-copy" >"$T/fakebin/wrenctl"
+(cd "$T" && echo n | PATH=$T/fakebin:$PATH bash "$LOOSE" "$HOME/pics" >"$T/out" 2>&1)
+check "...installed: the folder wrenctl knows" grep -q "$T/wren.git" "$T/out"
+mkdir -p "$T/wren-copy/bin"
+cp "$SHARE" "$T/wren-copy/bin/"
+: >"$T/wren-copy/lib.sh"
+git init -q --bare "$T/other.git"
+printf '#!/bin/sh\necho "%s"\n' "$T/nowhere" >"$T/fakebin/wrenctl"
+(cd "$T" && echo n | PATH=$T/fakebin:$PATH bash "$T/wren-copy/bin/claude-share" "$HOME/pics" >"$T/out" 2>&1)
+check "...run from a copy: that copy" grep -q "$T/wren.git" "$T/out"
+git init -q "$T/mine"
+git -C "$T/mine" remote add origin "$T/other.git"
+(cd "$T/mine" && echo n | bash "$T/wren-copy/bin/claude-share" "$HOME/pics" >"$T/out" 2>&1)
+check "...but the repository you're in comes first" grep -q "$T/other.git" "$T/out"
 
 echo n | bash "$SHARE" --done >/dev/null 2>&1
 check "--done, answering no, keeps them" test -n "$(one)"

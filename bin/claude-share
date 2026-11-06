@@ -1,10 +1,11 @@
 #!/bin/bash
-# claude-share PATH...: gives Claude files to look at, on a branch of their own on GitHub.
+# claude-share PATH...: written by Wren Linux extras/claude-code.sh
+# Gives Claude files to look at, on a branch of their own on GitHub.
 #   claude-share ~/Pictures/Wallpapers     shows what would go up, then asks
 #   claude-share --done                    deletes the branches it made, after asking
 # The repository is public: whatever goes up can be seen and copied at once, and
 # deleting the branch later doesn't take that back. So it shows every name first.
-# Run it in your git copy of the repository, or anywhere if that is ~/wren.
+# It goes to the repository you're in, else this Wren Linux's own git copy.
 # The branch holds one new commit and nothing else, so it brings no history along and
 # can't touch main. That commit doesn't carry your name, email or time zone. Hidden files
 # and links are left out. Claude looks and picks; nothing here goes into main by itself.
@@ -15,9 +16,15 @@ MAX_ALL_MB=200
 
 die() { printf 'claude-share: %s\n' "$*" >&2; exit 1; }
 
-# the address of the repository: the one you're in, else ~/wren
-url=$(git remote get-url origin 2>/dev/null || git -C "$HOME/wren" remote get-url origin 2>/dev/null) ||
-    die "this isn't a git copy, and ~/wren isn't one. Run it in your copy of the repository."
+# wren_copy: the Wren Linux folder this was run from, else the one wrenctl knows
+wren_copy() {
+    local here
+    here=$(dirname -- "$(realpath -- "${BASH_SOURCE[0]}")")/..
+    if [ -f "$here/lib.sh" ]; then echo "$here"; else wrenctl --dir 2>/dev/null; fi
+}
+# the address of the repository
+url=$(git remote get-url origin 2>/dev/null || git -C "$(wren_copy)" remote get-url origin 2>/dev/null) ||
+    die "this isn't a git copy, and neither is Wren Linux's folder. Run it in your copy of the repository."
 
 if [ "${1:-}" = --done ]; then
     mapfile -t branches < <(git ls-remote --heads "$url" 'claude-share-*' |
