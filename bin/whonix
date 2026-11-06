@@ -140,6 +140,10 @@ open_both() {
     fi
 }
 stop() {
+    if ! running Whonix-Workstation && ! running Whonix-Gateway; then
+        echo "whonix machines aren't running right now so there is nothing to stop."
+        return 0
+    fi
     i=0
     while [ "$i" -lt "${WHONIX_STOP_WAIT:-60}" ] && { running Whonix-Workstation || running Whonix-Gateway; }; do
         # Again every few seconds: a VM still starting doesn't hear its power button yet

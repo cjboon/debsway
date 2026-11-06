@@ -154,6 +154,17 @@ check "...and the Gateway still starts" grep -q '^virsh start Whonix-Gateway' "$
 rm -f "$T/home/.local/state/wren/whonix-lyrebird-version"
 check "no webtunnel in the Gateway: nothing said" test -z "$(lyr 0.6.2-1)"
 
+# Nothing to stop: it says so, rather than nothing at all
+reset
+out=$(w stop 2>&1) && rc=0 || rc=$?
+check "whonix stop with nothing running: it says there is nothing to stop" bash -c '[ "$1" = 0 ] && grep -q "aren.t running right now so there is nothing to stop" <<<"$2"' _ "$rc" "$out"
+check "...and presses no button" not grep -q '^virsh shutdown' "$T/calls"
+out=$(w stop --force 2>&1) && rc=0 || rc=$?
+check "...with --force too" bash -c '[ "$1" = 0 ] && grep -q "nothing to stop" <<<"$2"' _ "$rc" "$out"
+echo running >"$T/state/Whonix-Gateway"; echo Whonix-Gateway >"$T/obeys"
+out=$(w stop 2>&1)
+check "...but not when one was running" not grep -q 'nothing to stop' <<<"$out"
+
 # A press in about the first 70 seconds after a start is lost (seen on a real Workstation)
 reset; echo running >"$T/state/Whonix-Workstation"; echo Whonix-Workstation >"$T/obeys"; echo lost >"$T/deaf"
 env -u SWAYSOCK -u WAYLAND_DISPLAY -u DISPLAY HOME="$T/home" PATH="$T/bin:$PATH" WHONIX_STOP_WAIT=7 WHONIX_TTY="$T/no-terminal" sh "$HERE/bin/whonix" stop >/dev/null 2>&1
