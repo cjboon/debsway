@@ -5,10 +5,12 @@
 #                   one to the right (or left), the Workstation on the next
 #                   empty one after it, where you are left
 #   whonix gateway  start the Gateway and open it (Tor settings)
-#   whonix stop     shut both down. Each is asked to shut down first; Whonix's
-#                   desktop answers that with a dialog, so one still running
-#                   after WHONIX_STOP_WAIT seconds (20) is switched off, as if
-#                   its power button were held. Save your work inside first.
+#   whonix stop     shut both down, right away and cleanly: it presses each VM's
+#                   power button (extras/whonix.sh makes that shut it down). Save
+#                   your work inside first. One still running after
+#                   WHONIX_STOP_WAIT seconds (30) is left running, and it says so.
+#   whonix stop --force   the same, but one still running then is switched off,
+#                   as if its power button were held
 v="virsh -c qemu:///session"
 
 # Started from Super+d there is no terminal: what went wrong is also shown as a
@@ -131,14 +133,23 @@ stop() {
         if running "$vm"; then $v shutdown "$vm" >/dev/null 2>&1 || true; fi
     done
     i=0
-    while [ "$i" -lt "${WHONIX_STOP_WAIT:-20}" ] && { running Whonix-Workstation || running Whonix-Gateway; }; do
+    while [ "$i" -lt "${WHONIX_STOP_WAIT:-30}" ] && { running Whonix-Workstation || running Whonix-Gateway; }; do
         sleep 1
         i=$((i + 1))
     done
+    if [ "${1:-}" != --force ]; then
+        left=0
+        for vm in Whonix-Workstation Whonix-Gateway; do
+            running "$vm" || continue
+            echo "whonix: $vm is still running. Installed before whonix stop could shut it down, it shows a dialog: choose Shutdown there. Stuck? whonix stop --force switches it off (it can leave its disk needing repair)." >&2
+            left=1
+        done
+        return "$left"
+    fi
     # The Workstation first: the Gateway is its only way out
     for vm in Whonix-Workstation Whonix-Gateway; do
         running "$vm" || continue
-        echo "whonix: $vm didn't shut down by itself (its shutdown dialog is open); switching it off." >&2
+        echo "whonix: $vm didn't shut down by itself; switching it off." >&2
         # --graceful: QEMU is asked to end and closes its disk cleanly
         $v destroy --graceful "$vm" >/dev/null 2>&1 || $v destroy "$vm" >/dev/null 2>&1 ||
             echo "whonix: couldn't switch $vm off." >&2
@@ -161,6 +172,10 @@ lyrebird_check() {
 case "${1:-start}" in
     start) lyrebird_check; gateway_net && up Whonix-Gateway && up Whonix-Workstation && open_both ;;
     gateway) lyrebird_check; gateway_net && up Whonix-Gateway && console Whonix-Gateway ;;
-    stop) stop ;;
-    *) echo "usage: whonix [start|gateway|stop]" >&2; exit 2 ;;
+    stop)
+        case ${2:-} in
+            "" | --force) stop "${2:-}" ;;
+            *) echo "usage: whonix stop [--force]" >&2; exit 2 ;;
+        esac ;;
+    *) echo "usage: whonix [start|gateway|stop [--force]]" >&2; exit 2 ;;
 esac

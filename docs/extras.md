@@ -107,8 +107,8 @@ turn it on), and Safest with JavaScript off for the Workstation's Tor
 Browser. Then `whonix` starts both and opens each on an empty workspace
 (the Gateway on yours if it is empty, else the next empty one; the Workstation
 on the one after, where you are left), `whonix gateway` opens the
-Gateway's Tor settings, `whonix stop` shuts both down (switching off a VM that
-only opens its shutdown dialog, after 20 seconds: save your work inside first).
+Gateway's Tor settings, `whonix stop` shuts both down, right away and cleanly (save your work inside
+first; `--force` switches off one still running after 30 seconds).
 
 **OnionShare.** Debian's package pulls in the system tor service, which
 would connect to Tor directly the moment it's installed, so the script

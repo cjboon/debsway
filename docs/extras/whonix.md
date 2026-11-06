@@ -11,7 +11,8 @@ wrenctl manual whonix                      print the manual steps below
 
 whonix             start both VMs and open both, each on an empty workspace (or Super+d)
 whonix gateway     start the Gateway and open it (Tor settings, bridges)
-whonix stop        shut both down (one still running after 20 seconds is switched off)
+whonix stop        shut both down, right away and cleanly: save your work inside first
+whonix stop --force   the same, and one still running after 30 seconds is switched off
 ```
 
 Whonix runs Tor in one virtual machine, the Gateway, and your programs in
@@ -21,7 +22,9 @@ your user under KVM (libvirt's `qemu:///session`), with no root daemon or host
 network setup. The download (about 1.9 GB) is checked against Whonix's signing
 key, pinned in `pins.sh` (`WHONIX_FPR`), and kept in `offline/whonix`. Before
 the first boot, Wren Linux writes into the images, without mounting them (with
-qemu-img and debugfs): a bridge for the Gateway if you need one (obfs4 or
+qemu-img and debugfs): in both, a rule for acpid so that the power button, which
+`whonix stop` presses, shuts the VM down cleanly (left to Whonix's desktop, it
+opens a dialog); a bridge for the Gateway if you need one (obfs4 or
 webtunnel lines you paste, or Snowflake), so its very first connection uses it, or Tor kept
 off until you turn it on (`--bridges` chooses again later); and in the Workstation, Tor Browser at Safest with
 JavaScript off (`data/tor-browser-safest.js`) and the Feather wallet for Monero:
@@ -58,14 +61,16 @@ gives it the new card; `--bridges` then sets the DNS for the bridge you choose.
 
 - A bug in KVM or QEMU could reach this computer from a VM.
 - What you type into a site still identifies you if it's about you; Tor hides the address, not the person.
-- `whonix stop` doesn't shut down cleanly yet: Whonix's desktop answers it with a shutdown dialog in each VM. Choose Power off there within 20 seconds; a VM still running then is switched off, as if its power button were held, which can leave its disk needing repair at the next boot. Save your work inside first.
+- `whonix stop` doesn't ask inside the VMs: what isn't saved there is lost. The same goes for the power button of a VM's own window. Tried here on Whonix 18.2.4.2, without a Tor connection or programs open: both VMs were off in 5 seconds, their disks clean.
+- VMs installed before this have no such rule: `whonix stop` opens their shutdown dialog and leaves them running until you choose Shutdown there. `--bridges` gives the Gateway the rule, but nothing gives it to a Workstation that is already installed: back up what you keep in it, then `wrenctl remove whonix` (saying yes to deleting the disks) and `wrenctl install whonix`.
+- `whonix stop --force` switches off a VM still running after 30 seconds, as if its power button were held, which can leave its disk needing repair at the next boot.
 - Wren Linux doesn't update Feather in the Workstation after the install: Feather says when a newer version is out, and its guide for Whonix (docs.featherwallet.org) shows how to replace it. Whonix updates Electrum with its other packages.
 - Feather inside the Workstation hasn't been tried in a real Whonix VM yet: the files are put in place and checked, but not run there.
 - Whonix's own updates run inside the VMs: update them there.
 - With Snowflake, the Gateway looks up its broker and STUN servers through this computer's resolver (encrypted, with secure DNS on); the resolver sees those names, and your network sees you reach them, as with Snowflake anywhere. Whonix's page on Gateway DNS knows of no risk in having it on.
 - Started any other way than `whonix` (virt-manager, `virsh start`), the Gateway has no network: its passt isn't running.
 - webtunnel's copy of lyrebird in the Gateway isn't updated by Whonix. `whonix` says when the one on this computer is newer; then `whonix stop` and `wrenctl install whonix --bridges` copy it in again. Until you do, the Gateway runs the older one.
-- A disk switched off without shutting down (as `whonix stop` does to a VM whose shutdown dialog stays open) isn't edited: `--bridges` asks you to start the Gateway once and shut it down from inside first, so its journal is replayed.
+- A disk switched off without shutting down (as `whonix stop --force` can do) isn't edited: `--bridges` asks you to start the Gateway once and shut it down from inside first, so its journal is replayed.
 - The Gateway's own network was tried here with Whonix 18.2.4.2 under passt (its outside card is eth0, Tor reaches its relays), and Snowflake through it connected on a real install. webtunnel was tried here only up to lyrebird starting and looking up a bridge's address: a real webtunnel bridge (from bridges.torproject.org) is yours to try.
 
 ## MANUAL INSTALL
@@ -172,6 +177,8 @@ EOF
         { echo "Couldn't write $1 back; it is unchanged." >&2; rm -f "$1.raw" "$1.new"; return 1; }
     rm "$1.raw" && mv "$1.new" "$1"
 }
+put ws.qcow2 @WREN_DIR@/data/whonix-power-button /etc/acpi/events/wren-power-button
+put gw.qcow2 @WREN_DIR@/data/whonix-power-button /etc/acpi/events/wren-power-button
 put ws.qcow2 user.js /usr/local/etc/torbrowser.d/user.js
 put ws.qcow2 feather.AppImage /usr/local/lib/feather/feather.AppImage 755
 put ws.qcow2 whonix-feather /usr/local/bin/feather 755

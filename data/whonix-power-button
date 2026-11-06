@@ -1,0 +1,4 @@
+# Written by Wren Linux extras/whonix.sh: whonix stop presses this VM's power
+# button, and this shuts it down cleanly, with no dialog from its desktop.
+event=button[ /]power
+action=/usr/bin/systemctl poweroff --ignore-inhibitors

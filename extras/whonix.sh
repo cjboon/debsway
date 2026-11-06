@@ -6,6 +6,8 @@
 # setup.
 #
 # Before the first boot, this writes into the images:
+#   Both:        a rule for acpid: the power button (whonix stop presses it) shuts
+#                the VM down cleanly. Left to Whonix's desktop, it opens a dialog.
 #   Gateway:     a bridge if you need one (it asks first; obfs4 with lines
 #                you paste, or Snowflake; the Gateway has no webtunnel
 #                client), so its first connection uses it. Whonix 18
@@ -127,8 +129,8 @@ image_put() {
     start=$(sfdisk -d "$raw" | sed -n 's/.*start= *\([0-9]*\),.*name="primary".*/\1/p')
     [ -n "$start" ] || { rm -f "$raw"; die "Couldn't find the root partition in $img."; }
     fs="$raw?offset=$((start * 512))"
-    # A VM switched off without shutting down (whonix stop does that to one whose
-    # shutdown dialog stays open) leaves its file system for its next boot to put
+    # A VM switched off without shutting down (whonix stop --force does that)
+    # leaves its file system for its next boot to put
     # right: a journal to replay, orphaned files to clear. Edited before that, the
     # boot could undo the edit, or the edit spoil what the boot puts right: so it
     # must check out first, and it is said how to let the VM do that
@@ -341,7 +343,8 @@ gateway_config() {
         printf '%s\n' "# Written by Wren Linux extras/whonix.sh: Tor connects (Tor Control Panel can change this)." "DisableNetwork 0"
     fi >"$work/40_tor_control_panel.conf"
     GW_FILES=("$work/50_user.conf" /usr/local/etc/torrc.d/50_user.conf
-        "$work/40_tor_control_panel.conf" /usr/local/etc/torrc.d/40_tor_control_panel.conf)
+        "$work/40_tor_control_panel.conf" /usr/local/etc/torrc.d/40_tor_control_panel.conf
+        "$WREN_DIR/data/whonix-power-button" /etc/acpi/events/wren-power-button)
     if bridge_needs_dns; then
         GW_FILES+=(--edit /etc/resolv.conf.whonix 's/^#nameserver 10\.0\.2\.3$/nameserver 10.0.2.3/')
     else
@@ -494,7 +497,7 @@ else
 fi
 
 say "Workstation: Tor Browser and the wallets"
-ws_files=("$WREN_DIR/data/tor-browser-safest.js" /usr/local/etc/torbrowser.d/user.js)
+ws_files=("$WREN_DIR/data/tor-browser-safest.js" /usr/local/etc/torbrowser.d/user.js "$WREN_DIR/data/whonix-power-button" /etc/acpi/events/wren-power-button)
 if workstation_feather "$work"; then
     ws_files+=(--exec "$work/feather.AppImage" /usr/local/lib/feather/feather.AppImage
         --exec "$WREN_DIR/data/whonix-feather" /usr/local/bin/feather

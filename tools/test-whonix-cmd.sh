@@ -53,10 +53,17 @@ check "start starts the Gateway, then the Workstation, then opens both" \
 
 reset
 echo running >"$T/state/Whonix-Gateway"; echo running >"$T/state/Whonix-Workstation"
-w stop 2>/dev/null
+out=$(w stop 2>&1) && rc=0 || rc=$?
 check "stop asks both to shut down first" \
     bash -c 'grep -qx "virsh shutdown Whonix-Workstation" "$1" && grep -qx "virsh shutdown Whonix-Gateway" "$1"' _ "$T/calls"
-check "...and switches off those that only opened their shutdown dialog" \
+check "...one that doesn't: never switched off unasked, it fails, and says what to do" bash -c '
+    ! grep -q "^virsh destroy" "$1" && [ "$2" -ne 0 ] && grep -q "still running" <<<"$3" && grep -q "whonix stop --force" <<<"$3"' _ "$T/calls" "$rc" "$out"
+
+reset
+echo running >"$T/state/Whonix-Gateway"; echo running >"$T/state/Whonix-Workstation"
+w stop --force 2>/dev/null
+check "stop --force asks first too" grep -qx "virsh shutdown Whonix-Workstation" "$T/calls"
+check "...and switches off those still running" \
     bash -c 'grep -qx "shut off" "$1/Whonix-Workstation" && grep -qx "shut off" "$1/Whonix-Gateway"' _ "$T/state"
 check "...cleanly (destroy --graceful), the Workstation first" \
     bash -c 'grep "^virsh destroy" "$1" | paste -sd";" | grep -qx "virsh destroy --graceful Whonix-Workstation;virsh destroy --graceful Whonix-Gateway"' _ "$T/calls"
@@ -64,8 +71,23 @@ check "...cleanly (destroy --graceful), the Workstation first" \
 reset
 echo running >"$T/state/Whonix-Gateway"; echo running >"$T/state/Whonix-Workstation"
 printf '%s\n' Whonix-Workstation Whonix-Gateway >"$T/obeys"
-w stop 2>/dev/null
+w stop 2>/dev/null; rc=$?
 check "VMs that shut down by themselves are not switched off" not grep -q '^virsh destroy' "$T/calls"
+check "...and that counts as done" test "$rc" = 0
+out=$(w stop --now 2>&1) && rc=0 || rc=$?
+check "stop with anything else: refused, nothing shut down" bash -c '
+    [ "$1" -ne 0 ] && grep -q usage <<<"$2"' _ "$rc" "$out"
+
+# The power button: a rule of acpid's in both images, which powers off with no
+# desktop involved (tried on a real Whonix 18.2.4.2: both off in 5 s, disks clean)
+P=$HERE/data/whonix-power-button
+check "the rule: the power button powers off, past the desktop's dialog" bash -c '
+    grep -qx "event=button\[ /\]power" "$1" && grep -qx "action=/usr/bin/systemctl poweroff --ignore-inhibitors" "$1" &&
+    [ "$(grep -vc "^#" "$1")" = 2 ]' _ "$P"
+check "...written into the Gateway" bash -c '
+    sed -n "/^gateway_config()/,/^}/p" "$1" | grep -q "whonix-power-button\" /etc/acpi/events/wren-power-button"' _ "$HERE/extras/whonix.sh"
+check "...and the Workstation" bash -c '
+    grep "^ws_files=" "$1" | grep -q "whonix-power-button\" /etc/acpi/events/wren-power-button"' _ "$HERE/extras/whonix.sh"
 
 reset
 touch "$T/broken"
