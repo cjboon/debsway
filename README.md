@@ -12,6 +12,8 @@ or settings app: one compositor and plain text configs.
 
 **New here? Start with the [first-time guide](docs/first-time.md).** To report a
 security problem, or check Wren Linux's signing key, see [SECURITY.md](SECURITY.md).
+To help, see [CONTRIBUTING.md](CONTRIBUTING.md) and
+[how Wren Linux fits together](docs/architecture.md).
 
 Wren Linux is based on Debian; it is not affiliated with or endorsed by the
 Debian project. (It was called debsway until November 2026.)
@@ -80,7 +82,7 @@ updates, the sandboxed browser and encrypted DNS, each [x] done, [~] partly or
 
 ```
 wren/
-├── README.md, THREAT-MODEL.md, SECURITY.md, LICENSE (MIT)
+├── README.md, THREAT-MODEL.md, SECURITY.md, CONTRIBUTING.md, LICENSE (MIT)
 ├── start.sh                 from the stick on a fresh install: copies Wren Linux home, unmounts, wifi.sh if needed, install-base.sh
 ├── install-base.sh          the core desktop: explains and asks, packages, sway, bar, every part, then the extras list
 ├── install-extras.sh        pick optional programs from a list (install-base.sh ends with it)
