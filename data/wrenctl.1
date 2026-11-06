@@ -130,7 +130,9 @@ update it, and nobody force-pushes or deletes it.
 .B deploy\-key
 adds the claude\-vm VM's ssh key to a repository as a deploy key that can
 write, so the agent can push, without a browser; the token stays on this
-computer, never in the VM, and the branch rules keep the key off main.
+computer, never in the VM. It checks the branch rules first, offers to add any
+that are missing, and adds no key while main is open or can't be checked: those
+rules keep the key off main.
 \fB\-\-logout\fR forgets a saved token.
 .TP
 .B \-\-test

@@ -272,7 +272,9 @@ sandboxes, `extras/claude-code.sh` and `extras/claude-vm.sh`.) If Claude Code
 pushes to the repository, add the ssh key its sandbox prints as a deploy key
 on GitHub (with write access), replacing the old install's. `wrenctl gh
 deploy-key` does it from the command line, no browser: it reads the VM's key
-and adds it, with a token that stays on your computer, never in the VM.
+and adds it, with a token that stays on your computer, never in the VM. It checks
+the rules on `main` first and offers to add any that are missing; no key goes on
+while `main` is open or can't be checked.
 
 ## The `wrenctl` command
 

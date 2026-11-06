@@ -32,10 +32,14 @@ case "$*" in
     "auth login --hostname github.com --with-token") cat >"$S/input.$n"; : >"$S/logged-in" ;;
     "auth logout --hostname github.com") rm -f "$S/logged-in" ;;
     "api repos/"*"/rulesets --jq .[].name") cat "$S/have-rules" 2>/dev/null; true ;;
-    "api -X POST repos/"*"/rulesets --input -") cat >"$S/input.$n"; [ ! -e "$S/refuse" ] ;;
+    "api -X POST repos/"*"/rulesets --input -")
+        cat >"$S/input.$n"; [ ! -e "$S/refuse" ] || exit 1
+        if [ -e "$S/applied-after" ]; then cp "$S/applied-after" "$S/applied"; fi ;;
     "api repos/"*"/keys --jq .[].key") cat "$S/have-keys" 2>/dev/null; true ;;
     "api -X POST repos/"*"/keys --input -") cat >"$S/input.$n"; [ ! -e "$S/refuse-key" ] ;;
-    "api repos/"*"/rules/branches/main --jq .[].type") cat "$S/applied" 2>/dev/null; true ;;
+    "api repos/"*"/rules/branches/main --jq .[].type")
+        if [ -e "$S/refuse-read" ]; then echo "HTTP 503: pretend outage" >&2; exit 1; fi
+        cat "$S/applied" 2>/dev/null; true ;;
     *) exit 3 ;;
 esac
 GH
@@ -174,12 +178,36 @@ printf 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIVMKEYBODYxxxxxxxxxxxxxxxxxxxxxxxxxx
 out=$(dk "$T/tok")
 check "...a different comment on the same key still counts as there" not grep -q "api -X POST" "$T/s/calls"
 
-# main not protected: the key is added, with a warning to set the rules
+# main not protected: the rules come first, and the key only once GitHub applies them
+printf '%s\ny\n' "$TOK" >"$T/tok-yes"
+printf '%s\nn\n' "$TOK" >"$T/tok-no"
 fresh
 printf '%s\n' non_fast_forward deletion >"$T/s/applied"
-out=$(dk "$T/tok")
-check "main not fully protected: it warns this key could reach main, and points to rulesets" bash -c '
-    grep -q "could push to main" <<<"$1" && grep -q "wrenctl gh rulesets" <<<"$1"' _ "$out"
+cp "$T/all-applied" "$T/s/applied-after"
+out=$(dk "$T/tok-yes")
+check "main not fully protected, you say yes: the rules, then the key, one token" bash -c '
+    r=$(grep -n "api -X POST repos/.*/rulesets" "$1" | head -1 | cut -d: -f1)
+    k=$(grep -n "api -X POST repos/.*/keys" "$1" | cut -d: -f1)
+    [ -n "$r" ] && [ -n "$k" ] && [ "$r" -lt "$k" ] && grep -q "could push to main" <<<"$2" &&
+        [ "$(grep -c "Token:" <<<"$2")" = 1 ]' _ "$T/s/calls" "$out"
+fresh
+printf '%s\n' non_fast_forward deletion >"$T/s/applied"
+out=$(dk "$T/tok-no") && rc=0 || rc=$?
+check "...you say no: nothing is changed, it fails and says so" bash -c '
+    [ "$1" -ne 0 ] && ! grep -q "api -X POST" "$2" && grep -q "No key was added" <<<"$3"' _ "$rc" "$T/s/calls" "$out"
+fresh
+printf '%s\n' non_fast_forward deletion >"$T/s/applied"
+out=$(dk "$T/tok-yes") && rc=0 || rc=$?
+check "...the rules added but GitHub doesn't apply them: no key" bash -c '
+    [ "$1" -ne 0 ] && ! grep -q "api -X POST repos/.*/keys" "$2"' _ "$rc" "$T/s/calls"
+
+# The check itself fails: that isn't "main is open", and no key goes on unchecked
+fresh
+: >"$T/s/refuse-read"
+out=$(dk "$T/tok") && rc=0 || rc=$?
+check "main's rules can't be read: nothing is changed, it fails with GitHub's own words" bash -c '
+    [ "$1" -ne 0 ] && ! grep -q "api -X POST" "$2" && grep -q "pretend outage" <<<"$3" &&
+        grep -q "No key was added" <<<"$3" && ! grep -q "could push to main" <<<"$3"' _ "$rc" "$T/s/calls" "$out"
 
 # GitHub refuses the key (a deploy key is one repo only): said, nothing claimed
 fresh

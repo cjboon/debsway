@@ -17,7 +17,7 @@
 #        bash gh-helper.sh deploy-key [OWNER/REPO] [--account NAME]
 #                                              add the claude-vm VM's ssh key to the
 #                                              repository (so the agent can push),
-#                                              without a browser
+#                                              without a browser; main's rules first
 #        bash gh-helper.sh --logout              forget a saved token
 # (wrenctl gh runs it)
 . "$(dirname -- "${BASH_SOURCE[0]}")/lib.sh"
@@ -96,22 +96,23 @@ setup() {
     note "Saved. gh auth status shows it; wrenctl gh --logout forgets it."
 }
 
-rulesets() {
-    local repo=${1:-$(this_repo)} tok="" have
-    [ -n "$repo" ] || die "Which repository? wrenctl gh rulesets OWNER/REPO"
-    [[ $repo =~ ^[A-Za-z0-9-]{1,39}/[A-Za-z0-9._-]{1,100}$ ]] || die "\"$repo\" isn't OWNER/REPO."
-    have_gh
-    if ! logged_in; then
-        say "A token for this, used now and not saved"
-        token_help "Administration, Read and write"
-        secret tok "    Token: "
-        token_ok "$tok" || die "That isn't a GitHub token; nothing was changed."
-    fi
-    # The token reaches gh in its environment (only you can read that), never
-    # on a command line
-    gh_() { if [ -n "$tok" ]; then GH_TOKEN=$tok "$GH" "$@"; else "$GH" "$@"; fi; }
+# The token reaches gh in its environment (only you can read that), never on a
+# command line. $tok is the caller's, from token_for_this.
+gh_() { if [ -n "$tok" ]; then GH_TOKEN=$tok "$GH" "$@"; else "$GH" "$@"; fi; }
 
-    say "The rules on $repo's main"
+# token_for_this: into the caller's $tok, unless gh is logged in
+token_for_this() {
+    logged_in && return 0
+    say "A token for this, used now and not saved"
+    token_help "Administration, Read and write"
+    secret tok "    Token: "
+    token_ok "$tok" || die "That isn't a GitHub token; nothing was changed."
+}
+
+# add_rules REPO: the rules on main, each only if missing; then what GitHub says
+# it applies, or stop
+add_rules() {
+    local repo=$1 have
     have=$(gh_ api "repos/$repo/rulesets" --jq '.[].name') ||
         die "GitHub didn't list $repo's rules (the token needs Administration, Read and write, on $repo). Nothing was changed."
     if grep -qxF "$RULE_ONLY_OWNER" <<<"$have"; then
@@ -145,6 +146,16 @@ EOF
         grep -qx "$t" <<<"$applied" || die "GitHub doesn't apply \"$t\" to main. See: https://github.com/$repo/settings/rules"
     done
     note "GitHub applies them to main: only you update it; nobody force-pushes or deletes it."
+}
+
+rulesets() {
+    local repo=${1:-$(this_repo)} tok=""
+    [ -n "$repo" ] || die "Which repository? wrenctl gh rulesets OWNER/REPO"
+    [[ $repo =~ ^[A-Za-z0-9-]{1,39}/[A-Za-z0-9._-]{1,100}$ ]] || die "\"$repo\" isn't OWNER/REPO."
+    have_gh
+    token_for_this
+    say "The rules on $repo's main"
+    add_rules "$repo"
     if [ -n "$tok" ]; then
         note "The token wasn't saved. Made for this alone? Delete it: https://github.com/settings/personal-access-tokens"
     fi
@@ -153,8 +164,9 @@ EOF
 # deploy_key [OWNER/REPO] [--account NAME]: adds the claude-vm VM's ssh public
 # key to the repository as a deploy key that can write (so the agent can push).
 # The key is public; the token that adds it stays on this computer, never in the
-# VM. A deploy key reaches one repository only, and the branch rules (rulesets)
-# keep it off main, so it can push its own branch and nothing else.
+# VM. A deploy key reaches one repository only, and the branch rules keep it off
+# main, so it can push its own branch and nothing else: they are checked first,
+# and no key goes on while main is open or can't be checked.
 deploy_key() {
     local repo="" account="" tok="" key existing applied t
     while [ $# -gt 0 ]; do
@@ -186,18 +198,29 @@ deploy_key() {
     [[ $body =~ ^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp[0-9]+|sk-ssh-ed25519@openssh.com)\ [A-Za-z0-9+/]+=*$ ]] ||
         die "That doesn't look like a single ssh public key; nothing was sent to GitHub."
 
-    if ! logged_in; then
-        say "A token for this, used now and not saved"
-        token_help "Administration, Read and write"
-        secret tok "    Token: "
-        token_ok "$tok" || die "That isn't a GitHub token; nothing was changed."
+    token_for_this
+
+    # Is main protected, so this write key can't reach it? Before the key goes on
+    say "The rules on $repo's main"
+    applied=$(gh_ api "repos/$repo/rules/branches/main" --jq '.[].type' 2>&1) ||
+        die "Couldn't check the rules on $repo's main. No key was added. GitHub said: $(printable <<<"$applied")"
+    local main_open=false
+    for t in update non_fast_forward deletion; do
+        grep -qx "$t" <<<"$applied" || main_open=true
+    done
+    if $main_open; then
+        warn "main is not fully protected yet, so this key could push to main too."
+        ask "Add the rules now (only you update main; nobody force-pushes or deletes it)?" y ||
+            die "No key was added. When you want the rules: wrenctl gh rulesets $repo"
+        add_rules "$repo"
+    else
+        note "main is protected: this key can push its own branch, never main."
     fi
-    gh_() { if [ -n "$tok" ]; then GH_TOKEN=$tok "$GH" "$@"; else "$GH" "$@"; fi; }
 
     say "The claude-vm key on $repo"
     # Already there? (match on the type and body, not the comment)
     existing=$(gh_ api "repos/$repo/keys" --jq '.[].key') ||
-        die "GitHub didn't list $repo's deploy keys (the token needs Administration, Read and write, on $repo). Nothing was changed."
+        die "GitHub didn't list $repo's deploy keys (the token needs Administration, Read and write, on $repo). No key was added."
     if grep -qxF "$body" <(awk '{print $1 " " $2}' <<<"$existing"); then
         note "The VM's key is already a deploy key on $repo; nothing was added."
     else
@@ -205,21 +228,8 @@ deploy_key() {
         gh_ api -X POST "repos/$repo/keys" --input - >/dev/null <<EOF ||
 {"title":"$title","key":"$body","read_only":false}
 EOF
-            die "GitHub didn't add the key (a deploy key works on one repository only: is this key on another?). Nothing was changed. See: https://github.com/$repo/settings/keys"
+            die "GitHub didn't add the key (a deploy key works on one repository only: is this key on another?). See: https://github.com/$repo/settings/keys"
         note "Added the VM's key as a deploy key on $repo (it can push, so the agent's work reaches you)."
-    fi
-
-    # Is main protected, so this write key can't reach it? (the rules rulesets adds)
-    applied=$(gh_ api "repos/$repo/rules/branches/main" --jq '.[].type' 2>/dev/null) || applied=
-    local main_open=false
-    for t in update non_fast_forward deletion; do
-        grep -qx "$t" <<<"$applied" || main_open=true
-    done
-    if $main_open; then
-        warn "main is not fully protected yet, so this key could push to main too."
-        warn "Protect it first of all: wrenctl gh rulesets $repo"
-    else
-        note "main is protected (wrenctl gh rulesets): this key can push its own branch, never main."
     fi
     note "The VM pushes to the branch claude; you bring its work in with claude-pull, after reviewing it."
     if [ -n "$tok" ]; then
