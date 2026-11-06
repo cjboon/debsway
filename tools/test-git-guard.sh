@@ -132,6 +132,67 @@ check "...while one you name yourself still works (--git-dir)" bash -c "bash '$G
 (cd "$T/home/other" && WREN_REAL_GIT="$T/fakegit" bash "$GUARD" status)
 check "...and outside ~/projects nothing is added" grep -qx "status" "$T/calls"
 
+# Ways to send git to a folder the guard hasn't looked at. Each has a real hook there, and a
+# real commit through the guard: the hook must not run. (Each in a folder of its own.)
+evil_gitdir() { # DIR: a repository's insides, with a hook that leaves a mark
+    /usr/bin/git init -q --bare "$1"
+    /usr/bin/git -C "$1" config --unset core.bare
+    printf '#!/bin/sh\ntouch "%s/hook-ran"\n' "$T" >"$1/hooks/pre-commit"
+    chmod +x "$1/hooks/pre-commit"
+}
+try_commit() { # DIR: a commit there through the guard
+    rm -f "$T/hook-ran"
+    (cd "$1" && echo x >f && bash "$GUARD" add f && bash "$GUARD" commit -qm x) >/dev/null 2>&1
+}
+hook_held() { # DESCRIPTION: the hook didn't run
+    check "$1" test ! -e "$T/hook-ran"
+}
+X=$T/home/projects
+# .git/commondir, an absolute path (git uses it as it is)
+mkdir -p "$X/abs" && (cd "$X/abs" && real init -q)
+evil_gitdir "$X/abs-evil"
+rm -rf "$X/abs/.git/hooks" "$X/abs/.git/config" "$X/abs/.git/objects" "$X/abs/.git/refs"
+printf '%s\n' "$X/abs-evil" >"$X/abs/.git/commondir"
+try_commit "$X/abs"
+hook_held "commondir with an absolute path: its hook doesn't run"
+check "...and the refusal says what it found" bash -c "cd '$X/abs' && bash '$GUARD' status 2>&1 | grep -q 'hooks/pre-commit'"
+# .git/commondir, two lines (git takes them as one name)
+mkdir -p "$X/two" && (cd "$X/two" && real init -q)
+evil_gitdir "$X/two/clean
+evil"
+mkdir -p "$X/two/clean"
+rm -rf "$X/two/.git/hooks" "$X/two/.git/config" "$X/two/.git/objects" "$X/two/.git/refs"
+printf '../clean\nevil\n' >"$X/two/.git/commondir"
+try_commit "$X/two"
+hook_held "commondir of two lines: its hook doesn't run"
+# a .git file, two lines
+mkdir -p "$X/file"
+real init -q --bare "$X/file/clean"
+evil_gitdir "$X/file/clean
+evil"
+printf 'gitdir: clean\nevil\n' >"$X/file/.git"
+try_commit "$X/file"
+hook_held "a .git file of two lines: its hook doesn't run"
+# an empty .git folder isn't a repository: git goes on up, to one the guard must look at too
+mkdir -p "$T/home/projects-up/sub/.git"
+(cd "$T/home/projects-up" && real init -q)
+printf '#!/bin/sh\ntouch "%s/hook-ran"\n' "$T" >"$T/home/projects-up/.git/hooks/pre-commit"
+chmod +x "$T/home/projects-up/.git/hooks/pre-commit"
+try_commit "$T/home/projects-up/sub"
+hook_held "an empty .git folder, a repository with a hook above it: the hook doesn't run"
+# a .git file that leads nowhere the guard can see is refused, not waved through
+mkdir -p "$X/nowhere"
+printf 'gitdir: /no/such/folder\n' >"$X/nowhere/.git"
+check "a .git file that leads nowhere: refused by the guard itself" bash -c "cd '$X/nowhere'; bash '$GUARD' status 2>&1 | grep -q 'not running here'"
+rm -rf "$X/abs" "$X/abs-evil" "$X/two" "$X/file" "$X/nowhere" "$T/home/projects-up"
+# a real worktree, and a submodule's .git file, still work
+(cd "$P" && real worktree add -q ../wt2 >/dev/null 2>&1)
+check "a real worktree still works after all that" bash -c "cd '$T/home/projects/wt2' && bash '$GUARD' status"
+(cd "$P" && real worktree remove --force ../wt2 2>/dev/null)
+mkdir -p "$P/nested" && (cd "$P/nested" && real init -q)
+check "a clean repository inside a clean repository works" bash -c "cd '$P/nested' && bash '$GUARD' status"
+rm -rf "$P/nested"
+
 # explicit choices pass straight through
 check "--git-dir is left alone" bash -c "cd '$P' && printf '#!/bin/sh\n' >.git/hooks/pre-commit && bash '$GUARD' --git-dir='$P/.git' status; r=\$?; rm -f .git/hooks/pre-commit; exit \$r"
 

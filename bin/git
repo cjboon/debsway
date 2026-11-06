@@ -16,6 +16,7 @@
 # (A file could change between the check and the run; it is a guard against a
 # sloppy or confused assistant, not against one racing your keystrokes.)
 
+shopt -s extglob
 REAL=${WREN_REAL_GIT:-/usr/bin/git}
 AGENT=${WREN_AGENT_USER:-claude-agent}
 PROJECTS=${WREN_PROJECTS:-$HOME/projects}
@@ -104,20 +105,52 @@ check_gitdir() {
     done < <({ [ -L "$gd/hooks" ] && printf '%s\0' "$gd/hooks"; find "$gd/hooks" -mindepth 1 -print0 2>/dev/null; find "$gd/modules" -path '*/hooks/*' -print0 2>/dev/null; })
 }
 
-if [ -d "$top/.git" ]; then
-    gitdir=$top/.git
-elif [ -f "$top/.git" ]; then
-    # a worktree or submodule: .git says where the real folder is
-    gitdir=$(sed -n 's/^gitdir: //p' "$top/.git" | head -n 1)
-    case $gitdir in /*) ;; *) gitdir=$top/$gitdir ;; esac
-    gitdir=$(cd -- "$gitdir" 2>/dev/null && pwd -P) || plain "$@"
-else
-    plain "$@"
-fi
-check_gitdir "$gitdir"
-if [ -f "$gitdir/commondir" ]; then
-    common=$(cd -- "$gitdir/$(head -n 1 "$gitdir/commondir")" 2>/dev/null && pwd -P) && check_gitdir "$common"
-fi
+# pointer FILE: the folder FILE names, as git reads it: all of the file, less the line ends
+# at its end. Fails on a name with a line break in it: git would take that as one name.
+pointer() {
+    local line
+    line=$(<"$1") || return 1
+    line=${line%%+($'\r')}
+    [[ $line != *$'\n'* ]] || return 1
+    printf '%s' "$line"
+}
+# inside BASE NAME: NAME as a real folder, from BASE if it isn't absolute
+inside() {
+    case $2 in /*) (cd -- "$2" 2>/dev/null && pwd -P) ;; *) (cd -- "$1/$2" 2>/dev/null && pwd -P) ;; esac
+}
+
+# check_dot_git TOP: everything TOP/.git leads to. What can't be followed is refused:
+# git may read it differently, and what isn't looked at can't be vouched for.
+check_dot_git() {
+    local t=$1 gitdir line common
+    if [ -d "$t/.git" ]; then
+        gitdir=$t/.git
+    elif [ -f "$t/.git" ]; then
+        # a worktree or submodule: .git says where the real folder is
+        line=$(pointer "$t/.git") && [[ $line == "gitdir: "* ]] && gitdir=$(inside "$t" "${line#gitdir: }") ||
+            { problems+=("$t/.git: a file that doesn't lead to a folder"); return 0; }
+    else
+        return 0
+    fi
+    check_gitdir "$gitdir"
+    if [ -f "$gitdir/commondir" ]; then
+        line=$(pointer "$gitdir/commondir") && common=$(inside "$gitdir" "$line") ||
+            { problems+=("$gitdir/commondir: doesn't lead to a folder"); return 0; }
+        check_gitdir "$common"
+    fi
+}
+
+# This one, and every one above it in that folder: a .git git doesn't take for a repository
+# (an empty folder) sends it on up, and that is decided by more than this can see
+t=$top
+while :; do
+    [ ! -e "$t/.git" ] && [ ! -L "$t/.git" ] || check_dot_git "$t"
+    t=${t%/*}
+    case $t in
+        "$PROJECTS" | "$PROJECTS"/* | "$PROJECTS"-* ) ;;
+        *) break ;;
+    esac
+done
 
 if [ ${#problems[@]} -gt 0 ]; then
     {
