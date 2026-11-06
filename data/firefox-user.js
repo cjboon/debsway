@@ -32,6 +32,11 @@ user_pref("dom.push.enabled", false);
 // can show your address, and are a lot of code to attack). Video calls
 // can't work here anyway (no microphone or camera).
 user_pref("media.peerconnection.enabled", false);
+// Harder to recognise from one site to another: Firefox's fingerprinting protection, gentler
+// than resistFingerprinting (which incognito uses, and which breaks more sites). This
+// browser is hardened in ways that make it less common, so it doesn't make you blend in:
+// for that, use Tor Browser, unchanged.
+user_pref("privacy.fingerprintingProtection", true);
 
 // Saved passwords are filled in when you click the login box, not as the page
 // loads: tracking scripts have added hidden login boxes to read what Firefox

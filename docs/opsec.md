@@ -412,6 +412,16 @@ Keys and passphrases:
 - **Search engines** record what you search; Wren Linux's Firefox uses DuckDuckGo
   by default.
 
+### Blending in
+
+Hardening a browser and blending in pull in opposite directions. Sites can often recognise a browser
+from what makes it unusual: its settings, fonts, screen size and extensions. Wren Linux's Firefox
+is hardened, with its fingerprinting protection on, but its settings aren't common ones, so it
+doesn't make you look like everyone else. Tor Browser is built for that: everyone using it is
+meant to look alike. So to blend in, use Tor Browser, and leave it as it is: extensions, or a
+changed setting or window size, make you stand out. Check any browser at
+[Cover Your Tracks](https://coveryourtracks.eff.org/).
+
 ## 10. Files, photos and metadata
 
 Files carry information you didn't type:

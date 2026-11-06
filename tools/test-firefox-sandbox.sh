@@ -243,6 +243,7 @@ import sys; s = open(sys.argv[1]).read()
 assert "choose cookies \"When Firefox closes, its cookies and site data:\" \"$cookies\" delete keep" in s and "cookies=delete" in s
 assert "Manage Exceptions" in s and "History, bookmarks and saved passwords stay either way" in s and "\"cookies=$cookies\"" in s
 ' "$HERE/extras/firefox-sandbox.sh"
+check "Firefox's fingerprinting protection is on (gentler than incognito's)" grep -qx 'user_pref("privacy.fingerprintingProtection", true);' "$HERE/data/firefox-user.js"
 check "saved passwords fill in on a click, not as the page loads" grep -qx 'user_pref("signon.autofillForms", false);' "$HERE/data/firefox-user.js"
 check "the install asks about fast JavaScript (default no), sound and links (default yes), last answers first" python3 -I -c '
 import sys; s = open(sys.argv[1]).read()
