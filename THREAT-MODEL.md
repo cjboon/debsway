@@ -62,7 +62,7 @@ doesn't make you invisible or untouchable. Use this page to decide what else you
   after your sudo password; the primary key lives only in the encrypted backup on your USB stick.
 
   Root there can still read the subkey, and a program running as you can have something signed while
-  sudo remembers your password (a few minutes, in that terminal).
+  sudo remembers your password (a minute, in that terminal).
 
 - **Tampered downloads.** Everything Wren Linux downloads from outside Debian is checked against the
   project's signing key, pinned by fingerprint in `pins.sh`, before it's used. `test.sh` re-checks
