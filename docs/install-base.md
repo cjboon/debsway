@@ -343,8 +343,8 @@ plain background stays.
 - A JPEG or PNG in `~/Pictures/wren/firefox` is the sandboxed Firefox's New Tab background instead of the fox. A
   checked copy is handed over at each start: Firefox never sees the folder.
 - sway gets a link named with digits, never your file name.
-- `extras/wallpapers.sh` fills `~/Pictures/Wallpapers` with pictures from NASA, ESA's Webb, NASA Earth Observatory
-  and Budgie to choose from, or sets it up for your own.
+- `extras/wallpapers.sh` fills `~/Pictures/Wallpapers` with Budgie's photos to choose from, or sets it up for
+  your own.
 
 **`theme.sh`** is light or dark, from one place: `theme light`, `theme dark`, `theme toggle`, or the Wren menu's
 Theme line. Dark is the default, and Wren Linux's look as before. Light has warm light backgrounds (#f2efe9) and dark

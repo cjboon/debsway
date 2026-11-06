@@ -2,13 +2,10 @@
 # Checks bin/wallpaper (the newest real JPEG or PNG in ~/Pictures/wren/desktop
 # goes up; a file that only says it's a picture, an odd file name or an empty
 # folder changes nothing), parts/wallpaper.sh (the sway snippet), and
-# extras/wallpapers.sh (every source in one folder, named after it; Budgie's
-# unpacked from Debian's package, never installed: no sudo, no package
-# script, no links; --remove keeping what you added) and
-# lib/wallpaper-sources.py's rules (only https, to each source's own hosts;
-# size from the file, shape, credit; the feeds read right), offline. Uses a
-# pretend swaymsg, a pretend apt-get download serving a package built here, a
-# pretend download from the sources,
+# extras/wallpapers.sh (Budgie's unpacked from Debian's package, never
+# installed: no sudo, no package script, no links; --remove keeping what you
+# added, and what an earlier version fetched from NASA and ESA).
+# Uses a pretend swaymsg, a pretend apt-get download serving a package built here,
 # and a home in a temp folder; SWAYSOCK is unset, so the running sway isn't
 # touched. Run by test.sh, or:  bash tools/test-wallpaper.sh
 # shellcheck disable=SC2016  # the inner shells expand their own variables
@@ -216,36 +213,25 @@ for a; do p=\$a; done
 [ -f "$T/debs/\$p.deb" ] || { echo "E: Unable to locate package \$p" >&2; exit 100; }
 cp "$T/debs/\$p.deb" "./\${p}_1_all.deb"
 EOF
-# python3 -I wallpaper-sources.py DEST SOURCE COUNT: two pictures named after
-# the source, a credits line, and names that try to reach outside the folder
-# or another source's files (none of those may get on the list)
+# Nothing may run python3 for pictures any more: no site's download is left
 cat >"$T/fake/python3" <<EOF
 #!/bin/sh
 echo "python3 \$*" >>"$T/apt"
-[ -e "$T/fails-\$4" ] && exit 1
-for n in A1 B2; do printf '\377\330\377' >"\$3/\$4_\$n.jpg"; echo "\$4_\$n.jpg"; done
-echo "\$4_A1.jpg: credit" >>"\$3/CREDITS.txt"
-echo "../../.bashrc"
-echo "\$4_x/../../.bashrc"
-echo "inner/found.png"
-echo "nasa_not-mine.jpg"
 EOF
 chmod +x "$T/fake/apt-get" "$T/fake/python3"
 W=$H/Pictures/Wallpapers
 xw
 rc=$?
-check "without a terminal: every source, Budgie's with apt-get download" \
-    bash -c 'grep -q "download.* budgie-backgrounds$" "$1" && for s in "nasa 24" "webb 12" "earth 10"; do grep -q "python3 -I .*/lib/wallpaper-sources.py $2 $s$" "$1" || exit 1; done' _ "$T/apt" "$W"
-check "...all in one folder, named after the source" \
-    bash -c '[ "$(grep -c "python3 -I" "$2")" = 3 ] && for f in budgie_big.png nasa_A1.jpg webb_B2.jpg earth_B2.jpg; do [ -f "$1/$f" ] || exit 1; done' _ "$W" "$T/apt"
+check "without a terminal: Budgie's, with apt-get download" grep -q "download.* budgie-backgrounds$" "$T/apt"
+check "...named after the source, and nothing else is fetched" \
+    bash -c '[ -f "$1/budgie_big.png" ] && ! grep -q "python3" "$2" && [ -z "$(find "$1" -name "nasa_*" -o -name "webb_*" -o -name "earth_*")" ]' _ "$W" "$T/apt"
 check "...Budgie's licence next to them" grep -q CC-BY-SA "$W/budgie_LICENCE.txt"
 check "...icons (small pictures) and SVGs stay out" bash -c '[ ! -e "$1/budgie_icon.png" ] && [ -z "$(find "$1" -name "*.svg")" ]' _ "$W"
 check "...no links come out (a .png pointing at /etc/passwd)" bash -c '[ ! -e "$1/budgie_link.png" ] && [ -z "$(find "$1" -type l)" ]' _ "$W"
 check "...nothing is installed: no sudo, no package script ran" bash -c '[ ! -e "$1/sudo" ] && [ ! -e "$1/postinst-ran" ]' _ "$T"
 check "...two pictures with the same name both kept, under their own names" \
     test "$(find "$W" -name 'budgie_*1920x1080.jpg' | wc -l)" = 2
-check "...the downloads are on the list; paths out of the folder or into one, and another source's names, aren't" \
-    bash -c 'grep -qx webb_A1.jpg "$1" && grep -qx CREDITS.txt "$1" && ! grep -qE "\.\.|/" "$1" && [ "$(grep -c "^nasa_not-mine" "$1")" = 1 ]' _ "$W/.wren-wallpapers"
+check "...the downloads are on the list" grep -qx budgie_big.png "$W/.wren-wallpapers"
 check "...a README, which says your own pictures can go there too" bash -c '[ ! -e "$1/personal" ] && grep -q "Your own pictures" "$1/README.txt"' _ "$W"
 check "...and the run succeeds" test "$rc" -eq 0
 n=$(find "$W" -type f | wc -l)
@@ -255,23 +241,28 @@ echo "my notes" >"$W/README.txt"
 xw
 check "a README you rewrote yourself is left alone" grep -qx "my notes" "$W/README.txt"
 rm "$W/README.txt"
-touch "$T/fails-webb"
+mv "$T/debs/budgie-backgrounds.deb" "$T/kept.deb"
 xw
 rc=$?
-check "a source failing is said, and the run fails" bash -c '[ "$1" -ne 0 ] && grep -q "Not downloaded: webb" "$2"' _ "$rc" "$T/out"
-rm "$T/fails-webb"
+check "a download failing is said, and the run fails" bash -c '[ "$1" -ne 0 ] && grep -q "Not downloaded: budgie" "$2"' _ "$rc" "$T/out"
+mv "$T/kept.deb" "$T/debs/budgie-backgrounds.deb"
 png "$W/mine.png"
 mkdir -p "$W/inner"; png "$W/inner/found.png"
 echo "../mine.png" >>"$W/.wren-wallpapers"
 echo "inner/found.png" >>"$W/.wren-wallpapers"
+# what an earlier version downloaded from NASA and ESA, still on the list: yours to keep now
+for f in nasa_A1.jpg webb_B2.jpg earth_B2.jpg; do jpg "$W/$f"; echo "$f" >>"$W/.wren-wallpapers"; done
+echo "nasa_A1.jpg: credit" >"$W/CREDITS.txt"; echo CREDITS.txt >>"$W/.wren-wallpapers"
 xw --remove
 check "--remove takes out what it put there" \
-    bash -c '[ ! -e "$1/budgie_big.png" ] && [ ! -e "$1/nasa_A1.jpg" ] && [ ! -e "$1/CREDITS.txt" ] && [ ! -e "$1/.wren-wallpapers" ]' _ "$W"
+    bash -c '[ ! -e "$1/budgie_big.png" ] && [ ! -e "$1/.wren-wallpapers" ]' _ "$W"
+check "...but never the NASA and ESA pictures an earlier version fetched, or their credits" \
+    bash -c '[ -f "$1/nasa_A1.jpg" ] && [ -f "$1/webb_B2.jpg" ] && [ -f "$1/earth_B2.jpg" ] && [ -f "$1/CREDITS.txt" ]' _ "$W"
 check "...and keeps what you added, in the folder or below, whatever the list says" \
     bash -c '[ -f "$1/mine.png" ] && [ -f "$1/inner/found.png" ]' _ "$W"
 check "...no sudo there either" test ! -e "$T/sudo"
 
-# "No wallpapers downloaded, I'll find my own", ticked next to NASA in the list
+# "No wallpapers downloaded, I'll find my own", ticked next to Budgie in the list
 # (a stand-in for lib/checklist.sh; script(1) gives the run a terminal)
 R2=$T/r2
 mkdir -p "$R2/extras" "$R2/lib"
@@ -281,7 +272,7 @@ for f in "$HERE"/lib/*; do ln -s "$f" "$R2/lib/${f##*/}"; done
 rm "$R2/lib/checklist.sh"
 cat >"$R2/lib/checklist.sh" <<'EOF'
 # shellcheck shell=bash
-checklist() { printf '%s\n' "${ITEMS[@]}" >"$CL_SEEN"; chosen=(nasa none); }
+checklist() { printf '%s\n' "${ITEMS[@]}" >"$CL_SEEN"; chosen=(budgie none); }
 EOF
 cp "$HERE/extras/wallpapers.sh" "$R2/extras/"
 H2=$T/h2
@@ -295,105 +286,6 @@ check "...but the folder, its README and its list are set up (the extra counts a
     bash -c '[ -f "$1/README.txt" ] && [ -f "$1/.wren-wallpapers" ] && [ -z "$(find "$1" -name "*.jpg")" ]' _ "$H2/Pictures/Wallpapers"
 check "...and it says where your own pictures go" grep -q "Put pictures (JPEG or PNG) in" "$T/out"
 
-# ---- lib/wallpaper-sources.py's rules, offline (no connection is made)
-cat >"$T/rules.py" <<'PY'
-import importlib.util, json, struct, sys, urllib.error
-spec = importlib.util.spec_from_file_location("ws", sys.argv[1])
-n = importlib.util.module_from_spec(spec); spec.loader.exec_module(n)
-for good in ("https://images-assets.nasa.gov/x",
-             "https://cdn.esawebb.org/x", "https://assets.science.nasa.gov/x"):
-    assert n.allowed(good), good
-for bad in ("http://images-assets.nasa.gov/x", "https://evil.example/x",
-            "https://cdn.esawebb.org.evil.example/x", "https://cdn.esahubble.org/x",
-            "https://upload.wikimedia.org/x", "file:///etc/passwd"):
-    assert not n.allowed(bad), bad
-    try:
-        n.fetch(bad, 10)
-        raise SystemExit("fetched " + bad)
-    except ValueError:
-        pass
-try:
-    n.HttpsOnly().redirect_request(None, None, 302, "", {}, "http://cdn.esawebb.org/x")
-    raise SystemExit("followed a redirect to http")
-except urllib.error.HTTPError:
-    pass
-# sizes read from the file itself
-png = b"\x89PNG\r\n\x1a\n" + b"\0\0\0\rIHDR" + struct.pack(">II", 2560, 1440) + b"\0" * 20
-assert n.picture_size(png) == (2560, 1440)
-app0 = b"\xff\xe0" + struct.pack(">H", 16) + b"JFIF\0" + b"\0" * 9
-sof = b"\xff\xc0" + struct.pack(">HBHH", 17, 8, 1200, 1920) + b"\0" * 10
-assert n.picture_size(b"\xff\xd8" + app0 + sof) == (1920, 1200)
-assert n.picture_size(b"<html>") is None and n.picture_size(b"\xff\xd8\x00\x00") is None
-assert n.size_ok(1920, 1200) is None and n.size_ok(4613, 3318) is None
-assert "smaller" in n.size_ok(1280, 720)
-assert "landscape" in n.size_ok(2160, 3840)
-# NASA's library: size, type and credit
-ok = {"File:ImageWidth": 2800, "File:ImageHeight": 1400, "File:MIMEType": "image/jpeg", "XMP:Credit": "NASA/JPL-Caltech"}
-assert n.nasa_why_not({"description": "Photo Credit: (NASA/Bill Ingalls)"}, ok) is None
-assert "JPEG" in n.nasa_why_not({}, dict(ok, **{"File:MIMEType": "image/tiff"}))
-assert "copyright" in n.nasa_why_not({}, dict(ok, **{"XMP:Credit": "© Getty Images"}))
-assert "copyright" in n.nasa_why_not({"secondary_creator": "AP Photo/Someone"}, ok)
-# figures aren't wallpapers: JPL's PIA items (a Jupiter storm with labels and
-# insets came in that way), and titles that name a graphic or diagram
-assert "figure" in n.nasa_why_not({"nasa_id": "PIA09340", "title": "Probing Storm Activity on Jupiter"}, ok)
-assert "figure" in n.nasa_why_not({"nasa_id": "x1", "title": "Diagram of the Solar System"}, ok)
-assert "figure" in n.nasa_why_not({"nasa_id": "x2", "title": "Artist's Concept of a Planet"}, ok)
-assert n.nasa_why_not({"nasa_id": "iss043e010521", "title": "Earth Observation taken by the Expedition 43 crew"}, ok) is None
-assert all(c in ("JSC", "GSFC") for _, c in n.NASA_SEARCHES)
-# a station photo: its camera's colour profile names HP's copyright, which
-# isn't the picture's; one with no size in its metadata is checked by the file
-iss = {"File:ImageWidth": 4928, "File:ImageHeight": 3280, "File:MIMEType": "image/jpeg",
-       "ICC_Profile:ProfileCopyright": "Copyright (c) 1998 Hewlett-Packard Company", "XMP:CreatorTool": "NIKON D4"}
-assert n.nasa_why_not({"nasa_id": "iss043e010521", "title": "Earth Observation"}, iss) is None
-assert n.nasa_why_not({"nasa_id": "S39-23-020", "title": "Aurora Australis"}, {"AVAIL:SecondaryCreator": ""}) is None
-assert "smaller" in n.nasa_why_not({"nasa_id": "x"}, {"EXIF:ExifImageWidth": 1280, "EXIF:ExifImageHeight": 1070})
-assert n.picture_kind(b"\xff\xd8\xff\xe0") == "jpg" and n.picture_kind(png) == "png"
-assert n.clean("a\x1b]52;c;x\x07b") == "a ]52;c;x b"
-for bad in ("../x", "a/b", "", "x" * 101):
-    assert not n.ID_RE.match(bad), bad
-real_fetch = n.fetch
-n.fetch = lambda url, limit: b'["http://images-assets.nasa.gov/image/A/A~orig.jpg"]'
-assert n.nasa_original("A") == "https://images-assets.nasa.gov/image/A/A~orig.jpg"
-n.fetch = lambda url, limit: b'["https://evil.example/A~orig.jpg"]'
-assert n.nasa_original("A") is None
-# ESA's feeds: ESA's wallpaper cut on ESA's own CDN; another host's link is ignored
-n.fetch = lambda url, limit: (b'<rss><item><title>Stars</title><link>https://esawebb.org/images/potm2610a/</link>'
-    b'<enclosure url="https://cdn.esawebb.org/archives/images/screen/potm2610a.jpg"/></item>'
-    b'<item><title>Bad</title><enclosure url="https://evil.example/archives/images/screen/x.jpg"/></item></rss>')
-got = list(n.esa("webb"))
-assert got == [("potm2610a", "https://cdn.esawebb.org/archives/images/wallpaper4/potm2610a.jpg", "Stars",
-                "ESA/Webb (CC BY 4.0). https://esawebb.org/images/potm2610a/")], got
-# Earth Observatory: only the large files on NASA's asset host; a credit
-# naming another copyright holder skips the item
-n.fetch = lambda url, limit: ('<item><title>Canyon</title><link>https://science.nasa.gov/x/</link>'
-    '<span class="credits">NASA Earth Observatory/M. G.</span>'
-    '<a href="https://assets.science.nasa.gov/content/dam/eo/canyon_oli_lrg.jpg">x</a>'
-    '<img src="https://assets.science.nasa.gov/content/dam/eo/canyon_oli_lrg.jpg/jcr:content/renditions/t.png">'
-    '<a href="https://evil.example/content/dam/x_lrg.jpg">y</a></item>'
-    '<item><title>Theirs</title><span class="credits">© Someone</span>'
-    '<a href="https://assets.science.nasa.gov/content/dam/eo/theirs_lrg.jpg">z</a></item>').encode()
-got = list(n.earth())
-assert [g[0] for g in got] == ["canyon_oli_lrg"], got
-assert got[0][1] == "https://assets.science.nasa.gov/content/dam/eo/canyon_oli_lrg.jpg"
-# a whole run, with a pretend source: each picture is said on the screen as
-# it arrives (a run takes minutes), its name alone goes to the list
-import contextlib, io, os, tempfile
-jpeg = b"\xff\xd8" + app0 + sof
-n.SOURCES["webb"] = lambda: iter([("Fox", "https://cdn.esawebb.org/f.jpg", "Red fox", "Jo"),
-                                  ("Owl", "https://cdn.esawebb.org/o.jpg", "Owl", "Jo")])
-n.fetch = lambda url, limit: jpeg
-d = tempfile.mkdtemp()
-sys.argv = ["x", d, "webb", "2"]
-out, err = io.StringIO(), io.StringIO()
-with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
-    n.main()
-assert out.getvalue().split() == ["webb_Fox.jpg", "webb_Owl.jpg"], out.getvalue()
-assert "1/2 Red fox" in err.getvalue() and "2/2 Owl" in err.getvalue(), err.getvalue()
-assert sorted(os.listdir(d)) == ["CREDITS.txt", "webb_Fox.jpg", "webb_Owl.jpg"], os.listdir(d)
-assert sorted(n.SOURCES) == ["earth", "nasa", "webb"], sorted(n.SOURCES)
-PY
-check "the sources: only https, only their own hosts, also after a redirect; sizes, credits and feeds read right" \
-    python3 -I -B "$T/rules.py" "$HERE/lib/wallpaper-sources.py"
 check "the summary fits the list (52 characters)" bash -c '[ "$(sed -n "s/^# summary: //p" "$1" | wc -m)" -le 53 ]' _ "$HERE/extras/wallpapers.sh"
 
 [ "$fails" -eq 0 ]

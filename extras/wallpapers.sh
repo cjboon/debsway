@@ -1,20 +1,14 @@
 #!/bin/bash
-# Pictures to pick a wallpaper from, all in ~/Pictures/Wallpapers, each named
-# after where it came from (copy one into ~/Pictures/wren/desktop:
-# parts/wallpaper.sh):
-#   budgie_*  Budgie's photos, from Debian. The package is only downloaded
-#             (apt-get download: checked against Debian's signed lists, through
-#             Tor if apt goes through Tor) and its pictures unpacked: nothing
-#             installed, no package script, no sudo.
-#   nasa_*    NASA's image library            webb_*    ESA/Webb
-#   earth_*   NASA Earth Observatory
-#             (lib/wallpaper-sources.py: https only, to each source's own
-#             hosts; at least 1920x1080, landscape; credits in CREDITS.txt)
+# Pictures to pick a wallpaper from, in ~/Pictures/Wallpapers (copy one into
+# ~/Pictures/wren/desktop: parts/wallpaper.sh): budgie_*, Budgie's photos, from
+# Debian. The package is only downloaded (apt-get download: checked against
+# Debian's signed lists, through Tor if apt goes through Tor) and its pictures
+# unpacked: nothing installed, no package script, no sudo.
 # Your own pictures can go there too: --remove takes out only what it downloaded.
-# A list asks which sources, or none ("I'll find my own": the folder and its
-# README are still set up). Run it again to top each one up.
+# A list asks whether to download them, or not ("I'll find my own": the folder and
+# its README are still set up). Run it again to fetch them again.
 # Usage: bash wallpapers.sh [--remove | --manual]
-# summary: Wallpapers to pick from: NASA, Webb, Budgie
+# summary: Wallpapers to pick from: Budgie's photos
 # security: some
 # status: file:~/Pictures/Wallpapers/.wren-wallpapers
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
@@ -25,13 +19,6 @@ DEST="$HOME/Pictures/Wallpapers"
 # what this script put there, one file name a line; --remove takes out
 # exactly these, so pictures you add yourself stay
 LIST="$DEST/.wren-wallpapers"
-# SOURCE|WHAT|HOW MANY (for the downloaded ones)
-SOURCES=(
-    "budgie|Budgie's photos, from Debian's budgie-backgrounds (11 MB)|"
-    "nasa|NASA's image library: space and Earth (about 60 MB)|24"
-    "webb|ESA/Webb's pictures of the month (about 15 MB)|12"
-    "earth|NASA Earth Observatory's images of the day (up to 200 MB)|10"
-)
 # pictures in Budgie's package smaller than this are icons, not wallpapers
 MIN_BYTES=100000
 
@@ -43,6 +30,9 @@ if [ "${1:-}" = --remove ]; then
         while IFS= read -r f; do
             # only plain names: nothing outside the folder, nor in a folder in it
             case $f in "" | */* | .*) continue ;; esac
+            # An earlier version also fetched these from NASA and ESA. They're yours
+            # now: Wren Linux no longer has them to give back.
+            case $f in nasa_* | webb_* | earth_* | CREDITS.txt) continue ;; esac
             rm -f -- "${DEST:?}/$f"
         done <"$LIST"
         rm -f "$LIST"
@@ -62,44 +52,38 @@ To make one your wallpaper: Super+] and Super+[ step through them on the
 desktop itself, and "wallpaper pick" lists them by name. (Or copy one into
 ~/Pictures/wren/desktop and press Super+Shift+c.)
 
-Each picture is named after where it came from:
-  nasa_     NASA's image library. NASA's own pictures are public domain.
-  webb_     ESA/Webb. Free to use (CC BY 4.0): to share one, credit it as
-            CREDITS.txt says.
-  earth_    NASA Earth Observatory. Public domain.
-  budgie_   Budgie's photos, from Debian. Free licences: budgie_LICENCE.txt.
-CREDITS.txt names each one's title, credit and page.
+budgie_ pictures are Budgie's photos, from Debian. Free licences: budgie_LICENCE.txt.
+
+nasa_, webb_ and earth_ pictures came from an earlier version of Wren Linux, from
+NASA and ESA, and stay yours: nothing here removes them. CREDITS.txt names each
+one's title, credit and page, so keep it if you share them.
 
 Your own pictures (JPEG or PNG), e.g. from an image search, can go here too:
 save them through Firefox into ~/Downloads, then move them here, with a name
 you will recognise. Wren Linux never changes or removes them. Pictures from the
 web are often copyrighted: fine on your own screen, but don't share them on.
 
-wrenctl install wallpapers fetches more (each source is topped up);
+wrenctl install wallpapers fetches Budgie's again;
 wrenctl remove wallpapers takes out what it downloaded, nothing of yours.
 EOF
     listed README.txt
 }
 
-# Which sources: a list when there is a terminal to show it on
+# Whether to download them: a list when there is a terminal to show it on
 chosen=()
 declare -A used
 if [ -t 0 ] && [ -t 1 ]; then
     . "$WREN_DIR/lib/checklist.sh"
-    ITEMS=()
-    for s in "${SOURCES[@]}"; do
-        IFS='|' read -r name what _ <<<"$s"
-        ITEMS+=("$name" "$what" ON)
-    done
-    # ticked, it unticks the others (CL_ALONE); and nothing is downloaded
+    ITEMS=(budgie "Budgie's photos, from Debian's budgie-backgrounds (11 MB)" ON)
+    # ticked, it unticks the other (CL_ALONE); and nothing is downloaded
     # whatever else would be ticked
     ITEMS+=(none "No wallpapers downloaded, I'll find my own" OFF)
     CL_TITLE="Wallpapers" CL_OK=Download CL_CANCEL=Cancel CL_ALONE=none
-    CL_TEXT="Which sources? The pictures all go in ~/Pictures/Wallpapers, named after their source.\nYour own pictures can go there too: nothing of yours is changed or removed."
+    CL_TEXT="Download these? They go in ~/Pictures/Wallpapers.\nYour own pictures can go there too: nothing of yours is changed or removed."
     checklist || { note "Nothing downloaded."; exit 0; }
     if printf '%s\n' "${chosen[@]}" | grep -qx none; then chosen=(); fi
 else
-    for s in "${SOURCES[@]}"; do chosen+=("${s%%|*}"); done
+    chosen=(budgie)
 fi
 
 mkdir -p "$DEST"
@@ -115,24 +99,6 @@ tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
 failed=()
 for src in "${chosen[@]}"; do
-    if [ "$src" != budgie ]; then
-        count=
-        for s in "${SOURCES[@]}"; do [ "${s%%|*}" = "$src" ] && count=${s##*|}; done
-        say "Wallpapers: $src (https only, from its own site)"
-        need_tools python3:python3
-        # the files it saved, one a line, go on the list
-        if ! python3 -I "$WREN_DIR/lib/wallpaper-sources.py" "$DEST" "$src" "$count" >"$tmp/saved"; then
-            failed+=("$src")
-        fi
-        while IFS= read -r f; do
-            case $f in
-                */* | .* | *..*) ;;
-                "${src}"_?*) listed "$f" ;;
-            esac
-        done <"$tmp/saved"
-        [ ! -f "$DEST/CREDITS.txt" ] || listed CREDITS.txt
-        continue
-    fi
     pkg=budgie-backgrounds
     say "Wallpapers: Budgie's, from Debian's $pkg"
     rm -rf "${tmp:?}"/*

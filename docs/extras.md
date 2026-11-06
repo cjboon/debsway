@@ -172,8 +172,8 @@ text files).
 
 **[`archive-tools`](extras/archive-tools.md)**: unzip, zip, 7z, bzip2 and zstd for archives
 
-**[`wallpapers`](extras/wallpapers.md)**: Fills `~/Pictures/Wallpapers` with pictures from NASA,
-ESA's Webb, NASA Earth Observatory and Budgie to choose from, or sets it up for your own
+**[`wallpapers`](extras/wallpapers.md)**: Fills `~/Pictures/Wallpapers` with Budgie's photos to
+choose from, or sets it up for your own
 
 ## Coding
 
