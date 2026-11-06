@@ -10,17 +10,31 @@ is what the scripts do, and you can read them.
 ## From a bare Debian to a desktop
 
 ```
-start.sh               from the stick: copies Wren Linux home, gets online if needed
-  └ install-base.sh    explains, asks, then installs:
-      ├ packages.sh    PKGS: the core packages. PARTS: the parts, and their order
-      ├ parts/*.sh     one script per piece: firewall, lock screen, kernel settings...
-      └ install-extras.sh    the checklist of optional programs
-          └ extras/*.sh      one script per program
+start.sh               from the stick: copies Wren Linux home, gets online if needed (wifi.sh)
+  └ install-base.sh    explains and asks (prep/intro.sh), then, in this order:
+      1. the list of extras: you choose now, and they install at the end
+      2. offers apt over Tor, before anything is downloaded
+      3. packages.sh's PKGS, then sway's config, the bar and the keys
+      4. packages.sh's PARTS, one script each, in that order
+      5. the extras you chose (install-extras.sh --install)
 ```
 
 Every script can also be run by itself, as `bash extras/w3m.sh` or `wrenctl install w3m`.
 That's on purpose: running one again is how it gets repaired, and how an update reaches
-your computer.
+your computer. A part that needs hardware this computer lacks skips itself during the base
+install (`skip_unless`), but always installs when you run it by hand.
+
+## Two ways Wren Linux is on a computer
+
+- **A git copy**, as `~/wren` from a stick, or `~/wren-linux` from `wrenctl install wren-dev`. It's
+  yours to change, and it has the tests and build tools.
+- **The package**, root's and read-only, in `/usr/share/wren` (`tools/build-deb.sh`). A program running
+  as you can't change these scripts to wait for your password. It has no install scripts,
+  leaves out `tools/` and the signing key's tools, and the same commit always builds the same file,
+  so anyone can check a published package against the source.
+
+Scripts find their files through `WREN_DIR`, so they work from either. Saved downloads go to
+`offline/` in a copy you can write to, or to `~/.local/share/wren/offline` from the package.
 
 ## The promises every script keeps
 
@@ -63,16 +77,24 @@ wall, the further down this list:
 
 1. **bubblewrap**, for files you open. `imv`, `mpv`, `zathura` and GIMP run with only what they need.
    See `bin/media-sandbox`.
-2. **A user of its own**, for programs that need the network. The sandboxed Firefox, `incognito`,
-   `yt-dlp` and Claude's user each get a user with no password and no access to your home. The
-   pieces repeat from one to the next:
-   - a **session script** (`bin/*-session`) installed root's, in `/usr/local/libexec`, so that
-     user can't change it
-   - a **sudo rule** that lets you run exactly that one script as that user
-   - a **firewall rule** on that user that keeps it off your network (`data/*-firewall.nft`)
-   - a **check** that the rule is really there, seen from that user's side, before it starts
-     and while it runs (`bin/sandbox-net-check`). A sandbox whose firewall is gone doesn't run.
-   - a **restricted Wayland socket** (`bin/wayland-restrict`), so it can't read your screen or type
+2. **A user of its own**, for programs that need the network. The sandboxed Firefox (and one user per
+   profile), `incognito`, `yt-dlp` and Claude's user each get a system user with no password, no login
+   and no access to your home. The pieces repeat from one to the next. `extras/firefox-sandbox.sh`,
+   `lib/firefox-sandbox.sh` and `bin/firefox-session` are the fullest example:
+   - a **session script** (`bin/*-session`) installed root's, in `/usr/local/libexec`, so that user
+     can't change it. It treats its arguments as coming from someone it doesn't trust, and accepts
+     only what it expects.
+   - a **sudo rule** that lets you run exactly that one script as that user, checked with `visudo`
+     before it's installed, since a broken one would lock you out of sudo
+   - a **firewall rule** on that user (`data/*-firewall.nft`) that keeps it off this computer and your
+     network. It may send DNS only to the resolver this computer uses (`parts/sandbox-dns.sh`).
+   - a **check that the rule is really there** (`bin/sandbox-net-check`), because a service saying
+     "active" isn't enough: anything that runs "flush ruleset" takes the rule away and leaves
+     the service active. Running as that user, it connects to a closed port here. The rule makes
+     that "no route", and without the rule it would be "refused". The session runs this before it
+     starts, then every 5 seconds, and ends every process of that user if the rule goes.
+   - a **restricted Wayland socket** (`bin/wayland-restrict`), so it can't read your screen or type,
+     and no way to X11's abstract socket (`bin/no-abstract-sockets`, with Landlock)
 3. **A VM**, where a kernel bug must not reach you. `claude-vm` is QEMU under its own user, built on
    `vendor/mockvps-kvm`, with no shared folder. Whonix's two VMs run under libvirt as you.
 
@@ -88,13 +110,31 @@ tools/release.sh         publish, and install here
   └ wrenctl --update     runs update.sh
 ```
 
-`update.sh` runs on each computer. It fetches what's new and shows it. With a key pinned, it
-brings in a change only if the newest commit has a good signature from that key, checked with the
-pin in the copy you already have, never one that came with the change. It then works out which
-scripts you have set up use files that changed, and offers to run those again. Pulling alone
-installs nothing.
+`git-push.sh` signs with an empty commit on top, when the newest commit isn't signed. Since each
+commit's id covers the ones before it, that one signature vouches for everything below it.
+
+`update.sh` runs on each computer. In a git copy, it fetches what's new and shows it. With a key
+pinned, it brings in a change only if the newest commit has a good signature from that key, checked
+with the key and pin in the copy you already have, never ones that came with the change. It only
+fast-forwards, so it can't overwrite your own changes. In the package's copy, apt brings what's new
+instead (`parts/wren-repo.sh`, where the repository's key can't replace a Debian package), and
+`update.sh` compares against its record of every file.
+
+Either way, it then works out which scripts you have set up use files that changed (`lib/update.sh`:
+the script, the `bin/`, `data/`, `vendor/` and `lib/` files it names, the `pins.sh` lines it uses, and
+its `# files:` line), and offers to run those again. Bringing a change in installs nothing by itself.
+A retired extra isn't run again: `update.sh` offers its `--remove`.
 
 GitHub's rules only limit who may update `main`. They don't check signatures: `update.sh` does.
+
+## DNS
+
+Worth a look, since much depends on it. `parts/secure-dns.sh` sends every lookup to Unbound on this
+computer, which checks DNSSEC and asks one resolver you chose over TLS. It fails closed: a firewall
+rule lets only Unbound send DNS out. It has a switch, for Wi-Fi sign-in pages, and your user may flip
+that without a password (`THREAT-MODEL.md` says what that means). `/etc/resolv.conf` is the one place
+that says which is on: a Firefox session reads it at start to decide about its own encrypted DNS,
+and a path unit refills the sandboxes' resolver sets when it changes.
 
 ## The website
 
