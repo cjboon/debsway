@@ -1,62 +1,74 @@
 # Wren Linux
 
-A minimal, privacy-minded [sway](https://swaywm.org) desktop for Debian 13
-(trixie), installed by plain shell scripts you can read in one sitting.
-Start from a bare Debian install; get a launcher, screen lock (with a slow
-dimming warning first), notifications, a firewall, kernel hardening and
-automatic security updates, plus, where the computer has the hardware,
-brightness keys and easy Wi-Fi. Sound, a browser, screenshots and USB
-automount are optional extras you pick right after you agree to the install
-(nothing is checked for you). No desktop environment, display manager, tray
-or settings app: one compositor and plain text configs.
+A minimal, privacy-minded [sway](https://swaywm.org) desktop for Debian 13 (trixie), installed by
+plain shell scripts you can read in one sitting.
 
-**New here? Start with the [first-time guide](docs/first-time.md).** To report a
-security problem, or check Wren Linux's signing key, see [SECURITY.md](SECURITY.md).
-To help, see [CONTRIBUTING.md](CONTRIBUTING.md) and
-[how Wren Linux fits together](docs/architecture.md).
+Start from a bare Debian install, and you get:
 
-[What Wren Linux adds to Debian](docs/what-wren-adds.md) lists each change, and how to check it.
+- a launcher and notifications
+- a screen lock, with a slow dimming warning first
+- a firewall, kernel hardening and automatic security updates
+- brightness keys and easy Wi-Fi, where the computer has the hardware
 
-To learn: [what Debian is, and why Wren Linux is based on it](docs/what-is-debian.md) and
-[its history](docs/history-of-debian.md), [GPG in plain words](docs/gpg.md),
-[what an onion site is](docs/what-is-an-onion-site.md), [a short history of Tor](docs/history-of-tor.md),
-[what Monero is](docs/what-is-monero.md), and [a practical opsec guide](docs/opsec.md).
+Sound, a browser, screenshots and USB automount are optional extras you pick right after you agree
+to the install. Nothing is checked for you.
 
-Wren Linux is based on Debian; it is not affiliated with or endorsed by the
-Debian project. (It was called debsway until November 2026.)
+No desktop environment, display manager, tray or settings app: one compositor and plain text configs.
 
-What's different from a dotfiles repo:
+**New here? Start with the [first-time guide](docs/first-time.md).**
 
-- **Hardened Firefox** (an extra you pick): uBlock Origin (standard or medium mode, your choice), HTTPS-Only,
-  JIT off, DuckDuckGo, no password-saving prompts (KeePassXC keeps them), a folder of learning bookmarks, and `firefox` runs it as its own locked-down user (shared
-  clipboard and `~/Downloads`, nothing else of yours). `incognito` opens a throwaway Firefox as a
-  separate locked-down user, in memory, on a restricted Wayland socket,
-  with its own firewall rule and audio, that plays video and sound. "Wi-Fi sign-in" in the
-  Wren menu opens one for a café's sign-in page, the only window that uses the network's DNS.
-- **Sandboxes for the risky things**: images and video open in bubblewrap;
-  Claude Code can run as its own user or in a VM; Tor Browser, Whonix,
-  wallets and more are one script each in `extras/`.
-- **Everything undoable and checked**: every part and extra has `--remove`;
-  every download from outside Debian is signature-checked against a key
-  pinned in `pins.sh`; `test.sh` checks that it all still works.
+- To report a security problem, or check Wren Linux's signing key: [SECURITY.md](SECURITY.md)
+- To help: [CONTRIBUTING.md](CONTRIBUTING.md) and [how Wren Linux fits together](docs/architecture.md)
+- To see each change from plain Debian, and how to check it:
+  [what Wren Linux adds to Debian](docs/what-wren-adds.md)
 
-Everything beyond the base is optional, one script per app in `extras/`:
-Firefox profiles, w3m, Tor Browser with bridges, Whonix, Mullvad VPN and
-Browser, encrypted DNS (Unbound, DNSSEC, DNS over TLS), OnionShare, your
-own onion site in an offline VM, wallets (Electrum, Sparrow, Feather), SimpleX Chat,
+To learn:
+
+- [What Debian is, and why Wren Linux is based on it](docs/what-is-debian.md), and [its history](docs/history-of-debian.md)
+- [GPG in plain words](docs/gpg.md)
+- [What an onion site is](docs/what-is-an-onion-site.md), and [a short history of Tor](docs/history-of-tor.md)
+- [What Monero is](docs/what-is-monero.md)
+- [A practical opsec guide](docs/opsec.md)
+
+Wren Linux is based on Debian; it is not affiliated with or endorsed by the Debian project. (It was
+called debsway until November 2026.)
+
+## What's different from a dotfiles repo
+
+**Hardened Firefox** (an extra you pick):
+
+- uBlock Origin (standard or medium mode, your choice), HTTPS-Only, JIT off and DuckDuckGo.
+- No password-saving prompts (KeePassXC keeps them), and a folder of learning bookmarks.
+- `firefox` runs it as its own locked-down user: shared clipboard and `~/Downloads`, nothing else of yours.
+- `incognito` opens a throwaway Firefox as a separate locked-down user, in memory, on a restricted
+  Wayland socket, with its own firewall rule and audio. It plays video and sound.
+- "Wi-Fi sign-in" in the Wren menu opens one for a café's sign-in page, the only window that uses the
+  network's DNS.
+
+**Sandboxes for the risky things:** images and video open in bubblewrap, and Claude Code can run as its
+own user or in a VM. Tor Browser, Whonix, wallets and more are one script each in `extras/`.
+
+**Everything undoable and checked:**
+
+- Every part and extra has `--remove`.
+- Every download from outside Debian is signature-checked against a key pinned in `pins.sh`.
+- `test.sh` checks that it all still works.
+
+Everything beyond the base is optional, one script per app in `extras/`: Firefox profiles, w3m, Tor
+Browser with bridges, Whonix, Mullvad VPN and Browser, encrypted DNS (Unbound, DNSSEC, DNS over TLS),
+OnionShare, your own onion site in an offline VM, wallets (Electrum, Sparrow, Feather), SimpleX Chat,
 KeePassXC, encrypted backups and more.
 
-It's a set of scripts, not a distribution: you install Debian yourself,
-then run them. Read them first. `THREAT-MODEL.md` says plainly what this
-protects against and what it doesn't. It is a personal project tested on
-Debian 13 only.
+It's a set of scripts, not a distribution: you install Debian yourself, then run them. Read them first.
+`THREAT-MODEL.md` says plainly what this protects against and what it doesn't. It is a personal project
+tested on Debian 13 only.
 
 Good to know before you run anything:
 
-- Re-running a script repairs it, and packages that another piece still
-  needs are kept when you remove one ([Removing things](#removing-things)).
-- The scripts change system files: apt sources, AppArmor, PAM (for one
-  extra), Firefox policies, firewall rules.
+- Re-running a script repairs it, and packages that another piece still needs are kept when you remove
+  one ([Removing things](#removing-things)).
+- The scripts change system files: apt sources, AppArmor, PAM (for one extra), Firefox policies, firewall
+  rules.
 
 ## Quick start
 
@@ -90,8 +102,10 @@ updates, the sandboxed browser and encrypted DNS, each [x] done, [~] partly or
 ```
 wren/
 ├── README.md, THREAT-MODEL.md, SECURITY.md, CONTRIBUTING.md, LICENSE (MIT)
-├── start.sh                 from the stick on a fresh install: copies Wren Linux home, unmounts, wifi.sh if needed, install-base.sh
-├── install-base.sh          the core desktop: explains and asks, packages, sway, bar, every part, then the extras list
+├── start.sh                 from the stick on a fresh install: copies Wren Linux home, unmounts,
+│                            wifi.sh if needed, install-base.sh
+├── install-base.sh          the core desktop: explains and asks, packages, sway, bar, every part,
+│                            then the extras list
 ├── install-extras.sh        pick optional programs from a list (install-base.sh ends with it)
 ├── wifi.sh                  get online over Wi-Fi, whatever is installed
 ├── status.sh                security at a glance first, then what's installed
@@ -104,7 +118,8 @@ wren/
 ├── parts/                   one script per core piece; install-base.sh runs them all
 ├── extras/                  optional apps, one script each (and firefox-profiles/)
 ├── bin/                     the small commands the scripts install into ~/.local/bin
-├── data/                    key cheat sheet, foot and Mousepad settings, Tor Browser and incognito prefs
+├── data/                    key cheat sheet, foot and Mousepad settings, Tor Browser and
+│                            incognito prefs
 ├── prep/                    intro.sh (what the base install does, and the question);
 │                            before a reinstall: fetch-offline-debs.sh, fetch-tor-browser.sh;
 │                            setup-sudo.sh (run as root if the installer left sudo out)
@@ -146,44 +161,64 @@ executable bit.
    the stick yourself (`fatlabel /dev/sdX1 WREN` for FAT,
    `e2label /dev/sdX1 WREN` for ext4).
 
-Or, instead of installing Debian by hand and copying Wren Linux over: build
-**an automatic install stick** with `bash prep/make-install-iso.sh`. It
-downloads Debian 13's live "standard" image, text only (checked against the
-Debian CD signing key pinned in `pins.sh`), adds Wren Linux's answers and Wren Linux
-itself, and can write it to a USB stick. Booted from it, "Automatic install
-with Wren Linux" installs Debian as below (encrypted LVM over the whole disk, no
-root password; the installer copies the live system, and the base install's
-`parts/no-live-extras.sh` takes out what that brings and Wren Linux doesn't use,
-such as avahi and printing) and installs Wren Linux as its package, root's,
-in `/usr/share/wren` (nothing of it in your home; the saved downloads go to
-`~/.local/share/wren/offline`, the docs are linked in `~/Documents/wren-docs`);
-it asks only
-for the disk passphrase, your password, and the final "write the changes to
-disks?", which names the disk it erases (the stick itself is never offered).
-At the first login on the console it asks once "Set it up now?": Enter runs
-`bash /usr/share/wren/start.sh` (the usual introduction and questions), n leaves it
-for later. Options: `--user NAME`,
-`--keymap de`, `--locale de_DE.UTF-8`, `--timezone Europe/Berlin` (the clock's
-time zone; by default the one of the computer building the image), `--no-erase`
-(skip filling the disk with random data), `--noencrypt` (no disk encryption: no
-passphrase at boot, but anyone with the laptop can read the disk; it asks first),
-`--autologin` (tty1 logs you in without your password and starts sway), `--simplesway` (one
-workspace: the first install list starts with `one-workspace` ticked), `--scripts FOLDER` (your own files, to
-`~/scripts`). What it needs to build the image (xorriso, wget, gpg, git) it
-installs first if it is missing; xorriso it removes again at the end. The
-offline Wi-Fi packages (`offline/debs`, for a laptop with no network at first
-boot) are refreshed first when they'd soon be too old for `wifi.sh` to take,
-and it says until when they work: about a week after the build, since Debian's
-security and updates lists are only valid that long (an older stick still
-installs, over a cable or a phone). Try the image
-in a VM first: `bash tools/try-install-iso.sh` starts it the way a laptop would
-(UEFI, the image as a USB stick, an empty 20 GB disk), says what to check, then
-starts the installed system; `--two-disks` checks that it asks which disk,
-`--clean` deletes the VM to start over, `--remove` removes the packages it
-installed (QEMU stays if Whonix, claude-vm or mockvps-kvm use it). In the VM's
-window your own sway takes Super+Enter, Super+d and the rest first: press
-Ctrl+Alt+G there to give the VM the keyboard (again to take it back), or click
-Wren Linux in the VM's bar and choose Terminal.
+## An automatic install stick
+
+Instead of installing Debian by hand and copying Wren Linux over, you can build a stick that does both:
+
+```bash
+bash prep/make-install-iso.sh
+```
+
+**What it builds.** It downloads Debian 13's live "standard" image, text only, checked against the Debian
+CD signing key pinned in `pins.sh`. It adds Wren Linux's answers and Wren Linux itself, and can write it
+to a USB stick.
+
+**What it does when you boot from it.** "Automatic install with Wren Linux" installs Debian as below:
+
+- Encrypted LVM over the whole disk, and no root password.
+- The installer copies the live system, and the base install's `parts/no-live-extras.sh` takes out what
+  that brings and Wren Linux doesn't use, such as avahi and printing.
+- Wren Linux goes in as its package, root's, in `/usr/share/wren`. Nothing of it is in your home: the saved
+  downloads go to `~/.local/share/wren/offline`, and the docs are linked in `~/Documents/wren-docs`.
+
+It asks only for the disk passphrase, your password, and the final "write the changes to disks?", which
+names the disk it erases. The stick itself is never offered.
+
+**At the first login** on the console, it asks once "Set it up now?". Enter runs
+`bash /usr/share/wren/start.sh` (the usual introduction and questions), and n leaves it for later.
+
+**Options:**
+
+| Option | What it does |
+|---|---|
+| `--user NAME` | The user to make |
+| `--keymap de` | The keyboard layout |
+| `--locale de_DE.UTF-8` | The language and formats |
+| `--timezone Europe/Berlin` | The clock's time zone. By default, the one of the computer building the image |
+| `--no-erase` | Skip filling the disk with random data |
+| `--noencrypt` | No disk encryption: no passphrase at boot, but anyone with the laptop can read the disk. It asks first |
+| `--autologin` | tty1 logs you in without your password and starts sway |
+| `--simplesway` | One workspace: the first install list starts with `one-workspace` ticked |
+| `--scripts FOLDER` | Your own files, to `~/scripts` |
+| `--public` | An image for anyone (`tools/publish-image.sh`): the user "user", UTC, a US keyboard, disk encryption, and no saved downloads |
+
+**What it needs:** xorriso, wget, gpg and git, which it installs first if they're missing. xorriso it
+removes again at the end.
+
+**The offline Wi-Fi packages** (`offline/debs`, for a laptop with no network at first boot) are refreshed
+first when they'd soon be too old for `wifi.sh` to take, and it says until when they work: about a week
+after the build, since Debian's security and updates lists are only valid that long. An older stick still
+installs, over a cable or a phone.
+
+**Try the image in a VM first:** `bash tools/try-install-iso.sh` starts it the way a laptop would (UEFI, the
+image as a USB stick, an empty 20 GB disk), says what to check, then starts the installed system.
+
+- `--two-disks` checks that it asks which disk.
+- `--clean` deletes the VM to start over.
+- `--remove` removes the packages it installed (QEMU stays if Whonix, claude-vm or mockvps-kvm use it).
+
+In the VM's window, your own sway takes Super+Enter, Super+d and the rest first. Press Ctrl+Alt+G there to
+give the VM the keyboard (again to take it back), or click `wren` in the VM's bar and choose Terminal.
 
 ## Installing Debian
 
@@ -244,12 +279,33 @@ su -c "bash $HOME/wren/prep/setup-sudo.sh $USER"    # then log out and back in
 bash install-base.sh
 ```
 
-Then log out (`exit`) and log in on tty1: sway starts by itself if you
-said yes to that, otherwise type `sway`. The key cheat sheet opens on
-your first login; Super+? brings it back, and so does typing `keys` or
-opening `~/KEYS.txt`. The status bar has a "wren" at its left: click it for a black-and-gray menu in a floating window over what you were doing (arrow keys and Enter, or click; Esc goes back from a list, and closes the rest) with your browser, password manager and terminal, the lists Switches, Apps and System (Install apps, Update, Status, Startup programs...), and Help (the sheet), and the Wi-Fi name next to it opens nmtui. Scrolling over "vol" or "bright" changes them; clicking "vol" mutes, and clicking "bat" says how long the battery will last.
+Then log out (`exit`) and log in on tty1: sway starts by itself if you said yes to that, otherwise type
+`sway`. The key cheat sheet opens on your first login. Super+? brings it back, and so does typing `keys`
+or opening `~/KEYS.txt`.
 
-Click the time (or press Super+t) for timers and alarms, with this month's calendar (`cal`, from `ncal`) and today's date: type `10m` or `7:30` and press Enter; Esc, or another click on the time, closes it. The same goes for the Wren menu and the Wi-Fi screen: click again to close. Only one of them is open at a time: clicking another closes it (except the menu while it runs Update or Install apps, which stays). From a terminal: `timer 10m tea`, `timer at 7:30 wake up`, `timer clock` (date in the bar or not). Timers last until you log out; a sleeping laptop does not wake for them.
+**The status bar:**
+
+- **`wren`, at its left:** click it for a black-and-gray menu in a floating window over what you were
+  doing, with your browser, password manager and terminal, the lists Switches, Apps and System (Install
+  apps, Update, Status, Startup programs...), and Help (the sheet). Use arrow keys and Enter, or click. Esc
+  goes back from a list, and closes the rest.
+- **The Wi-Fi name,** next to it, opens nmtui.
+- **`vol` and `bright`:** scrolling over them changes them, and clicking `vol` mutes.
+- **`bat`:** clicking it says how long the battery will last.
+
+**Timers and alarms:** click the time (or press Super+t), for this month's calendar (`cal`, from `ncal`) and
+today's date. Type `10m` or `7:30` and press Enter. Esc, or another click on the time, closes it.
+
+The same goes for the Wren menu and the Wi-Fi screen: click again to close. Only one of them is open at a
+time: clicking another closes it (except the menu while it runs Update or Install apps, which stays).
+
+From a terminal:
+
+- `timer 10m tea`
+- `timer at 7:30 wake up`
+- `timer clock` (date in the bar or not)
+
+Timers last until you log out, and a sleeping laptop does not wake for them.
 
 ### Getting updates from GitHub
 
@@ -261,47 +317,61 @@ online, this makes it a git checkout of the published Wren Linux
 bash ~/wren/git-helper.sh
 ```
 
-It first asks your name and email for commits (on GitHub, it offers your
-no-reply address, since GitHub refuses pushes that carry an email you keep
-private), and at the end how git logs in to push from here: a token you paste
-at each push (nothing saved), the same kept in memory for an hour, or, with
-GitHub's gh installed by you, its login (saved in plain text). It never pushes by itself, and `wrenctl git`
-does the same for any repository of yours (`wrenctl git DIR`, or run inside
-it). It finds the published commit whose files are exactly yours and sets your
-copy there, so `bash ~/wren/update.sh` then shows and brings in what came
-after. If your files match nothing that was published (you changed them, or
-someone changed them on the stick), it says so: look at `git -C ~/wren status`
-and `git -C ~/wren diff` before you run anything with sudo. Once `pins.sh`
-names Wren Linux's signing key, it also refuses a server whose newest commit
-that key didn't sign.
+**What it asks:**
 
-After that, `update.sh` (or `claude-pull`) shows what's new and asks before
-bringing it in; plain `git pull` works too. (`claude-pull` is installed by the Claude Code
-sandboxes, `extras/claude-code.sh` and `extras/claude-vm.sh`.) If Claude Code
-pushes to the repository, add the ssh key its sandbox prints as a deploy key
-on GitHub (with write access), replacing the old install's. `wrenctl gh
-deploy-key` does it from the command line, no browser: it reads the VM's key
-and adds it, with a token that stays on your computer, never in the VM. It checks
-the rules on `main` first and offers to add any that are missing; no key goes on
-while `main` is open or can't be checked. It then offers to remove the last VM's
-key, which a rebuild leaves on GitHub, still able to push.
+- First, your name and email for commits. On GitHub, it offers your no-reply address, since GitHub refuses
+  pushes that carry an email you keep private.
+- At the end, how git logs in to push from here: a token you paste at each push (nothing saved), the same
+  kept in memory for an hour, or, with GitHub's gh installed by you, its login (saved in plain text).
+
+It never pushes by itself. `wrenctl git` does the same for any repository of yours (`wrenctl git DIR`, or run
+inside it).
+
+**What it does:** it finds the published commit whose files are exactly yours and sets your copy there, so
+`bash ~/wren/update.sh` then shows and brings in what came after.
+
+- If your files match nothing that was published (you changed them, or someone changed them on the stick), it
+  says so. Look at `git -C ~/wren status` and `git -C ~/wren diff` before you run anything with sudo.
+- Once `pins.sh` names Wren Linux's signing key, it also refuses a server whose newest commit that key didn't sign.
+
+After that, `update.sh` (or `claude-pull`) shows what's new and asks before bringing it in. Plain `git pull`
+works too. (`claude-pull` is installed by the Claude Code sandboxes, `extras/claude-code.sh` and
+`extras/claude-vm.sh`.)
+
+**If Claude Code pushes to the repository,** add the ssh key its sandbox prints as a deploy key on GitHub (with
+write access), replacing the old install's. `wrenctl gh deploy-key` does it from the command line, no browser:
+
+- It reads the VM's key and adds it, with a token that stays on your computer, never in the VM.
+- It checks the rules on `main` first and offers to add any that are missing. No key goes on while `main` is
+  open or can't be checked.
+- It then offers to remove the last VM's key, which a rebuild leaves on GitHub, still able to push.
 
 ## The `wrenctl` command
 
-In a terminal, `wrenctl --help` lists what it does and `man wrenctl` has the
-details. `wrenctl --update` brings Wren Linux up to date (see below),
-`wrenctl --apps` picks optional programs, `wrenctl --status` shows what is
-set up, `wrenctl --test` runs the checks, `wrenctl --welcome` shows the key
-cheat sheet again. On a sway screen, `wrenctl` alone (or a click on
-**Wren Linux** in the bar) opens the menu.
+In a terminal, `wrenctl --help` lists what it does and `man wrenctl` has the details. Each option works with or
+without its dashes (`wrenctl update`, `wrenctl --update`).
 
-One extra at a time: `wrenctl install NAME` installs it (or repairs or
-updates it), `wrenctl remove NAME` takes it out, `wrenctl manual NAME` prints
-the steps to do it by hand, and `wrenctl list` lists them all. Tab completes
-the name. Only the exact name of an extra is accepted, so nothing else is
-run; options after the name go to its script (`wrenctl install claude-vm
---account work`). `wrenctl part NAME` runs one part of the base again. Each
-option works with or without its dashes (`wrenctl update`, `wrenctl --update`).
+| Command | What it does |
+|---|---|
+| `wrenctl --update` | Brings Wren Linux up to date (see below) |
+| `wrenctl --apps` | Picks optional programs |
+| `wrenctl --status` | Shows what is set up |
+| `wrenctl --test` | Runs the checks |
+| `wrenctl --welcome` | Shows the key cheat sheet again |
+| `wrenctl` | On a sway screen, alone (or a click on `wren` in the bar), opens the menu |
+
+One extra at a time:
+
+| Command | What it does |
+|---|---|
+| `wrenctl install NAME` | Installs it, or repairs or updates it |
+| `wrenctl remove NAME` | Takes it out |
+| `wrenctl manual NAME` | Prints the steps to do it by hand |
+| `wrenctl list` | Lists them all |
+| `wrenctl part NAME` | Runs one part of the base again |
+
+Tab completes the name. Only the exact name of an extra is accepted, so nothing else is run. Options after the
+name go to its script (`wrenctl install claude-vm --account work`).
 
 ## Updating
 
@@ -309,55 +379,55 @@ option works with or without its dashes (`wrenctl update`, `wrenctl --update`).
 bash ~/wren/update.sh
 ```
 
-or click **Wren Linux** at the left of the status bar and choose Update. Install apps (`install-extras.sh`) opens in the same window; Esc on its list with nothing picked closes the window at once.
+or click `wren` at the left of the status bar and choose Update. Install apps (`install-extras.sh`) opens in the
+same window, and Esc on its list with nothing picked closes the window at once.
 
-It fetches what's new, shows you every change, and asks before bringing it
-in (only a plain fast-forward, so your own edits are never overwritten).
-Once `pins.sh` names Wren Linux's signing key (`WREN_SIGNING_FPR`), it brings
-a change in only if the newest commit carries a good signature from exactly
-that key, checked with the key in the copy you already have; until then it
-says that it didn't check.
-Then it lists the parts and extras you have set up whose files changed and
-offers to run them again, one after the other: running a script again is
-how a change reaches `/usr/local`, the firewall or Firefox's policy. An
-extra Wren Linux has retired (its `# retired:` line says why) gets no more
-runs: if you still have it, it asks whether to take it out with its own
-`--remove`, and Enter keeps it until next time. Otherwise it never runs
-`--remove`. If a script fails it says so and offers it again
-next time. A part of the base desktop that is new in an update is offered
-too, even though it isn't set up yet.
+**What's new.** It fetches what's new, shows you every change, and asks before bringing it in. It's only ever a
+plain fast-forward, so your own edits are never overwritten.
 
-Each run also checks the signing keys of the apt repositories Wren Linux added
-(Claude Code, Signal, Mullvad, the Tor Project's for lyrebird). One that has
-expired, or will within 60 days, is fetched again, and the new one goes in
-only if it is exactly the pinned key (`pins.sh`) and lasts longer. Without
-this, a key that runs out would quietly stop that program's updates.
-`status.sh` shows the same check.
+**The signature.** Once `pins.sh` names Wren Linux's signing key (`WREN_SIGNING_FPR`), it brings a change in only
+if the newest commit carries a good signature from exactly that key, checked with the key in the copy you already
+have. Until then, it says that it didn't check.
 
-The first run takes what you have now as already applied. If you updated by
-hand earlier, `bash update.sh --since COMMIT` offers what changed after that
-commit (`git log` shows it), and `bash update.sh --all` offers everything
-that is set up.
+**Running scripts again.** It lists the parts and extras you have set up whose files changed, and offers to run them
+again, one after the other. Running a script again is how a change reaches `/usr/local`, the firewall or Firefox's policy.
+
+- If a script fails, it says so and offers it again next time.
+- A part of the base desktop that is new in an update is offered too, even though it isn't set up yet.
+- An extra Wren Linux has retired (its `# retired:` line says why) gets no more runs. If you still have it, it asks
+  whether to take it out with its own `--remove`, and Enter keeps it until next time. Otherwise it never runs `--remove`.
+
+**Signing keys.** Each run also checks the signing keys of the apt repositories Wren Linux added (Claude Code, Signal,
+Mullvad, the Tor Project's for lyrebird). One that has expired, or will within 60 days, is fetched again, and the new
+one goes in only if it is exactly the pinned key (`pins.sh`) and lasts longer. Without this, a key that runs out would
+quietly stop that program's updates. `status.sh` shows the same check.
+
+**The first run** takes what you have now as already applied. If you updated by hand earlier,
+`bash update.sh --since COMMIT` offers what changed after that commit (`git log` shows it), and `bash update.sh --all`
+offers everything that is set up.
 
 ## More
 
-- [docs/wifi.md](docs/wifi.md): `wifi.sh`, and how the packages on the stick are checked
-- [docs/first-time.md](docs/first-time.md): your first install and first day, step by step
-- [docs/install-base.md](docs/install-base.md): what `install-base.sh` sets up, and every part
-- [docs/extras.md](docs/extras.md): the optional apps, Firefox with its hardening and `incognito`, Firefox profiles
-- [docs/extras/](docs/extras/README.md): one page per extra: its commands, what it is, what it doesn't protect against, and every step to install it by hand (`wrenctl manual NAME` prints them)
-- [docs/vps.md](docs/vps.md): the website, its git mirror and onion addresses on a VPS (`tools/setup-vps.sh`), tried in a local VM first
-- [docs/bios.md](docs/bios.md): the BIOS (UEFI firmware) settings for a Wren Linux install, and for security in general, with a checklist
-- [docs/opsec.md](docs/opsec.md): operations security in general: laptops, USB drives, networks, passwords, encryption, private communication, physical security, and what to do when something goes wrong
-- [docs/maintaining.md](docs/maintaining.md) (in a git copy; `wrenctl install wren-dev` gets one): `test.sh`, `pins.sh`, shellcheck, the other scripts
-- [docs/distro-plan.md](docs/distro-plan.md) (in a git copy too): the plan from these scripts to a Debian-based distribution: a package, a signed apt repository, a website, an installer image
-- [THREAT-MODEL.md](THREAT-MODEL.md): what this protects against, and what it doesn't
+| Page | What it covers |
+|---|---|
+| [docs/first-time.md](docs/first-time.md) | Your first install and first day, step by step |
+| [docs/wifi.md](docs/wifi.md) | `wifi.sh`, and how the packages on the stick are checked |
+| [docs/install-base.md](docs/install-base.md) | What `install-base.sh` sets up, and every part |
+| [docs/extras.md](docs/extras.md) | The optional apps, Firefox with its hardening and `incognito`, Firefox profiles |
+| [docs/extras/](docs/extras/README.md) | One page per extra: its commands, what it is, what it doesn't protect against, and every step to install it by hand (`wrenctl manual NAME` prints them) |
+| [docs/vps.md](docs/vps.md) | The website, its git mirror and onion addresses on a VPS (`tools/setup-vps.sh`), tried in a local VM first |
+| [docs/bios.md](docs/bios.md) | The BIOS (UEFI firmware) settings for a Wren Linux install, and for security in general, with a checklist |
+| [docs/opsec.md](docs/opsec.md) | Operations security in general: laptops, USB drives, networks, passwords, encryption, private communication, physical security, and what to do when something goes wrong |
+| [docs/maintaining.md](docs/maintaining.md) | In a git copy (`wrenctl install wren-dev` gets one): `test.sh`, `pins.sh`, shellcheck, the other scripts |
+| [docs/distro-plan.md](docs/distro-plan.md) | In a git copy too: the plan from these scripts to a Debian-based distribution: a package, a signed apt repository, a website, an installer image |
+| [THREAT-MODEL.md](THREAT-MODEL.md) | What this protects against, and what it doesn't |
 
 ## Removing things
 
 `wrenctl remove NAME` (for an extra; `bash extras/NAME.sh --remove` does the
-same) and `bash parts/NAME.sh --remove` undo one piece. Several pieces need the same packages (QEMU for Whonix and
-mockvps-kvm, XWayland for every app that only speaks X11), so a script
+same) and `bash parts/NAME.sh --remove` undo one piece.
+
+Several pieces need the same packages (QEMU for Whonix and mockvps-kvm, XWayland for every app that only speaks X11), so a script
 doesn't install its packages directly. It installs a tiny package of its
 own, `wren-NAME`, that depends on them. `--remove` removes that package
 and lets apt autoremove what nothing else needs, so a shared package stays
@@ -421,8 +491,8 @@ main ones:
 ## Troubleshooting
 
 - **A site doesn't work in Firefox**: if you chose uBlock's medium mode, it is
-  probably blocking a script the site needs (`ublock-allow --list` says the mode). `ublock-allow thatsite.com`, then restart
-  Firefox. To try it first: in uBlock's popup, make the red box next to
+  probably blocking a script the site needs (`ublock-allow --list` says the mode).
+  `ublock-allow thatsite.com`, then restart Firefox. To try it first: in uBlock's popup, make the red box next to
   "3rd-party scripts" grey and reload the page (that lasts until Firefox
   restarts).
 - **A web app is slow**: give it its own profile with fast JavaScript:
@@ -437,7 +507,7 @@ main ones:
 - **Wi-Fi gone after install-base.sh**: NetworkManager took it over. Run
   `nmtui` to pick the network, or `bash wifi.sh` to rescue it.
 - **A Wi-Fi login page keeps asking again**: that's the random MAC; see
-  [docs/install-base.md](docs/install-base.md).
+  [docs/install-base.md](docs/install-base.md#networks-and-dns).
 - **USB stick doesn't mount, or you can't write to it**: `usb` lists your
   sticks and `usb mount` mounts one as you. Don't use `sudo mount`: a FAT or
   exFAT stick mounted that way is root's, all of it (`usb mount` offers to
@@ -456,7 +526,7 @@ main ones:
   `bash prep/fetch-offline-debs.sh`. To accept old lists on purpose:
   `WREN_OFFLINE_ALLOW_STALE=1 bash wifi.sh`.
 - **A program on a USB stick won't run**: drives mount `noexec`. Run it
-  with its interpreter, copy it off, or see [docs/install-base.md](docs/install-base.md).
+  with its interpreter, copy it off, or see [docs/install-base.md](docs/install-base.md#usb).
 - **Something that used to work doesn't**: `bash test.sh` shows what
   changed outside Wren Linux.
 
