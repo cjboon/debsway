@@ -312,6 +312,20 @@ check "the session stops if the net check says no, before the VM starts" bash -c
     a=$(grep -n "\"\$NETCHECK\"; then" "$1" | cut -d: -f1); b=$(grep -n "mockvps --start" "$1" | cut -d: -f1); [ -n "$a" ] && [ "$a" -lt "$b" ]' _ "$HERE/bin/claude-vm-session"
 check "both ssh commands forward nothing and ignore config files" bash -c '[ "$(grep -c "ssh \"\${SSH_SAFE\[@\]}\"" "$1")" = 2 ] && grep -q "ForwardAgent=no" "$1" && grep -q "ClearAllForwardings=yes" "$1" && grep -q -- "-F /dev/null" "$1"' _ "$HERE/bin/claude-vm-session"
 check "pubkey checks what the guest says before showing it" grep -q "ssh-ed25519" "$HERE/bin/claude-vm-session"
+# The real session, with a pretend guest: in en_US.UTF-8 a range like [!-~] holds no letters
+touch "$S/vm-running"; echo x >"$S/home/vm/claude-vm.qcow2"
+cp "$S/bin/ssh" "$S/ssh-saved"
+printf '#!/bin/sh\ncat "%s/guest-says"\n' "$S" >"$S/bin/ssh"
+KEY='ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGRyvGTVTezPcsCR1jPMtG6zEk2W28vfX7ln6Gu8wW+V claude-vm@guest'
+echo "$KEY" >"$S/guest-says"
+for loc in C C.UTF-8 en_US.UTF-8; do
+    check "pubkey shows a real key, with its comment, in $loc" test "$(LC_ALL=$loc session pubkey 2>/dev/null)" = "$KEY"
+done
+printf '%s \033[2Jx\n' "${KEY% *}" >"$S/guest-says"
+check "...a terminal escape in the comment: not shown" test -z "$(LC_ALL=en_US.UTF-8 session pubkey 2>/dev/null)"
+echo 'hello there' >"$S/guest-says"
+check "...some text: not shown" test -z "$(LC_ALL=en_US.UTF-8 session pubkey 2>/dev/null)"
+mv "$S/ssh-saved" "$S/bin/ssh"; rm -f "$S/vm-running" "$S/guest-says" "$S/home/vm/claude-vm.qcow2"
 check "a clean snapshot after install and rebuild" test "$(grep -c '^        clean_snapshot$' "$HERE/bin/claude-vm-session")" = 2
 check "reset asks first, and no answer changes nothing" bash -c 'grep -q "Nothing was changed" "$1" && grep -q "\[y/N\]" "$1"' _ "$HERE/bin/claude-vm"
 # A commit message with a terminal escape in it, through the real claude-pull
