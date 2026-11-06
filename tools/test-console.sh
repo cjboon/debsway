@@ -83,7 +83,7 @@ check "...the login goes back to sway before the mark goes (cut off, --remove ag
     python3 -I -c 'import sys; s = open(sys.argv[1]).read(); r = s.index("= --remove ]"); a = s.index("profile_autostart sway", r); m = s.index("rm -f \"$MARK\"", r); assert a < m' "$HERE/extras/console-only.sh"
 
 bar=$(sh "$HERE/bin/sway-status" --tmux)
-check "the tmux bar starts with the Wren menu range" bash -c '[[ $1 == "#[range=user|menu]wren#[norange]"* ]]' _ "$bar"
+check "the tmux bar starts with the Wren menu range" bash -c '[[ $1 == "#[range=user|menu]Wren Menu#[norange]"* ]]' _ "$bar"
 check "...and has a date item" bash -c '[[ $1 == *"#[range=user|date]"* ]]' _ "$bar"
 
 mkdir -p "$T/bin" "$HOME/.local/bin"
@@ -92,7 +92,7 @@ chmod +x "$T/bin/tmux"
 printf '#!/bin/sh\necho "volume $@" >>%s/calls\n' "$T" >"$HOME/.local/bin/volume"
 chmod +x "$HOME/.local/bin/volume"
 PATH=$T/bin:$PATH sh "$HERE/bin/console-click" menu 1 c0
-check "a click on Wren Linux opens the menu in a pop-up" grep -q 'display-popup -c c0 -E -w 72% -h 85% .*wren-menu --tui' "$T/calls"
+check "a click on Wren Menu opens the menu in a pop-up" grep -q 'display-popup -c c0 -E -w 72% -h 85% .*wren-menu --tui' "$T/calls"
 PATH=$T/bin:$PATH sh "$HERE/bin/console-click" vol 4 c0
 check "scrolling vol up raises the volume" grep -qx 'volume up' "$T/calls"
 check "the config loads the console file only without sway" grep -q "if-shell '\[ -z \"\$WAYLAND_DISPLAY\" \]' 'source-file ~/.config/tmux/console.conf'" "$HERE/data/tmux.conf"
