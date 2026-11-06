@@ -127,7 +127,7 @@ one and anyone on the way can answer falsely. With it:
   only Unbound send DNS out (ports 53 and 853), so a program that asks another
   DNS server itself is refused, and if the resolver can't be reached names stop
   resolving rather than going out unencrypted. That holds for the sandboxes
-  too: the sandboxed Claude's users and the VMs (claude-vm, opencode-vm, and
+  too: the sandboxed Claude's users and the VMs (claude-vm, the retired opencode-vm, and
   their accounts) can only ask Unbound while it is on.
 - NetworkManager (`dns=none`), dhclient, dhcpcd and `wifi.sh` stop rewriting
   `/etc/resolv.conf`. The old one is kept as `/etc/resolv.conf.wren-secure-dns.bak`.

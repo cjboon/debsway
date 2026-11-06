@@ -18,8 +18,10 @@ internet. So:
   owner's real extras).
 - `~/projects/wren-linux` is a clone of https://github.com/cjboon/wren-linux.git (push
   over ssh: `git@github.com:cjboon/wren-linux.git`). The VM's ssh key is a deploy key.
-  **Push only to the branch `claude`, never to `main`**: `main` holds only what the owner
-  reviewed and signed, and GitHub refuses anything else there. Start each piece of work
+  **Push only to the branch `claude`, never to `main`**: `main` holds what the owner
+  reviewed and signed. GitHub's rules let only the owner update it, and nobody force-push
+  or delete it (`wrenctl gh rulesets`); they don't check signatures: `wren-release` signs,
+  and `update.sh` checks that on each computer. Start each piece of work
   from `origin/main` as it is (`git fetch origin && git checkout -B claude origin/main`,
   when nothing of yours is waiting unpulled), so `claude` sits on top of the owner's
   signed commit. Commit each finished item as soon as its tests pass (one commit per

@@ -58,7 +58,7 @@ gives it the new card; `--bridges` then sets the DNS for the bridge you choose.
 
 - A bug in KVM or QEMU could reach this computer from a VM.
 - What you type into a site still identifies you if it's about you; Tor hides the address, not the person.
-- `whonix stop` switches off a VM that doesn't shut down in 20 seconds: save your work inside first.
+- `whonix stop` doesn't shut down cleanly yet: Whonix's desktop answers it with a shutdown dialog in each VM. Choose Power off there within 20 seconds; a VM still running then is switched off, as if its power button were held, which can leave its disk needing repair at the next boot. Save your work inside first.
 - Wren Linux doesn't update Feather in the Workstation after the install: Feather says when a newer version is out, and its guide for Whonix (docs.featherwallet.org) shows how to replace it. Whonix updates Electrum with its other packages.
 - Feather inside the Workstation hasn't been tried in a real Whonix VM yet: the files are put in place and checked, but not run there.
 - Whonix's own updates run inside the VMs: update them there.

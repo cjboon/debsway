@@ -438,7 +438,7 @@ if defined "$GW" && defined "$WS"; then
         gateway_off
         say "Gateway bridges"
         pick_bridges whonix
-webtunnel_note
+        webtunnel_note
         work=$(mktemp -d)
         trap 'rm -rf "$work"' EXIT
         gateway_config "$work"

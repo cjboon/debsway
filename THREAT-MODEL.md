@@ -126,10 +126,11 @@ this page to decide what else you need.
   only its own guest's console port, not the first VM's. The two can be installed together. Use the VM if
   your computer has KVM (`docs/extras.md` says how to check); `claude` is
   the weaker, lighter choice for computers that can't run it. `opencode-vm`
-  (`extras/opencode-vm.sh`) puts opencode in the same kind of VM. Its
-  download has no signature, only GitHub's own SHA-256 for an immutable
-  release, so a hijacked maintainer account could slip in a bad one: the VM
-  limits what that reaches, not whether it runs.
+  (`extras/opencode-vm.sh`) is retired: it can't be newly installed, gets no more
+  updates, and `update.sh` offers to remove it. If you still have it, it puts
+  opencode in the same kind of VM. Its download has no signature, only GitHub's
+  own SHA-256 for an immutable release, so a hijacked maintainer account could
+  slip in a bad one: the VM limits what that reaches, not whether it runs.
 - **A stranger's USB stick running something.** Drives mount with
   `nosuid`, `nodev` and `noexec` (the `usb` command, `parts/usb.sh`, and
   `extras/udiskie.sh`), so nothing on a stick can run from it by itself.
@@ -186,12 +187,15 @@ With the extras:
 - **Logins phished or taken from the computer**, for sites and SSH servers
   that take a security key: the key signs only for the site it was registered
   with, and only when touched.
-- **A hacked wallet reading your files or showing your address**, with the
-  wallet sandbox (`extras/wallet-sandbox.sh`), for a computer that can't run VMs:
-  each wallet is its own user, the firewall lets it reach Tor's port and nothing
-  else, checked from its own side, and it has its own window system. It shares
-  this computer's kernel, so a kernel flaw gets out: Whonix is stronger. It can't
-  stop a hacked wallet showing you a false address.
+- **A hacked wallet reading your files or showing your address**, in Whonix's
+  Workstation (`extras/whonix.sh`), which has Feather and Electrum behind Tor. A
+  bug in KVM or QEMU could still get out, and it can't stop a hacked wallet
+  showing you a false address. The wallet sandbox
+  (`extras/wallet-sandbox.sh`) is retired: it can't be newly installed, gets no
+  more updates, and `update.sh` offers to remove it. If you still have it, each
+  wallet is its own user, the firewall lets it reach Tor's port and nothing else,
+  checked from its own side, and it has its own window system; it shares this
+  computer's kernel, so a kernel flaw gets out.
 - **Coins spent behind your back**, with a hardware wallet
   (`extras/hardware-wallet.sh`): the device shows what it signs on its own
   screen and signs only when you agree there. It doesn't protect the
@@ -227,7 +231,8 @@ With the extras:
   KVM could still get out, and it reaches the internet, so nothing private belongs
   in the VM. Read what it pushes.
 - **What runs in the distribution VMs** (`extras/distro-vm.sh`: Kali, Tails,
-  Arch). Each VM is one QEMU process of its own locked user, under QEMU's syscall
+  Arch), retired: they can't be newly installed, get no more updates, and
+  `update.sh` offers to remove them. If you still have them, each VM is one QEMU process of its own locked user, under QEMU's syscall
   filter, behind a firewall checked before every start and every few seconds while
   it runs: the internet but not this computer or your network, or (Kali and Arch,
   if you chose it) Tor only. A bug in QEMU or KVM could still get out, and the
@@ -236,14 +241,15 @@ With the extras:
   VM is weaker than Tails on its own stick: this computer sees all it does.
 - **Anything running as you.** If you run a malicious program, or an
   attack escapes the browser, it can read all your files, every Firefox
-  profile's logins and your wallets (except those kept in the wallet sandbox,
-  `extras/wallet-sandbox.sh`, which it could still reach by waiting for your
-  password). Wren Linux doesn't sandbox your own user. Only install software you trust. (With the Wren Linux package
+  profile's logins and your wallets, those in Whonix's Workstation too: the VMs
+  run as you, and their disks are your files. (Only the retired wallet sandbox,
+  `extras/wallet-sandbox.sh`, keeps them under another user, which it could still
+  reach by waiting for your password.) Wren Linux doesn't sandbox your own user. Only install software you trust. (With the Wren Linux package
   installed, the scripts Wren Linux runs with sudo are root's files in
   `/usr/share/wren`, so such a program can't change them to wait for your
   password; from your own copy in `~/wren` it could.) `claude-regular`
-  (`extras/claude-regular.sh`) and `mullvad-browser-regular` run as you on
-  purpose, for ease: a hacked page in Mullvad Browser reaches your files, and
+  (`extras/claude-regular.sh`, retired: `update.sh` offers to remove it) and
+  `mullvad-browser-regular` run as you on purpose, for ease: a hacked page in Mullvad Browser reaches your files, and
   so does `firefox-unsafe` (Debian's `firefox-esr`, moved there when the
   sandboxed Firefox is installed, so that `firefox-esr` by name opens the
   sandbox; without the sandbox, `firefox-esr` itself). `claude-regular`'s
