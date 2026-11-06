@@ -149,6 +149,10 @@ build_vm() {
             say "The VM is ready"
             note "Its ssh public key (add it on your git host so the agent can push):"
             sudo -u "$AGENT" "$SESSION" pubkey 2>/dev/null | sed 's/^/        /' || true
+            if ask "Add it to GitHub now (wrenctl gh deploy-key)?" n; then
+                bash "$WREN_DIR/gh-helper.sh" deploy-key ${1:+--account "$1"} ||
+                    warn "The key wasn't added. To try again: wrenctl gh deploy-key${1:+ --account $1}"
+            fi
         else
             warn "The build didn't finish. Try again with: claude-vm${1:+ --account $1} rebuild"
         fi

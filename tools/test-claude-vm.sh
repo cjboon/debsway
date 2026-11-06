@@ -44,6 +44,39 @@ run status
 check "a known command is passed through to the session" \
     grep -qx "sudo -n -u claude-vm /usr/local/libexec/claude-vm-session status" "$T/calls"
 
+# A rebuild makes a new ssh key: GitHub's copy is offered, never done unasked
+printf '#!/bin/sh\necho "wrenctl $*" >>"%s/calls"\n[ ! -e "%s/wrenctl-fails" ]\n' "$T" "$T" >"$T/fake/wrenctl"
+chmod +x "$T/fake/wrenctl"
+rb() { printf '%s\n' "$1" | WREN_TEST_ANSWERS=1 run "${@:2}"; }
+: >"$T/calls"
+rb y rebuild >/dev/null 2>&1
+check "rebuild, you say yes: the VM first, then wrenctl gh deploy-key" bash -c '
+    [ "$(sed -n 1p "$1")" = "sudo -n -u claude-vm /usr/local/libexec/claude-vm-session rebuild" ] &&
+        [ "$(sed -n 2p "$1")" = "wrenctl gh deploy-key" ]' _ "$T/calls"
+: >"$T/calls"
+rb '' rebuild >/dev/null 2>&1
+check "...Enter: no key is sent anywhere" bash -c '! grep -q wrenctl "$1"' _ "$T/calls"
+: >"$T/calls"
+run rebuild </dev/null >/dev/null 2>&1
+check "...no terminal: it asks nothing and sends nothing" bash -c '! grep -q wrenctl "$1"' _ "$T/calls"
+: >"$T/sudo-fails"; : >"$T/calls"
+rb y rebuild >/dev/null 2>&1 && rc=0 || rc=$?
+check "...the build fails: it says so, and offers nothing" bash -c '[ "$1" -ne 0 ] && ! grep -q wrenctl "$2"' _ "$rc" "$T/calls"
+rm -f "$T/sudo-fails"
+: >"$T/wrenctl-fails"
+rb y rebuild >/dev/null 2>&1 && rc=0 || rc=$?
+check "...the key isn't added: the rebuild itself still counts as done" test "$rc" = 0
+rm -f "$T/wrenctl-fails"
+touch "$T/rule-claude-vm-work"; : >"$T/calls"
+rb y --account work rebuild >/dev/null 2>&1
+check "...--account NAME: that account's key" grep -qx "wrenctl gh deploy-key --account work" "$T/calls"
+rm -f "$T/rule-claude-vm-work"; : >"$T/calls"
+rb y status >/dev/null 2>&1
+check "...other commands offer nothing" bash -c '! grep -q wrenctl "$1"' _ "$T/calls"
+: >"$T/calls"
+check "the first build offers the same, Enter meaning no" bash -c '
+    grep -q "ask .*GitHub.* n" "$1" && grep -q "gh-helper.sh\" deploy-key" "$1"' _ "$HERE/extras/claude-vm.sh"
+
 # From wmenu: no controlling terminal (setsid, as sway's exec), in sway
 launch() { setsid -w bash "$HERE/bin/claude-vm" "$@"; }
 : >"$T/calls"
