@@ -7,9 +7,14 @@
 # the system tor service, which would connect to Tor directly the moment
 # it's installed, so that service is masked (blocked) first and never runs.
 # It first asks whether you need a bridge to reach Tor (built-in obfs4,
-# your own obfs4 lines, or Snowflake; OnionShare can't use webtunnel or
-# meek on Debian). The choice is written into OnionShare's settings before
-# its first start, so its first connection goes through the bridge.
+# your own obfs4 lines, Snowflake or webtunnel; OnionShare can't use meek on
+# Debian). The choice is written into OnionShare's settings before its first
+# start, so its first connection goes through the bridge.
+#
+# OnionShare's own tor can't run webtunnel. With that chosen, onionshare and
+# onionshare-cli in ~/.local/bin start a private tor instead (bin/onionshare-tor),
+# which OnionShare talks to through a socket only you can open, and lyrebird comes
+# from the Tor Project's repository (lib/tor.sh: its key pinned, nothing else from it).
 # Usage: bash onionshare.sh [--remove | --manual]
 # summary: Share files, sites and chat over Tor
 # security: some
@@ -19,9 +24,56 @@ if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 SETTINGS="$HOME/.config/onionshare/onionshare.json"
+# The private tor, for webtunnel: its torrc (with your bridge lines), data and socket
+PRIVATE_TOR="$HOME/.local/state/wren/onionshare-tor"
+
+# private_tor_off: back to OnionShare's own tor: the links, the torrc and the data gone
+private_tor_off() {
+    local c
+    for c in onionshare onionshare-cli; do
+        if [ -L "$BIN/$c" ] && [ "$(readlink -- "$BIN/$c")" = onionshare-tor ]; then rm -f "$BIN/$c"; fi
+    done
+    remove_bin onionshare-tor
+    rm -rf "$PRIVATE_TOR"
+}
+
+# private_tor_on: a private tor for webtunnel. Nothing else is listening: no SOCKS port
+# (OnionShare needs only its control socket), and no cookie, since the folder is the lock.
+private_tor_on() {
+    local c
+    [[ ! $PRIVATE_TOR =~ [[:space:]\"\\] ]] || die "tor can't use a folder with spaces or quotes: $PRIVATE_TOR"
+    # (a socket's path has a length limit)
+    [ ${#PRIVATE_TOR} -le 90 ] || die "Your home folder's path is too long for tor's socket: $PRIVATE_TOR"
+    mkdir -p "${PRIVATE_TOR%/*}"
+    install -d -m 0700 "$PRIVATE_TOR" "$PRIVATE_TOR/data"
+    {
+        echo "# Written by Wren Linux extras/onionshare.sh: OnionShare's private tor (bin/onionshare-tor)."
+        echo "DataDirectory $PRIVATE_TOR/data"
+        echo "ControlSocket $PRIVATE_TOR/control"
+        echo "CookieAuthentication 0"
+        echo "SocksPort 0"
+        echo "ClientOnly 1"
+        echo "AvoidDiskWrites 1"
+        echo "Log notice file $PRIVATE_TOR/log"
+        tor_bridge_config
+    } | install -m 0600 /dev/stdin "$PRIVATE_TOR/torrc"
+    tor --defaults-torrc /dev/null -f "$PRIVATE_TOR/torrc" --verify-config >/dev/null 2>&1 ||
+        die "tor doesn't accept the private settings in $PRIVATE_TOR/torrc."
+    install_bin onionshare-tor
+    for c in onionshare onionshare-cli; do
+        if [ -e "$BIN/$c" ] && [ ! -L "$BIN/$c" ]; then
+            cp -- "$BIN/$c" "$BIN/$c.bak"
+            note "Old $BIN/$c kept as $BIN/$c.bak"
+        fi
+        ln -sfn onionshare-tor "$BIN/$c"
+    done
+    note "webtunnel is experimental here, and a dead bridge stops OnionShare: it never connects any other way."
+}
 
 if [ "${1:-}" = --remove ]; then
     apt_purge onionshare onionshare-cli
+    private_tor_off
+    remove_torproject_repo_if_unused
     note "Your settings stay in ~/.config/onionshare; received files in ~/OnionShare."
     note "The system tor service stays masked: sudo systemctl unmask tor.service tor@default.service"
     exit
@@ -39,9 +91,12 @@ if s.get("bridges_enabled") and s.get("bridges_type") == "custom":
 PY
     )
 fi
+# (webtunnel's are in the private tor's settings)
+if [ -r "$PRIVATE_TOR/torrc" ]; then mapfile -t old < <(sed -n 's/^Bridge //p' "$PRIVATE_TOR/torrc"); fi
 if [ ${#old[@]} -gt 0 ] && ask "Keep the ${#old[@]} bridge line(s) OnionShare already has?" y; then
     BRIDGES=("${old[@]}")
     BRIDGE_TYPE=obfs4
+    [[ ${old[0]} != webtunnel\ * ]] || BRIDGE_TYPE=webtunnel
     BRIDGE_WANTED=true
 else
     pick_bridges onionshare
@@ -60,6 +115,10 @@ say "Installing OnionShare"
 pkgs=(onionshare-cli obfs4proxy)
 # OnionShare finds the Snowflake program by name
 [ "$BRIDGE_TYPE" != snowflake ] || pkgs+=(snowflake-client)
+if [ "$BRIDGE_TYPE" = webtunnel ]; then
+    add_torproject_repo
+    pkgs+=(lyrebird)
+fi
 if ask "Also install the graphical OnionShare app?" y; then
     # qt6-wayland: lets the Qt 6 app run on Wayland without XWayland
     pkgs+=(onionshare qt6-wayland)
@@ -69,19 +128,29 @@ if ! system_tor_wanted && systemctl is-active --quiet tor.service tor@default.se
     warn "The system tor service is running anyway. Stop it: sudo systemctl stop tor@default.service"
 fi
 
-# Only these settings are written; OnionShare fills in the rest. Its own
-# tor then connects through the bridge, from its very first start.
+# The private tor is in place before the settings point at it, or gone once they don't
+if [ "$BRIDGE_TYPE" = webtunnel ]; then private_tor_on; else private_tor_off; fi
+
+# Only these settings are written; OnionShare fills in the rest. Its tor then
+# connects through the bridge, from its very first start.
 mkdir -p "$(dirname -- "$SETTINGS")"
-python3 -I - "$SETTINGS" "$BRIDGE_TYPE" "${BRIDGES[@]}" <<'PY'
+python3 -I - "$SETTINGS" "$PRIVATE_TOR/control" "$BRIDGE_TYPE" "${BRIDGES[@]}" <<'PY'
 import json, os, sys
-path, kind, lines = sys.argv[1], sys.argv[2], sys.argv[3:]
+path, control, kind, lines = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4:]
 try:
     s = json.load(open(path))
 except (OSError, ValueError):
     s = {}
 s["connection_type"] = "bundled"
 s["bridges_enabled"] = kind != "none"
-if kind == "obfs4" and lines:
+if kind == "webtunnel":
+    # (without the private tor running, this finds nothing: it doesn't connect at all)
+    s["connection_type"] = "socket_file"
+    s["socket_file_path"] = control
+    s["auth_type"] = "no_auth"
+    s["bridges_enabled"] = False
+    s.pop("bridges_custom", None)
+elif kind == "obfs4" and lines:
     s["bridges_type"] = "custom"
     s["bridges_custom"] = "\n".join(lines)
 elif kind in ("obfs4-builtin", "snowflake"):

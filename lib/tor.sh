@@ -18,14 +18,15 @@ BRIDGE_WANTED=false
 #   tor-browser   Tor Browser: has all of them built in
 #   system-tor    Debian's tor (apt over Tor, remote access, the onion site):
 #                 obfs4proxy, lyrebird (webtunnel) and snowflake-client
-#   onionshare    OnionShare's own tor: its built-in lists, obfs4proxy, snowflake-client
+#   onionshare    OnionShare's own tor: its built-in lists, obfs4proxy, snowflake-client;
+#                 and webtunnel, in a private tor (bin/onionshare-tor)
 #   whonix        the Whonix Gateway: obfs4proxy and snowflake-client
 bridge_kinds() {
     case $1 in
         tor-browser) echo "obfs4-builtin obfs4 webtunnel snowflake meek" ;;
         system-tor) echo "obfs4 webtunnel snowflake" ;;
         whonix) echo "obfs4 snowflake webtunnel" ;;
-        onionshare) echo "obfs4-builtin obfs4 snowflake" ;;
+        onionshare) echo "obfs4-builtin obfs4 snowflake webtunnel" ;;
         *) echo "obfs4" ;;
     esac
 }
@@ -34,7 +35,7 @@ bridge_kinds() {
 bridge_unavailable() {
     case $1 in
         system-tor) echo "meek: no client program for it here" ;;
-        onionshare) echo "webtunnel, meek: OnionShare and Debian have no client for them" ;;
+        onionshare) echo "meek: OnionShare and Debian have no client for it" ;;
         whonix) echo "meek: not offered for the Whonix Gateway" ;;
     esac
 }

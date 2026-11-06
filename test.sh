@@ -211,6 +211,7 @@ dev_test tails-usb "Tails on a USB stick (lib/tails.sh): release file, which dis
 dev_test backup "What backups leave out (extras/backup.sh), in a pretend home" "backup checks"
 
 # --------------------------------------------------------------------
+dev_test onionshare-tor "OnionShare through webtunnel (bin/onionshare-tor, extras/onionshare.sh), with a pretend tor" "OnionShare private tor checks"
 dev_test tor-service "Who keeps the system tor service on (lib/tor.sh), on a pretend /etc" "tor service checks"
 
 # --------------------------------------------------------------------

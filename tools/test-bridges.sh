@@ -62,7 +62,10 @@ check "...choice 3: Snowflake" test "$(result "$out")" = "RESULT snowflake 0 tru
 out=$(run onionshare y 1)
 check "OnionShare offers built-in obfs4" has 'own public list' "$out"
 check "OnionShare offers Snowflake" has 'Snowflake: no lines' "$out"
-check "OnionShare does not offer webtunnel" lacks 'webtunnel, bridge lines' "$out"
+check "OnionShare offers webtunnel (in a private tor)" has 'webtunnel, bridge lines' "$out"
+check "...and says why meek is missing" has 'Not offered here (meek' "$out"
+out=$(run onionshare y 4 "$WEBT" "")
+check "...choice 4: webtunnel, with its line" test "$(result "$out")" = "RESULT webtunnel 1 true"
 
 echo "Getting bridge lines"
 out=$(run system-tor y 1 "$OBFS4" "Bridge $OBFS4" "not a bridge" "")

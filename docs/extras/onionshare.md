@@ -25,9 +25,11 @@ private key; the other person opens the address in Tor Browser. It starts its
 own private tor. Debian's package also installs the system tor service, which
 would connect to Tor the moment it is installed, so that is masked first
 (unless apt over Tor, remote access or the onion site runs it). If you need a
-bridge to reach Tor (built-in obfs4, your own obfs4 lines, or Snowflake), it
-goes into OnionShare's settings before its first start, so its first
-connection already uses it.
+bridge to reach Tor (built-in obfs4, your own obfs4 lines, Snowflake or
+webtunnel), it goes into OnionShare's settings before its first start, so its
+first connection already uses it. OnionShare's own tor can't run webtunnel, so with
+that chosen, `onionshare` and `onionshare-cli` start a private tor, used only through a
+socket in a folder only you can open (`bin/onionshare-tor`), and stop it when they end.
 
 ## LIMITS
 
@@ -35,6 +37,12 @@ connection already uses it.
 - While it runs, this laptop is the server: shut the lid or lose the network and the share stops.
 - Files you receive can be anything: don't open them on this computer without care.
 - Tor hides your address from the other side, not what you put in the files.
+- webtunnel is experimental here, and a real webtunnel bridge is yours to try: here it was tried with
+  a dead one, and through the private tor without a bridge. A dead bridge stops OnionShare: it says so,
+  and nothing connects any other way. It runs one OnionShare at a time, and takes as long to start as
+  tor takes to connect. Its URL's name is looked up through this computer's resolver (encrypted, with
+  secure DNS on).
+- A menu entry or `/usr/bin/onionshare` run directly finds no private tor, and doesn't connect at all.
 
 ## MANUAL INSTALL
 
@@ -60,6 +68,23 @@ python3 -c 'import json,os,sys; p=sys.argv[1]; os.makedirs(os.path.dirname(p),ex
 # Only you may read it (bridge lines are private)
 chmod 600 ~/.config/onionshare/onionshare.json
 
+# Only for webtunnel: lyrebird from the Tor Project's repository (as parts/apt-tor.sh
+# adds it: key @TORPROJECT_FPR@, pinned to lyrebird only), a private tor, and OnionShare
+# told to use it. YOUR-LINE is a whole line from bridges.torproject.org, without "Bridge".
+sudo apt install --no-install-recommends lyrebird
+T=~/.local/state/wren/onionshare-tor
+install -d -m 700 $T $T/data
+printf '%s\n' "DataDirectory $T/data" "ControlSocket $T/control" 'CookieAuthentication 0' 'SocksPort 0' \
+    'ClientOnly 1' 'AvoidDiskWrites 1' "Log notice file $T/log" 'UseBridges 1' \
+    'ClientTransportPlugin webtunnel exec /usr/bin/lyrebird' 'Bridge YOUR-LINE' >$T/torrc
+chmod 600 $T/torrc
+python3 -c 'import json,os,sys; p=sys.argv[1]; os.makedirs(os.path.dirname(p),exist_ok=True); json.dump({"connection_type":"socket_file","socket_file_path":sys.argv[2],"auth_type":"no_auth","bridges_enabled":False},open(p,"w"))' ~/.config/onionshare/onionshare.json $T/control
+chmod 600 ~/.config/onionshare/onionshare.json
+# What runs it, each time: it starts that tor, waits for "Bootstrapped 100%", runs OnionShare
+install -D -m 0755 @WREN_DIR@/bin/onionshare-tor ~/.local/bin/onionshare-tor
+ln -sfn onionshare-tor ~/.local/bin/onionshare-cli
+ln -sfn onionshare-tor ~/.local/bin/onionshare
+
 # The system tor must not be running now: this must say "inactive"
 systemctl is-active tor@default.service
 ```
@@ -70,8 +95,10 @@ To undo (your settings stay in `~/.config/onionshare`, received files in `~/Onio
 # OnionShare (add onionshare qt6-wayland if you installed the app)
 sudo apt purge onionshare-cli
 # obfs4 and Snowflake, marked "automatic": autoremove takes them out only if nothing needs them
-sudo apt-mark auto obfs4proxy snowflake-client
+sudo apt-mark auto obfs4proxy snowflake-client lyrebird
 sudo apt autoremove --purge
 # Let the system tor service start again, if you want it
 sudo systemctl unmask tor.service tor@default.service
+# webtunnel's private tor (its bridge lines are in there)
+rm -rf ~/.local/state/wren/onionshare-tor ~/.local/bin/onionshare-tor ~/.local/bin/onionshare-cli ~/.local/bin/onionshare
 ```

@@ -1,0 +1,77 @@
+#!/bin/sh
+# onionshare-tor: written by Wren Linux extras/onionshare.sh
+# OnionShare through a webtunnel bridge. OnionShare's own tor has no way to run webtunnel,
+# so with that bridge chosen, onionshare and onionshare-cli in ~/.local/bin are links to
+# this, which starts a private tor (the torrc beside its data, in a folder only you can
+# open), waits until it is connected, runs the real program, and stops it again.
+#
+# There is no other way out: the torrc says UseBridges 1, so with the bridge down it stays
+# unconnected, and this says so. It never connects directly, and never hands over to
+# OnionShare's own tor. The tor ends with this script, however this script ends, and
+# killing this script ends the share.
+set -u
+name=${0##*/}
+REAL_DIR=${WREN_ONIONSHARE_REAL:-/usr/bin}
+DIR=$HOME/.local/state/wren/onionshare-tor
+WAIT=${WREN_ONIONSHARE_WAIT:-600}
+
+fail() {
+    echo "$name: $*" >&2
+    [ -t 2 ] || notify-send -u critical OnionShare "$*" 2>/dev/null || true
+    exit 1
+}
+case $name in
+    onionshare | onionshare-cli) real=$REAL_DIR/$name ;;
+    *) echo "usage: run it as onionshare or onionshare-cli (extras/onionshare.sh links them here)" >&2; exit 2 ;;
+esac
+[ -x "$real" ] || fail "$real is missing. Run: wrenctl install onionshare"
+# (these say something and end: no reason to connect to anything)
+case ${1:-} in --help | -h | --version | -V) exec "$real" "$@" ;; esac
+[ -r "$DIR/torrc" ] || fail "its bridge isn't set up. Run: wrenctl install onionshare"
+command -v tor >/dev/null || fail "tor is missing. Run: wrenctl install onionshare"
+
+# One at a time: two tors can't share this one's data
+exec 9>"$DIR/lock"
+flock -n 9 || fail "OnionShare is running already, through this bridge. Close that one first."
+
+tor_pid=
+# shellcheck disable=SC2317,SC2329  # the trap below calls it
+stop_tor() {
+    if [ -n "$tor_pid" ]; then kill "$tor_pid" 2>/dev/null; wait "$tor_pid" 2>/dev/null; tor_pid=; fi
+    rm -f "$DIR/log"
+}
+trap stop_tor EXIT
+trap 'exit 130' INT TERM HUP
+
+: >"$DIR/log"
+chmod 600 "$DIR/log"
+# (no defaults: only this torrc counts. Owning process: it ends if this script is killed)
+tor --defaults-torrc /dev/null -f "$DIR/torrc" --quiet --__OwningControllerProcess "$$" 9>&- &
+tor_pid=$!
+
+echo "Connecting to Tor through your webtunnel bridge. This can take a few minutes..."
+[ -t 2 ] || notify-send OnionShare "Connecting to Tor through your webtunnel bridge..." 2>/dev/null || true
+end=$(($(date +%s) + WAIT))
+until grep -q 'Bootstrapped 100%' "$DIR/log"; do
+    kill -0 "$tor_pid" 2>/dev/null || { tor_pid=; fail "its tor stopped before it connected. Nothing was shared."; }
+    [ "$(date +%s)" -lt "$end" ] ||
+        fail "couldn't reach Tor through your bridge in $WAIT seconds, and nothing connected any other way. Nothing was shared. The bridge may be down: wrenctl install onionshare asks for another."
+    sleep "${WREN_ONIONSHARE_POLL:-1}"
+done
+
+# Beside this script, not in front of it: sh keeps a signal until the program in front
+# ends, so killing this would leave the share online. Its keyboard and Ctrl+C stay its
+# own (sh takes both from a program started with &).
+exec 8<&0
+env --default-signal=INT "$real" "$@" <&8 8<&- 9>&- &
+real_pid=$!
+exec 8<&-
+trap 'kill "$real_pid" 2>/dev/null' TERM HUP
+# (Ctrl+C reaches OnionShare too: it ends in its own way, and this goes on waiting)
+trap : INT
+while :; do
+    wait "$real_pid"
+    rc=$?
+    kill -0 "$real_pid" 2>/dev/null || break
+done
+exit "$rc"
