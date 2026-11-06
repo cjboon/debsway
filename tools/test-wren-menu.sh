@@ -158,17 +158,20 @@ if __name__ == "__main__":
            # no browser or editor unless a scenario's test names some
            "WREN_MENU_BROWSERS": os.environ.get("WREN_MENU_BROWSERS", "/nonexistent"),
            "WREN_MENU_EDITORS": os.environ.get("WREN_MENU_EDITORS", "/nonexistent"),
-           "WREN_MENU_APPS": os.environ.get("WREN_MENU_APPS", "/nonexistent")}
+           "WREN_MENU_APPS": os.environ.get("WREN_MENU_APPS", "/nonexistent"),
+           "WREN_MENU_NMTUI": os.environ.get("WREN_MENU_NMTUI", "")}
     if scenario.startswith("sway-"):
         env["SWAYSOCK"] = "/nonexistent/sway.sock"
-    SYSTEM, SWITCHES, APPS = click_on("System"), click_on("Switches"), click_on("Apps")
+    SYSTEM, SETTINGS, APPS = click_on("System"), click_on("Settings"), click_on("Apps")
+    NETWORK, POWER = click_on("Wi-Fi"), click_on("Power")
     scenarios = {
-        # (without sway or anything installed the first screen is System, Help)
         "enter": ["k", "\r"],
-        "first-list": ["\r", "\x1b", "\x1b"],
-        "system-install": [SYSTEM, click_on("Install apps")],
-        "j-enter": ["\r", "j", "j", "\r"],
-        "j-remove": ["\r", "j", "\r"],
+        "all-lists": [APPS, "\x1b", SYSTEM, "\x1b", POWER, "\x1b", "\x1b"],
+        "settings-list": [SETTINGS, "\x1b", "\x1b"],
+        "top-only": ["\x1b"],
+        "system-install": [APPS, click_on("Install apps")],
+        "j-enter": [SYSTEM, "\r"],
+        "j-remove": [APPS, click_on("Remove apps")],
         "up-wraps": ["\x1b[A", "\r"],
         "click-update": [SYSTEM, click_on("Update")],
         "click-outside": ["\x1b[<0;1;1M\x1b[<0;1;1m", "q"],
@@ -186,31 +189,42 @@ if __name__ == "__main__":
         "help-wheel": ["k", "\r", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b[<65;5;5M", "\x1b"],
         "status-esc": [SYSTEM, click_on("Status"), "\x1b"],
         "resize": [("resize", 40, 120), "q"],
-        "toggle-wifi": ["\r", "\r", "\x1b", "\x1b"],
-        "space-wifi": ["\r", " ", "\x1b", "\x1b"],
-        "click-mic": [SWITCHES, click_on("Microphone"), "\x1b", "\x1b"],
+        "toggle-wifi": [NETWORK, click_on("Wi-Fi:"), "\x1b", SETTINGS, "\x1b", "\x1b"],
+        "space-wifi": [NETWORK, " ", "\x1b", "\x1b"],
+        "click-mic": [SETTINGS, click_on("Microphone"), "\x1b", "\x1b"],
+        "net-choose": [NETWORK, click_on("Choose a network"), "\r", "\x1b", "\x1b"],
         "early-resize": [("early", 40, 120), "q"],
         "q": ["q"],
-        "sway-terminal": ["\r"],
+        "sway-terminal": [click_on("Terminal")],
+        "sway-install-browser": [click_on("Web browser")],
+        "sway-install-passwords": [click_on("Password manager")],
+        "sway-tor": [APPS, click_on("Tor Browser")],
+        "sway-whonix": [APPS, click_on("Whonix")],
+        "sway-lock": [POWER, click_on("Lock")],
+        "sway-logout": [POWER, click_on("Log out")],
+        "power-suspend": [POWER, click_on("Suspend")],
+        "power-reboot": [POWER, click_on("Reboot")],
+        "power-shutdown": [POWER, click_on("Shut down")],
+        "sway-power-list": [POWER, "\x1b", "\x1b"],
         "sway-space-terminal": [" ", "\x1b"],
         "sway-click-terminal": [click_on("Terminal")],
         "sway-browser": [click_on("Web browser")],
         "sway-editor": [APPS, click_on("Text editor")],
         "sway-files": [APPS, click_on("File manager")],
-        "sway-all": [APPS, "\x1b", SWITCHES, "\x1b", SYSTEM, "\x1b", "\x1b"],
+        "sway-all": [APPS, "\x1b", SETTINGS, "\x1b", SYSTEM, "\x1b", "\x1b"],
         "sway-passwords": [click_on("Password manager")],
         "sway-signal": [APPS, click_on("Signal")],
         "sway-simplex": [APPS, click_on("SimpleX")],
         "sway-claude": [APPS, click_on("Claude")],
         "sway-opencode": [APPS, click_on("opencode")],
-        "vault-closed": [SWITCHES, click_on("Vault: closed"), "\r", "\x1b", "\x1b"],
-        "vault-open": [SWITCHES, click_on("Vault: open"), "\x1b", "\x1b"],
+        "vault-closed": [SETTINGS, click_on("Vault: closed"), "\r", "\x1b", "\x1b"],
+        "vault-open": [SETTINGS, click_on("Vault: open"), "\x1b", "\x1b"],
         "backup": [SYSTEM, click_on("Back up now"), "\r", "\x1b", "\x1b"],
         "startup": [SYSTEM, click_on("Startup programs"), "\x1b", "\x1b"],
-        "sway-switches-space": [SWITCHES, "k", "k", " ", "\r", "\x1b", SYSTEM, "\x1b", "\x1b"],
-        "sway-securedns-click": [SWITCHES, click_on("Secure DNS"), "\r", "\x1b", "\x1b"],
-        "sway-theme-click": [SYSTEM, click_on("Theme"), "\x1b", "\x1b"],
-        "sway-signin": [click_on("Wi-Fi sign-in")],
+        "sway-switches-space": [SETTINGS, "k", "k", " ", "\r", "\x1b", SYSTEM, "\x1b", "\x1b"],
+        "sway-securedns-click": [SETTINGS, click_on("Secure DNS"), "\r", "\x1b", "\x1b"],
+        "sway-theme-click": [SETTINGS, click_on("Theme"), "\x1b", "\x1b"],
+        "sway-signin": [NETWORK, click_on("Sign-in page")],
     }
     drawn, status = run(script, env, scenarios[scenario])
     if len(sys.argv) > 7:
@@ -251,14 +265,22 @@ menu sway-space-terminal
 check "Space on an entry that isn't a switch opens nothing" not grep -q "swaymsg exec" "$T/ran"
 menu sway-click-terminal
 check "...also with a click" grep -qx 'swaymsg exec foot' "$T/ran"
-check "no browser or editor installed: no lines for them" not grep -qE '^DREWAPPS.*(Web browser|Text editor)' <<<"$out"
+check "no editor installed: no line for it" not grep -qE '^DREWAPPS.*Text editor' <<<"$out"
+menu sway-install-browser
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+check "no browser installed: Web browser stays on the first screen, and offers to install one" \
+    bash -c 'grep -q "Web browser: install one" "$1" && grep -qxF "$2/wren|install-extras.sh|pause=1" "$3"' _ "$T/screen" "$T" "$T/ran"
+menu sway-install-passwords
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+check "...and so does Password manager" \
+    bash -c 'grep -q "Password manager: install one" "$1" && grep -qxF "$2/wren|install-extras.sh|pause=1" "$3"' _ "$T/screen" "$T" "$T/ran"
 # A web browser and a text editor: the default browser (mimeapps.list) is the one opened
 mkdir -p "$T/apps" "$T/home/.config"
 for a in firefox firefox-esr mousepad; do printf '#!/bin/sh\n' >"$T/apps/$a"; chmod +x "$T/apps/$a"; done
 export WREN_MENU_BROWSERS="$T/apps/firefox-esr $T/apps/firefox" WREN_MENU_EDITORS="$T/apps/mousepad"
 printf '[Default Applications]\nx-scheme-handler/https=wren-firefox.desktop\n' >"$T/home/.config/mimeapps.list"
 menu sway-editor
-check "inside sway: Web browser, then Terminal, on the first screen; Text editor in Apps" grep -q 'DREWAPPS Web browser|Terminal|Help|Text editor' <<<"$out"
+check "inside sway: Web browser, then Terminal, on the first screen; in Apps, Install apps first, then Text editor" grep -q 'DREWAPPS Web browser|Terminal|Help|Install apps|Text editor' <<<"$out"
 menu sway-browser
 check "...Web browser opens the default browser (the sandboxed firefox, though listed second), through sway" grep -qx "swaymsg exec $T/apps/firefox" "$T/ran"
 rm "$T/home/.config/mimeapps.list"
@@ -273,17 +295,41 @@ check "...no editor installed: only Web browser" bash -c 'grep -q "Web browser" 
 unset WREN_MENU_BROWSERS WREN_MENU_EDITORS
 # File manager, Password manager, Claude, Back up now and the Vault switch,
 # each only when installed
-check "nothing else installed: none of them" not grep -qE '^DREWMORE.*(File manager|Password manager|Claude|Back up|Vault)' <<<"$out"
-for a in thunar keepassxc signal-desktop simplex claude opencode-vm; do printf '#!/bin/sh\n' >"$T/apps/$a"; chmod +x "$T/apps/$a"; done
+check "nothing else installed: none of them" not grep -qE '^DREWMORE.*(File manager|Claude|Back up|Vault)' <<<"$out"
+for a in thunar keepassxc signal-desktop simplex claude opencode-vm torbrowser-launcher whonix; do printf '#!/bin/sh\n' >"$T/apps/$a"; chmod +x "$T/apps/$a"; done
 printf '#!/bin/sh\necho "backup $*" >>"%s/ran"\n' "$T" >"$T/apps/backup"
 # a pretend vault: open while $T/vault-open exists
 # shellcheck disable=SC2016  # the inner shell expands its own variables
 printf '#!/bin/sh\necho "vault $*" >>"%s/ran"\ncase "$1" in status) [ -e "%s/vault-open" ] && echo "open in x" || echo closed ;; open) : >"%s/vault-open" ;; close) rm -f "%s/vault-open" ;; esac\n' "$T" "$T" "$T" "$T" >"$T/apps/vault"
 chmod +x "$T/apps/backup" "$T/apps/vault"
-export WREN_MENU_APPS="$T/apps/thunar $T/apps/keepassxc $T/apps/signal-desktop $T/apps/simplex $T/apps/claude $T/apps/opencode-vm $T/apps/vault $T/apps/backup"
+export WREN_MENU_APPS="$T/apps/torbrowser-launcher $T/apps/whonix $T/apps/thunar $T/apps/keepassxc $T/apps/signal-desktop $T/apps/simplex $T/apps/claude $T/apps/opencode-vm $T/apps/vault $T/apps/backup"
 menu sway-all
-check "all installed: Password manager first; File manager, Signal, SimpleX, Claude, opencode in Apps; the Vault in Switches; Install apps, Back up now in System" \
-    grep -q '^DREWMORE Password manager|File manager|Signal|SimpleX|Claude|opencode|Vault: closed|Install apps|Back up now' <<<"$out"
+check "all installed: Password manager first; Install apps, File manager, Signal, SimpleX, Claude, opencode in Apps; the Vault in Settings; Back up now in System" \
+    grep -q '^DREWMORE Password manager|Install apps|File manager|Signal|SimpleX|Claude|opencode|Vault: closed|Back up now' <<<"$out"
+check "...Apps ends with Remove apps, just before Back" grep -A1 -x ' *Remove apps *' "$T/screen" | grep -q 'Back'
+menu sway-tor
+check "Tor Browser opens through sway" grep -qx "swaymsg exec $T/apps/torbrowser-launcher" "$T/ran"
+menu sway-whonix
+check "Whonix opens through sway" grep -qx "swaymsg exec $T/apps/whonix" "$T/ran"
+# Power
+printf '#!/bin/sh\necho "systemctl $*" >>"%s/ran"\n' "$T" >"$T/fake/systemctl"
+printf '#!/bin/sh\necho "wren-lock" >>"%s/ran"\n' "$T" >"$T/home/.local/bin/wren-lock"
+chmod +x "$T/fake/systemctl" "$T/home/.local/bin/wren-lock"
+menu sway-power-list
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+check "Power lists Lock, Suspend, Log out, Reboot and Shut down" \
+    bash -c 'for l in Lock Suspend "Log out" Reboot "Shut down"; do grep -q "$l" "$1" || exit 1; done' _ "$T/screen"
+menu sway-lock
+check "...Lock locks, through sway" grep -qx "swaymsg exec $T/home/.local/bin/wren-lock" "$T/ran"
+menu sway-logout
+check "...Log out leaves sway" grep -qx "swaymsg exit" "$T/ran"
+menu power-suspend
+check "...Suspend" grep -qx "systemctl suspend" "$T/ran"
+menu power-reboot
+check "...Reboot" grep -qx "systemctl reboot" "$T/ran"
+menu power-shutdown
+check "...Shut down" grep -qx "systemctl poweroff" "$T/ran"
+menu sway-all
 # shellcheck disable=SC2016  # the inner shell expands its own variables
 check "each list says where you are, and how to go back" bash -c 'grep -q "Wren Linux > Apps" "$1" && grep -q "Esc goes back" "$1"' _ "$T/screen"
 menu sway-files
@@ -327,7 +373,7 @@ menu sway-switches-space
 # shellcheck disable=SC2016  # the inner shell expands its own variables
 check "inside sway the Theme and Secure DNS lines are listed, with their state" bash -c 'grep -q "Theme: Light" "$1" && grep -q "Secure DNS: off" "$1"' _ "$T/screen"
 check "Space on Secure DNS switches it, in the window" grep -qx "secure-dns toggle" "$T/ran"
-check "the first screen says how secure DNS is, without opening the list" grep -q "Switches: DNS off" "$T/screen"
+check "the first screen says how secure DNS is, without opening the list" grep -q "Settings: DNS off" "$T/screen"
 : >"$T/ran"
 menu sway-securedns-click
 check "...a click on it too" grep -qx "secure-dns toggle" "$T/ran"
@@ -347,8 +393,22 @@ check "the menu looks for theme and secure-dns where they are installed" bash -c
     grep "^APPS=" "$1" | grep -q "\$HOME/.local/bin/wren-autostart \$HOME/.local/bin/theme \$HOME/.local/bin/secure-dns /usr/local/bin/wifi-signin}"' _ "$HERE/bin/wren-menu"
 unset WREN_MENU_APPS
 rm -f "$T/fake/swaymsg"
-menu first-list
-check "System holds Install apps, Update and Status, Help is on the first screen" grep -q 'DREW Help|Install apps|Update|Status' <<<"$out"
+menu all-lists
+# shellcheck disable=SC2016  # the inner shell expands its own variables
+check "Apps holds Install apps; System holds Update and Status; Help is on the first screen" \
+    bash -c 'grep -q "Install apps" "$1" && grep -q Update "$1" && grep -q Status "$1" && grep -q Help "$1"' _ "$T/screen"
+# Choosing a network: nmtui, where there is one, else wifi.sh, in this window
+printf '#!/bin/sh\necho nmtui >>"%s/ran"\n' "$T" >"$T/nmtui"
+chmod +x "$T/nmtui"
+: >"$T/wren/wifi.sh"
+WREN_MENU_NMTUI=$T/nmtui
+export WREN_MENU_NMTUI
+menu net-choose
+check "Wi-Fi > Choose a network runs nmtui in the window, and comes back" grep -qx nmtui "$T/ran"
+unset WREN_MENU_NMTUI
+menu net-choose
+check "...without NetworkManager it runs wifi.sh" grep -qxF "$T/wren|wifi.sh|pause=" "$T/ran"
+rm "$T/wren/wifi.sh"
 menu enter
 check "Enter on Help opens it in the pager, not less" grep -qx 'line 1' "$T/screen"
 check "...which says how to close it" grep -q 'Esc closes' "$T/screen"
@@ -408,12 +468,12 @@ menu list-back
 check "the Back line goes back too (a mouse is enough)" grep -q 'STATUS 0' <<<"$out"
 
 menu resize
-check "the menu starts centered for the window's first size (24x80)" grep -q 'TITLES 10;19' <<<"$out"
-check "and centers itself again, with no key pressed, when sway stretches the window" grep -q 'TITLES 10;19 18;39' <<<"$out"
+check "the menu starts centered for the window's first size (24x80)" grep -q 'TITLES 9;19' <<<"$out"
+check "and centers itself again, with no key pressed, when sway stretches the window" grep -q 'TITLES 9;19 17;39' <<<"$out"
 check "...without leaving the menu" grep -q 'STATUS 0' <<<"$out"
 
 menu early-resize
-check "a window stretched before the first draw is drawn centered at once, with no jump" grep -qx 'TITLES 18;39' <<<"$(grep TITLES <<<"$out")"
+check "a window stretched before the first draw is drawn centered at once, with no jump" grep -qx 'TITLES 17;39' <<<"$(grep TITLES <<<"$out")"
 
 # Wi-Fi, Bluetooth and the microphone: listed only when the computer has them
 printf 'wifi on\nmic off\n' >"$T/radios-list"; echo on >"$T/radio-wifi"; echo off >"$T/radio-mic"
@@ -422,7 +482,7 @@ menu toggle-wifi
 check "Wi-Fi and the microphone are listed, with their state" grep -q 'Wi-Fi: on' "$T/screen" && grep -q 'Microphone: off' "$T/screen"
 check "choosing Wi-Fi flips it" grep -qx 'radios wifi toggle' "$T/ran"
 check "...the entry shows the new state" grep -q 'Wi-Fi: off' "$T/screen"
-check "the first screen says how the microphone is, without opening the list" grep -q 'Switches: mic off' "$T/screen"
+check "the first screen says how the microphone is, without opening the list" grep -q 'Settings: mic off' "$T/screen"
 check "...and the menu stays open until Esc" grep -q 'STATUS 0' <<<"$out"
 check "Bluetooth is not listed when the computer has none" not grep -q 'Bluetooth' "$T/screen"
 : >"$T/ran"; echo on >"$T/radio-wifi"
@@ -433,17 +493,17 @@ echo off >"$T/radio-mic"
 menu click-mic
 check "a click on Microphone flips it too" grep -qx 'radios mic toggle' "$T/ran"
 printf 'bluetooth blocked\n' >"$T/radios-list"; echo blocked >"$T/radio-bluetooth"
-menu first-list
+menu settings-list
 check "a Bluetooth held off by a hardware switch says so" grep -q 'Bluetooth: off (hardware switch)' "$T/screen"
 : >"$T/radios-list"
-menu first-list
+menu top-only
 # shellcheck disable=SC2016  # the inner shell expands its own variables
-check "with nothing to switch there is no such list" bash -c '! grep -q Switches "$1"' _ "$T/screen"
+check "with nothing to switch there is no such list" bash -c '! grep -q Settings "$1"' _ "$T/screen"
 check "...only the usual entries show" test "$(grep -c -E 'Wi-Fi|Bluetooth|Microphone' "$T/screen")" -eq 0
 rm -f "$T/home/.local/bin/radios"
 
 menu esc "$T/nowhere"
-check "without the Wren Linux folder only Help is drawn" grep -q 'DREW Help$' <<<"$out"
+check "without the Wren Linux folder no Install apps or Update, only Help and Power" grep -q 'DREW Help$' <<<"$out"
 
 # 3. The prompt at the end of the install and update screens: Esc, Enter or q
 cat >"$T/pause.py" <<'PY'

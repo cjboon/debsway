@@ -56,7 +56,7 @@ the screen lock and sudo still ask for yours. On a disk that isn't encrypted it 
 **The bar** is see-through black, and it's only changed if it's still the stock one. It has:
 
 - a clickable "wren" menu: a gray menu with your browser, password manager and terminal, then
-  Switches, Apps and System, and Help
+  Apps, Wi-Fi, Settings, System and Power, and Help
 - your Wi-Fi name
 - volume and brightness, which you can scroll
 - a battery you can click for the time left
@@ -265,28 +265,28 @@ Super+m (again closes it), for a black-and-gray menu in a floating window over w
 - **What you pick** runs in that window, which closes when it ends. The install and update screens wait
   for Enter first if they did something.
 
-Its first screen has:
+Its first screen stays the same whatever is installed:
 
-- Web browser (the one links open in, or the first installed)
-- Password manager (KeePassXC)
+- Web browser (the one links open in, or the first installed; with none, it offers to install one)
+- Password manager (KeePassXC; with none, it offers to install one)
 - Terminal (as Super+Enter opens; only inside sway)
-- Wi-Fi sign-in
+- Apps, Wi-Fi, Settings, System and Power, the lists below
 - Help (the key cheat sheet, in the menu's own pager, which also opens on Super+?)
-- a line that shows the microphone, webcam and secure DNS at a glance
 
-Three lists hold the rest, each with only what is here:
+The Settings line shows the microphone, webcam and secure DNS at a glance.
 
-- **Switches** (choosing one flips it): Wi-Fi, Bluetooth, Microphone, Webcam, the Vault, Secure DNS
-- **Apps** (only inside sway): Text editor, File manager, Signal, SimpleX, Claude, opencode
-- **System:**
+The lists, each with only what is here:
+
+- **Apps:**
   - Install apps (`install-extras.sh`, in three groups: most secure, somewhat secure, least secure)
+  - What you have (only inside sway): Tor Browser, Whonix, Text editor, File manager, GIMP, Signal, SimpleX,
+    the wallets, Claude, opencode
   - Remove apps (`install-extras.sh --remove`)
-  - Update (`update.sh`)
-  - Status (`status.sh`)
-  - Back up now
-  - Startup programs (`wren-autostart edit`)
-  - Theme
-  - Font size, on a text console
+- **Wi-Fi:** Choose a network (`nmtui`, or `wifi.sh` without NetworkManager), Wi-Fi on or off, Sign-in page
+- **Settings** (choosing one flips it): Theme, Bluetooth, Microphone, Webcam, the Vault, Secure DNS, and
+  Font size on a text console
+- **System:** Update (`update.sh`), Status (`status.sh`), Back up now, Startup programs (`wren-autostart edit`)
+- **Power:** Lock, Suspend, Log out, Reboot, Shut down
 
 ### The desktop
 
@@ -410,7 +410,7 @@ one and anyone on the way can answer falsely. With it:
   at each start, so it follows the switch at its next start): strict by
   default, so a hostile network can't push it back to plain DNS by blocking
   the encrypted kind.
-- **The Wi-Fi sign-in window** (the Wren menu's "Wi-Fi sign-in", or
+- **The Wi-Fi sign-in window** (the Wren menu's Wi-Fi > Sign-in page, or
   `wifi-signin`) is the easy way through a sign-in page: it switches secure
   DNS off, opens a throwaway incognito window (in memory, gone when it
   closes; as its own user, `wifi-signin`, which may reach the local network

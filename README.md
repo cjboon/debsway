@@ -286,8 +286,8 @@ or opening `~/KEYS.txt`.
 **The status bar:**
 
 - **`wren`, at its left:** click it for a black-and-gray menu in a floating window over what you were
-  doing, with your browser, password manager and terminal, the lists Switches, Apps and System (Install
-  apps, Update, Status, Startup programs...), and Help (the sheet). Use arrow keys and Enter, or click. Esc
+  doing, with your browser, password manager and terminal, the lists Apps, Wi-Fi, Settings, System and
+  Power, and Help (the sheet). Use arrow keys and Enter, or click. Esc
   goes back from a list, and closes the rest.
 - **The Wi-Fi name,** next to it, opens nmtui.
 - **`vol` and `bright`:** scrolling over them changes them, and clicking `vol` mutes.

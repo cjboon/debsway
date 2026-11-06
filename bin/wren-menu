@@ -2,11 +2,11 @@
 # wren-menu: written by Wren Linux parts/wren-menu.sh
 # The menu behind the "wren" item in the bar. A click opens a black-and-gray
 # terminal in a floating, centered window. Its first screen: Web browser, Password
-# manager, Terminal, then three lists, Switches (Wi-Fi, Bluetooth, Microphone,
-# Webcam, Vault, Secure DNS), Apps (Text editor, File manager, Signal, SimpleX,
-# Claude, opencode) and System (Install apps, Remove apps, Update, Status, Back up
-# now, Startup programs, Theme, Font size on a text console), then Wi-Fi sign-in
-# and Help. Each shows only what is here. Arrow keys (or j/k) and Enter choose; so
+# manager, Terminal, then the lists Apps (Install apps, what you have, Remove apps),
+# Wi-Fi (Choose a network, on or off, Sign-in page), Settings (Theme, Bluetooth,
+# Microphone, Webcam, Vault, Secure DNS), System (Update, Status, Back up now,
+# Startup programs) and Power (Lock, Suspend, Log out, Reboot, Shut down), and Help.
+# Each shows only what is here. Arrow keys (or j/k) and Enter choose; so
 # does a click. Esc goes back from a list, and closes the first screen, the
 # install list and the pager. What you choose runs in that same window, and the
 # window closes when it ends (the install and update screens wait for a key
@@ -230,9 +230,10 @@ fi
 [ "$1" = --tui ] || { echo "usage: wren-menu [--tui | --pager FILE]" >&2; exit 2; }
 
 # ---- the menu ----
-# The first screen is short: what you open most, then three lists (Switches,
-# Apps, System), each with only what is here. ids say what an entry does; items
-# are what it shows. Esc, or Back, goes from a list to the first screen.
+# The first screen stays the same whatever is installed: what you open most, then
+# the lists (Apps, Wi-Fi, Settings, System, Power), in words a newcomer would look
+# for. ids say what an entry does; items are what it shows. Esc, or Back, goes from a
+# list to the first screen.
 # Wi-Fi, Bluetooth and the microphone are listed only when this computer has them
 # (bin/radios), with their state; choosing one flips it and the menu stays open.
 RADIOS=$HOME/.local/bin/radios
@@ -260,7 +261,7 @@ text_editor() {
 }
 # app NAME...: the first of these commands that is installed, from APPS (where
 # Wren Linux and Debian put them; WREN_MENU_APPS: a test's own list)
-APPS=${WREN_MENU_APPS-/usr/bin/thunar /usr/bin/keepassxc /usr/bin/signal-desktop $HOME/.local/bin/simplex $HOME/.local/bin/claude $HOME/.local/bin/opencode-vm $HOME/.local/bin/vault $HOME/.local/bin/backup $HOME/.local/bin/wren-autostart $HOME/.local/bin/theme $HOME/.local/bin/secure-dns /usr/local/bin/wifi-signin}
+APPS=${WREN_MENU_APPS-/usr/bin/torbrowser-launcher $HOME/.local/bin/whonix $HOME/.local/bin/gimp $HOME/.local/bin/sparrow $HOME/.local/bin/feather /usr/bin/electrum /usr/bin/thunar /usr/bin/keepassxc /usr/bin/signal-desktop $HOME/.local/bin/simplex $HOME/.local/bin/claude $HOME/.local/bin/opencode-vm $HOME/.local/bin/vault $HOME/.local/bin/backup $HOME/.local/bin/wren-autostart $HOME/.local/bin/theme $HOME/.local/bin/secure-dns /usr/local/bin/wifi-signin}
 app() {
     local want c
     for want; do
@@ -275,7 +276,7 @@ claude_cmd() {
     [ -z "$c" ] || echo "foot --title=Claude -D $HOME $c"
 }
 IN_SWAY=
-BROWSER='' EDITOR_CMD='' FILES_CMD='' PASSWORDS_CMD='' CLAUDE_CMD='' SIGNAL_CMD='' SIMPLEX_CMD='' OPENCODE_CMD='' SIGNIN_CMD='' THEME_CMD=''
+TOR_CMD='' WHONIX_CMD='' GIMP_CMD='' SPARROW_CMD='' FEATHER_CMD='' ELECTRUM_CMD='' BROWSER='' EDITOR_CMD='' FILES_CMD='' PASSWORDS_CMD='' CLAUDE_CMD='' SIGNAL_CMD='' SIMPLEX_CMD='' OPENCODE_CMD='' SIGNIN_CMD='' THEME_CMD=''
 # (a terminal window, as Super+Enter opens: for a mouse, or where the keys don't
 # arrive: sway in a VM's window, whose computer's own sway takes Super first)
 if [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null; then
@@ -283,6 +284,8 @@ if [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null; then
     BROWSER=$(web_browser) EDITOR_CMD=$(text_editor)
     FILES_CMD=$(app thunar) PASSWORDS_CMD=$(app keepassxc) CLAUDE_CMD=$(claude_cmd)
     SIGNAL_CMD=$(app signal-desktop) SIMPLEX_CMD=$(app simplex) OPENCODE_CMD=$(app opencode-vm)
+    TOR_CMD=$(app torbrowser-launcher) WHONIX_CMD=$(app whonix) GIMP_CMD=$(app gimp)
+    SPARROW_CMD=$(app sparrow) FEATHER_CMD=$(app feather) ELECTRUM_CMD=$(app electrum)
     # A throwaway window for a Wi-Fi sign-in page (it switches secure DNS off
     # while it is open, and on again after)
     SIGNIN_CMD=$(app wifi-signin)
@@ -298,10 +301,18 @@ if [ -z "${SWAYSOCK:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ] && [ -x "$HOME/.local
 fi
 HAS_UPDATE=
 if [ -f "$DIR/update.sh" ]; then HAS_UPDATE=1; fi
-radio_ids=()
+# (WREN_MENU_NMTUI: a test's own; empty when NetworkManager isn't here)
+NMTUI_CMD=${WREN_MENU_NMTUI-$(command -v nmtui || true)}
+WIFI_SCRIPT=
+if [ -f "$DIR/wifi.sh" ]; then WIFI_SCRIPT=1; fi
+# radio_ids: all of them; wifi goes in the Wi-Fi list, the others in Settings
+radio_ids=() HAS_WIFI='' other_radios=()
 if [ -x "$RADIOS" ]; then
     mapfile -t radio_ids < <("$RADIOS" list 2>/dev/null | awk '{ print $1 }')
 fi
+for r in "${radio_ids[@]}"; do
+    if [ "$r" = wifi ]; then HAS_WIFI=1; else other_radios+=("$r"); fi
+done
 
 # entry ID TEXT [SHOW]: an entry for this screen; with a third argument (a
 # command found above), only if that isn't empty
@@ -315,40 +326,60 @@ build() {
     ids=() items=()
     case $level in
         top)
-            entry browser "Web browser" "$BROWSER"
-            entry passwords "Password manager" "$PASSWORDS_CMD"
+            # Inside sway, these two stay even before they are installed, to say how
+            if [ -n "$BROWSER" ]; then entry browser "Web browser"
+            elif [ -n "$IN_SWAY" ] && [ -n "$HAS_UPDATE" ]; then entry browser "Web browser: install one"; fi
+            if [ -n "$PASSWORDS_CMD" ]; then entry passwords "Password manager"
+            elif [ -n "$IN_SWAY" ] && [ -n "$HAS_UPDATE" ]; then entry passwords "Password manager: install one"; fi
             entry terminal Terminal "$IN_SWAY"
-            entry switches Switches "${radio_ids[*]}$VAULT_CMD$SECDNS_CMD"
-            entry apps Apps "$EDITOR_CMD$FILES_CMD$SIGNAL_CMD$SIMPLEX_CMD$CLAUDE_CMD$OPENCODE_CMD"
-            entry system System "$HAS_UPDATE$BACKUP_CMD$AUTOSTART_CMD$THEME_CMD$FONT_CMD"
-            entry signin "Wi-Fi sign-in" "$SIGNIN_CMD"
+            entry apps Apps "$HAS_UPDATE$EDITOR_CMD$FILES_CMD$SIGNAL_CMD$SIMPLEX_CMD$CLAUDE_CMD$OPENCODE_CMD$TOR_CMD$WHONIX_CMD$GIMP_CMD$SPARROW_CMD$FEATHER_CMD$ELECTRUM_CMD"
+            entry network Wi-Fi "$HAS_WIFI$NMTUI_CMD$WIFI_SCRIPT$SIGNIN_CMD"
+            entry settings Settings "$THEME_CMD${other_radios[*]}$VAULT_CMD$SECDNS_CMD$FONT_CMD"
+            entry system System "$HAS_UPDATE$BACKUP_CMD$AUTOSTART_CMD"
+            entry power Power
             entry help Help ;;
-        switches)
-            local r
-            for r in "${radio_ids[@]}"; do entry "$r" ""; done
-            # (the vault shows whether it is open; secure DNS: off for a Wi-Fi
-            # sign-in page, then on again)
-            entry vault "" "$VAULT_CMD"
-            entry securedns "" "$SECDNS_CMD"
-            entry back Back ;;
         apps)
+            entry apps-install "Install apps" "$HAS_UPDATE"
+            entry tor "Tor Browser" "$TOR_CMD"
+            entry whonix Whonix "$WHONIX_CMD"
             entry editor "Text editor" "$EDITOR_CMD"
             entry files "File manager" "$FILES_CMD"
+            entry gimp GIMP "$GIMP_CMD"
             entry signal Signal "$SIGNAL_CMD"
             entry simplex SimpleX "$SIMPLEX_CMD"
+            entry sparrow Sparrow "$SPARROW_CMD"
+            entry feather Feather "$FEATHER_CMD"
+            entry electrum Electrum "$ELECTRUM_CMD"
             entry claude Claude "$CLAUDE_CMD"
-            # (opencode-vm opens a window of its own)
+            # (a window of its own, which it opens itself)
             entry opencode opencode "$OPENCODE_CMD"
+            entry remove "Remove apps" "$HAS_UPDATE"
+            entry back Back ;;
+        network)
+            entry choose "Choose a network" "$NMTUI_CMD$WIFI_SCRIPT"
+            entry wifi "" "$HAS_WIFI"
+            entry signin "Sign-in page" "$SIGNIN_CMD"
+            entry back Back ;;
+        settings)
+            entry theme "" "$THEME_CMD"
+            for r in "${other_radios[@]}"; do entry "$r" ""; done
+            # the vault's own switch: closed, it asks for the vault's password
+            entry vault "" "$VAULT_CMD"
+            entry securedns "" "$SECDNS_CMD"
+            entry font "Font size" "$FONT_CMD"
             entry back Back ;;
         system)
-            entry apps-install "Install apps" "$HAS_UPDATE"
-            entry remove "Remove apps" "$HAS_UPDATE"
             entry update Update "$HAS_UPDATE"
             entry status Status "$HAS_UPDATE"
             entry backup "Back up now" "$BACKUP_CMD"
             entry autostart "Startup programs" "$AUTOSTART_CMD"
-            entry theme "" "$THEME_CMD"
-            entry font "Font size" "$FONT_CMD"
+            entry back Back ;;
+        power)
+            entry lock Lock "$IN_SWAY"
+            entry suspend Suspend
+            entry logout "Log out" "$IN_SWAY"
+            entry reboot Reboot
+            entry shutdown "Shut down"
             entry back Back ;;
     esac
     n=${#ids[@]}
@@ -392,9 +423,9 @@ radio_label() {
     esac
     printf '%s: %s' "$name" "$state"
 }
-# switches_label: the first screen's line: what matters at a glance, whatever
-# is in the list ("Switches: mic off, camera off, DNS on")
-switches_label() {
+# settings_label: the first screen's line: what matters at a glance, whatever
+# is in the list ("Settings: mic off, camera off, DNS on")
+settings_label() {
     local r said=''
     for r in "${radio_ids[@]}"; do
         case $r in
@@ -403,13 +434,13 @@ switches_label() {
         esac
     done
     if [ -n "$SECDNS_CMD" ]; then said+=", DNS $("$SECDNS_CMD" status 2>/dev/null || echo unknown)"; fi
-    printf 'Switches%s' "${said:+: ${said#, }}"
+    printf 'Settings%s' "${said:+: ${said#, }}"
 }
 refresh_items() {
     local i
     for i in "${!ids[@]}"; do
         case ${ids[i]} in
-            switches) items[i]=$(switches_label) ;;
+            settings) items[i]=$(settings_label) ;;
             wifi | bluetooth | mic | camera | vault | theme | securedns) items[i]=$(radio_label "${ids[i]}") ;;
         esac
     done
@@ -419,6 +450,15 @@ sel=0
 width=44
 first_row=1 first_col=1
 build
+
+# level_title: where you are, after the title
+level_title() {
+    case $level in
+        top) ;;
+        network) echo " > Wi-Fi" ;;
+        *) echo " > ${level^}" ;;
+    esac
+}
 
 # draw: the title, the choices (the chosen one reversed), and a hint, centered
 draw() {
@@ -431,7 +471,7 @@ draw() {
     [ "$left" -ge 1 ] || left=1
     first_row=$((top + 2))
     first_col=$left
-    printf '\e[2J\e[%d;%dH\e[1mWren Linux%s\e[0m' "$top" "$left" "$([ "$level" = top ] || echo " > ${level^}")"
+    printf '\e[2J\e[%d;%dH\e[1mWren Linux%s\e[0m' "$top" "$left" "$(level_title)"
     for i in "${!items[@]}"; do
         y=$((first_row + i))
         if [ "$i" -eq "$sel" ]; then
@@ -451,7 +491,7 @@ draw() {
 run_choice() {
     local out
     case ${ids[sel]} in
-        switches | apps | system)
+        apps | network | settings | system | power)
             go "${ids[sel]}"
             return 0 ;;
         back)
@@ -488,20 +528,54 @@ run_choice() {
         terminal)
             swaymsg exec foot >/dev/null 2>&1
             exit 0 ;;
-        browser)
-            swaymsg exec "$BROWSER" >/dev/null 2>&1
+        browser | passwords)
+            local cmd=$BROWSER
+            [ "${ids[sel]}" = browser ] || cmd=$PASSWORDS_CMD
+            if [ -z "$cmd" ]; then
+                # not installed yet: the list to install it from
+                ids[sel]=apps-install
+                run_choice
+                return
+            fi
+            swaymsg exec "$cmd" >/dev/null 2>&1
             exit 0 ;;
-        files | passwords | signal | simplex | claude | opencode | signin)
+        files | signal | simplex | claude | opencode | signin | tor | whonix | gimp | sparrow | feather | electrum)
             local cmd
             case ${ids[sel]} in
                 signin) cmd=$SIGNIN_CMD ;;
-                files) cmd=$FILES_CMD ;; passwords) cmd=$PASSWORDS_CMD ;;
+                files) cmd=$FILES_CMD ;;
                 signal) cmd=$SIGNAL_CMD ;;
                 simplex) cmd=$SIMPLEX_CMD ;; claude) cmd=$CLAUDE_CMD ;;
                 opencode) cmd=$OPENCODE_CMD ;;
+                tor) cmd=$TOR_CMD ;; whonix) cmd=$WHONIX_CMD ;; gimp) cmd=$GIMP_CMD ;;
+                sparrow) cmd=$SPARROW_CMD ;; feather) cmd=$FEATHER_CMD ;; electrum) cmd=$ELECTRUM_CMD ;;
             esac
             swaymsg exec "$cmd" >/dev/null 2>&1
             exit 0 ;;
+        choose)
+            # nmtui draws in this window; without NetworkManager, wifi.sh asks here
+            screen_off
+            printf '\e[2J\e[1;1H'
+            if [ -n "$NMTUI_CMD" ]; then
+                "$NMTUI_CMD" || true
+            else
+                (cd "$DIR" && bash wifi.sh) || true
+                printf '\nPress Enter to go back. '
+                wait_enter
+            fi
+            screen_on
+            settle
+            refresh_items
+            return 0 ;;
+        # As bin/powermenu does; the lock through sway, so it outlives this window
+        lock)
+            if [ -x "$HOME/.local/bin/wren-lock" ]; then swaymsg exec "$HOME/.local/bin/wren-lock" >/dev/null 2>&1
+            else swaymsg exec "swaylock -f -c 000000" >/dev/null 2>&1; fi
+            exit 0 ;;
+        suspend) systemctl suspend; exit 0 ;;
+        logout) swaymsg exit >/dev/null 2>&1; exit 0 ;;
+        reboot) systemctl reboot; exit 0 ;;
+        shutdown) systemctl poweroff; exit 0 ;;
         vault)
             if "$VAULT_CMD" status 2>/dev/null | grep -q '^open'; then
                 "$VAULT_CMD" close >/dev/null 2>&1

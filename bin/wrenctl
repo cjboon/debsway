@@ -20,7 +20,7 @@ usage: wrenctl [OPTION]
 
   (no option)  open the menu: a window in sway, or in this terminal on a
                text console or over ssh; this help when there is no terminal
-  --menu       open the menu: your browser, Switches, Apps, System, Help
+  --menu       open the menu: your browser, Apps, Wi-Fi, Settings, System, Power, Help
   --update     bring Wren Linux up to date, then rerun the scripts whose files
                changed (more: --update --since COMMIT, --update --all)
   --apps       pick optional programs to install (--apps --list lists them)

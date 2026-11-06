@@ -1,8 +1,8 @@
 #!/bin/bash
 # The "wren" item at the left of the status bar: click it for a black-and-gray
 # menu, in a floating, centered window (bin/wren-menu): your browser, password
-# manager and terminal, the lists Switches, Apps and System (Install apps, Update,
-# Status...), and Help (the key cheat sheet). Arrow keys and Enter choose, or
+# manager and terminal, the lists Apps, Wi-Fi, Settings, System and Power, and Help
+# (the key cheat sheet). Arrow keys and Enter choose, or
 # click; Esc goes back from a list, and closes the rest. What you choose runs in
 # that same window. Super+? still opens the cheat sheet straight away.
 # Also the Wren Linux command (wrenctl --help, --update, --apps, wrenctl install
@@ -62,5 +62,5 @@ put_snippet wren-menu <<'EOF'
 # The Wren menu on Super+m (Wren Linux parts/wren-menu.sh)
 bindsym $mod+m exec ~/.local/bin/sway-status --menu
 EOF
-note "Click \"Wren Linux\" in the bar: Switches, Apps, System (Install apps, Update, Status), Help."
+note "Click \"wren\" in the bar: Apps, Wi-Fi, Settings, System, Power, Help."
 note "In a terminal: wrenctl --help, wrenctl update, wrenctl install NAME (Tab lists them; man wrenctl)."

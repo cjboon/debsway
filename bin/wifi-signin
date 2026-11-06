@@ -5,7 +5,7 @@
 # when it closes) that alone uses the network's own DNS, so the sign-in page
 # can load; every other Firefox keeps its encrypted DNS. If secure DNS is on,
 # it is switched off while the window is open and on again when you close it.
-# The Wren menu's "Wi-Fi sign-in" line runs this.
+# The Wren menu's Wi-Fi > Sign-in page runs this.
 set -euo pipefail
 
 # Mozilla's page for exactly this: plain http, so the network can put its

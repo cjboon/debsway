@@ -31,7 +31,7 @@
 #  - Your user may run exactly one thing as incognito: the wrapper that
 #    starts this (a rule in /etc/sudoers.d). While it runs, incognito can
 #    reach your sway's socket and nothing else of yours.
-#  - The Wi-Fi sign-in window (wifi-signin, the Wren menu's "Wi-Fi
+#  - The Wi-Fi sign-in window (wifi-signin, the Wren menu's Wi-Fi
 #    sign-in") is the same throwaway Firefox, as a second user of the same
 #    kind, wifi-signin, with the network's own DNS. Its firewall rule lets it
 #    reach the local network, where cafés' and hotels' sign-in pages often
