@@ -34,8 +34,9 @@ copies = sys.argv[2] if len(sys.argv) > 2 else ""
 FILES = [".profile", ".bash_profile", ".bash_login", ".bashrc", ".bash_logout", ".pam_environment",
          ".xprofile", ".xsessionrc", ".zshrc", ".zprofile", ".zshenv", ".gitconfig", ".config/git/config",
          ".config/mimeapps.list", ".ssh/rc", ".ssh/config", ".ssh/authorized_keys",
-         ".gnupg/gpg-agent.conf", ".gnupg/gpg.conf", ".config/wren/autostart"]
-DIRS = [".config/sway", ".config/autostart", ".config/systemd/user", ".config/environment.d",
+         ".gnupg/gpg-agent.conf", ".gnupg/gpg.conf", ".config/wren/autostart",
+         ".tmux.conf", ".config/tmux/tmux.conf", ".vimrc", ".gdbinit", ".inputrc", ".wgetrc", ".curlrc"]
+DIRS = [".config/sway", ".config/autostart", ".config/systemd/user", ".local/share/systemd/user", ".config/environment.d",
         ".local/bin", ".config/mako", ".local/share/applications", ".config/wren/on-lock.d"]
 out = []
 # through_link REL: a link on the way to it (~/.ssh pointing at root'"'"'s, say).
@@ -226,7 +227,9 @@ case $cmd in
         fi
         echo "Changed since you last accepted (if it wasn't you or Wren Linux, something running as you did it):"
         sed 's/^/  ~\//' "$RUN/$user"
-        echo "See the changes: sudo wren-watch diff    Take them as yours: sudo wren-watch accept" ;;
+        echo "See the changes: sudo wren-watch diff    Take them as yours: sudo wren-watch accept"
+        echo "If it was neither you nor Wren Linux: don't accept it, don't type passwords, and take this"
+        echo "computer off the network. docs/opsec.md, \"When something goes wrong\", says what next." ;;
     diff)
         [ "$(id -u)" -eq 0 ] || [ -n "${WREN_WATCH_STATE:-}" ] || die "it needs root's copies: sudo wren-watch diff"
         user=$(me diff)

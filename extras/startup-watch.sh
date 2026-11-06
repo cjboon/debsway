@@ -1,7 +1,8 @@
 #!/bin/bash
 # The startup watch: a program running as you that wants to start again at
 # every login has to change one of a few files (your shell's startup files,
-# sway's config, autostart, systemd user units, ~/.local/bin, ...). This keeps
+# sway's config, autostart, systemd user units, ~/.local/bin, tmux's and vim's,
+# curl's and wget's settings, ...). This keeps
 # their fingerprints where it can't change them (root's, /var/lib/wren-watch),
 # compares them at boot and every 15 minutes (a root timer), and shows what
 # changed: "startup changed" in the bar, with a notification, and wren-watch.
