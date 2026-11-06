@@ -274,7 +274,8 @@ on GitHub (with write access), replacing the old install's. `wrenctl gh
 deploy-key` does it from the command line, no browser: it reads the VM's key
 and adds it, with a token that stays on your computer, never in the VM. It checks
 the rules on `main` first and offers to add any that are missing; no key goes on
-while `main` is open or can't be checked.
+while `main` is open or can't be checked. It then offers to remove the last VM's
+key, which a rebuild leaves on GitHub, still able to push.
 
 ## The `wrenctl` command
 

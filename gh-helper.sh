@@ -233,16 +233,31 @@ deploy_key() {
     # Already there? (match on the type and body, not the comment)
     existing=$(gh_ api "repos/$repo/keys" --jq '.[].key') ||
         die "GitHub didn't list $repo's deploy keys (the token needs Administration, Read and write, on $repo). No key was added."
+    local title="wren-claude-vm${account:+-$account}"
     if grep -qxF "$body" <(awk '{print $1 " " $2}' <<<"$existing"); then
         note "The VM's key is already a deploy key on $repo; nothing was added."
     else
-        local title="wren-claude-vm${account:+-$account}"
         gh_ api -X POST "repos/$repo/keys" --input - >/dev/null <<EOF ||
 {"title":"$title","key":"$body","read_only":false}
 EOF
             die "GitHub didn't add the key (a deploy key works on one repository only: is this key on another?). See: https://github.com/$repo/settings/keys"
         note "Added the VM's key as a deploy key on $repo (it can push, so the agent's work reaches you)."
     fi
+
+    # A rebuild makes a new key, and the last VM's stays on GitHub, still able to
+    # push. Only a key with this VM's exact title is offered, and only if you say so.
+    local rows id old_title old_type old_body
+    rows=$(gh_ api "repos/$repo/keys" --jq '.[] | "\(.id) \(.title) \(.key)"') || rows=
+    while read -r id old_title old_type old_body _; do
+        [ "$old_title" = "$title" ] && [[ $id =~ ^[0-9]+$ ]] && [ "$old_type $old_body" != "$body" ] || continue
+        warn "Another key titled $title is on $repo (ending ${old_body: -12}): it can still push."
+        ask "Remove it? (Yes if it was a VM you have rebuilt; no if another computer uses it)" n || continue
+        if gh_ api -X DELETE "repos/$repo/keys/$id" </dev/null >/dev/null; then
+            note "Removed the old key."
+        else
+            warn "It couldn't be removed. See: https://github.com/$repo/settings/keys"
+        fi
+    done <<<"$rows"
     note "The VM pushes to the branch claude; you bring its work in with claude-pull, after reviewing it."
     if [ -n "$tok" ]; then
         note "The token wasn't saved. Made for this alone? Delete it: https://github.com/settings/personal-access-tokens"

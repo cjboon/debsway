@@ -36,6 +36,8 @@ case "$*" in
         cat >"$S/input.$n"; [ ! -e "$S/refuse" ] || exit 1
         if [ -e "$S/applied-after" ]; then cp "$S/applied-after" "$S/applied"; fi ;;
     "api repos/"*"/keys --jq .[].key") cat "$S/have-keys" 2>/dev/null; true ;;
+    "api repos/"*'/keys --jq .[] | "\(.id) \(.title) \(.key)"') cat "$S/key-rows" 2>/dev/null; true ;;
+    "api -X DELETE repos/"*"/keys/"*) [ ! -e "$S/refuse-delete" ] ;;
     "api -X POST repos/"*"/keys --input -") cat >"$S/input.$n"; [ ! -e "$S/refuse-key" ] ;;
     "api repos/"*"/rules/branches/main --jq .[].type")
         if [ -e "$S/refuse-read" ]; then echo "HTTP 503: pretend outage" >&2; exit 1; fi
@@ -239,6 +241,45 @@ out=$(dk "$T/tok") && rc=0 || rc=$?
 check "the VM's key isn't a single ssh key: nothing is sent to GitHub" bash -c '
     [ "$1" -ne 0 ] && [ ! -s "$3/calls" ]' _ "$rc" "$out" "$T/s"
 printf '%s\n' "$VMKEY" >"$T/vmkey"
+
+# A rebuilt VM's last key: offered for removal, by its exact title, and never this
+# VM's key or anyone else's
+rows() {
+    cat >"$T/s/key-rows" <<ROWS
+11 wren-claude-vm ssh-ed25519 AAAAOLDKEYxxxxxxxxxxxxxxxx
+22 wren-claude-vm ${VMKEY% *}
+33 Claude ssh-ed25519 AAAAOTHERKEYxxxxxxxxxxxxxx
+44 wren-claude-vm-work ssh-ed25519 AAAAWORKKEYxxxxxxxxxxxxxxx
+55 wren claude-vm ssh-ed25519 AAAASPACEDxxxxxxxxxxxxxxxx
+abc wren-claude-vm ssh-ed25519 AAAANOTANIDxxxxxxxxxxxxxxx
+ROWS
+}
+fresh
+cp "$T/all-applied" "$T/s/applied"
+rows
+out=$(dk "$T/tok-yes")
+check "an old VM's key, you say yes: removed, that one alone" bash -c '
+    [ "$(grep -c "api -X DELETE" "$1")" = 1 ] && grep -q "api -X DELETE repos/someone/wren-linux/keys/11 " "$1"' _ "$T/s/calls"
+check "...and it says so" grep -q "Removed the old key" <<<"$out"
+fresh
+cp "$T/all-applied" "$T/s/applied"
+rows
+out=$(dk "$T/tok-no")
+check "...you say no: it stays, and it says it can still push" bash -c '
+    ! grep -q "api -X DELETE" "$1" && grep -q "can still push" <<<"$2"' _ "$T/s/calls" "$out"
+fresh
+cp "$T/all-applied" "$T/s/applied"
+rows
+: >"$T/s/refuse-delete"
+out=$(dk "$T/tok-yes") && rc=0 || rc=$?
+check "...GitHub won't remove it: said, and the new key's work isn't undone" bash -c '
+    [ "$1" = 0 ] && grep -q "couldn.t be removed" <<<"$2" && ! grep -q "Removed the old key" <<<"$2"' _ "$rc" "$out"
+fresh
+cp "$T/all-applied" "$T/s/applied"
+rows
+out=$(dk "$T/tok-yes" --account work)
+check "--account NAME: only that account's old keys" bash -c '
+    grep -q "api -X DELETE repos/someone/wren-linux/keys/44 " "$1" && [ "$(grep -c "api -X DELETE" "$1")" = 1 ]' _ "$T/s/calls"
 
 # claude-vm can't give the key: its own words, and never a word about rebuild (that
 # throws the VM away, with whatever isn't pushed)
