@@ -36,7 +36,8 @@ this page to decide what else you need.
   computer's name to the network (avahi, which a live-image install brings
   and which announces the name on every network, is removed by
   `parts/no-live-extras.sh`), and uses temporary IPv6 addresses
-  (`parts/random-mac.sh`).
+  (`parts/random-mac.sh`). dhcpcd and dhclient, on a cable or through `wifi.sh`, don't send
+  the name either (`parts/dhcp-no-name.sh`). A wired card keeps its real hardware address.
 - **Your network seeing which packages you install**, if you chose to
   download through Tor (`parts/apt-tor.sh`, with a bridge if you need one).
 - **A tampered Wren Linux update**, once Wren Linux's signing key is pinned
@@ -273,7 +274,7 @@ With the extras:
   choose your DNS. `tether` (`parts/tether.sh`) asks before connecting a device with a driver
   phones use, and NetworkManager is told not to connect those by itself, but it can't tell a phone
   from another device with that driver. NetworkManager still connects a device with any other
-  driver by itself, and `wifi.sh` uses any cable or tether it finds, sending this computer's name.
+  driver by itself, and `wifi.sh` uses any cable or tether it finds.
 - **Physical tampering.** Someone with the laptop alone for a while
   could install a hardware keylogger or tamper with the boot process.
   Wren Linux doesn't set up Secure Boot measurement or tamper evidence.

@@ -166,3 +166,21 @@ set_bluetooth_autoenable() {
         rm -f "$tmp"
     fi
 }
+
+# dhcp_no_name on|off: dhcpcd and dhclient send this computer's name to every network,
+# since Debian's settings tell them to (seen in a DHCP server's log). This takes that
+# out of those settings, for wifi.sh's connections and for cables, and off puts it back.
+# NetworkManager has a setting of its own (parts/random-mac.sh, bin/tether). (WREN_ETC is
+# where /etc is, for tests.)
+DHCP_NO_NAME_MARK='#(no name sent: Wren Linux) '
+dhcp_no_name() {
+    local etc=${WREN_ETC:-/etc} f
+    for f in "$etc/dhcpcd.conf" "$etc/dhcp/dhclient.conf"; do
+        [ -f "$f" ] || continue
+        if [ "$1" = off ]; then
+            $SUDO sed -i "s/^$DHCP_NO_NAME_MARK//" "$f"
+        else
+            $SUDO sed -i -E "s/^(hostname[[:space:]]*|send host-name = gethostname\(\);[[:space:]]*)\$/$DHCP_NO_NAME_MARK\1/" "$f"
+        fi
+    done
+}

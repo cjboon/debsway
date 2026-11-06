@@ -182,7 +182,7 @@ networkd_dhcp() {
     local ifc=$1 dir=/run/systemd/network lease dns i
     [ "${2:-}" = persist ] && dir=/etc/systemd/network
     mkdir -p "$dir"
-    printf '[Match]\nName=%s\n\n[Network]\nDHCP=yes\n' "$ifc" >"$dir/50-wren-$ifc.network"
+    printf '[Match]\nName=%s\n\n[Network]\nDHCP=yes\n\n[DHCPv4]\nSendHostname=no\n\n[DHCPv6]\nSendHostname=no\n' "$ifc" >"$dir/50-wren-$ifc.network"
     if [ "${2:-}" = persist ]; then
         systemctl enable systemd-networkd >/dev/null 2>&1 || true
         systemctl disable systemd-networkd-wait-online.service >/dev/null 2>&1 || true
@@ -228,6 +228,7 @@ EOF
 # Get an address on $1 right now with any DHCP client there is
 dhcp_now() {
     local ifc=$1
+    dhcp_no_name on
     ip link set "$ifc" up
     if command -v dhcpcd >/dev/null && dhcpcd -4 -w -t 30 "$ifc"; then return 0; fi
     if command -v dhclient >/dev/null && dhclient -4 -1 "$ifc"; then return 0; fi
@@ -523,6 +524,7 @@ connect_wpa() {
     sleep 1
 
     if command -v ifup >/dev/null && { command -v dhcpcd || command -v dhclient; } >/dev/null; then
+        dhcp_no_name on
         # Debian's own way: ifupdown starts wpa_supplicant and DHCP at boot
         drop_ifupdown_iface "$IF"
         grep -Eqs '^[[:space:]]*source(-directory)?[[:space:]]+/etc/network/interfaces\.d' \
@@ -555,6 +557,7 @@ keep_wired() {
     grep -Eqs '^[[:space:]]*source(-directory)?[[:space:]]+/etc/network/interfaces\.d' "$dir/interfaces" ||
         printf '\nsource /etc/network/interfaces.d/*\n' >>"$dir/interfaces"
     mkdir -p "$dir/interfaces.d"
+    dhcp_no_name on
     printf '%s\n' "# Written by Wren Linux wifi.sh: the cable on $ifc comes up by itself" \
         "allow-hotplug $ifc" "iface $ifc inet dhcp" >"$dir/interfaces.d/wren-wired-$ifc"
     note "Saved for boot in $dir/interfaces.d/wren-wired-$ifc"
