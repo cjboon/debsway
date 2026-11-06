@@ -198,8 +198,10 @@ deploy_key() {
     local claude_vm=${WREN_CLAUDE_VM:-$HOME/.local/bin/claude-vm}
     [ -x "$claude_vm" ] ||
         die "The claude-vm sandbox isn't set up here, so there is no VM key to add. Set it up first: wrenctl install claude-vm${account:+ --account $account}"
-    key=$("$claude_vm" ${account:+--account "$account"} pubkey 2>/dev/null | grep -m1 -E '^(ssh-ed25519|ssh-rsa|ecdsa-sha2-[a-z0-9-]+|sk-ssh-ed25519@openssh\.com) ') ||
-        die "Couldn't read the VM's public key (claude-vm${account:+ --account $account} pubkey). Is the VM built? Try: claude-vm${account:+ --account $account} rebuild"
+    local vm_said
+    vm_said=$("$claude_vm" ${account:+--account "$account"} pubkey 2>&1) || true
+    key=$(grep -m1 -E '^(ssh-ed25519|ssh-rsa|ecdsa-sha2-[a-z0-9-]+|sk-ssh-ed25519@openssh\.com) ' <<<"$vm_said") ||
+        die "Couldn't read the VM's public key (claude-vm${account:+ --account $account} pubkey), so nothing was sent to GitHub. It said: $(printable <<<"$vm_said" | tail -n 3)"
     # The type and base64 body only (GitHub needs no comment). It holds nothing
     # but safe characters, so no quote or backslash in a comment could break out
     # of the JSON this becomes; it is also what GitHub stores and compares.

@@ -240,6 +240,21 @@ check "the VM's key isn't a single ssh key: nothing is sent to GitHub" bash -c '
     [ "$1" -ne 0 ] && [ ! -s "$3/calls" ]' _ "$rc" "$out" "$T/s"
 printf '%s\n' "$VMKEY" >"$T/vmkey"
 
+# claude-vm can't give the key: its own words, and never a word about rebuild (that
+# throws the VM away, with whatever isn't pushed)
+fresh
+cat >"$T/bin/claude-vm-broken" <<'CV'
+#!/bin/sh
+echo "Starting the VM; this takes about a minute."
+echo "claude-vm-session: pretend reason it failed" >&2
+exit 1
+CV
+chmod +x "$T/bin/claude-vm-broken"
+out=$(GH_STATE=$T/s WREN_GH=$T/bin/gh WREN_CLAUDE_VM=$T/bin/claude-vm-broken WREN_TEST_ANSWERS=/dev/null bash "$C/gh-helper.sh" deploy-key 2>&1) && rc=0 || rc=$?
+check "claude-vm can't give the key: it fails with claude-vm's own words, asking nothing of GitHub" bash -c '
+    [ "$1" -ne 0 ] && grep -q "pretend reason it failed" <<<"$2" && [ ! -s "$3/calls" ]' _ "$rc" "$out" "$T/s"
+check "...and doesn't send you to rebuild" not grep -q rebuild <<<"$out"
+
 # --account NAME: that account's VM key, titled for it
 fresh
 cp "$T/all-applied" "$T/s/applied"
