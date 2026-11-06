@@ -154,8 +154,10 @@ busy="{\"total_count\":1,\"check_runs\":[$(run_ a in_progress null)]}"
 none='{"total_count":0,"check_runs":[]}'
 commit 'red work'
 c=$(head_); before=$(server)
-ci "$red" n
-check "CI failed on it: it says so, with a link, and Enter or no stops, nothing signed" bash -c '
+# (Enter: it means no here, but yes at the question that comes next, so that without this
+# stop the commit would be signed and go out)
+ci "$red" '' y
+check "CI failed on it: it says so, with a link, and Enter stops, nothing signed" bash -c '
     grep -q "CI failed" "$1" && grep -q "https://github.com/someone/wren/commit/$2" "$1" && [ "$2" = "$3" ]' _ "$T/out" "$c" "$(head_)"
 check "...nothing goes out" test "$(server)" = "$before"
 check "...it asked about this very commit" grep -q "repos/someone/wren/commits/$c/check-runs" "$T/ci-asked"
@@ -165,8 +167,8 @@ commit 'green work'
 ci "$green" y y
 check "CI passed: it says so, and asks nothing more" bash -c 'grep -q "CI passed" "$1" && [ "$2" = "$3" ]' _ "$T/out" "$(server)" "$(head_)"
 commit 'busy work'; before=$(server); c=$(head_)
-ci "$busy" n
-check "CI still running: it says so, and no stops" bash -c 'grep -q "still running" "$1" && [ "$2" = "$3" ]' _ "$T/out" "$(server)" "$before"
+ci "$busy" '' y
+check "CI still running: it says so, and Enter stops" bash -c 'grep -q "still running" "$1" && [ "$2" = "$3" ]' _ "$T/out" "$(server)" "$before"
 for what in offline none garbage; do
     commit "work with CI $what"; c=$(head_)
     case $what in
