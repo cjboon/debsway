@@ -58,8 +58,18 @@ internet. So:
 - If you use a helper agent, don't hand it: firewall, sudo, sshd, signature or key code;
   anything that edits the repo as the final word; anything about git or pushing. Check
   what a helper returns before relying on it.
-- `bash test.sh --offline` takes about 10 minutes. Claude runs it, the owner doesn't: run
+- `bash test.sh --offline` takes about 22 minutes. Claude runs it, the owner doesn't: run
   it here before every push, and say its result (and which failures are this VM's own).
+  **The security of the project comes first.** A small, contained change may go out on just its
+  own `tools/test-*.sh` only when that is plainly wise and safe, to save a run. Never for
+  firewall, sudo, sshd, signature, key, update or installer code, or anything touching many
+  parts: those always get the full suite, and so does anything you're unsure of. When you skip
+  it, tell the owner what was skipped and what CI said of that push (CI runs the whole suite, but
+  can't try everything this VM can, like real VMs). Tell them too when a full run here is due:
+  after a few pushes without one, and always before suggesting a release.
+  The suite may run in a `git worktree` of the exact commit you'll push, in a short path under
+  `/tmp`, so you can go on editing the main copy meanwhile. It is still one test run at a time,
+  even a single test file; push only the commit that passed; remove the worktree afterwards.
   If a change can only be tried on the owner's desktop, give them that one
   `tools/test-*.sh` to run, not the whole suite. Run it once per finished piece, not after
   every edit; run the single `tools/test-*.sh` for what you changed. Run slow things in
