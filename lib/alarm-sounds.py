@@ -73,7 +73,8 @@ def gong(buf):
              harmonics=((1, 1.0), (2.01, 0.6), (2.97, 0.4), (4.23, 0.25), (5.41, 0.14)))
 
 
-SOUNDS = {"chimes": chimes, "wren": wren, "beeps": beeps, "rising": rising, "gong": gong}
+# (the first is the default: bin/timer lists it first and rings with it)
+SOUNDS = {"wren": wren, "chimes": chimes, "beeps": beeps, "rising": rising, "gong": gong}
 
 
 def render(make):

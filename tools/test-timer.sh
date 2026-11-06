@@ -135,6 +135,28 @@ check "the sounds differ from each other, and each is made by arithmetic alone" 
     d=$(mktemp -d); python3 -I "$1/lib/alarm-sounds.py" make "$d" && [ "$(sha256sum "$d"/*.wav | cut -d" " -f1 | sort -u | wc -l)" = 5 ]; r=$?; rm -rf "$d"; exit $r' _ "$HERE"
 check "...nothing from the network or outside the standard library" bash -c '! grep -qE "^(import|from) +(requests|urllib|numpy|socket)" "$1"' _ "$HERE/lib/alarm-sounds.py"
 check "the base part installs the sound maker" grep -q 'lib/alarm-sounds.py' "$HERE/parts/core-commands.sh"
+# The wren is the default: first in the list, and what rings until you choose another
+conf=${XDG_CONFIG_HOME:-$HOME/.config}/wren/clock
+ring_with() { # the sound one timer rings with
+    t 1m "tea" >/dev/null
+    id=$(find "$T/run/wren-timers" -type f -printf '%f')
+    : >"$T/calls"
+    t fire "$id"
+    grep '^pw-play' "$T/calls" | head -n 1 | cut -d' ' -f2
+}
+sed -i '/^sound=/d' "$conf"
+rm -rf "$T/sounds/alarms"
+check "no sound chosen, the wren not made yet: the bell, never silence" test "$(ring_with)" = "$T/sounds/alarm.wav"
+python3 -I "$T/sounds/alarm-sounds.py" make "$T/sounds/alarms"
+check "no sound chosen: the wren rings" test "$(ring_with)" = "$T/sounds/alarms/wren.wav"
+out=$(t sound list)
+check "...it is first in the list, and marked" bash -c 'grep -q "^\* 1) wren$" <<<"$1"' _ "$out"
+check "...the bell is still there, next" bash -c 'grep -q "^  2) bell$" <<<"$1"' _ "$out"
+out=$(t sound bell)
+check "a sound you chose stays yours: the bell, once chosen, rings" test "$(ring_with)" = "$T/sounds/alarm.wav"
+out=$(t sound list)
+check "...and is the one marked" bash -c 'grep -q "^\* 2) bell$" <<<"$1"' _ "$out"
+check "the base part makes the sounds at install, so the first alarm has its wren" bash -c 'grep -q "alarm-sounds.py\" make" "$1"' _ "$HERE/parts/core-commands.sh"
 check "no python in bin/, which is all shell" bash -c '! grep -lqE "^#!.*python" "$1"/bin/* 2>/dev/null || [ -z "$(grep -lE "^#!.*python" "$1"/bin/*)" ]' _ "$HERE"
 
 # (the real /bin/sleep below: the pretend sleep above does not wait)

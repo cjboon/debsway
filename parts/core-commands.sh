@@ -53,8 +53,11 @@ for c in "${COMMANDS[@]}"; do install_bin "$c"; done
 mkdir -p "${KEYS%/*}"
 install -m 0644 "$WREN_DIR/data/keys.txt" "$KEYS"
 note "Cheat sheet: $KEYS"
-# The sound timer and alarm clock ring with: three short beeps (tools/make-alarm-sound.py)
+# The bell (tools/make-alarm-sound.py): what rings if every other sound is gone
 install -m 0644 "$WREN_DIR/data/alarm.wav" "${KEYS%/*}/alarm.wav"
-# (it makes the other sounds timer can ring with, when one is first chosen: timer sound)
+# The other sounds timer can ring with (timer sound), the wren first: it is the default, so
+# it is made now, ready for the first alarm
 install -m 0644 "$WREN_DIR/lib/alarm-sounds.py" "${KEYS%/*}/alarm-sounds.py"
+command -v python3 >/dev/null && python3 -I "${KEYS%/*}/alarm-sounds.py" make "${KEYS%/*}/alarms" ||
+    warn "The alarm sounds weren't made, so alarms ring with the bell until you choose one: timer sound"
 docs_links

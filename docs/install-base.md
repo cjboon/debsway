@@ -84,7 +84,7 @@ The next one shows in the bar.
 | `timer cancel` | Cancels one |
 | `timer stop` | Ends the ringing. Clicking the notification or dismissing it does too |
 | `timer lock 10` | Minutes idle before the screen turns off (or `l` in the timer menu). It locks a minute later |
-| `timer sound` | Hear and choose what it rings with (or `a` in the timer menu). The sounds are made on your computer by `lib/alarm-sounds.py` |
+| `timer sound` | Hear and choose what it rings with (or `a` in the timer menu): the wren, unless you choose another. The sounds are made on your computer by `lib/alarm-sounds.py` |
 | `timer clock` | Whether the bar shows the date (`~/.config/wren/clock`). The time is always am/pm |
 
 An alarm repeats its sound for up to 5 minutes, to wake you, and a timer rings for about 20 seconds.

@@ -197,7 +197,7 @@ cancel_cmd() {
     echo "Cancelled $n."
 }
 
-# The alarm sound is Wren Linux's own bell phrase (data/alarm.wav, 8 seconds), put
+# The alarm sound is the wren, unless you chose another (timer sound). The sounds are put
 # here by parts/core-commands.sh; no sound theme package is needed. An alarm
 # plays it over and over for about RING_ALARM seconds, a timer for RING_TIMER.
 # (The WREN_ ones: a test points these at pretend values)
@@ -294,24 +294,33 @@ next() {
 }
 
 # --- which sound it rings with ---------------------------------------
-# bell is data/alarm.wav. The others are made by lib/alarm-sounds.py, into SOUND_DIR/alarms
-# the first time they're wanted.
+# bell is data/alarm.wav. The others are made by lib/alarm-sounds.py, into SOUND_DIR/alarms,
+# at install (parts/core-commands.sh), or the first time they're wanted.
 
-# sound_file: the chosen sound, or the bell if its file is gone: never silence
-sound_file() {
+# sound_name: what rings: the one you chose, else the wren; the bell if that one's file is
+# gone: never silence
+sound_name() {
     local name
     name=$(conf_get sound)
+    name=${name:-wren}
     if [[ $name =~ ^[a-z]+$ ]] && [ "$name" != bell ] && [ -r "$SOUND_DIR/alarms/$name.wav" ]; then
-        echo "$SOUND_DIR/alarms/$name.wav"
+        echo "$name"
     else
-        echo "$SOUND_DIR/alarm.wav"
+        echo bell
     fi
+}
+sound_file() {
+    local name
+    name=$(sound_name)
+    if [ "$name" = bell ]; then echo "$SOUND_DIR/alarm.wav"; else echo "$SOUND_DIR/alarms/$name.wav"; fi
 }
 
 sound_cmd() {
-    local maker names=(bell) name n i
+    local maker names=(bell) made=() n i
     maker=$SOUND_DIR/alarm-sounds.py
-    if [ -r "$maker" ] && command -v python3 >/dev/null; then mapfile -t -O 1 names < <(python3 -I "$maker" list); fi
+    # (the first one the maker lists, then the bell, then the rest)
+    if [ -r "$maker" ] && command -v python3 >/dev/null; then mapfile -t made < <(python3 -I "$maker" list); fi
+    if [ ${#made[@]} -gt 0 ]; then names=("${made[0]}" bell "${made[@]:1}"); fi
     # choose NAME: it's kept and played
     choose() {
         local c found=
@@ -327,9 +336,9 @@ sound_cmd() {
     }
     show() {
         local cur
-        cur=$(conf_get sound)
+        cur=$(sound_name)
         for i in "${!names[@]}"; do
-            if [ "${names[i]}" = "${cur:-bell}" ]; then printf '* %d) %s\n' $((i + 1)) "${names[i]}"
+            if [ "${names[i]}" = "$cur" ]; then printf '* %d) %s\n' $((i + 1)) "${names[i]}"
             else printf '  %d) %s\n' $((i + 1)) "${names[i]}"; fi
         done
     }
