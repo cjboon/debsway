@@ -124,6 +124,23 @@ check "a click on a heading checks nothing" test "$(pick 'click:SOMEWHAT SECURE'
 # shellcheck disable=SC2016  # its own shell would expand it, if the report reached arithmetic
 pick "\x1b[<0;5;a[\$(cd;touch pasted-ran)]M" '\r' >/dev/null
 check "a mouse report that isn't numbers (pasted text) runs nothing" test ! -e "$HOME/pasted-ran"
+# The search box: / or Tab, then letters narrow the list
+pick '\x1b' >/dev/null
+check "the search box shows, and says how to get to it" bash -c 'grep -aq "Search:" "$1" && grep -aq "/ or Tab" "$1"' _ "$T/drawn"
+check "search: letters narrow it, Tab goes to the list, Space checks, Enter installs" test "$(pick / del '\t' ' ' '\r')" = delta
+check "...Tab goes to the box as well" test "$(pick '\t' del '\t' ' ' '\r')" = delta
+check "...an arrow goes back to the list too" test "$(pick / del '\x1b[B' ' ' '\r')" = delta
+check "...any case" test "$(pick / DEL '\t' ' ' '\r')" = delta
+check "...a box checked before stays checked, narrowed or not" test "$(pick ' ' / del '\t' ' ' '\x1b' '\r')" = gamma,delta
+check "...a letter you type there doesn't move or cancel: q, j, k and x are letters" test "$(pick / 'q' '\x7f' 'jkx' '\x7f\x7f\x7f' del '\t' ' ' '\r')" = delta
+check "...Backspace widens it again" test "$(pick / delx '\x7f' '\t' ' ' '\r')" = delta
+check "...Esc clears the search and cancels nothing, staying on the line you found" test "$(pick / del '\x1b' ' ' '\r')" = delta
+check "...then Esc in the list cancels" test "$(pick / del '\x1b' '\x1b')" = ""
+check "...Esc in the list clears a search first too" test "$(pick / del '\t' '\x1b' ' ' '\r')" = delta
+none=$(pick / zzzz ' ' '\t' ' ' '\r')
+check "...nothing matching: it says so, and nothing can be checked" bash -c '[ -z "$1" ] && grep -aq "Nothing matches" "$2"' _ "$none" "$T/drawn"
+check "...a click on a narrowed line checks that line" test "$(pick / del '\t' click:delta '\r')" = delta
+check "...it never draws a control character you typed" test "$(pick / $'\x01\x02' del '\t' ' ' '\r')" = delta
 # CL_ALONE: a "none of these" box (the wallpapers' "No wallpapers downloaded")
 cat >"$T/alone.sh" <<'EOF'
 . "$D/lib.sh"

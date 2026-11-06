@@ -67,7 +67,7 @@ mode=both file=
 PRESELECT=$HOME/.config/wren/preselect
 # What the list says, and its buttons (--remove changes them)
 TITLE="Optional extras" OK=Install CANCEL="No extras"
-TEXT="Arrow keys or the wheel move; Space or a click checks a box.\n* = already installed (checking it runs it again, to repair or update).\nInstall puts the checked ones in; No extras finishes without any."
+TEXT="Arrow keys or the wheel move; Space or a click checks a box; / or Tab searches.\n* = already installed (checking it runs it again, to repair or update).\nInstall puts the checked ones in; No extras finishes without any."
 case "${1:-}" in
     --remove)
         mode=remove TITLE="Remove apps" OK=Remove CANCEL=Cancel

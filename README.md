@@ -75,7 +75,7 @@ sudo mount -L WREN /mnt && bash /mnt/wren/start.sh
 3. Log out and log in on tty1: sway starts. Super+? shows every key (also
    `keys` in a terminal, or the file `~/KEYS.txt`).
 4. `install-base.sh` starts with a list of optional programs, and installs them
-   at its end: arrow keys and the space bar check the ones you want. Add more later with
+   at its end: arrow keys and the space bar check the ones you want, and `/` searches. Add more later with
    `bash install-extras.sh`, or one directly: `wrenctl install keepassxc`.
 
 `bash status.sh` (Status in the Wren menu) shows what's set up. It starts

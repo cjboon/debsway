@@ -14,7 +14,7 @@ sudo wren-watch accept [FILE...]   take them as yours (all, or those files)
 
 A program running as you that wants to start again at every login has to
 change one of a few files: your shell's startup files (`~/.profile`,
-`~/.bashrc`, ...), sway's config, `~/.config/autostart`, systemd user units,
+`~/.bashrc`, ...), tmux's, vim's, curl's and wget's settings, sway's config, `~/.config/autostart`, systemd user units,
 `~/.local/bin`, mako's config, `.desktop` files and default apps, Wren Linux's
 on-lock programs, your list of what opens at login, `~/.ssh/config`, `rc` and
 `authorized_keys`, and git's and gpg-agent's settings (`wren-watch --help` lists
