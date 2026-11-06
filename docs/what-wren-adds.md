@@ -44,7 +44,7 @@ Everyone who installs Wren Linux gets these. The script named in each row does i
 | dhcpcd and dhclient send this computer's name to each network | They don't | `parts/dhcp-no-name.sh` | `grep 'no name sent' /etc/dhcpcd.conf` |
 | Wi-Fi uses the card's real hardware address, with NetworkManager's defaults | A made-up address at each connection, no name sent, temporary IPv6 addresses | `parts/random-mac.sh` | `ip link` |
 | The live image installs avahi, which announces this computer's name on every network, and hw-probe | Taken out, with printing unless you print | `parts/no-live-extras.sh` | `systemctl status avahi-daemon` |
-| Wren Linux's sandboxes don't exist | DNS from its sandbox users goes only to the resolver this computer uses, so a hacked sandbox can't reach what else listens on port 53 nearby. It can still send data out | `parts/sandbox-dns.sh` | `sudo nft list ruleset \| grep -A3 resolvers` |
+| Has no sandbox users like these | DNS from its sandbox users goes only to the resolver this computer uses, so a hacked sandbox can't reach what else listens on port 53 nearby. It can still send data out | `parts/sandbox-dns.sh` | `sudo nft list ruleset \| grep -A3 resolvers` |
 | NetworkManager connects a new USB network device by itself | It asks first, for the drivers phones use | `parts/tether.sh` | `cat /etc/NetworkManager/conf.d/90-wren-tether.conf` |
 
 ### The kernel

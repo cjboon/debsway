@@ -8,9 +8,9 @@
 # Before the first boot, this writes into the images:
 #   Both:        a rule for acpid: the power button (whonix stop presses it) shuts
 #                the VM down cleanly. Left to Whonix's desktop, it opens a dialog.
-#   Gateway:     a bridge if you need one (it asks first; obfs4 with lines
-#                you paste, or Snowflake; the Gateway has no webtunnel
-#                client), so its first connection uses it. Whonix 18
+#   Gateway:     a bridge if you need one (it asks first; obfs4 or webtunnel
+#                with lines you paste, or Snowflake), so its first connection
+#                uses it. Whonix 18
 #                connects to Tor at first boot; if you need a bridge but
 #                have none yet, Tor is kept off until you turn it on.
 #   Workstation: Tor Browser at Safest with JavaScript off, and Feather
