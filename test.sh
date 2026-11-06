@@ -326,6 +326,7 @@ dev_test update "update.sh: which scripts to rerun, with a pretend server" "upda
 # --------------------------------------------------------------------
 dev_test git-push "Publishing, signed (tools/git-push.sh), with a pretend server and a throwaway key" "git-push checks"
 dev_test release "Publishing and installing here in one command (tools/release.sh)" "release checks"
+dev_test tag-release "Releases: a signed tag, and the install image (tools/tag-release.sh, tools/publish-image.sh), with a throwaway key" "release tag and image checks"
 dev_test wren-dev "A git copy to work on (extras/wren-dev.sh), from a pretend server" "wren-dev checks"
 dev_test build-deb "The Wren Linux package (tools/build-deb.sh), unpacked in a temp folder" "package checks"
 

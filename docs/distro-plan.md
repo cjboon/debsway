@@ -17,10 +17,12 @@
 About seven to nine working sessions in all. Start with step 2: it is useful
 at once, and everything later builds on it.
 
-**Where it stands (2026-11-03):** steps 2 and 3 are done, and the tools for
-step 4. Besides, `update.sh` brings in only what your key signed once the key
-is pinned. What waits on you: step 1 (the name, and the key, which only you
-can make), the address for the repository, then the server (step 5).
+**Where it stands (2026-11-06):** steps 1 to 3 are done, and the tools for steps 4 to 6:
+the key is pinned and `update.sh` takes only what it signed, the site and its server have
+their scripts, an install image builds, and releases and their images are one command each
+("Making a release" in `docs/maintaining.md`). What waits: a full install tried start to end, the
+server and the repository's address, then real releases, and an outside review before
+people at risk are pointed at it. A second release, then DistroWatch.
 
 ---
 

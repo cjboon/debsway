@@ -66,6 +66,7 @@ TORRC=$ROOT/etc/tor/torrc
 CADDYFILE=$ROOT/etc/caddy/Caddyfile
 SITE=/srv/wren-site
 GITDIR=/srv/wren-git
+IMAGEDIR=/srv/wren-images
 SELF=/usr/local/sbin/wren-vps
 ROLLBACK=/usr/local/sbin/wren-vps-rollback
 BOOT_UNIT=$ROOT/etc/systemd/system/wren-vps-undo-unconfirmed.service
@@ -252,6 +253,10 @@ $( [ -z "${VPS_EMAIL:-}" ] || printf '    email %s\n' "$VPS_EMAIL")
     import wren_headers
     handle_path /git/* {
         root * $GITDIR
+        file_server
+    }
+    handle_path /images/* {
+        root * $IMAGEDIR
         file_server
     }
     handle {
@@ -568,11 +573,11 @@ setup() {
     fi
 
     say "The web server (Caddy)"
-    mkdir -p "$ROOT$SITE" "$ROOT$GITDIR"
+    mkdir -p "$ROOT$SITE" "$ROOT$GITDIR" "$ROOT$IMAGEDIR"
     if [ ! -e "$ROOT$SITE/index.html" ]; then
         printf '<!doctype html>\n<meta charset="utf-8">\n<title>Soon</title>\n<p>Soon.</p>\n' | write_file "$ROOT$SITE/index.html" 0644
     fi
-    run chown "$VPS_ADMIN:$VPS_ADMIN" "$SITE" "$GITDIR"
+    run chown "$VPS_ADMIN:$VPS_ADMIN" "$SITE" "$GITDIR" "$IMAGEDIR"
     if [ ! -d "$ROOT$GITDIR/wren-linux.git" ]; then
         run sudo -u "$VPS_ADMIN" git init -q --bare "$GITDIR/wren-linux.git"
         # what a plain web server needs to serve it, kept up to date at every push

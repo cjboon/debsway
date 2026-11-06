@@ -48,6 +48,8 @@
 #   --simplesway  one workspace: the first login's install list starts with
 #              one-workspace ticked (no workspace keys or buttons; untick it there)
 #   --scripts  a folder of your own, copied to ~/scripts in the new system
+#   --public   an image for anyone (tools/publish-image.sh): the user "user", UTC, a US
+#              keyboard, disk encryption, and no saved downloads: nothing of this computer's
 # Then it offers to write the image to a USB stick (as tails-usb does: only USB
 # sticks, you type its name, and it reads it back to check).
 # It runs as you; sudo is asked for only to install what it needs and is
@@ -62,7 +64,7 @@
 . "$WREN_DIR/lib/usb-stick.sh"
 not_root
 
-user=$(id -un) keymap=us locale=en_US.UTF-8 timezone=$(this_timezone) erase=true encrypt=true autologin=false simplesway=false scripts='' out='' choice=''
+public=false user=$(id -un) keymap=us locale=en_US.UTF-8 timezone=$(this_timezone) erase=true encrypt=true autologin=false simplesway=false scripts='' out='' choice=''
 while [ $# -gt 0 ]; do
     case $1 in
         --user) user=${2:-}; shift 2 ;;
@@ -77,9 +79,15 @@ while [ $# -gt 0 ]; do
         --live) shift ;;
         --scripts) scripts=${2:-}; shift 2 ;;
         --out) out=${2:-}; shift 2 ;;
+        --public) public=true; shift ;;
         *) die "Usage: bash prep/make-install-iso.sh [--user NAME] [--keymap us] [--locale en_US.UTF-8] [--timezone Area/City] [--no-erase] [--noencrypt] [--autologin] [--simplesway] [--scripts FOLDER] [--out FILE]" ;;
     esac
 done
+# An image for anyone (tools/publish-image.sh): nothing of this computer's on it
+if $public; then
+    user=user keymap=us locale=en_US.UTF-8 timezone=Etc/UTC autologin=false simplesway=false scripts=''
+    $encrypt || die "--public and --noencrypt don't go together."
+fi
 user_ok "$user" || die "\"$user\" can't be a user name (lowercase letters, digits, _ and -, starting with a letter; not root)."
 keymap_ok "$keymap" || die "\"$keymap\" doesn't look like a keyboard layout (us, de, fr, gb...)."
 locale_ok "$locale" || die "\"$locale\" doesn't look like a locale (en_US.UTF-8, de_DE.UTF-8...)."
@@ -154,8 +162,10 @@ else
 fi
 [ -n "$out" ] || out=$SAVED/${name%.iso}-wren.iso
 
-say "The offline Wi-Fi packages"
-offline_debs_refresh
+if ! $public; then
+    say "The offline Wi-Fi packages"
+    offline_debs_refresh
+fi
 
 say "What goes on it"
 stage=$work/stage
@@ -184,7 +194,7 @@ bash "$WREN_DIR/tools/build-deb.sh" --commit HEAD --out "$stage/wren-install" >"
 deb=$(head -1 "$work/deb.out")
 [ -f "$deb" ] || die "The Wren Linux package wasn't built ($deb)."
 note "The package: ${deb##*/} ($(sed -n 's/^SHA-256: //p' "$work/deb.out" | cut -c1-16)...)"
-if [ -d "$OFFLINE_DIR" ]; then
+if [ -d "$OFFLINE_DIR" ] && ! $public; then
     mkdir -p "$stage/wren-install/offline"
     (cd "$OFFLINE_DIR" && find . -mindepth 1 -maxdepth 1 ! -name install-iso ! -name tails -exec cp -R {} "$stage/wren-install/offline/" \;)
 fi
@@ -230,7 +240,7 @@ cat <<EOF
           -drive file=$HOME/test-disk.qcow2,if=virtio -boot d
 
 EOF
-if ask "Write it to a USB stick now?" n; then
+if ! $public && ask "Write it to a USB stick now?" n; then
     mapfile -t disks < <(usb_disks)
     [ ${#disks[@]} -gt 0 ] || die "No USB stick found. Write it later: run this again (the image is kept)."
     for i in "${!disks[@]}"; do

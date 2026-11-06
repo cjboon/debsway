@@ -63,6 +63,16 @@ internet. So:
   Never run two test runs at once: the pty-based tests (menu, timer) are timing-sensitive.
   Don't wait with `pgrep -f` or `pkill -f` patterns that match your own command line.
 
+## Releases
+
+The version is the year and month (`2026.11`, then `2026.11.1`), so nobody decides a number:
+`tools/tag-release.sh` works it out. Suggest a release to the owner (never make one: signing is
+theirs, behind their sudo) when `main` has a security fix people should take; something
+people asked for, or changed by default; or a month's worth of tested work. Not for docs alone,
+or while something on `main` is known to be broken. Say which, and what still needs trying on
+a real desktop. An image (`tools/publish-image.sh`) goes with a release when the installer or
+base changed. Notes are written for the people who use it, not as a list of commits.
+
 ## Conventions
 
 - Scripts are bash, shellcheck-clean (`.shellcheckrc`). New scripts: `chmod +x`.

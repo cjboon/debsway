@@ -110,7 +110,7 @@ rm -rf "$O/offline"; mkdir -p "$O/offline/debs"
 FETCH_FAILS=1 refresh
 check "no network to fetch them: the build goes on, saying the laptop needs a cable" grep -q 'needs a cable or a phone' "$T/said"
 check "make-install-iso.sh does this before it puts Wren Linux on the image" \
-    bash -c 'grep -n "^offline_debs_refresh$\|^say \"What goes on it\"$" "$1" | cut -d: -f2 | paste -sd, | grep -qx "offline_debs_refresh,say \"What goes on it\""' _ "$HERE/prep/make-install-iso.sh"
+    bash -c 'grep -n "^ *offline_debs_refresh$\|^say \"What goes on it\"$" "$1" | cut -d: -f2 | sed "s/^ *//" | paste -sd, | grep -qx "offline_debs_refresh,say \"What goes on it\""' _ "$HERE/prep/make-install-iso.sh"
 
 # ---- the installer's answers ----
 P=$(fill_preseed "$HERE/data/install-iso-preseed.cfg" me de_DE.UTF-8 de true)

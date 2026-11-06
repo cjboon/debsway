@@ -90,6 +90,34 @@ with the old subkey's signature, before it expires. A key that has
 expired or been revoked fails the check, and updates stop until a copy with
 the new key is brought in by hand.
 
+## Making a release
+
+A release is a signed tag on what's already published. Its name is the year and month
+(`2026.11`, then `2026.11.1`), and its message is the release notes.
+
+```bash
+wren-release --tag                 # publish, mark it as a release, install it here
+bash tools/tag-release.sh          # only mark what's already published
+bash tools/publish-image.sh        # its install image, signed, on the server
+```
+
+`tag-release.sh` writes the notes from the commits since the last release, for you to edit,
+signs the tag, checks it with the pinned key alone, and asks before pushing. Write the notes
+for people who use Wren Linux: what changed for them, and what they should do.
+
+`publish-image.sh` needs a commit with such a tag. It builds with
+`make-install-iso.sh --public`, which puts nothing of this computer's on the image, signs
+`SHA256SUMS`, checks that, and copies them to `/srv/wren-images/VERSION` on the server, as
+`images/VERSION/` on the site, beside `RELEASE-NOTES.txt`. It never replaces what's there.
+A server set up before this needs `setup-vps.sh` run again for that folder.
+
+Neither can run by itself. The key signs only after your sudo password, on purpose: a script
+that could sign alone means anything running as you could too.
+
+The package's version still comes from its commit (`0~git...`), so a later commit always
+sorts higher, whether or not it's a release. The image isn't built byte for byte the same
+twice: anyone can rebuild the package on it and compare, but only check the image's signature.
+
 ## The Wren Linux package
 
 `bash tools/build-deb.sh` builds `wren-linux_VERSION_all.deb` from a commit

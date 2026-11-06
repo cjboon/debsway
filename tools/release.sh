@@ -6,11 +6,13 @@
 #   2. tools/build-deb.sh: the package, from the commit, in a new private folder
 #   3. sudo apt install: that one file, with its SHA-256 shown first
 #   4. wrenctl --update: offers to run again the scripts whose files changed
+# With --tag, it also marks what it published as a release, after step 1 (tools/tag-release.sh).
 # The private folder matters: /tmp is open to every user, the sandboxes' too, and
 # apt installs as root, so a name like /tmp/wren-linux_*.deb could also pick up a
 # package a hacked sandbox left there.
 # (wrenctl install wren-dev adds a command for it: wren-release, from any folder)
 # Usage: bash tools/release.sh           publish, then install here
+#        bash tools/release.sh --tag     the same, and a signed release of what it published
 #        bash tools/release.sh --local   install here only, nothing is pushed (to try
 #                                     the last commit; what isn't committed stays out)
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
@@ -20,11 +22,12 @@ g() { git -C "$WREN_DIR" "$@"; }
 # (a test gives its own pretend wrenctl)
 WRENCTL=${WREN_WRENCTL:-wrenctl}
 
-local_only=false
+local_only=false tag=false
 case ${1:-} in
     "") ;;
     --local) local_only=true ;;
-    *) die "Usage: bash tools/release.sh [--local]" ;;
+    --tag) tag=true ;;
+    *) die "Usage: bash tools/release.sh [--tag | --local]" ;;
 esac
 g rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "$WREN_DIR isn't a git copy (wrenctl install wren-dev gets one)."
 
@@ -39,6 +42,10 @@ else
     # (saying no to the push isn't a failure to git-push.sh)
     [ "$(g rev-list --count origin/main..HEAD)" = 0 ] ||
         die "Not everything was pushed, so nothing was installed. To try it here without publishing: bash tools/release.sh --local"
+    if $tag; then
+        say "Marking it as a release"
+        bash "$WREN_DIR/tools/tag-release.sh" || die "It was published, but not marked as a release, so nothing was installed."
+    fi
 fi
 
 say "Building the package"
