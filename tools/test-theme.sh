@@ -171,4 +171,7 @@ check "--remove goes back to dark first" python3 -I -c 'import sys; s = open(sys
 check "foot's part keeps the theme's colors when it writes foot.ini again" grep -q '"$BIN/theme" apply' "$HERE/parts/foot-config.sh"
 check "the Wren menu has a Theme line, inside sway" bash -c 'grep -q "entry theme \"\" \"\$THEME_CMD\"" "$1" && grep -q "\"\$THEME_CMD\" toggle" "$1"' _ "$HERE/bin/wren-menu"
 
+check "dark: workspace numbers stay readable on any wallpaper (white; the blue box marks the active one)" \
+    grep -qx 'BAR_INACTIVE_TEXT=ffffff' "$HERE/data/themes/dark"
+
 [ "$fails" -eq 0 ]

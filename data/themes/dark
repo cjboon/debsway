@@ -6,7 +6,7 @@ DESKTOP_BG=000000
 # The bar: background (rrggbbaa: see-through), text, inactive workspaces' text
 BAR_BG=00000080
 BAR_TEXT=ffffff
-BAR_INACTIVE_TEXT=5c5c5c
+BAR_INACTIVE_TEXT=ffffff
 # The lock screen
 LOCK=000000
 # Notifications (mako): background (rrggbbaa), text, border
