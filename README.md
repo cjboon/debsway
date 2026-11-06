@@ -15,6 +15,8 @@ security problem, or check Wren Linux's signing key, see [SECURITY.md](SECURITY.
 To help, see [CONTRIBUTING.md](CONTRIBUTING.md) and
 [how Wren Linux fits together](docs/architecture.md).
 
+[What Wren Linux adds to Debian](docs/what-wren-adds.md) lists each change, and how to check it.
+
 To learn: [what Debian is, and why Wren Linux is based on it](docs/what-is-debian.md) and
 [its history](docs/history-of-debian.md), [GPG in plain words](docs/gpg.md),
 [what an onion site is](docs/what-is-an-onion-site.md), [a short history of Tor](docs/history-of-tor.md),

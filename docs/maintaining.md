@@ -92,6 +92,13 @@ with the old subkey's signature, before it expires. A key that has
 expired or been revoked fails the check, and updates stop until a copy with
 the new key is brought in by hand.
 
+## What Wren Linux adds to Debian
+
+`docs/what-wren-adds.md` lists each change. `tools/test-what-wren-adds.sh` keeps its Wren Linux side
+true, and fails when a new base part that hardens something has no row. It can't check the Debian column: measure
+that again on a plain install at each new Debian, with `/usr/sbin/sysctl` on a real host (a container has
+network settings of its own), the kernel's `/boot/config-*`, and the live image's package list.
+
 ## Trying it for real
 
 Tests with pretend programs show what you believed the real ones do, and have passed over real

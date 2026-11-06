@@ -42,7 +42,7 @@
    so and are skipped (run by hand, a part always installs).
 5. Installs the extras you picked at the start (`install-extras.sh --install`).
    The list is the one from step 0: arrow keys move, the space bar checks a
-   box, Tab reaches **Install** or **No extras**. `wrenctl --apps` shows it
+   box, `/` or Tab searches, and Enter goes on. `wrenctl --apps` shows it
    again whenever you like; `wrenctl --apps --list` only prints it.
 
 At its first run on an encrypted disk it also sets up the login without your
