@@ -1,105 +1,365 @@
 # What install-base.sh does
 
-0. Starts with `prep/intro.sh`: it explains what is about to happen, shows
-   a disclaimer, and asks whether to go on. `bash install-base.sh --yes`
-   skips it. Right after you agree, it shows the list of optional extras
-   (`install-extras.sh --choose`) so you answer everything up front; nothing
-   is checked for you. What you pick is installed once the base is done.
-1. Installs the core packages, all with `--no-install-recommends`:
-   `sway foot libgl1-mesa-dri gpg age diceware` (`gpg` checks downloads;
-   `age` encrypts a file to a password or a key, `age -p file >file.age`, and
-   `age -d file.age` decrypts it; `diceware -n 6` makes a passphrase of six random
-   words, from the system's secure random source). Every part
-   installs its own packages (see the table below). There is no web
-   browser until you pick one: Firefox and w3m are in the extras list.
-2. Sets up sway (a copy of the stock config plus one `include` line for
-   `~/.config/sway/config.d/`), the status bar (see-through black), no window
-   borders (`appearance.conf`), and the key cheat sheet: `Super+?`, the `keys` command, `~/KEYS.txt` (a link
-   to the one copy; the first time sway starts it asks whether sway's shortcuts use
-   Super, the Windows key, or Alt, and `keys --mod alt` / `keys --mod super` switches
-   later, with the sheet showing whichever you use), a bar with a clickable "wren" menu (a gray menu: your browser, password manager and terminal, then Switches, Apps and System, and Help) and Wi-Fi name, a scrollable volume and brightness, and a battery you can click for the time left, and a one-line hint on
-   plain text consoles. `display-scale` sets the text size of each screen,
-   remembered per screen (`display.conf`), and a watcher started by sway says
-   once, in a notification, when a sharp screen is still at scale 1, also when
-   you plug one in later. A screen's size comes from its own data in
-   `/sys/class/drm`; without it the sharpness is unknown and nothing is said.
-   `timer` (Super+t, or a click on the time in the bar) sets timers and alarms
-   with systemd user timers and no extra package: `timer 10m tea`,
-   `timer at 7:30`, `timer list`, `timer cancel`. The next one shows in the bar.
-   `timer lock 10` (or `l` in the timer menu) sets how many minutes idle before the screen turns off; it locks a minute later.
-   `timer sound` (or `a` in the timer menu) lets you hear and choose what it rings with, sounds
-   made on your computer by `lib/alarm-sounds.py`.
-   `timer stop`, clicking the notification or dismissing it ends the ringing (an alarm repeats a gentle bell phrase for up to 5 minutes, to wake you; a timer rings about 20 seconds). `timer clock` chooses whether the bar shows the date (the time is always am/pm)
-   (`~/.config/wren/clock`). Timers last until logout or reboot, and a
-   laptop that is asleep does not wake for them.
-3. Starts sway when you log in on tty1 (a marked block in
-   `~/.profile`).
-4. Runs every script in the base list (`PARTS` in `packages.sh`). If one
-   fails, the rest still run and it tells you which to re-run. A few only
-   run where the computer has the hardware: `brightnessctl` needs a screen
-   backlight, `power-profiles-daemon` a battery or power profiles,
-   `network-manager` and `random-mac` a Wi-Fi adapter. Otherwise they say
-   so and are skipped (run by hand, a part always installs).
-5. Installs the extras you picked at the start (`install-extras.sh --install`).
-   The list is the one from step 0: arrow keys move, the space bar checks a
-   box, `/` or Tab searches, and Enter goes on. `wrenctl --apps` shows it
-   again whenever you like; `wrenctl --apps --list` only prints it.
+`install-base.sh` turns a bare Debian 13 into the Wren Linux desktop, in six steps:
 
-At its first run on an encrypted disk it also sets up the login without your
-password on tty1 (`extras/autologin.sh --encrypted-only`): the disk passphrase
-at boot is the lock then, and the screen lock and sudo still ask for yours.
-On a disk that isn't encrypted it doesn't; `wrenctl remove autologin` takes it
-out, and later runs leave that alone.
+1. **It explains and asks.** Nothing changes until you agree.
+2. **You pick your extras.** They install at the end, so you answer everything up front.
+3. **It installs the core packages:** sway, a terminal, and a few tools.
+4. **It sets up the desktop:** sway, the bar and the key cheat sheet.
+5. **It runs every base part:** the firewall, the screen lock, kernel hardening and the rest.
+6. **It installs the extras you picked.**
 
-An existing sway config is kept; only the include line is added, and the
-bar is only changed if it's still the stock one. Every snippet is
-checked with `sway -C` before it's kept.
+The rest of this page goes through each step, then each part, one at a time.
 
-### parts/
+## 1. It explains and asks
 
-| Script | Installs | Sets up |
-|---|---|---|
-| `core-commands.sh` | ncal | The base desktop's own commands in `~/.local/bin` (`keys`, `wren-welcome`, `timer`, `display-scale`, `sway-status`), the key cheat sheet and the alarm sound. `install-base.sh` puts them in place too; this part does it again so that `wrenctl --update` brings them up to date when they change |
-| `sudo-timeout.sh` | (none) | sudo remembers your password for 60 seconds, in the terminal it was typed in, instead of Debian's 15 minutes (`timestamp_timeout=1`): a program waiting for you to use sudo gets a minute, not a quarter of an hour. Wren Linux's scripts refresh it every 50 seconds while they run, so a long install still asks once |
-| `home-private.sh` | (none) | Your home private to you, also from Wren Linux's sandbox users (the sandboxed Firefox and Claude pass through your home to their shared folder, and could otherwise open any world-readable file in it by name): others lose access to what is directly in your home, folders shared through an ACL keep their user, new files start private (`umask 077`, at the top of `~/.profile`), and a sudo rule keeps Debian's usual umask for commands run through sudo |
-| `clock.sh` | systemd-timesyncd | The clock is set over the network (NTP, from `debian.pool.ntp.org`) and kept right; Tor needs a right clock. While the time zone is UTC it asks for yours (Enter keeps UTC), so the bar shows your local time; run it again to change it (`timedatectl list-timezones` lists them) |
-| `no-live-extras.sh` | (removes) | Takes out what Debian's live image installs and Wren Linux doesn't use; a DVD or netinst install doesn't have it. Always: avahi (announces this computer's name and services on every network), hw-probe (can send your hardware details off), extrepo, the telnet client. Printing (cups) unless you say you print; cups-browsed, which looks for printers on the network, either way. dkms and mdadm only if nothing needs them: no kernel module DKMS builds (some Wi-Fi drivers; `wifi.sh` says when yours is one) and no software RAID. It marks sudo as wanted first, and refuses any removal that would take sudo, the kernel, disk encryption or networking with it. Shows what goes first. To have one back: `sudo apt install NAME` |
-| `unattended-upgrades.sh` | unattended-upgrades | Debian's security fixes install themselves daily, with Debian's default rules; the Mullvad and Claude Code repositories Wren Linux adds are included, any repository you add yourself is left to you. Log: `/var/log/unattended-upgrades/` |
-| `wmenu.sh` | wmenu | The launcher on Super+d, in the bar's black and white, opaque (the bar is see-through) and with a font a little bigger than the bar's so it covers the bar. If a strip of the bar still shows, raise the `12` in the `set $menu` line of `~/.config/sway/config` |
-| `swaylock.sh` | swaylock | Super+Escape locks |
-| `swayidle.sh` | swayidle, swaylock | Screen off after 5 min idle (`timer lock 10` makes it 10; 1 to 120, kept when the part runs again; `bash status.sh` shows it), locked a minute later with the vault and KeePassXC: back within that minute, any key brings it back without a password. Locked at once before sleep. The screen fades down slowly for the 30 seconds before it turns off, with a "Screen going dark" notification; any key or mouse movement puts it back (`dim-warning`; a monitor with no backlight gets only the notification) |
-| `brightnessctl.sh` | brightnessctl | `brightness up\|down [STEP]`, never below 5%; brightness keys and Super+F1/F2 |
-| `wl-clipboard.sh` | wl-clipboard | `wl-copy` / `wl-paste` |
-| `mako.sh` | mako-notifier | Notifications close after 5 seconds; Super+n / Super+Shift+n dismiss |
-| `foot-config.sh` | fonts-dejavu-mono | The terminal's look (`data/foot.ini`): DejaVu Sans Mono at size 14 instead of foot's small default, black background, readable colors. `console-font`, run in a terminal window, picks another size (or bold) for every terminal opened after; foot-config.sh keeps that choice when it writes the file again. Written to `~/.config/foot/foot.ini`; one you wrote yourself is kept as `foot.ini.bak`. |
-| `autostart.sh` | (none) | What opens when you log in, and on which workspace: one file, `~/.config/wren/autostart`, a workspace and a command on each line. It starts with a terminal on workspace 1. Change it there, with the Wren menu's System > Startup programs, or with `wren-autostart edit`; yours is never replaced. |
-| `wallpaper.sh` | (none) | Your own wallpaper: the newest JPEG or PNG in `~/Pictures/wren/desktop` goes up at every login and sway reload (Super+Shift+c); with the folder empty, your sway config's own `output * bg` line or sway's plain background stays. Super+] and Super+[ step through `~/Pictures/Wallpapers` as the wallpaper and Super+Shift+w lists it by name, with "0  No wallpaper" first (wmenu; the one chosen is copied into the desktop folder, so it stays), and Super+\ goes back to no wallpaper (the theme's plain background, until you choose one or copy in a newer picture). A JPEG or PNG in `~/Pictures/wren/firefox` is the sandboxed Firefox's New Tab background instead of the fox (a checked copy is handed over at each start: Firefox never sees the folder). `wallpaper status` says which picture is used and why a file isn't (a file that only says it is a JPEG or PNG, over 50 MB). sway gets a link named with digits, never your file name. `extras/wallpapers.sh` fills `~/Pictures/Wallpapers` with pictures from NASA, ESA's Webb, NASA Earth Observatory and Budgie to choose from, or sets it up for your own |
-| `theme.sh` | (none) | Light or dark, from one place (`theme light`, `theme dark`, `theme toggle`, or the Wren menu's Theme line; dark is the default and Wren Linux's look as before). Light has warm light backgrounds (#f2efe9) and dark text: the bar (see-through), the plain background with no wallpaper, foot, the Wren menu and its lists, nmtui, the launcher (Super+d), the power menu, notifications and the lock screen; GTK apps prefer light too (`settings.ini` for GTK 3 and 4, and the color-scheme setting libadwaita apps read, through `gsettings`), and the sandboxed Firefox and incognito take Firefox's light or dark theme at their next start, websites that offer one their light or dark version, and the light or dark fox. The colors are `data/themes/dark` and `light`, read strictly (colors only); only Wren Linux's own foot.ini and mako config are changed. Windows open now keep their colors until they open again; the text console (tmux) stays dark. The lock screen falls back to black if the theme can't say |
-| `command-hints.sh` | (none) | Type a Wren Linux extra's command that isn't installed (`claude-vm`, `gimp`...) and the terminal says which script installs it. Only prints; bash asks it only when no program of that name exists. A root-owned file (`data/command-hints.bash`) loaded by one marked block in `~/.bashrc` |
-| `console-tmux.sh` | tmux | tmux dressed like the desktop, always installed: `~/.config/tmux/tmux.conf` (plain settings) loads `console.conf` (the bar on top: workspace numbers, then Wren Linux, wifi, vol, bright, bat, timer, date, with the same clicks and scrolls; black and gray; Alt+1 … Alt+0 workspaces, Alt+Shift+1 … sends the pane, Alt+m the Wren menu) only on a text console, so a tmux in a foot window under sway stays plain. `console-click` handles the bar clicks. The console-only extra starts it at login |
-| `wren-menu.sh` | wmenu, rfkill | `wren-menu`: click "wren" at the left of the bar, or press Super+m (again closes it), for a black-and-gray menu in a floating window over what you were doing (arrows and Enter, or click; Space flips a switch; Esc goes back from a list, and closes the rest, the install list and the help page included). Its first screen has Web browser (the one links open in, or the first installed), Password manager (KeePassXC), Terminal (as Super+Enter opens; only inside sway), Wi-Fi sign-in and Help (the key cheat sheet, in the menu's own pager, which also opens on Super+?), and a line that shows the microphone, webcam and secure DNS at a glance. Three lists hold the rest, each with only what is here: Switches (Wi-Fi, Bluetooth, Microphone, Webcam, the Vault, Secure DNS: choosing one flips it), Apps (Text editor, File manager, Signal, SimpleX, Claude, opencode; only inside sway) and System (Install apps, `install-extras.sh`, in three groups: most secure, somewhat secure, least secure; Remove apps, `install-extras.sh --remove`; Update, `update.sh`; Status, `status.sh`; Back up now; Startup programs, `wren-autostart edit`; Theme; Font size on a text console). What you pick runs in that window, which closes when it ends; the install and update screens wait for Enter first if they did something |
-| `power-menu.sh` | wmenu | `powermenu`: lock, suspend, log out, reboot or power off from a small menu on Super+Shift+Escape |
-| `needrestart.sh` | needrestart, libnotify-bin | After every update, lists the running programs that still use outdated libraries (list only: it never restarts anything). Check any time: `sudo needrestart` |
-| `sysctl-hardening.sh` | (none) | Kernel and network settings in the spirit of Kicksecure (`data/sysctl-hardening.conf`): kernel addresses hidden, only your own child programs can be traced, no kexec, SysRq limited, no io_uring, stricter file and network defaults. Applies now and at every boot. See [Kernel hardening](#kernel-hardening) |
-| `module-blacklist.sh` | (none) | Blocks rare network protocols, old filesystems and FireWire from loading (`data/module-blacklist.conf`) |
-| `boot-hardening.sh` | (none) | Adds Kicksecure's boot parameters to GRUB (`slab_nomerge init_on_alloc=1 init_on_free=1 page_alloc.shuffle=1 randomize_kstack_offset=on vsyscall=none debugfs=off intel_iommu=on iommu.passthrough=0 iommu.strict=1`); applies after a reboot |
-| `grub-colors.sh` | (none) | GRUB's boot menu: a red box with white text, the chosen entry yellow, black around it (`/etc/grub.d/06_wren_colors`); colours only |
-| `ufw.sh` | ufw | Firewall: blocks everything incoming, allows outgoing |
-| `power-profiles-daemon.sh` | power-profiles-daemon | `powerprofilesctl set power-saver \| balanced \| performance` (skips itself if tlp is installed) |
-| `network-manager.sh` | network-manager, wpasupplicant, wireless-regdb, polkitd | Moves the Wi-Fi from the installer or wifi.sh into NetworkManager; `nmtui` (in Wren Linux's white-on-black colors, like the install list; your own `NEWT_COLORS` wins) to switch networks |
-| `usb.sh` | udisks2, polkitd | The `usb` command: `usb` lists sticks, `usb mount [NAME]` mounts one as you under `/media/$USER/` (`nosuid,nodev,noexec`; FAT, exFAT and NTFS readable by you alone; an encrypted one asks for its passphrase), `usb unmount` unmounts, locks and switches it off. A FAT stick mounted with `sudo mount` is root's, so you can't write to it: `usb mount` offers to mount it again as you. Nothing mounts by itself (that is `extras/udiskie.sh`) |
-| `sandbox-dns.sh` | (none) | DNS from Wren Linux's sandbox users (the sandboxed Firefox, incognito, the Wi-Fi sign-in window, yt-dlp, Claude's own user, the VMs) only to the resolver this computer uses, not to any address: their firewall rules take port 53 only to a set that a root helper fills from `/etc/resolv.conf` (Unbound with secure DNS on, the network's resolver while it is off), at boot, whenever that file changes, and after each sandbox's firewall loads. It keeps a hacked sandbox off what else listens on port 53 nearby; it can still send data out |
-| `secure-dns.sh` | unbound, dns-root-data, nftables | Encrypted DNS: Unbound on this computer checks every answer with DNSSEC and asks the resolver you pick (Enter: Quad9) over DNS over TLS; a firewall rule lets only Unbound send DNS out. A switch for Wi-Fi sign-in pages: the Wren menu's Secure DNS line, or `secure-dns on`/`off`. See [Encrypted DNS](#encrypted-dns-with-a-switch-partssecure-dnssh) |
-| `random-mac.sh` | (NetworkManager) | A made-up Wi-Fi MAC address on every connection and while scanning, no computer name sent to the network, temporary IPv6 addresses: networks can't recognise the laptop from place to place |
+`prep/intro.sh` says what is about to happen, shows a disclaimer, and asks whether to go on.
+`bash install-base.sh --yes` skips it.
 
-**USB drives and `noexec`:** a drive can't run programs from itself
-(`bash script.sh` and `mpv file` work; `./program` doesn't). Delete
-`noexec` in `~/.config/udiskie/config.yml` if you want that.
+## 2. You pick your extras
 
-**Random MAC side effects:** Wi-Fi login pages at cafés and hotels may
-ask again after reconnecting, and your home router sees a new device
-each time. For one made-up address per network instead, change `random`
-to `stable` in `/etc/NetworkManager/conf.d/90-wren-random-mac.conf`.
+Right after you agree, it shows the list of optional extras (`install-extras.sh --choose`).
+Nothing is checked for you. What you pick is installed once the base is done.
+
+- Arrow keys move, and the space bar checks a box.
+- `/` or Tab searches.
+- Enter goes on.
+
+`wrenctl --apps` shows the list again whenever you like, and `wrenctl --apps --list` only prints it.
+
+There is no web browser until you pick one: Firefox and w3m are in the list.
+
+## 3. It installs the core packages
+
+All with `--no-install-recommends`: `sway foot libgl1-mesa-dri gpg age diceware`.
+Every part then installs its own packages, listed [below](#the-parts).
+
+| Tool | What it's for |
+|---|---|
+| `gpg` | Checks downloads |
+| `age` | Encrypts a file to a password or a key: `age -p file >file.age`, and `age -d file.age` decrypts it |
+| `diceware` | `diceware -n 6` makes a passphrase of six random words, from the system's secure random source |
+
+## 4. It sets up the desktop
+
+**sway:** a copy of the stock config, plus one `include` line for `~/.config/sway/config.d/`.
+An existing sway config is kept: only the include line is added. Every snippet is checked with
+`sway -C` before it's kept. Windows have no borders (`appearance.conf`).
+
+**Starting it:** sway starts when you log in on tty1, from a marked block in `~/.profile`.
+
+**The login:** at its first run on an encrypted disk, it also sets up the login without your password
+on tty1 (`extras/autologin.sh --encrypted-only`). The disk passphrase at boot is the lock then, and
+the screen lock and sudo still ask for yours. On a disk that isn't encrypted it doesn't.
+`wrenctl remove autologin` takes it out, and later runs leave that alone.
+
+**The bar** is see-through black, and it's only changed if it's still the stock one. It has:
+
+- a clickable "wren" menu: a gray menu with your browser, password manager and terminal, then
+  Switches, Apps and System, and Help
+- your Wi-Fi name
+- volume and brightness, which you can scroll
+- a battery you can click for the time left
+
+**The key cheat sheet:** `Super+?`, the `keys` command, or `~/KEYS.txt` (a link to the one copy).
+The first time sway starts, it asks whether sway's shortcuts use Super, the Windows key, or Alt.
+`keys --mod alt` and `keys --mod super` switch later, and the sheet shows whichever you use.
+Plain text consoles get a one-line hint.
+
+**Screens:** `display-scale` sets the text size of each screen, remembered per screen
+(`display.conf`). A watcher started by sway says once, in a notification, when a sharp screen is
+still at scale 1, also when you plug one in later. A screen's size comes from its own data in
+`/sys/class/drm`. Without it, the sharpness is unknown and nothing is said.
+
+### Timers and alarms
+
+`timer` (Super+t, or a click on the time in the bar) uses systemd user timers and no extra package.
+The next one shows in the bar.
+
+| Command | What it does |
+|---|---|
+| `timer 10m tea` | A timer |
+| `timer at 7:30` | An alarm |
+| `timer list` | What is running |
+| `timer cancel` | Cancels one |
+| `timer stop` | Ends the ringing. Clicking the notification or dismissing it does too |
+| `timer lock 10` | Minutes idle before the screen turns off (or `l` in the timer menu). It locks a minute later |
+| `timer sound` | Hear and choose what it rings with (or `a` in the timer menu). The sounds are made on your computer by `lib/alarm-sounds.py` |
+| `timer clock` | Whether the bar shows the date (`~/.config/wren/clock`). The time is always am/pm |
+
+An alarm repeats its sound for up to 5 minutes, to wake you, and a timer rings for about 20 seconds.
+Timers last until logout or reboot, and a laptop that is asleep does not wake for them.
+
+## 5. It runs every base part
+
+It runs every script in the base list (`PARTS` in `packages.sh`). If one fails, the rest still run,
+and it tells you which to re-run.
+
+A few only run where the computer has the hardware, and otherwise say so and are skipped. Run by
+hand, a part always installs.
+
+| Part | Needs |
+|---|---|
+| `brightnessctl` | A screen backlight |
+| `power-profiles-daemon` | A battery or power profiles |
+| `network-manager`, `random-mac` | A Wi-Fi adapter |
+
+## 6. It installs the extras you picked
+
+`install-extras.sh --install` installs what you chose in step 2.
+
+## The parts
+
+Each is one script in `parts/`, and its `--remove` undoes it.
+
+### Updates
+
+**`unattended-upgrades.sh`** installs unattended-upgrades.
+
+- Debian's security fixes install themselves daily, with Debian's default rules.
+- The Mullvad and Claude Code repositories Wren Linux adds are included. Any repository you add
+  yourself is left to you.
+- The bar says so if updates stop arriving while you're online.
+- Log: `/var/log/unattended-upgrades/`
+
+**`needrestart.sh`** installs needrestart and libnotify-bin. After every update, it lists the running
+programs that still use outdated libraries. It only lists: it never restarts anything. Check any time
+with `sudo needrestart`.
+
+### Networks and DNS
+
+**`ufw.sh`** installs ufw, the firewall. It blocks everything incoming and allows outgoing.
+
+**`secure-dns.sh`** installs unbound, dns-root-data and nftables. Unbound on this computer checks every
+answer with DNSSEC and asks the resolver you pick (Enter: Quad9) over DNS over TLS. A firewall rule
+lets only Unbound send DNS out. There's a switch for Wi-Fi sign-in pages: the Wren menu's Secure DNS
+line, or `secure-dns on`/`off`. See [Encrypted DNS](#encrypted-dns-with-a-switch-partssecure-dnssh).
+
+**`sandbox-dns.sh`** sends DNS from Wren Linux's sandbox users only to the resolver this computer uses,
+not to any address. That covers the sandboxed Firefox, incognito, the Wi-Fi sign-in window, yt-dlp,
+Claude's own user and the VMs.
+
+- Their firewall rules take port 53 only to a set that a root helper fills from `/etc/resolv.conf`:
+  Unbound with secure DNS on, the network's resolver while it is off.
+- It's filled at boot, whenever that file changes, and after each sandbox's firewall loads.
+- It keeps a hacked sandbox off what else listens on port 53 nearby. It can still send data out.
+
+**`network-manager.sh`** installs network-manager, wpasupplicant, wireless-regdb and polkitd. It moves
+the Wi-Fi from the installer or wifi.sh into NetworkManager. `nmtui` switches networks, in Wren Linux's
+white-on-black colors, like the install list. Your own `NEWT_COLORS` wins.
+
+**`random-mac.sh`** (with NetworkManager) means a made-up Wi-Fi MAC address on every connection and
+while scanning, no computer name sent to the network, and temporary IPv6 addresses. Networks can't
+recognise the laptop from place to place.
+
+- Wi-Fi login pages at cafés and hotels may ask again after reconnecting, and your home router sees a
+  new device each time.
+- For one made-up address per network instead, change `random` to `stable` in
+  `/etc/NetworkManager/conf.d/90-wren-random-mac.conf`.
+
+**`dhcp-no-name.sh`** stops dhcpcd and dhclient sending this computer's name to each network, on a cable
+or through `wifi.sh`.
+
+**`tether.sh`** adds `tether`: a phone's mobile data through its USB cable, with or without NetworkManager.
+While you are offline, a window asks when a phone appears, and it connects only if you say so. See
+[phone tethering](extras/phone-tethering.md).
+
+**`no-live-extras.sh`** takes out what Debian's live image installs and Wren Linux doesn't use. A DVD or
+netinst install doesn't have it. It shows what goes first.
+
+- **Always:** avahi (announces this computer's name and services on every network), hw-probe (can send
+  your hardware details off), extrepo, and the telnet client.
+- **Unless you say you print:** printing (cups). cups-browsed, which looks for printers on the network,
+  goes either way.
+- **Only if nothing needs them:** dkms, if no kernel module needs building (some Wi-Fi drivers: `wifi.sh`
+  says when yours is one), and mdadm, if there's no software RAID.
+- It marks sudo as wanted first, and refuses any removal that would take sudo, the kernel, disk
+  encryption or networking with it.
+- To have one back: `sudo apt install NAME`
+
+### Kernel and boot
+
+**`sysctl-hardening.sh`** applies kernel and network settings in the spirit of Kicksecure
+(`data/sysctl-hardening.conf`), now and at every boot: kernel addresses hidden, only your own child
+programs can be traced, no kexec, SysRq limited, no io_uring, and stricter file and network defaults.
+See [Kernel hardening](#kernel-hardening).
+
+**`module-blacklist.sh`** blocks rare network protocols, old filesystems and FireWire from loading
+(`data/module-blacklist.conf`).
+
+**`boot-hardening.sh`** adds Kicksecure's boot parameters to GRUB, and they apply after a reboot:
+`slab_nomerge init_on_alloc=1 init_on_free=1 page_alloc.shuffle=1 randomize_kstack_offset=on vsyscall=none debugfs=off intel_iommu=on iommu.passthrough=0 iommu.strict=1`
+
+**`grub-colors.sh`** changes GRUB's boot menu to a red box with white text, the chosen entry yellow, and
+black around it (`/etc/grub.d/06_wren_colors`). Colours only.
+
+### Your account
+
+**`sudo-timeout.sh`** makes sudo remember your password for 60 seconds, in the terminal it was typed in,
+instead of Debian's 15 minutes (`timestamp_timeout=1`). A program waiting for you to use sudo gets a
+minute, not a quarter of an hour. Wren Linux's scripts refresh it every 50 seconds while they run, so a
+long install still asks once.
+
+**`home-private.sh`** keeps your home private to you, also from Wren Linux's sandbox users. The sandboxed
+Firefox and Claude pass through your home to their shared folder, and could otherwise open any
+world-readable file in it by name.
+
+- Others lose access to what is directly in your home.
+- Folders shared through an ACL keep their user.
+- New files start private (`umask 077`, at the top of `~/.profile`).
+- A sudo rule keeps Debian's usual umask for commands run through sudo.
+
+**`clock.sh`** installs systemd-timesyncd. The clock is set over the network (NTP, from
+`debian.pool.ntp.org`) and kept right, which Tor needs. While the time zone is UTC it asks for yours
+(Enter keeps UTC), so the bar shows your local time. Run it again to change it:
+`timedatectl list-timezones` lists them.
+
+### Locking the screen, and power
+
+**`swaylock.sh`** installs swaylock. Super+Escape locks.
+
+**`swayidle.sh`** installs swayidle and swaylock.
+
+- The screen turns off after 5 minutes idle. `timer lock 10` makes it 10 (1 to 120, kept when the part
+  runs again), and `bash status.sh` shows it.
+- It locks a minute later, with the vault and KeePassXC. Back within that minute, any key brings it
+  back without a password.
+- It locks at once before sleep.
+- The screen fades down slowly for the 30 seconds before it turns off, with a "Screen going dark"
+  notification. Any key or mouse movement puts it back (`dim-warning`). A monitor with no backlight
+  gets only the notification.
+
+**`power-menu.sh`** installs wmenu. `powermenu` locks, suspends, logs out, reboots or powers off, from a
+small menu on Super+Shift+Escape.
+
+**`power-profiles-daemon.sh`** installs power-profiles-daemon:
+`powerprofilesctl set power-saver | balanced | performance`. It skips itself if tlp is installed.
+
+**`brightnessctl.sh`** installs brightnessctl: `brightness up|down [STEP]`, never below 5%, on the
+brightness keys and Super+F1/F2.
+
+### USB
+
+**`usb.sh`** installs udisks2 and polkitd, for the `usb` command. Nothing mounts by itself: that is
+`extras/udiskie.sh`.
+
+| Command | What it does |
+|---|---|
+| `usb` | Lists sticks |
+| `usb mount [NAME]` | Mounts one as you, under `/media/$USER/`, with `nosuid,nodev,noexec`. FAT, exFAT and NTFS are readable by you alone. An encrypted one asks for its passphrase |
+| `usb unmount` | Unmounts, locks and switches it off |
+
+A FAT stick mounted with `sudo mount` is root's, so you can't write to it: `usb mount` offers to mount it
+again as you.
+
+**USB drives and `noexec`:** a drive can't run programs from itself (`bash script.sh` and `mpv file` work;
+`./program` doesn't). Delete `noexec` in `~/.config/udiskie/config.yml` if you want that.
+
+### The Wren menu
+
+**`wren-menu.sh`** installs wmenu and rfkill, for `wren-menu`. Click "wren" at the left of the bar, or press
+Super+m (again closes it), for a black-and-gray menu in a floating window over what you were doing.
+
+- **Keys:** arrows and Enter, or click. Space flips a switch. Esc goes back from a list, and closes the
+  rest, the install list and the help page included.
+- **What you pick** runs in that window, which closes when it ends. The install and update screens wait
+  for Enter first if they did something.
+
+Its first screen has:
+
+- Web browser (the one links open in, or the first installed)
+- Password manager (KeePassXC)
+- Terminal (as Super+Enter opens; only inside sway)
+- Wi-Fi sign-in
+- Help (the key cheat sheet, in the menu's own pager, which also opens on Super+?)
+- a line that shows the microphone, webcam and secure DNS at a glance
+
+Three lists hold the rest, each with only what is here:
+
+- **Switches** (choosing one flips it): Wi-Fi, Bluetooth, Microphone, Webcam, the Vault, Secure DNS
+- **Apps** (only inside sway): Text editor, File manager, Signal, SimpleX, Claude, opencode
+- **System:**
+  - Install apps (`install-extras.sh`, in three groups: most secure, somewhat secure, least secure)
+  - Remove apps (`install-extras.sh --remove`)
+  - Update (`update.sh`)
+  - Status (`status.sh`)
+  - Back up now
+  - Startup programs (`wren-autostart edit`)
+  - Theme
+  - Font size, on a text console
+
+### The desktop
+
+**`core-commands.sh`** installs ncal, and puts the base desktop's own commands in `~/.local/bin` (`keys`,
+`wren-welcome`, `timer`, `display-scale`, `sway-status`), with the key cheat sheet and the alarm sound.
+`install-base.sh` puts them in place too. This part does it again so that `wrenctl --update` brings them up
+to date when they change.
+
+**`wmenu.sh`** installs wmenu, the launcher on Super+d, in the bar's black and white. It's opaque (the bar is
+see-through), with a font a little bigger than the bar's, so it covers the bar. If a strip of the bar still
+shows, raise the `12` in the `set $menu` line of `~/.config/sway/config`.
+
+**`autostart.sh`** sets what opens when you log in, and on which workspace, in one file:
+`~/.config/wren/autostart`, a workspace and a command on each line. It starts with a terminal on workspace 1.
+Change it there, with the Wren menu's System > Startup programs, or with `wren-autostart edit`. Yours is never
+replaced.
+
+**`mako.sh`** installs mako-notifier. Notifications close after 5 seconds, and Super+n and Super+Shift+n dismiss.
+
+**`wl-clipboard.sh`** installs wl-clipboard: `wl-copy` and `wl-paste`.
+
+**`command-hints.sh`** helps when you type a Wren Linux extra's command that isn't installed (`claude-vm`,
+`gimp`...): the terminal says which script installs it. It only prints, and bash asks it only when no program of
+that name exists. It's a root-owned file (`data/command-hints.bash`), loaded by one marked block in `~/.bashrc`.
+
+**`foot-config.sh`** installs fonts-dejavu-mono, and sets the terminal's look (`data/foot.ini`): DejaVu Sans Mono
+at size 14 instead of foot's small default, a black background and readable colors.
+
+- `console-font`, run in a terminal window, picks another size (or bold) for every terminal opened after.
+  foot-config.sh keeps that choice when it writes the file again.
+- It's written to `~/.config/foot/foot.ini`. One you wrote yourself is kept as `foot.ini.bak`.
+
+**`console-tmux.sh`** installs tmux, dressed like the desktop, always. `~/.config/tmux/tmux.conf` (plain settings)
+loads `console.conf` only on a text console, so a tmux in a foot window under sway stays plain.
+`console-click` handles the bar clicks, and the console-only extra starts it at login.
+
+- The bar is on top, in black and gray: workspace numbers, then Wren Linux, wifi, vol, bright, bat, timer and
+  date, with the same clicks and scrolls.
+- Alt+1 … Alt+0 go to workspaces, Alt+Shift+1 … sends the pane there, and Alt+m opens the Wren menu.
+
+### Wallpaper and theme
+
+**`wallpaper.sh`** is your own wallpaper: the newest JPEG or PNG in `~/Pictures/wren/desktop` goes up at every
+login and sway reload (Super+Shift+c). With the folder empty, your sway config's own `output * bg` line or sway's
+plain background stays.
+
+| Key or command | What it does |
+|---|---|
+| Super+] and Super+[ | Step through `~/Pictures/Wallpapers` as the wallpaper |
+| Super+Shift+w | Lists it by name, with "0  No wallpaper" first (wmenu). The one chosen is copied into the desktop folder, so it stays |
+| Super+\ | Back to no wallpaper: the theme's plain background, until you choose one or copy in a newer picture |
+| `wallpaper status` | Which picture is used, and why a file isn't (a file that only says it is a JPEG or PNG, over 50 MB) |
+
+- A JPEG or PNG in `~/Pictures/wren/firefox` is the sandboxed Firefox's New Tab background instead of the fox. A
+  checked copy is handed over at each start: Firefox never sees the folder.
+- sway gets a link named with digits, never your file name.
+- `extras/wallpapers.sh` fills `~/Pictures/Wallpapers` with pictures from NASA, ESA's Webb, NASA Earth Observatory
+  and Budgie to choose from, or sets it up for your own.
+
+**`theme.sh`** is light or dark, from one place: `theme light`, `theme dark`, `theme toggle`, or the Wren menu's
+Theme line. Dark is the default, and Wren Linux's look as before. Light has warm light backgrounds (#f2efe9) and dark
+text.
+
+- **It changes:** the bar (see-through), the plain background with no wallpaper, foot, the Wren menu and its lists,
+  nmtui, the launcher (Super+d), the power menu, notifications and the lock screen.
+- **GTK apps** prefer light too: `settings.ini` for GTK 3 and 4, and the color-scheme setting libadwaita apps read,
+  through `gsettings`.
+- **The sandboxed Firefox and incognito** take Firefox's light or dark theme at their next start, websites that offer
+  one their light or dark version, and the light or dark fox.
+- **The colors** are `data/themes/dark` and `light`, read strictly (colors only). Only Wren Linux's own foot.ini and
+  mako config are changed.
+- **Windows open now** keep their colors until they open again, and the text console (tmux) stays dark.
+- **The lock screen** falls back to black if the theme can't say.
 
 ## Encrypted DNS, with a switch (`parts/secure-dns.sh`)
 
