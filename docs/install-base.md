@@ -55,7 +55,7 @@ the screen lock and sudo still ask for yours. On a disk that isn't encrypted it 
 
 **The bar** is see-through black, and it's only changed if it's still the stock one. It has:
 
-- a clickable "wren" menu: a gray menu with your browser, password manager and terminal, then
+- a clickable **Wren Menu**: a gray menu with your browser, password manager and terminal, then
   Apps, Wi-Fi, Settings, System and Power, and Help
 - your Wi-Fi name
 - volume and brightness, which you can scroll

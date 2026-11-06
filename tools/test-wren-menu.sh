@@ -1,5 +1,5 @@
 #!/bin/bash
-# Checks bin/wren-menu (the menu behind "wren" in the bar): the window
+# Checks bin/wren-menu (the menu behind "Wren Menu" in the bar): the window
 # it opens, and the menu itself, driven through a real pseudo-terminal with
 # arrow keys, Enter, Esc and mouse clicks. The programs it would run are
 # pretend ones that only write down how they were called. Changes nothing.
@@ -704,7 +704,7 @@ echo $$ >"$T/oc/xdg/wren-menu-busy"; oc wren-timer
 # shellcheck disable=SC2016  # expanded by the inner shell, on purpose
 check "...but not a Wren menu that is running Update" bash -c '! grep -q "wren-run" "$1/sway" && [ -e "$1/ran" ]' _ "$T/oc"
 rm -f "$T/oc/xdg/wren-menu-busy"
-# Super+m: sway-status --menu, as a click on "wren" in the bar
+# Super+m: sway-status --menu, as a click on "Wren Menu" in the bar
 mkdir -p "$T/oc/home/.local/bin"
 printf '#!/bin/sh\ntouch "%s/oc/menu-ran"\n' "$T" >"$T/oc/home/.local/bin/wren-menu"
 chmod +x "$T/oc/home/.local/bin/wren-menu"
@@ -745,7 +745,7 @@ check "the menu marks itself busy before Update or Install apps, and unmarks aft
     python3 -I -c 'import sys; s = open(sys.argv[1]).read(); a = s.index("echo $$ >\"$busy\""); assert a < s.index("bash update.sh") and a < s.index("bash install-extras.sh") < s.index("rm -f \"$WREN_PAUSED_FILE\" \"$busy\"")' "$HERE/bin/wren-menu"
 
 # the bar
-check "the bar shows Wren Linux" grep -q '"full_text":"wren"' "$HERE/bin/sway-status"
+check "the bar shows Wren Menu" grep -q '"full_text":"Wren Menu"' "$HERE/bin/sway-status"
 check "the bar has no separate Help any more" not grep -q '"name":"help"' "$HERE/bin/sway-status"
 check "a click on Wren Linux starts the menu" grep -q 'wren-menu' "$HERE/bin/sway-status"
 

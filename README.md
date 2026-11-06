@@ -218,7 +218,7 @@ image as a USB stick, an empty 20 GB disk), says what to check, then starts the 
 - `--remove` removes the packages it installed (QEMU stays if Whonix, claude-vm or mockvps-kvm use it).
 
 In the VM's window, your own sway takes Super+Enter, Super+d and the rest first. Press Ctrl+Alt+G there to
-give the VM the keyboard (again to take it back), or click `wren` in the VM's bar and choose Terminal.
+give the VM the keyboard (again to take it back), or click **Wren Menu** in the VM's bar and choose Terminal.
 
 ## Installing Debian
 
@@ -285,7 +285,7 @@ or opening `~/KEYS.txt`.
 
 **The status bar:**
 
-- **`wren`, at its left:** click it for a black-and-gray menu in a floating window over what you were
+- **Wren Menu, at its left:** click it for a black-and-gray menu in a floating window over what you were
   doing, with your browser, password manager and terminal, the lists Apps, Wi-Fi, Settings, System and
   Power, and Help (the sheet). Use arrow keys and Enter, or click. Esc
   goes back from a list, and closes the rest.
@@ -358,7 +358,7 @@ without its dashes (`wrenctl update`, `wrenctl --update`).
 | `wrenctl --status` | Shows what is set up |
 | `wrenctl --test` | Runs the checks |
 | `wrenctl --welcome` | Shows the key cheat sheet again |
-| `wrenctl` | On a sway screen, alone (or a click on `wren` in the bar), opens the menu |
+| `wrenctl` | On a sway screen, alone (or a click on **Wren Menu** in the bar), opens the menu |
 
 One extra at a time:
 
@@ -379,7 +379,7 @@ name go to its script (`wrenctl install claude-vm --account work`).
 bash ~/wren/update.sh
 ```
 
-or click `wren` at the left of the status bar and choose Update. Install apps (`install-extras.sh`) opens in the
+or click **Wren Menu** at the left of the status bar and choose Update. Install apps (`install-extras.sh`) opens in the
 same window, and Esc on its list with nothing picked closes the window at once.
 
 **What's new.** It fetches what's new, shows you every change, and asks before bringing it in. It's only ever a

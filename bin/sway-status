@@ -197,7 +197,7 @@ open_or_close() {
     # it (the menu removing an extra that reloads sway) would be killed too.
     setsid -f "$@" >/dev/null 2>&1
 }
-# Super+m (install-base.sh): the same as a click on "wren", from a key;
+# Super+m (install-base.sh): the same as a click on "Wren Menu", from a key;
 # it ends here, before anything the running bar owns (its PID file)
 if [ "${1:-}" = --menu ]; then
     if [ -x "$HOME/.local/bin/wren-menu" ]; then
@@ -280,7 +280,7 @@ while :; do
             "Lookups go to the network unencrypted. If you didn't switch it off, something running as you did. Click \"dns OFF\" in the bar to switch it on." 2>/dev/null
     fi
     dns_was=$dns_now
-    printf '[{"name":"menu","full_text":"wren","separator":false,"separator_block_width":0}%s%s%s%s%s%s%s],\n' \
+    printf '[{"name":"menu","full_text":"Wren Menu","separator":false,"separator_block_width":0}%s%s%s%s%s%s%s],\n' \
         "$(block wifi "$(wifi)")" "$(alert updates "$updates_now")$(alert startup "$startup_now")$(block dns "$dns_now")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
         "$(block bat "$(battery)")" "$(block timer "$(timer_text)")" "$(block date "$(date +"$(clock_format)")")"
     # wait returns early when SIGUSR1 arrives; the sleep ends by itself
