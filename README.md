@@ -51,7 +51,7 @@ own user or in a VM. Tor Browser, Whonix, wallets and more are one script each i
 **Everything undoable and checked:**
 
 - Every part and extra has `--remove`.
-- Every download from outside Debian is signature-checked against a key pinned in `pins.sh`.
+- Every program downloaded from outside Debian is signature-checked against a key pinned in `pins.sh`.
 - `test.sh` checks that it all still works.
 
 Everything beyond the base is optional, one script per app in `extras/`: Firefox profiles, w3m, Tor
