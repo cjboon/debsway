@@ -50,7 +50,9 @@ with throwaway keys). One signed commit on top vouches for everything under
 it, since each commit's id covers the ones before it.
 
 To publish, use `bash tools/git-push.sh`: it sets up signing and the pin the first
-time, signs the newest commit if it isn't (with an empty commit on top), checks that
+time, says what CI thinks of the commit and asks first if CI failed or hasn't finished (GitHub
+doesn't enforce this, since a signed commit on top hasn't been through CI, and so that an outage
+can't hold back a fix), signs the newest commit if it isn't (with an empty commit on top), checks that
 signature as a computer updating would, and asks before it pushes. Computers with
 the pin refuse an update whose newest commit isn't signed.
 

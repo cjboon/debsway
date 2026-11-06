@@ -7,6 +7,7 @@
 #    pins the key: pins.sh and data/wren-signing-key.asc, both committed.
 #  - It shows what would go out. If the newest commit isn't signed (a helper's work,
 #    say), it signs it, with an empty commit on top that vouches for those below.
+#  - It says what CI thinks of it, and asks first if CI failed or hasn't finished.
 #  - It checks that signature as a computer updating would, then asks before it pushes.
 # It only ever pushes main, and never forces.
 # Usage: bash tools/git-push.sh
@@ -17,6 +18,48 @@ not_root
 
 g() { git -C "$WREN_DIR" "$@"; }
 PRINT=${XDG_DATA_HOME:-$HOME/.local/share}/wren/signing-key/fingerprint
+
+# ci_says REPO COMMIT: what GitHub's CI says of it: passed, failed, running or nothing
+# known. Read only, with no login. CI vouches for nothing: what goes out is what you read and
+# sign. It's a warning at the moment that counts, not a gate, so that an outage or a
+# change at GitHub can't hold back an urgent fix. (WREN_WGET: a test's pretend wget)
+ci_says() {
+    "${WREN_WGET:-wget}" -q -T 15 -O - "https://api.github.com/repos/$1/commits/$2/check-runs" 2>/dev/null | python3 -I -c '
+import json, sys
+try:
+    runs = json.load(sys.stdin)["check_runs"]
+    states = [(r["status"], r["conclusion"]) for r in runs]
+except Exception:
+    states = []
+if not states:
+    print("unknown")
+elif any(s != "completed" for s, _ in states):
+    print("running")
+elif all(c in ("success", "skipped", "neutral") for _, c in states):
+    print("passed")
+else:
+    print("failed")
+' 2>/dev/null || echo unknown
+}
+# ci_check: says what CI thinks of what would go out; red or unfinished, it asks first
+ci_check() {
+    local repo commit says url
+    repo=${WREN_CI_REPO:-$(g remote get-url origin | sed -nE 's#^(https://github\.com/|git@github\.com:)([A-Za-z0-9-]+/[A-Za-z0-9._-]+)$#\2#p' | sed 's/\.git$//')}
+    [ -n "$repo" ] || return 0
+    commit=$(g rev-parse HEAD)
+    url=https://github.com/$repo/commit/$commit
+    says=$(ci_says "$repo" "$commit")
+    case $says in
+        passed) note "CI passed on this commit." ;;
+        failed)
+            warn "CI failed on this commit: $url"
+            ask "Publish it anyway?" n || die "Nothing was pushed." ;;
+        running)
+            warn "CI is still running on this commit: $url"
+            ask "Publish it without waiting?" n || die "Nothing was pushed. Run this again when CI has finished." ;;
+        *) note "CI can't say about this commit (not pushed for it to try, or GitHub didn't answer)." ;;
+    esac
+}
 
 g rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "$WREN_DIR isn't a git copy (wrenctl install wren-dev gets one)."
 [ "$(g rev-parse --abbrev-ref HEAD)" = main ] || die "This is for the branch main; you are on $(g rev-parse --abbrev-ref HEAD)."
@@ -61,6 +104,7 @@ say "What would go out"
 g --no-pager log --format='  %h %s' origin/main..HEAD | printable
 echo
 
+ci_check
 if ! update_signed HEAD; then
     note "The newest commit isn't signed. Signing vouches for everything listed above."
     ask "Sign it?" y || die "Nothing was pushed: computers with the pin would refuse it unsigned."

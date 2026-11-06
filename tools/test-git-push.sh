@@ -132,4 +132,54 @@ git -C "$T/L" -c commit.gpgsign=false commit -q -am 'another pin'
 gp y y y
 check "pins.sh pins another key: refused" grep -q 'pins another key' "$T/out"
 
+# ---- what CI says about what you are about to sign ----
+git -C "$T/L" reset -q --hard HEAD~1   # (the wrong pin from just above)
+cat >"$T/wget" <<EOF
+#!/bin/bash
+for a; do url=\$a; done
+echo "\$url" >"$T/ci-asked"
+[ ! -e "$T/ci-offline" ] || exit 4
+cat "$T/ci.json"
+EOF
+chmod +x "$T/wget"
+ci() { # JSON ANSWERS...: gp, with GitHub saying JSON about this commit
+    printf '%s' "$1" >"$T/ci.json"
+    shift
+    WREN_CI_REPO=someone/wren WREN_WGET=$T/wget gp "$@"
+}
+run_() { printf '{"name":"%s","status":"%s","conclusion":%s}' "$1" "$2" "$3"; }
+green="{\"total_count\":1,\"check_runs\":[$(run_ shellcheck completed '"success"')]}"
+red="{\"total_count\":2,\"check_runs\":[$(run_ a completed '"success"'),$(run_ b completed '"failure"')]}"
+busy="{\"total_count\":1,\"check_runs\":[$(run_ a in_progress null)]}"
+none='{"total_count":0,"check_runs":[]}'
+commit 'red work'
+c=$(head_); before=$(server)
+ci "$red" n
+check "CI failed on it: it says so, with a link, and Enter or no stops, nothing signed" bash -c '
+    grep -q "CI failed" "$1" && grep -q "https://github.com/someone/wren/commit/$2" "$1" && [ "$2" = "$3" ]' _ "$T/out" "$c" "$(head_)"
+check "...nothing goes out" test "$(server)" = "$before"
+check "...it asked about this very commit" grep -q "repos/someone/wren/commits/$c/check-runs" "$T/ci-asked"
+ci "$red" y y y
+check "...yes, knowing that: it goes on" test "$(server)" = "$(head_)"
+commit 'green work'
+ci "$green" y y
+check "CI passed: it says so, and asks nothing more" bash -c 'grep -q "CI passed" "$1" && [ "$2" = "$3" ]' _ "$T/out" "$(server)" "$(head_)"
+commit 'busy work'; before=$(server); c=$(head_)
+ci "$busy" n
+check "CI still running: it says so, and no stops" bash -c 'grep -q "still running" "$1" && [ "$2" = "$3" ]' _ "$T/out" "$(server)" "$before"
+for what in offline none garbage; do
+    commit "work with CI $what"; c=$(head_)
+    case $what in
+        offline) : >"$T/ci-offline"; j=$none ;;
+        none) j=$none ;;
+        garbage) j='<html>rate limited</html>' ;;
+    esac
+    ci "$j" y y y
+    rm -f "$T/ci-offline"
+    check "CI can't say ($what): it says so, and you can still publish" bash -c 'grep -q "CI can.t say" "$1" && [ "$2" = "$3" ]' _ "$T/out" "$(server)" "$(head_)"
+done
+commit 'not on GitHub'; rm -f "$T/ci-asked"
+gp y y
+check "a server that isn't GitHub: nothing is asked" test ! -e "$T/ci-asked"
+
 [ "$fails" -eq 0 ]
