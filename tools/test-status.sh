@@ -37,6 +37,16 @@ lockline() { HOME=$T/home STATUS_TEST_PATH=$1 bash "$R/status.sh" 2>/dev/null | 
 check "with swaylock: it locks after the idle minutes" grep -q 'after 30 minutes idle' <<<"$(lockline "$T/bin:$T/nolock")"
 check "without swaylock: it says the screen never locks" grep -q "swaylock isn't installed, so the screen never locks" <<<"$(lockline "$T/nolock")"
 
+# A swap file listed that isn't there (as a container sees its host's): Status still goes on,
+# and doesn't call it encrypted
+mkdir "$T/phantom"
+printf '#!/bin/sh\necho "/nowhere/swapfile file"\n' >"$T/phantom/swapon"
+printf '#!/bin/sh\nexit 1\n' >"$T/phantom/findmnt"
+chmod +x "$T/phantom/"*
+out=$(HOME=$T/home STATUS_TEST_PATH="$T/phantom:$T/bin:$T/nolock" bash "$R/status.sh" 2>&1)
+check "a swap file it can't look up: it goes on to the end" grep -q '^Screen lock:' <<<"$out"
+check "...and says it isn't encrypted" grep -qxF '  [ ] swap /nowhere/swapfile' <<<"$out"
+
 # ---- Security at a glance
 G=$T/g
 mkdir -p "$G/bin" "$G/etc/apt/apt.conf.d" "$G/etc/unbound/unbound.conf.d" "$G/dist" "$T/home/.config"

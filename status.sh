@@ -20,7 +20,7 @@ glance() { printf '  [%s] %s\n' "$1" "$2"; }
 ETC=${WREN_ETC:-/etc}
 FX=${WREN_FX_CLIENT:-/usr/local/bin/firefox}
 echo "Security at a glance:"
-root_src=$(findmnt -no SOURCE / 2>/dev/null | sed 's/\[.*//')
+root_src=$(findmnt -no SOURCE / 2>/dev/null | sed 's/\[.*//') || root_src=
 if [ -n "$root_src" ] && on_crypt "$root_src"; then
     glance x "Disk encrypted: without your passphrase nobody can read it"
 else
@@ -106,7 +106,8 @@ done
 while read -r name type; do
     case $name in /dev/zram*) continue ;; esac
     dev=$name
-    [ "$type" = file ] && dev=$(findmnt -no SOURCE -T "$name" | sed 's/\[.*//')
+    # (a swap file it can't look up, as a container sees its host's, isn't called encrypted)
+    if [ "$type" = file ]; then dev=$(findmnt -no SOURCE -T "$name" 2>/dev/null | sed 's/\[.*//') || dev=; fi
     if on_crypt "$dev"; then printf '  [x] swap %s\n' "$name"; else printf '  [ ] swap %s\n' "$name"; plain+=("swap"); fi
 done < <(swapon --show=NAME,TYPE --noheadings 2>/dev/null)
 if [ ${#plain[@]} -gt 0 ]; then
