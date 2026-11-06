@@ -103,6 +103,38 @@ t fire "$id"
 check "a timer rings the sound twice (about 20 seconds)" test "$(grep -c "^pw-play $T/sounds/alarm.wav" "$T/calls")" -eq 2
 check "...and the notification has no apology" bash -c "! grep -q '(no sound' '$T/calls'"
 
+# choosing the sound (bin/alarm-sounds is real here, and makes real files)
+: >"$T/calls"
+out=$(t sound chimes)
+check "timer sound NAME: chosen, and you hear it" bash -c 'grep -q "^pw-play $1/sounds/alarms/chimes.wav" "$1/calls"' _ "$T"
+check "...it's made the first time it's needed, a real sound" python3 -I -c '
+import sys, wave
+w = wave.open(sys.argv[1])
+assert w.getnchannels() == 1 and w.getsampwidth() == 2 and 7 < w.getnframes() / w.getframerate() < 9
+' "$T/sounds/alarms/chimes.wav"
+t 1m "tea" >/dev/null
+id=$(find "$T/run/wren-timers" -type f -printf '%f')
+: >"$T/calls"
+t fire "$id"
+check "...a timer then rings with it" test "$(grep -c "^pw-play $T/sounds/alarms/chimes.wav" "$T/calls")" -eq 2
+rm -f "$T/sounds/alarms/chimes.wav"
+t 1m "tea" >/dev/null
+id=$(find "$T/run/wren-timers" -type f -printf '%f')
+: >"$T/calls"
+t fire "$id"
+check "...its file gone: the bell rings instead, never silence" test "$(grep -c "^pw-play $T/sounds/alarm.wav" "$T/calls")" -eq 2
+out=$(t sound 'nope;rm' 2>&1); rc=$?
+check "a name that isn't one: refused, nothing chosen" bash -c '[ "$1" != 0 ] && grep -q "chimes" <<<"$2" && grep -q "^sound=chimes" "$3"' _ "$rc" "$out" "${XDG_CONFIG_HOME:-$HOME/.config}/wren/clock"
+: >"$T/calls"
+out=$(t sound bell)
+check "timer sound bell: back to the first one" bash -c 'grep -q "^pw-play $1/sounds/alarm.wav" "$1/calls"' _ "$T"
+out=$(t sound list)
+check "timer sound list: all of them, the chosen one marked" bash -c 'for n in bell chimes wren beeps rising gong; do grep -q "$n" <<<"$1" || exit 1; done; grep -q "^\* .*bell" <<<"$1"' _ "$out"
+check "the sounds differ from each other, and each is made by arithmetic alone" bash -c '
+    d=$(mktemp -d); python3 -I "$1/bin/alarm-sounds" make "$d" && [ "$(sha256sum "$d"/*.wav | cut -d" " -f1 | sort -u | wc -l)" = 5 ]; r=$?; rm -rf "$d"; exit $r' _ "$HERE"
+check "...nothing from the network or outside the standard library" bash -c '! grep -qE "^(import|from) +(requests|urllib|numpy|socket)" "$1"' _ "$HERE/bin/alarm-sounds"
+check "the base part installs the sound maker" grep -q 'alarm-sounds' "$HERE/parts/core-commands.sh"
+
 # (the real /bin/sleep below: the pretend sleep above does not wait)
 # 7b. an alarm rings long, and there are three ways to stop it. These use a player that
 # really takes time and a notification program that supports --wait and --action.

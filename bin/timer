@@ -9,6 +9,7 @@
 #   timer list                  what is running
 #   timer cancel [N|all]        cancel one, or all of them
 #   timer stop                  stop the sound of an alarm that is ringing (else: cancel)
+#   timer sound [NAME|list]     which sound it rings with: choose one, and hear it
 #   timer clock                 whether the bar shows the date (the time is always am/pm)
 #   timer clock date on|date off
 #   timer lock [MINUTES]        screen off after MINUTES idle, locked a minute later (1 to 120; alone: how long now)
@@ -236,7 +237,7 @@ fire() {
     elif [ ! -r "$SOUND_DIR/alarm.wav" ]; then
         hint=" (no sound: the alarm sound is missing; run wrenctl --update)"
     else
-        sound=$SOUND_DIR/alarm.wav
+        sound=$(sound_file)
     fi
     body="${label:-$(date +'%-I:%M %p')}$hint"
     if [ -n "$sound" ]; then
@@ -290,6 +291,60 @@ next() {
     fi
     [ ${#IDS[@]} -gt 1 ] && more=" +$((${#IDS[@]} - 1))"
     printf '%s%s\n' "$text" "$more"
+}
+
+# --- which sound it rings with ---------------------------------------
+# bell is data/alarm.wav. The others are made by bin/alarm-sounds, into SOUND_DIR/alarms
+# the first time they're wanted.
+
+# sound_file: the chosen sound, or the bell if its file is gone: never silence
+sound_file() {
+    local name
+    name=$(conf_get sound)
+    if [[ $name =~ ^[a-z]+$ ]] && [ "$name" != bell ] && [ -r "$SOUND_DIR/alarms/$name.wav" ]; then
+        echo "$SOUND_DIR/alarms/$name.wav"
+    else
+        echo "$SOUND_DIR/alarm.wav"
+    fi
+}
+
+sound_cmd() {
+    local maker names=(bell) name n i
+    maker=$(dirname -- "$SELF")/alarm-sounds
+    if [ -x "$maker" ] && command -v python3 >/dev/null; then mapfile -t -O 1 names < <("$maker" list); fi
+    # choose NAME: it's kept and played
+    choose() {
+        local c found=
+        for c in "${names[@]}"; do [ "$c" != "$1" ] || found=1; done
+        [ -n "$found" ] || { err "there is no sound \"$1\". They are: ${names[*]}"; return 1; }
+        if [ "$1" != bell ] && [ ! -r "$SOUND_DIR/alarms/$1.wav" ]; then
+            "$maker" make "$SOUND_DIR/alarms" || { err "couldn't make the sound."; return 1; }
+        fi
+        conf_set sound "$1"
+        echo "Rings with: $1"
+        if command -v pw-play >/dev/null; then pw-play "$(sound_file)" 2>/dev/null || true
+        else echo "(You'd hear it with the sound extra: wrenctl --apps, then check pipewire-audio.)"; fi
+    }
+    show() {
+        local cur
+        cur=$(conf_get sound)
+        for i in "${!names[@]}"; do
+            if [ "${names[i]}" = "${cur:-bell}" ]; then printf '* %d) %s\n' $((i + 1)) "${names[i]}"
+            else printf '  %d) %s\n' $((i + 1)) "${names[i]}"; fi
+        done
+    }
+    case ${1:-} in
+        list) show ;;
+        "")
+            while :; do
+                show
+                read -r -p "Number to hear and choose it, Enter when you're done: " n || return 0
+                [ -n "$n" ] || return 0
+                if [[ $n =~ ^[0-9]{1,2}$ ]] && [ "$n" -ge 1 ] && [ "$n" -le ${#names[@]} ]; then choose "${names[n - 1]}"
+                else echo "Type one of the numbers."; fi
+            done ;;
+        *) choose "$1" ;;
+    esac
 }
 
 # --- how the clock looks in the bar ---------------------------------------
@@ -476,7 +531,7 @@ draw_compact() {
     fi
     echo
     printf '  %s\n' "$(pad 'A time: 10m  1h30  7:30  7am (Enter)' "$w")"
-    printf '  %s\n' "$(pad 'c cancel  s stop  f date in bar' "$w")"
+    printf '  %s\n' "$(pad 'c cancel  s stop  f date  a sound' "$w")"
     if [ -x "$IDLE" ]; then printf '  %s\n' "$(pad "l lock (now $("$IDLE" --minutes) min idle)" "$w")"; fi
     printf '  %s%s%s\n' "$DIM" "$(pad 'Esc or q   close' "$w")" "$OFF"
 }
@@ -563,6 +618,7 @@ menu() {
                     cancel_cmd "$n"
                 fi ;;
             f | format | clock) echo; clock_cmd ;;
+            a | sound) echo; sound_cmd ;;
             l | lock)
                 n=${2:-}
                 [ -n "$n" ] || read -r -p "  Screen off after how many minutes idle, locked a minute later (1 to 120)? " n || continue
@@ -590,6 +646,7 @@ case ${1:-} in
             else show_list; err "which one? timer cancel N, or timer cancel all"; exit 1; fi
         fi ;;
     clock) shift; clock_cmd "$@" ;;
+    sound) shift; sound_cmd "$@" ;;
     lock) shift; lock_cmd "$@" ;;
     fire) fire "${2:-}" ;;
     next) next ;;

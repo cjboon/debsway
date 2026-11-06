@@ -8,12 +8,12 @@
 # documentation into ~/Documents/wren-docs.
 # Usage: bash core-commands.sh [--remove]
 # status: bin:timer
-# files: data/keys.txt data/alarm.wav bin/keys bin/wren-welcome bin/timer bin/display-scale bin/sway-status
+# files: data/keys.txt data/alarm.wav bin/keys bin/wren-welcome bin/timer bin/alarm-sounds bin/display-scale bin/sway-status
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
 KEYS="$HOME/.local/share/wren/keys.txt"
-COMMANDS=(keys wren-welcome timer display-scale sway-status)
+COMMANDS=(keys wren-welcome timer alarm-sounds display-scale sway-status)
 # The documentation, easy to find: links to the docs of the Wren Linux in use
 DOCS="$HOME/Documents/wren-docs"
 

@@ -1,0 +1,113 @@
+#!/usr/bin/python3 -I
+"""alarm-sounds: written by Wren Linux parts/core-commands.sh
+Makes the sounds timer can ring with (timer sound lets you hear and choose them), from
+nothing but arithmetic, so each can be read here and nothing comes from anywhere else.
+    alarm-sounds list            their names
+    alarm-sounds make DIR        writes DIR/NAME.wav for each (mono, 16-bit, 8 seconds)"""
+import math
+import os
+import struct
+import sys
+import tempfile
+import wave
+
+RATE = 16000
+SECONDS = 8.0
+TWO_PI = 2 * math.pi
+
+# A note, in Hz
+C5, E5, G5, C6, E6, G6 = 523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98
+
+
+def tone(buf, start, length, freq, volume=0.3, decay=3.0, attack=0.01, harmonics=((1, 1.0), (2, 0.2), (3, 0.08)), slide=0.0):
+    """Adds one note to buf. decay: how fast it fades. slide: Hz per second it glides by.
+    The phase is summed as it goes, so a glide stays smooth."""
+    first = int(start * RATE)
+    count = min(int(length * RATE), len(buf) - first)
+    phase = 0.0
+    for i in range(max(0, count)):
+        t = i / RATE
+        phase += TWO_PI * (freq + slide * t) / RATE
+        envelope = min(1.0, t / attack) * math.exp(-decay * t)
+        # no click at the end of a note
+        envelope *= min(1.0, (length - t) / 0.01)
+        buf[first + i] += volume * envelope * sum(a * math.sin(h * phase) for h, a in harmonics)
+
+
+def chimes(buf):
+    """Slow, soft and wide apart, like wind chimes: for waking gently."""
+    for start, freq in [(0, C6), (0.9, G5), (1.8, E6), (2.7, C6), (4.2, G6), (5.1, E6), (6.0, C6)]:
+        tone(buf, start, 1.9, freq, volume=0.26, decay=1.6, harmonics=((1, 1.0), (2.76, 0.25), (5.4, 0.08)))
+
+
+def wren(buf):
+    """A small bird's quick falling trills, this project's namesake. Not any real recording."""
+    for phrase in (0.2, 3.3, 6.0):
+        for i in range(9):
+            start = phrase + i * 0.11
+            tone(buf, start, 0.09, 3400 - 90 * i, volume=0.3, decay=4, attack=0.004,
+                 harmonics=((1, 1.0), (2, 0.06)), slide=-3500)
+        for i in range(4):
+            tone(buf, phrase + 1.05 + i * 0.16, 0.13, 2500 + 500 * (i % 2), volume=0.28, decay=6, attack=0.004,
+                 harmonics=((1, 1.0),), slide=2500)
+
+
+def beeps(buf):
+    """The plain alarm clock: four quick beeps and a rest. Hard to sleep through."""
+    for group in range(5):
+        for i in range(4):
+            tone(buf, group * 1.6 + i * 0.2, 0.11, 880, volume=0.3, decay=0, attack=0.003,
+                 harmonics=((1, 1.0), (3, 0.15)))
+
+
+def rising(buf):
+    """Starts quiet and climbs, step by step, in pitch and loudness."""
+    steps = [C5, E5, G5, C6, E6, G6, C6 * 2]
+    for i in range(16):
+        tone(buf, i * 0.5, 0.45, steps[min(i // 2, len(steps) - 1)], volume=0.05 + 0.27 * i / 15, decay=2.2)
+
+
+def gong(buf):
+    """Two deep strokes that ring on, with an uneven shimmer."""
+    for start in (0.0, 4.0):
+        tone(buf, start, 4.0, 110, volume=0.33, decay=0.7, attack=0.008,
+             harmonics=((1, 1.0), (2.01, 0.6), (2.97, 0.4), (4.23, 0.25), (5.41, 0.14)))
+
+
+SOUNDS = {"chimes": chimes, "wren": wren, "beeps": beeps, "rising": rising, "gong": gong}
+
+
+def render(make):
+    """The sound as 16-bit samples, its loudest point brought to one level so that
+    no choice is much louder than another."""
+    buf = [0.0] * int(SECONDS * RATE)
+    make(buf)
+    peak = max(abs(x) for x in buf) or 1.0
+    return b"".join(struct.pack("<h", int(x / peak * 0.8 * 32767)) for x in buf)
+
+
+def write(directory):
+    os.makedirs(directory, exist_ok=True)
+    for name, make in SOUNDS.items():
+        fd, tmp = tempfile.mkstemp(dir=directory, suffix=".part")
+        os.close(fd)
+        with wave.open(tmp, "wb") as out:
+            out.setnchannels(1)
+            out.setsampwidth(2)
+            out.setframerate(RATE)
+            out.writeframes(render(make))
+        os.chmod(tmp, 0o644)
+        os.replace(tmp, os.path.join(directory, name + ".wav"))
+
+
+def main():
+    if len(sys.argv) == 2 and sys.argv[1] == "list":
+        print("\n".join(SOUNDS))
+    elif len(sys.argv) == 3 and sys.argv[1] == "make":
+        write(sys.argv[2])
+    else:
+        sys.exit(__doc__)
+
+
+if __name__ == "__main__":
+    main()
