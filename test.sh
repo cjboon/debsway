@@ -524,6 +524,12 @@ if online; then
             ok "$1: $fpr"
         fi
     }
+    # GitHub's host keys (pins.sh): do they still match what GitHub says?
+    hosts=$(wget -qO- --timeout=20 https://api.github.com/meta |
+        python3 -I -c 'import json,sys; [print("github.com " + k) for k in json.load(sys.stdin)["ssh_keys"]]' | sort)
+    if [ -z "$hosts" ]; then meh "GitHub's host keys: couldn't ask GitHub"
+    elif [ "$hosts" = "$(sort <<<"$GITHUB_HOST_KEYS")" ]; then ok "GitHub's host keys: as pinned"
+    else bad "GitHub's host keys have changed: check them, and update GITHUB_HOST_KEYS in pins.sh"; fi
     check_key "Claude Code" "$ANTHROPIC_FPR" "$ANTHROPIC_KEY_URL"
     check_key "Tor Browser" "$TB_FPR" "$TB_KEY_URL"
     check_key "Whonix" "$WHONIX_FPR" "$WHONIX_KEY_URL"

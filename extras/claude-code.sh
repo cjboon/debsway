@@ -115,21 +115,14 @@ setup_agent() {
     else
         note "It already has an ssh key."
     fi
-    # GitHub's own list of its host keys, over https, so the first push doesn't have to guess
+    # GitHub's host keys, from pins.sh, so the first push doesn't have to guess
     if ! sudo test -e "$AGENT_HOME/.ssh/known_hosts"; then
-        local hosts known
-        if command -v python3 >/dev/null &&
-            hosts=$(wget -qO- --timeout=20 https://api.github.com/meta 2>/dev/null |
-                python3 -c 'import json,sys; [print("github.com " + k) for k in json.load(sys.stdin)["ssh_keys"]]' 2>/dev/null) &&
-            [ -n "$hosts" ]; then
-            known=$(mktemp)
-            printf '%s\n' "$hosts" >"$known"
-            sudo install -o "$AGENT" -g "$AGENT" -m 0644 "$known" "$AGENT_HOME/.ssh/known_hosts"
-            rm -f "$known"
-            note "Wrote GitHub's host keys to its known_hosts."
-        else
-            warn "Couldn't fetch GitHub's host keys; the first ssh to GitHub will ask about its key."
-        fi
+        local known
+        known=$(mktemp)
+        printf '%s\n' "$GITHUB_HOST_KEYS" >"$known"
+        sudo install -o "$AGENT" -g "$AGENT" -m 0644 "$known" "$AGENT_HOME/.ssh/known_hosts"
+        rm -f "$known"
+        note "Wrote GitHub's host keys to its known_hosts."
     fi
 
     say "Its folder"

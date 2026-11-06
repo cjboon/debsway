@@ -65,9 +65,7 @@ doesn't make you invisible or untouchable. Use this page to decide what else you
   sudo remembers your password (a minute, in that terminal).
 
 - **Tampered downloads.** Every program and system image Wren Linux downloads from outside Debian is
-  checked against the project's signing key, pinned by fingerprint in `pins.sh`, before it's used.
-  Two things that aren't programs come over https only, with no signature: the wallpaper pictures
-  from NASA and ESA, and GitHub's host keys for Claude Code's own user. `test.sh` re-checks
+  checked against the project's signing key, pinned by fingerprint in `pins.sh`, before it's used. `test.sh` re-checks
   them. The Wi-Fi packages carried on a USB stick (`offline/debs`) are matched, one by one, to
   Debian's signed package lists before `wifi.sh` installs them as root.
 
