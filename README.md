@@ -15,6 +15,10 @@ security problem, or check Wren Linux's signing key, see [SECURITY.md](SECURITY.
 To help, see [CONTRIBUTING.md](CONTRIBUTING.md) and
 [how Wren Linux fits together](docs/architecture.md).
 
+To learn: [GPG in plain words](docs/gpg.md), [what an onion site is](docs/what-is-an-onion-site.md),
+[a short history of Tor](docs/history-of-tor.md), [what Monero is](docs/what-is-monero.md), and
+[a practical opsec guide](docs/opsec.md).
+
 Wren Linux is based on Debian; it is not affiliated with or endorsed by the
 Debian project. (It was called debsway until November 2026.)
 
