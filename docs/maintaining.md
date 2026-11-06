@@ -90,6 +90,26 @@ with the old subkey's signature, before it expires. A key that has
 expired or been revoked fails the check, and updates stop until a copy with
 the new key is brought in by hand.
 
+## Trying it for real
+
+Tests with pretend programs show what you believed the real ones do, and have passed over real
+bugs. These need a throwaway computer or VM, and root, and have caught what they missed:
+
+- **A DHCP client:** in network namespaces, joined by a veth pair, with `dnsmasq --log-dhcp` as the
+  server, whose log says what each client sent. Give the client a fresh `/run` and `/var/lib`
+  (`unshare -m`), and `/etc/netns/NAME/resolv.conf` so the real one isn't touched: dhcpcd's control
+  socket isn't per namespace, so don't stop one by name.
+- **NetworkManager:** in a privileged container (`podman run --privileged`), with dbus and udev running,
+  on a veth it's told to manage, since it leaves those alone by default.
+- **Whonix:** unpack the real image, boot a qcow2 overlay of it with QEMU, and over QMP press
+  its power button (`system_powerdown`) and take screenshots (`screendump`). Your user needs
+  the `kvm` group. Check the disk with `debugfs -R features` and `e2fsck -fn` once it's off.
+- **A window:** a headless sway (`WLR_BACKENDS=headless WLR_RENDERER=pixman`), asked for its windows
+  with `swaymsg -t get_tree`.
+- **CI's own steps:** `.github/workflows/shellcheck.yml` run by hand, in a Debian 13 container.
+
+And run a command as a normal user: `/usr/sbin` isn't on that `PATH`, which testing as root hides.
+
 ## Making a release
 
 A release is a signed tag on what's already published. Its name is the year and month

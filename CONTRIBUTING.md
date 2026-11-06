@@ -61,6 +61,8 @@ five minutes. In short:
 - **It keeps its promises.** Re-running a script repairs. `--remove` undoes. Never claim
   protection a script doesn't give: if you change what something protects, change
   [THREAT-MODEL.md](THREAT-MODEL.md) in the same commit.
+- **It uses `foot`.** It's the only terminal the scripts support. Install another for your
+  own use if you like, but a change that adds another for the scripts won't be taken.
 - **It says what was tested.** "Ran on a real desktop" and "passes with a pretend sway" are
   different, and both are fine to say.
 

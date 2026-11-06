@@ -47,7 +47,7 @@ reset() { : >"$T/calls"; rm -f "$T/state/"* "$T/obeys" "$T/broken" "$T/wren-net"
 
 reset
 w start
-/bin/sleep 0.3   # (virt-manager runs on its own, and the suite's sleep is a no-op)
+/bin/sleep 0.3   # (virt-manager runs on its own, in the background)
 check "start starts the Gateway, then the Workstation, then opens both" \
     bash -c 'grep "^virsh start\|^virt-manager" "$1" | paste -sd";" | grep -qx "virsh start Whonix-Gateway;virsh start Whonix-Workstation;virt-manager -c qemu:///session --show-domain-console Whonix-Gateway;virt-manager -c qemu:///session --show-domain-console Whonix-Workstation"' _ "$T/calls"
 

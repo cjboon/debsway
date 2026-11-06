@@ -12,12 +12,15 @@ internet. So:
 - This VM is yours to change. You have sudo without a password: install what you need
   and test real installs here (extras, firewalls, users, services, VMs inside it with
   `/dev/kvm`). The owner can reset or rebuild it, so nothing kept only here is safe.
-- It is a bare Debian 13 server, not the Wren Linux desktop: no sway, no screen, and
-  the base parts aren't installed. Say which results came from here and which still
+- It is a bare Debian 13 server, not the Wren Linux desktop: no screen, and the base parts
+  aren't installed. Say which results came from here and which still
   need the owner's machine (a window on the desktop, prompts typed by hand, the
   owner's real extras).
 - `~/projects/wren-linux` is a clone of https://github.com/cjboon/wren-linux.git (push
-  over ssh: `git@github.com:cjboon/wren-linux.git`). The VM's ssh key is a deploy key.
+  over ssh: `git@github.com:cjboon/wren-linux.git`). The VM's ssh key is a deploy key; a
+  rebuilt VM has a new one, for the owner to add (`wrenctl gh deploy-key`, or `claude-vm
+  rebuild` offers it). Memory doesn't survive a rebuild: if the owner plans one, write
+  `HANDOFF.md`, push it, and put a line at the top of this file saying to read it first.
   **Push only to the branch `claude`, never to `main`**: `main` holds what the owner
   reviewed and signed. GitHub's rules let only the owner update it, and nobody force-push
   or delete it (`wrenctl gh rulesets`); they don't check signatures: `wren-release` signs,
@@ -30,16 +33,17 @@ internet. So:
   If `claude` isn't on top of their `main`, `claude-pull` refuses: rebase onto
   `origin/main` and push again (`--force-with-lease`, on `claude` only).
 - Things this VM needs or does differently:
-  - Before the first test run: `sudo apt install gnupg gpgv acl sway rsync nftables
-    xclip cage socat keepassxc lintian`, and `PATH=$PATH:/usr/sbin` (nft, visudo).
-    Without `gpg-agent` (in `gnupg`) a dozen groups fail on key making and signing.
-  - Expected failures here, not bugs: the three DNS-over-TLS checks (port 853 is
-    blocked from this VM) and one `setup-vps` check (it assumes no ssh login above it;
-    you are logged in over ssh).
+  - Before the first test run: install what `.github/workflows/shellcheck.yml` installs, and
+    `PATH=$PATH:/usr/sbin` (nft, visudo). Without `gpg-agent` a dozen groups fail on key
+    making and signing.
+  - Expected failures here, not bugs: one `setup-vps` check (it assumes no ssh login above it;
+    you are logged in over ssh), now and then the timing-sensitive timer check under load, and
+    online only, the three DNS-over-TLS checks (port 853 is blocked from this VM).
   - Run the suite with the default `TMPDIR` (`/tmp`): a longer temp path breaks
     gpg-agent's socket, and the signing-key checks fail.
   - Scripts call `sudo -v`, which asks for a password here despite NOPASSWD:
-    `echo 'Defaults verifypw=any' | sudo tee /etc/sudoers.d/zz-claude-verifypw`.
+    `echo 'Defaults verifypw=any' | sudo tee /etc/sudoers.d/zz-claude-verifypw`, then
+    `sudo chmod 440` that file (`visudo -c` refuses it otherwise).
   - **Never turn on ufw (or any input firewall) in this VM.** The owner's `claude-vm`
     command logs in over ssh to the guest's port 22; blocking it locks them out of
     this VM (your own session survives, which hides it).
@@ -59,9 +63,15 @@ internet. So:
   If a change can only be tried on the owner's desktop, give them that one
   `tools/test-*.sh` to run, not the whole suite. Run it once per finished piece, not after
   every edit; run the single `tools/test-*.sh` for what you changed. Run slow things in
-  the background writing to a file in the scratchpad, then poll it with short checks.
-  Never run two test runs at once: the pty-based tests (menu, timer) are timing-sensitive.
+  the background, writing to a file in the scratchpad; you're told when they end.
+  Don't edit files while a run is going. Never run two test runs at once: the pty-based tests (menu, timer) are timing-sensitive.
   Don't wait with `pgrep -f` or `pkill -f` patterns that match your own command line.
+- CI runs on every push, in a Debian 13 container (`.github/workflows/shellcheck.yml`). Its
+  logs need a GitHub login, so ask the owner for the `FAIL` lines of a red run. Its API, for
+  whether a run passed, doesn't.
+- A pretend program only shows what you believed the real one does: tests with them have
+  passed over real bugs. Try the real one here where you can, and say which is which.
+  `docs/maintaining.md`, "Trying it for real", has ways to, in this VM.
 
 ## Releases
 
@@ -87,8 +97,8 @@ base changed. Notes are written for the people who use it, not as a list of comm
   It leaves the install list and `wrenctl install`, and `update.sh` offers its `--remove`
   to whoever still has it. Delete the file a release or two later.
 - Every behaviour has a test in `tools/test-*.sh`, registered in `test.sh`. Make a test
-  that can fail: check that it fails on the old code. The test suite replaces `sleep` with
-  a no-op; use `/bin/sleep` where a test must really wait.
+  that can fail: check that it fails on the old code. Some tests replace `sleep` with a
+  no-op; use `/bin/sleep` where a test must really wait.
 - An extra's `## MANUAL INSTALL` section in `docs/extras/` is what its `--manual`
   prints (`print_manual`). Change those steps in the same commit as the script;
   tests compare only a few of them with the script (Unbound's settings, sshd's,
@@ -102,8 +112,10 @@ base changed. Notes are written for the people who use it, not as a list of comm
   reminder, tests passing first. When splitting a change into commits, stage the files by
   name (a `git mv` is already staged and rides along with the next commit).
 - `bin/*` files are installed by `install_bin` into `~/.local/bin`, or by root scripts into
-  `/usr/local`. A script is only re-run on the owner's machine by `update.sh`; pulling does
-  not install anything.
+  `/usr/local`. A script is only re-run on the owner's machine by `update.sh` (`wren-release`
+  runs it); pulling does not install anything.
+- `foot` is the only terminal the scripts support: its options are in many of them, and it
+  suits a small sway desktop. Anyone can install another for their own use.
 
 ## Safety
 
