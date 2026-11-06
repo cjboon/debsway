@@ -164,6 +164,14 @@ assert r[\"title\"]==\"wren-claude-vm\"" "$1"' _ "$jk"
 check "...and it says the key was added, and that main is protected" bash -c '
     grep -q "Added the VM.s key" <<<"$1" && grep -q "main is protected" <<<"$1"' _ "$out"
 
+LINK='https://github.com/settings/personal-access-tokens/new?name=wren-gh-helper&target_name=someone&expires_in=1&administration=write'
+check "...the token's link fills in the owner, a day's expiry and the permission" grep -qF "$LINK" <<<"$out"
+check "...and says what the link can't fill in" grep -q "Only select repositories" <<<"$out"
+fresh
+cp "$T/all-applied" "$T/s/applied"
+out=$(run "$T/tok" rulesets)
+check "rulesets gives the same link" grep -qF "$LINK" <<<"$out"
+
 # the key is already a deploy key there: nothing added
 fresh
 cp "$T/all-applied" "$T/s/applied"

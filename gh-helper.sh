@@ -62,6 +62,16 @@ token_help() {
     note "Keep it in your password manager. (Pasting shows nothing; press Enter after.)"
 }
 
+# admin_token_help OWNER: the same for changing OWNER's repository, by a link that
+# fills in the form (GitHub's URL parameters; no parameter picks the repository)
+admin_token_help() {
+    note "Make a token for this. The link fills in all but one choice:"
+    note "  $TOKEN_PAGE?name=wren-gh-helper&target_name=$1&expires_in=1&administration=write"
+    note "  Repository access: Only select repositories, the one you mean"
+    note "  Check that Administration says Read and write, then Generate token."
+    note "(Pasting shows nothing; press Enter after.)"
+}
+
 logged_in() { "$GH" auth status --hostname github.com >/dev/null 2>&1; }
 
 # this_repo: OWNER/REPO of this copy's GitHub server (empty if it has none)
@@ -100,11 +110,11 @@ setup() {
 # command line. $tok is the caller's, from token_for_this.
 gh_() { if [ -n "$tok" ]; then GH_TOKEN=$tok "$GH" "$@"; else "$GH" "$@"; fi; }
 
-# token_for_this: into the caller's $tok, unless gh is logged in
+# token_for_this OWNER/REPO: into the caller's $tok, unless gh is logged in
 token_for_this() {
     logged_in && return 0
     say "A token for this, used now and not saved"
-    token_help "Administration, Read and write"
+    admin_token_help "${1%%/*}"
     secret tok "    Token: "
     token_ok "$tok" || die "That isn't a GitHub token; nothing was changed."
 }
@@ -153,7 +163,7 @@ rulesets() {
     [ -n "$repo" ] || die "Which repository? wrenctl gh rulesets OWNER/REPO"
     [[ $repo =~ ^[A-Za-z0-9-]{1,39}/[A-Za-z0-9._-]{1,100}$ ]] || die "\"$repo\" isn't OWNER/REPO."
     have_gh
-    token_for_this
+    token_for_this "$repo"
     say "The rules on $repo's main"
     add_rules "$repo"
     if [ -n "$tok" ]; then
@@ -198,7 +208,7 @@ deploy_key() {
     [[ $body =~ ^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp[0-9]+|sk-ssh-ed25519@openssh.com)\ [A-Za-z0-9+/]+=*$ ]] ||
         die "That doesn't look like a single ssh public key; nothing was sent to GitHub."
 
-    token_for_this
+    token_for_this "$repo"
 
     # Is main protected, so this write key can't reach it? Before the key goes on
     say "The rules on $repo's main"
