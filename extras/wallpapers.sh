@@ -116,7 +116,7 @@ drop_set() {
 chosen=(basic)
 if [ -t 0 ] && [ -t 1 ]; then
     . "$WREN_DIR/lib/checklist.sh"
-    ITEMS=(basic "Wrens, art, Earth and space (about 20 MB)" ON)
+    ITEMS=(basic "Wrens, art, Earth and space (about 24 MB)" ON)
     if [ -d "$PICS/shock" ]; then
         ITEMS+=(strong "Strong: real violence and death, and nudity (about 4 MB)" OFF)
     fi
