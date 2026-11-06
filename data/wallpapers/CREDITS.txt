@@ -1,32 +1,234 @@
 Pictures that ship with Wren Linux. Each keeps its own licence: the MIT licence
 of Wren Linux's scripts doesn't cover them. If you share one, credit it as below.
 
-eurasian-wren.jpg: Troglodyte mignon (Troglodytes troglodytes), Parc de Woluwe, Bruxelles. Credit: Frank Vassen, from Brussels, Belgium. https://commons.wikimedia.org/wiki/File:Troglodyte_mignon_(Troglodytes_troglodytes),_Parc_de_Woluwe,_Bruxelles_(51983216895).jpg. Licence: CC BY 2.0, https://creativecommons.org/licenses/by/2.0/. Changes: none.
-budgie_beacon-street-sunset.jpg: Beacon street sunset. Credit: Budgie Desktop Developers. https://github.com/buddiesofbudgie/budgie-backgrounds. Licence: CC0 1.0, https://creativecommons.org/publicdomain/zero/1.0/. Changes: resized to 2560 wide, details in the file removed.
-budgie_blue-periwinkle.jpg: Blue periwinkle. Credit: Budgie Desktop Developers. https://github.com/buddiesofbudgie/budgie-backgrounds. Licence: CC0 1.0, https://creativecommons.org/publicdomain/zero/1.0/. Changes: resized to 2560 wide, details in the file removed.
-budgie_casa-mila.jpg: Casa mila. Credit: Budgie Desktop Developers. https://github.com/buddiesofbudgie/budgie-backgrounds. Licence: CC0 1.0, https://creativecommons.org/publicdomain/zero/1.0/. Changes: resized to 2560 wide, details in the file removed.
-budgie_extreme-desert-hike.jpg: Extreme desert hike. Credit: Budgie Desktop Developers. https://github.com/buddiesofbudgie/budgie-backgrounds. Licence: CC0 1.0, https://creativecommons.org/publicdomain/zero/1.0/. Changes: resized to 2560 wide, details in the file removed.
-budgie_ocean-waves.jpg: Ocean waves. Credit: Budgie Desktop Developers. https://github.com/buddiesofbudgie/budgie-backgrounds. Licence: CC0 1.0, https://creativecommons.org/publicdomain/zero/1.0/. Changes: resized to 2560 wide, details in the file removed.
-budgie_roman-colosseum.jpg: Roman colosseum. Credit: Budgie Desktop Developers. https://github.com/buddiesofbudgie/budgie-backgrounds. Licence: CC0 1.0, https://creativecommons.org/publicdomain/zero/1.0/. Changes: resized to 2560 wide, details in the file removed.
-budgie_saturnian-profile.jpg: Saturnian profile. Credit: Budgie Desktop Developers. https://github.com/buddiesofbudgie/budgie-backgrounds. Licence: CC0 1.0, https://creativecommons.org/publicdomain/zero/1.0/. Changes: resized to 2560 wide, details in the file removed.
-budgie_singaporean-cityscape.jpg: Singaporean cityscape. Credit: Budgie Desktop Developers. https://github.com/buddiesofbudgie/budgie-backgrounds. Licence: CC0 1.0, https://creativecommons.org/publicdomain/zero/1.0/. Changes: resized to 2560 wide, details in the file removed.
-budgie_tea-gardens.jpg: Tea gardens. Credit: Budgie Desktop Developers. https://github.com/buddiesofbudgie/budgie-backgrounds. Licence: CC0 1.0, https://creativecommons.org/publicdomain/zero/1.0/. Changes: resized to 2560 wide, details in the file removed.
-gnu-linux-revoy.png: 2016-11-14 gnu-linux wallpaper. Credit: David Revoy. https://commons.wikimedia.org/wiki/File:2016-11-14_gnu-linux_wallpaper.png. Licence: CC BY 4.0, https://creativecommons.org/licenses/by/4.0/. Changes: none.
-nasa_51B-116-005.jpg: Aurora over the Southern Hemisphere. Credit: NASA. https://images.nasa.gov/details/51B-116-005. Licence: NASA's media guidelines, not copyrighted in the US, https://www.nasa.gov/nasa-brand-center/images-and-media/. Changes: resized to 2560 wide, details in the file removed.
-nasa_S39-23-020.jpg: Aurora Australis, Sinuous Loop. Credit: NASA. https://images.nasa.gov/details/S39-23-020. Licence: NASA's media guidelines, not copyrighted in the US, https://www.nasa.gov/nasa-brand-center/images-and-media/. Changes: resized to 2560 wide, details in the file removed.
-nasa_STS047-20-015.jpg: STS-47 view of the Aurora Australis. Credit: NASA. https://images.nasa.gov/details/STS047-20-015. Licence: NASA's media guidelines, not copyrighted in the US, https://www.nasa.gov/nasa-brand-center/images-and-media/. Changes: resized to 2560 wide, details in the file removed.
-nasa_art002e012588.jpg: Starstruck. Credit: NASA. https://images.nasa.gov/details/art002e012588. Licence: NASA's media guidelines, not copyrighted in the US, https://www.nasa.gov/nasa-brand-center/images-and-media/. Changes: resized to 2560 wide, details in the file removed.
-nasa_hubble-eyes-galactic-refurbishment_17322896925_o.jpg: Hubble Eyes Galactic Refurbishment. Credit: NASA. https://images.nasa.gov/details/hubble-eyes-galactic-refurbishment_17322896925_o. Licence: NASA's media guidelines, not copyrighted in the US, https://www.nasa.gov/nasa-brand-center/images-and-media/. Changes: resized to 2560 wide, details in the file removed.
-nasa_iss042e013697.jpg: Earth Observations. Credit: NASA. https://images.nasa.gov/details/iss042e013697. Licence: NASA's media guidelines, not copyrighted in the US, https://www.nasa.gov/nasa-brand-center/images-and-media/. Changes: resized to 2560 wide, details in the file removed.
-nasa_iss043e000030.jpg: Earth Observation taken by the Expedition 43 crew. Credit: NASA. https://images.nasa.gov/details/iss043e000030. Licence: NASA's media guidelines, not copyrighted in the US, https://www.nasa.gov/nasa-brand-center/images-and-media/. Changes: resized to 2560 wide, details in the file removed.
-nasa_iss072e519089.jpg: The city lights of Lima, Peru. Credit: NASA. https://images.nasa.gov/details/iss072e519089. Licence: NASA's media guidelines, not copyrighted in the US, https://www.nasa.gov/nasa-brand-center/images-and-media/. Changes: resized to 2560 wide, details in the file removed.
-nasa_iss072e519516.jpg: The city lights of Osaka, Japan. Credit: NASA. https://images.nasa.gov/details/iss072e519516. Licence: NASA's media guidelines, not copyrighted in the US, https://www.nasa.gov/nasa-brand-center/images-and-media/. Changes: resized to 2560 wide, details in the file removed.
-nasa_iss072e519889.jpg: The city lights of Kuwait City, the capital of Kuwait. Credit: NASA. https://images.nasa.gov/details/iss072e519889. Licence: NASA's media guidelines, not copyrighted in the US, https://www.nasa.gov/nasa-brand-center/images-and-media/. Changes: resized to 2560 wide, details in the file removed.
-orange-freefall.jpg: Orange Freefall. Credit: Javier Perez Montes. https://commons.wikimedia.org/wiki/File:Orange_Freefall.jpg. Licence: CC BY-SA 4.0, https://creativecommons.org/licenses/by-sa/4.0/. Changes: resized to 2560 wide, details in the file removed.
-spicy-namako.png: Spicy namako (jan Koko). Credit: jan Koko (neverRare). https://commons.wikimedia.org/wiki/File:Spicy_namako_(jan_Koko).png. Licence: CC BY 4.0, https://creativecommons.org/licenses/by/4.0/. Changes: resized to 2560 wide, details in the file removed.
-wren-italy.jpg: Scriciolo comune (Troglodytes troglodytes). Credit: Artemio Terna. https://commons.wikimedia.org/wiki/File:Scriciolo_comune_(Troglodytes_troglodytes).jpg. Licence: CC BY-SA 4.0, https://creativecommons.org/licenses/by-sa/4.0/. Changes: resized to 2560 wide, details in the file removed.
-wren-juvenile.jpg: Wren - Troglodytes troglodytes - Juvenile1. Credit: caroline legg. https://commons.wikimedia.org/wiki/File:Wren_-_Troglodytes_troglodytes_-_Juvenile1.jpg. Licence: CC BY 4.0, https://creativecommons.org/licenses/by/4.0/. Changes: resized to 2560 wide, details in the file removed.
-wren-explored.jpg: Wren (Troglodytes troglodytes) Explored 9 4 15 (16890980760). Credit: Smudge 9000 from North Kent Coast, England. https://commons.wikimedia.org/wiki/File:Wren_(Troglodytes_troglodytes)_Explored_9_4_15_(16890980760).jpg. Licence: CC BY-SA 2.0, https://creativecommons.org/licenses/by-sa/2.0/. Changes: details in the file removed.
-wren-shetland.jpg: Shetland Wren (Troglodtyes troglodytes zetlandicus), Norwick - geograph.org.uk - 6686476. Credit: Mike Pennington. https://commons.wikimedia.org/wiki/File:Shetland_Wren_(Troglodtyes_troglodytes_zetlandicus),_Norwick_-_geograph.org.uk_-_6686476.jpg. Licence: CC BY-SA 2.0, https://creativecommons.org/licenses/by-sa/2.0/. Changes: details in the file removed.
-wren-japan.jpg: Troglodytes troglodytes fumigatus Japan. Credit: su neko. https://commons.wikimedia.org/wiki/File:Troglodytes_troglodytes_fumigatus_Japan.jpg. Licence: CC BY 2.0, https://creativecommons.org/licenses/by/2.0/. Changes: details in the file removed.
-wren-gilgit.jpg: Eurasian Wren Troglodytes troglodytes neglectus, Gilgit (28250932885). Credit: Imran Shah from Islamabad, Pakistan. https://commons.wikimedia.org/wiki/File:Eurasian_Wren_Troglodytes_troglodytes_neglectus,_Gilgit_(28250932885).jpg. Licence: CC BY-SA 2.0, https://creativecommons.org/licenses/by-sa/2.0/. Changes: details in the file removed.
+eurasian-wren.jpg
+    Title:   Troglodyte mignon (Troglodytes troglodytes), Parc de Woluwe, Bruxelles
+    Credit:  Frank Vassen, from Brussels, Belgium
+    Page:    https://commons.wikimedia.org/wiki/File:Troglodyte_mignon_(Troglodytes_troglodytes),_Parc_de_Woluwe,_Bruxelles_(51983216895).jpg
+    Licence: CC BY 2.0
+             https://creativecommons.org/licenses/by/2.0/
+    Changes: none
+
+budgie_beacon-street-sunset.jpg
+    Title:   Beacon street sunset
+    Credit:  Budgie Desktop Developers
+    Page:    https://github.com/buddiesofbudgie/budgie-backgrounds
+    Licence: CC0 1.0
+             https://creativecommons.org/publicdomain/zero/1.0/
+    Changes: resized to 2560 wide, details in the file removed
+
+budgie_blue-periwinkle.jpg
+    Title:   Blue periwinkle
+    Credit:  Budgie Desktop Developers
+    Page:    https://github.com/buddiesofbudgie/budgie-backgrounds
+    Licence: CC0 1.0
+             https://creativecommons.org/publicdomain/zero/1.0/
+    Changes: resized to 2560 wide, details in the file removed
+
+budgie_casa-mila.jpg
+    Title:   Casa mila
+    Credit:  Budgie Desktop Developers
+    Page:    https://github.com/buddiesofbudgie/budgie-backgrounds
+    Licence: CC0 1.0
+             https://creativecommons.org/publicdomain/zero/1.0/
+    Changes: resized to 2560 wide, details in the file removed
+
+budgie_extreme-desert-hike.jpg
+    Title:   Extreme desert hike
+    Credit:  Budgie Desktop Developers
+    Page:    https://github.com/buddiesofbudgie/budgie-backgrounds
+    Licence: CC0 1.0
+             https://creativecommons.org/publicdomain/zero/1.0/
+    Changes: resized to 2560 wide, details in the file removed
+
+budgie_ocean-waves.jpg
+    Title:   Ocean waves
+    Credit:  Budgie Desktop Developers
+    Page:    https://github.com/buddiesofbudgie/budgie-backgrounds
+    Licence: CC0 1.0
+             https://creativecommons.org/publicdomain/zero/1.0/
+    Changes: resized to 2560 wide, details in the file removed
+
+budgie_roman-colosseum.jpg
+    Title:   Roman colosseum
+    Credit:  Budgie Desktop Developers
+    Page:    https://github.com/buddiesofbudgie/budgie-backgrounds
+    Licence: CC0 1.0
+             https://creativecommons.org/publicdomain/zero/1.0/
+    Changes: resized to 2560 wide, details in the file removed
+
+budgie_saturnian-profile.jpg
+    Title:   Saturnian profile
+    Credit:  Budgie Desktop Developers
+    Page:    https://github.com/buddiesofbudgie/budgie-backgrounds
+    Licence: CC0 1.0
+             https://creativecommons.org/publicdomain/zero/1.0/
+    Changes: resized to 2560 wide, details in the file removed
+
+budgie_singaporean-cityscape.jpg
+    Title:   Singaporean cityscape
+    Credit:  Budgie Desktop Developers
+    Page:    https://github.com/buddiesofbudgie/budgie-backgrounds
+    Licence: CC0 1.0
+             https://creativecommons.org/publicdomain/zero/1.0/
+    Changes: resized to 2560 wide, details in the file removed
+
+budgie_tea-gardens.jpg
+    Title:   Tea gardens
+    Credit:  Budgie Desktop Developers
+    Page:    https://github.com/buddiesofbudgie/budgie-backgrounds
+    Licence: CC0 1.0
+             https://creativecommons.org/publicdomain/zero/1.0/
+    Changes: resized to 2560 wide, details in the file removed
+
+gnu-linux-revoy.png
+    Title:   2016-11-14 gnu-linux wallpaper
+    Credit:  David Revoy
+    Page:    https://commons.wikimedia.org/wiki/File:2016-11-14_gnu-linux_wallpaper.png
+    Licence: CC BY 4.0
+             https://creativecommons.org/licenses/by/4.0/
+    Changes: none
+
+nasa_51B-116-005.jpg
+    Title:   Aurora over the Southern Hemisphere
+    Credit:  NASA
+    Page:    https://images.nasa.gov/details/51B-116-005
+    Licence: NASA's media guidelines, not copyrighted in the US
+             https://www.nasa.gov/nasa-brand-center/images-and-media/
+    Changes: resized to 2560 wide, details in the file removed
+
+nasa_S39-23-020.jpg
+    Title:   Aurora Australis, Sinuous Loop
+    Credit:  NASA
+    Page:    https://images.nasa.gov/details/S39-23-020
+    Licence: NASA's media guidelines, not copyrighted in the US
+             https://www.nasa.gov/nasa-brand-center/images-and-media/
+    Changes: resized to 2560 wide, details in the file removed
+
+nasa_STS047-20-015.jpg
+    Title:   STS-47 view of the Aurora Australis
+    Credit:  NASA
+    Page:    https://images.nasa.gov/details/STS047-20-015
+    Licence: NASA's media guidelines, not copyrighted in the US
+             https://www.nasa.gov/nasa-brand-center/images-and-media/
+    Changes: resized to 2560 wide, details in the file removed
+
+nasa_art002e012588.jpg
+    Title:   Starstruck
+    Credit:  NASA
+    Page:    https://images.nasa.gov/details/art002e012588
+    Licence: NASA's media guidelines, not copyrighted in the US
+             https://www.nasa.gov/nasa-brand-center/images-and-media/
+    Changes: resized to 2560 wide, details in the file removed
+
+nasa_hubble-eyes-galactic-refurbishment_17322896925_o.jpg
+    Title:   Hubble Eyes Galactic Refurbishment
+    Credit:  NASA
+    Page:    https://images.nasa.gov/details/hubble-eyes-galactic-refurbishment_17322896925_o
+    Licence: NASA's media guidelines, not copyrighted in the US
+             https://www.nasa.gov/nasa-brand-center/images-and-media/
+    Changes: resized to 2560 wide, details in the file removed
+
+nasa_iss042e013697.jpg
+    Title:   Earth Observations
+    Credit:  NASA
+    Page:    https://images.nasa.gov/details/iss042e013697
+    Licence: NASA's media guidelines, not copyrighted in the US
+             https://www.nasa.gov/nasa-brand-center/images-and-media/
+    Changes: resized to 2560 wide, details in the file removed
+
+nasa_iss043e000030.jpg
+    Title:   Earth Observation taken by the Expedition 43 crew
+    Credit:  NASA
+    Page:    https://images.nasa.gov/details/iss043e000030
+    Licence: NASA's media guidelines, not copyrighted in the US
+             https://www.nasa.gov/nasa-brand-center/images-and-media/
+    Changes: resized to 2560 wide, details in the file removed
+
+nasa_iss072e519089.jpg
+    Title:   The city lights of Lima, Peru
+    Credit:  NASA
+    Page:    https://images.nasa.gov/details/iss072e519089
+    Licence: NASA's media guidelines, not copyrighted in the US
+             https://www.nasa.gov/nasa-brand-center/images-and-media/
+    Changes: resized to 2560 wide, details in the file removed
+
+nasa_iss072e519516.jpg
+    Title:   The city lights of Osaka, Japan
+    Credit:  NASA
+    Page:    https://images.nasa.gov/details/iss072e519516
+    Licence: NASA's media guidelines, not copyrighted in the US
+             https://www.nasa.gov/nasa-brand-center/images-and-media/
+    Changes: resized to 2560 wide, details in the file removed
+
+nasa_iss072e519889.jpg
+    Title:   The city lights of Kuwait City, the capital of Kuwait
+    Credit:  NASA
+    Page:    https://images.nasa.gov/details/iss072e519889
+    Licence: NASA's media guidelines, not copyrighted in the US
+             https://www.nasa.gov/nasa-brand-center/images-and-media/
+    Changes: resized to 2560 wide, details in the file removed
+
+orange-freefall.jpg
+    Title:   Orange Freefall
+    Credit:  Javier Perez Montes
+    Page:    https://commons.wikimedia.org/wiki/File:Orange_Freefall.jpg
+    Licence: CC BY-SA 4.0
+             https://creativecommons.org/licenses/by-sa/4.0/
+    Changes: resized to 2560 wide, details in the file removed
+
+spicy-namako.png
+    Title:   Spicy namako (jan Koko)
+    Credit:  jan Koko (neverRare)
+    Page:    https://commons.wikimedia.org/wiki/File:Spicy_namako_(jan_Koko).png
+    Licence: CC BY 4.0
+             https://creativecommons.org/licenses/by/4.0/
+    Changes: resized to 2560 wide, details in the file removed
+
+wren-italy.jpg
+    Title:   Scriciolo comune (Troglodytes troglodytes)
+    Credit:  Artemio Terna
+    Page:    https://commons.wikimedia.org/wiki/File:Scriciolo_comune_(Troglodytes_troglodytes).jpg
+    Licence: CC BY-SA 4.0
+             https://creativecommons.org/licenses/by-sa/4.0/
+    Changes: resized to 2560 wide, details in the file removed
+
+wren-juvenile.jpg
+    Title:   Wren - Troglodytes troglodytes - Juvenile1
+    Credit:  caroline legg
+    Page:    https://commons.wikimedia.org/wiki/File:Wren_-_Troglodytes_troglodytes_-_Juvenile1.jpg
+    Licence: CC BY 4.0
+             https://creativecommons.org/licenses/by/4.0/
+    Changes: resized to 2560 wide, details in the file removed
+
+wren-explored.jpg
+    Title:   Wren (Troglodytes troglodytes) Explored 9 4 15 (16890980760)
+    Credit:  Smudge 9000 from North Kent Coast, England
+    Page:    https://commons.wikimedia.org/wiki/File:Wren_(Troglodytes_troglodytes)_Explored_9_4_15_(16890980760).jpg
+    Licence: CC BY-SA 2.0
+             https://creativecommons.org/licenses/by-sa/2.0/
+    Changes: details in the file removed
+
+wren-shetland.jpg
+    Title:   Shetland Wren (Troglodtyes troglodytes zetlandicus), Norwick - geograph.org.uk - 6686476
+    Credit:  Mike Pennington
+    Page:    https://commons.wikimedia.org/wiki/File:Shetland_Wren_(Troglodtyes_troglodytes_zetlandicus),_Norwick_-_geograph.org.uk_-_6686476.jpg
+    Licence: CC BY-SA 2.0
+             https://creativecommons.org/licenses/by-sa/2.0/
+    Changes: details in the file removed
+
+wren-japan.jpg
+    Title:   Troglodytes troglodytes fumigatus Japan
+    Credit:  su neko
+    Page:    https://commons.wikimedia.org/wiki/File:Troglodytes_troglodytes_fumigatus_Japan.jpg
+    Licence: CC BY 2.0
+             https://creativecommons.org/licenses/by/2.0/
+    Changes: details in the file removed
+
+wren-gilgit.jpg
+    Title:   Eurasian Wren Troglodytes troglodytes neglectus, Gilgit (28250932885)
+    Credit:  Imran Shah from Islamabad, Pakistan
+    Page:    https://commons.wikimedia.org/wiki/File:Eurasian_Wren_Troglodytes_troglodytes_neglectus,_Gilgit_(28250932885).jpg
+    Licence: CC BY-SA 2.0
+             https://creativecommons.org/licenses/by-sa/2.0/
+    Changes: details in the file removed

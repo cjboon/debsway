@@ -25,11 +25,17 @@ SHIPPED="$DEST/.wren-shipped"
 
 # forget NAME: NAME's credit goes, and it comes off the list
 forget() {
-    local f
-    for f in "$DEST/CREDITS.txt" "$SHIPPED"; do
-        [ -f "$f" ] || continue
-        awk -v n="$1" 'index($0, n ": ") != 1 && $0 != n' "$f" >"$f.new" && mv "$f.new" "$f"
-    done
+    if [ -f "$DEST/CREDITS.txt" ]; then
+        # (its block, up to the blank line after it; or its one line, from an install from before)
+        awk -v n="$1" '
+            skip { if ($0 == "") skip = 0; next }
+            $0 == n { skip = 1; next }
+            index($0, n ": ") != 1' "$DEST/CREDITS.txt" >"$DEST/CREDITS.txt.new" &&
+            mv "$DEST/CREDITS.txt.new" "$DEST/CREDITS.txt"
+    fi
+    if [ -f "$SHIPPED" ]; then
+        awk -v n="$1" '$0 != n' "$SHIPPED" >"$SHIPPED.new" && mv "$SHIPPED.new" "$SHIPPED"
+    fi
 }
 
 # back_to_default: "no wallpaper", or one of these pictures as the wallpaper (bin/wallpaper
@@ -118,8 +124,9 @@ copy_set() {
         if [ -e "$DEST/$name" ] && ! grep -qxF -- "$name" "$SHIPPED"; then continue; fi
         install -m 0644 -- "$f" "$DEST/$name"
         grep -qxF -- "$name" "$SHIPPED" || echo "$name" >>"$SHIPPED"
-        grep -qF -- "$name: " "$DEST/CREDITS.txt" 2>/dev/null ||
-            awk -v n="$name" 'index($0, n ": ") == 1' "$1/CREDITS.txt" >>"$DEST/CREDITS.txt"
+        # (its block and the blank line after it, unless it has one, or a line from before)
+        grep -qxF -- "$name" "$DEST/CREDITS.txt" 2>/dev/null || grep -qF -- "$name: " "$DEST/CREDITS.txt" 2>/dev/null ||
+            awk -v n="$name" '$0 == n { on = 1 } on { print } on && $0 == "" { exit }' "$1/CREDITS.txt" >>"$DEST/CREDITS.txt"
     done
 }
 # drop_set DIR: what it copied from DIR goes again

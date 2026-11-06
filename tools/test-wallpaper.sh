@@ -118,7 +118,8 @@ png "$CO/nasa_iss1.png"
 jpg "$CO/my mountain_lake.jpg"
 printf 'GIF89a' >"$CO/not-a.jpg"
 printf '\xff\xd8\xff' >"$CO/found.webp"
-printf 'earth_eo1a.jpg: A vista of stellar birth. Credit: NASA Earth Observatory. https://x\nnasa_iss1.png: Aurora over the sea. Credit: NASA. https://y\n' >"$CO/CREDITS.txt"
+# (one as an install from before has it, one as it ships now)
+printf 'earth_eo1a.jpg: A vista of stellar birth. Credit: NASA Earth Observatory. https://x\n\nnasa_iss1.png\n    Title:   Aurora over the sea\n    Credit:  NASA\n    Page:    https://y\n\n' >"$CO/CREDITS.txt"
 touch -d '2026-01-01' "$CO/earth_eo1a.jpg"
 touch -d '2026-02-01' "$CO/nasa_iss1.png"
 touch -d '2026-03-01' "$CO/my mountain_lake.jpg"
@@ -136,6 +137,7 @@ check "...past the last, round to the first" test "$(cat "$C/chosen-wallpaper")"
 wp previous
 check "Super+[: back round to the last" test "$(cat "$C/chosen-wallpaper")" = nasa_iss1.png
 check "...its name shows in a notification for a moment" grep -q "Wallpaper NASA: Aurora over the sea" "$T/notify"
+check "...a credit from an install from before is still read" grep -q "A vista of stellar birth" "$T/notify"
 wp status
 check "status names it by its title from CREDITS.txt" grep -q "Wallpaper: NASA: Aurora over the sea" "$T/out"
 check "...and says why a WebP or a fake JPEG isn't used" bash -c 'grep -q "found.webp: a WebP picture" "$1" && grep -q "not-a.jpg: not really a JPEG" "$1"' _ "$T/out"
@@ -212,7 +214,7 @@ check "the part: sway runs wallpaper at every start and reload" grep -qx "exec_a
 check "...Super+] and Super+[ step through the pictures, Super+Shift+w lists them, Super+\\ is none" \
     bash -c 'grep -qx "bindsym \$mod+bracketright exec $2/wallpaper next" "$1" && grep -qx "bindsym \$mod+bracketleft exec $2/wallpaper previous" "$1" && grep -qx "bindsym \$mod+Shift+w exec $2/wallpaper pick" "$1" && grep -qx "bindsym \$mod+backslash exec $2/wallpaper none" "$1"' _ "$P/home/.config/sway/config.d/wallpaper.conf" "$P/home/.local/bin"
 check "...the two default wrens, and their credits" \
-    bash -c 'd=$1/.local/share/wren/wallpapers; cmp -s "$d/default-light.jpg" "$2/wren-explored.jpg" && cmp -s "$d/default-dark.jpg" "$2/wren-juvenile.jpg" && grep -q "^wren-juvenile.jpg: " "$d/CREDITS.txt"' _ "$P/home" "$HERE/data/wallpapers"
+    bash -c 'd=$1/.local/share/wren/wallpapers; cmp -s "$d/default-light.jpg" "$2/wren-explored.jpg" && cmp -s "$d/default-dark.jpg" "$2/wren-juvenile.jpg" && grep -qx "wren-juvenile.jpg" "$d/CREDITS.txt"' _ "$P/home" "$HERE/data/wallpapers"
 check "...which get no extra: it costs the base about 2 MB" bash -c '[ "$(du -sk "$1/.local/share/wren/wallpapers" | cut -f1)" -lt 4000 ]' _ "$P/home"
 check "...its README doesn't promise pictures from outside" not grep -qE 'NASA|Budgie' "$P/home/Pictures/wren/README.txt"
 check "...the command is installed, the desktop and firefox folders made, with a README" \
@@ -233,9 +235,10 @@ for f in "$HERE"/data/*; do [ "${f##*/}" = wallpapers ] || ln -s "$f" "$R3/data/
 cp "$HERE/extras/wallpapers.sh" "$R3/extras/"
 P3=$R3/data/wallpapers
 jpg "$P3/wren.jpg"; png "$P3/nasa_new.png"; jpg "$P3/nasa_mine.jpg"
-printf 'Header line.\n\nwren.jpg: A wren. Credit: Someone. https://x.example/w. Licence: CC0.\nnasa_new.png: Space. Credit: NASA. https://x.example/n. Licence: PD.\nnasa_mine.jpg: Mine. Credit: NASA. https://x.example/m. Licence: PD.\n' >"$P3/CREDITS.txt"
+block() { printf '%s\n    Title:   %s\n    Credit:  %s\n    Page:    https://x.example/\n    Licence: CC0\n\n' "$@"; }
+{ printf 'Header line.\n\n'; block wren.jpg 'A wren' Someone; block nasa_new.png Space NASA; block nasa_mine.jpg Mine NASA; } >"$P3/CREDITS.txt"
 jpg "$P3/shock/hard.jpg"
-printf 'hard.jpg: Hard. Credit: Someone. https://x.example/h. Licence: CC0.\n' >"$P3/shock/CREDITS.txt"
+block hard.jpg Hard Someone >"$P3/shock/CREDITS.txt"
 # nothing may be fetched or installed: every one of these logs, if it is run
 for c in apt-get wget curl python3; do printf '#!/bin/sh\necho "%s $*" >>"%s/apt"\n' "$c" "$T" >"$T/fake/$c"; chmod +x "$T/fake/$c"; done
 H=$T/h3
@@ -254,8 +257,9 @@ check "without a terminal: the basic set is copied in" bash -c '[ -f "$1/wren.jp
 check "...and never the strong one" test ! -e "$W/hard.jpg"
 check "...nothing fetched, nothing installed: no apt, wget, python or sudo" bash -c '[ ! -s "$1/apt" ] && [ ! -e "$1/sudo" ]' _ "$T"
 check "...their credits join yours in CREDITS.txt, in the form bin/wallpaper reads" \
-    bash -c 'grep -q "^wren.jpg: A wren. Credit:" "$1" && grep -q "^nasa_old.jpg: Old" "$1" && ! grep -q "Header line" "$1"' _ "$W/CREDITS.txt"
+    bash -c 'grep -qx "wren.jpg" "$1" && grep -q "^    Title:   A wren$" "$1" && grep -q "^nasa_old.jpg: Old" "$1" && ! grep -q "Header line" "$1"' _ "$W/CREDITS.txt"
 check "...a picture you already have stays yours, bigger original and all" test "$(stat -c %s "$W/nasa_mine.jpg")" = "$big"
+check "...each block ends with a blank line, so a person can read them" bash -c '[ "$(grep -A5 -x "wren.jpg" "$1" | tail -n 1)" = "" ]' _ "$W/CREDITS.txt"
 check "...a README, which says your own pictures can go there too" grep -q "Your own pictures" "$W/README.txt"
 check "...and where to find more for your own screen, with its licence" \
     bash -c 'grep -q "https://www.pexels.com/search/desktop%20wallpaper/" "$1/README.txt" && grep -q "https://www.pexels.com/license/" "$1/README.txt"' _ "$W"
@@ -263,7 +267,7 @@ check "...and the run succeeds" test "$rc" -eq 0
 n=$(find "$W" -type f | wc -l)
 xw
 check "run again: the same files, no credit doubled" \
-    bash -c '[ "$(find "$1" -type f | wc -l)" = "$2" ] && [ "$(sort "$1/CREDITS.txt" | uniq -d | wc -l)" = 0 ]' _ "$W" "$n"
+    bash -c '[ "$(find "$1" -type f | wc -l)" = "$2" ] && [ "$(grep -c "^wren.jpg$" "$1/CREDITS.txt")" = 1 ] && [ "$(grep -c "^nasa_new.png$" "$1/CREDITS.txt")" = 1 ]' _ "$W" "$n"
 echo "my notes" >"$W/README.txt"
 xw
 check "a README you rewrote yourself is left alone" grep -qx "my notes" "$W/README.txt"
@@ -280,9 +284,9 @@ ty 'basic strong'
 check "the list: basic ticked, strong not, and it says what strong holds" \
     bash -c 'grep -A2 -x basic "$1" | tail -1 | grep -qx ON && grep -A2 -x strong "$1" | tail -1 | grep -qx OFF && grep -A1 -x strong "$1" | grep -qi "violence and death, and nudity"' _ "$T/seen"
 check "...no Budgie and no \"none\" to pick" bash -c '! grep -qix -e budgie -e none "$1"' _ "$T/seen"
-check "ticked: the strong pictures come too, with their credits" bash -c '[ -f "$1/hard.jpg" ] && grep -q "^hard.jpg: Hard" "$1/CREDITS.txt"' _ "$W"
+check "ticked: the strong pictures come too, with their credits" bash -c '[ -f "$1/hard.jpg" ] && grep -qx "hard.jpg" "$1/CREDITS.txt" && grep -q "Title:   Hard$" "$1/CREDITS.txt"' _ "$W"
 ty basic
-check "unticked again: they go, and their credits" bash -c '[ ! -e "$1/hard.jpg" ] && ! grep -q "^hard.jpg" "$1/CREDITS.txt" && [ -f "$1/wren.jpg" ]' _ "$W"
+check "unticked again: they go, and their credits" bash -c '[ ! -e "$1/hard.jpg" ] && ! grep -q "^hard.jpg\|Title:   Hard$" "$1/CREDITS.txt" && [ -f "$1/wren.jpg" ]' _ "$W"
 ty strong
 check "strong alone: no basic ones are forced on you" bash -c '[ -f "$1/hard.jpg" ]' _ "$W"
 ty basic
@@ -293,7 +297,7 @@ mv "$T/shock-away" "$P3/shock"
 
 xw --remove
 check "--remove takes out the copied pictures and their credits" \
-    bash -c '[ ! -e "$1/wren.jpg" ] && [ ! -e "$1/nasa_new.png" ] && ! grep -q "^wren.jpg" "$1/CREDITS.txt" && [ ! -e "$1/.wren-shipped" ]' _ "$W"
+    bash -c '[ ! -e "$1/wren.jpg" ] && [ ! -e "$1/nasa_new.png" ] && ! grep -q "^wren.jpg\|A wren" "$1/CREDITS.txt" && [ ! -e "$1/.wren-shipped" ]' _ "$W"
 check "...and what an earlier version fetched from Debian" test ! -e "$W/budgie_old.jpg"
 check "...but never the NASA and ESA pictures an earlier version fetched, or their credits" \
     bash -c '[ -f "$1/nasa_old.jpg" ] && [ -f "$1/nasa_mine.jpg" ] && grep -q "^nasa_old.jpg" "$1/CREDITS.txt"' _ "$W"
@@ -301,16 +305,7 @@ check "...and keeps what you added, in the folder or below, whatever the list sa
     bash -c '[ -f "$1/mine.png" ] && [ -f "$1/inner/found.png" ]' _ "$W"
 check "...no sudo there either" test ! -e "$T/sudo"
 
-# ---- the pictures that ship with Wren Linux: each named in the credits, with its author,
-# page and licence, or it can't be shipped
 PICS=$HERE/data/wallpapers
-uncredited=
-for f in "$PICS"/*.jpg "$PICS"/*.jpeg "$PICS"/*.png "$PICS"/shock/*.jpg "$PICS"/shock/*.png; do
-    [ -e "$f" ] || continue
-    line=$(grep -F "${f##*/}: " "${f%/*}/CREDITS.txt" | grep -m1 "^${f##*/}: ")
-    grep -q '\. Credit: .*https://.*Licence: .*Changes: ' <<<"$line" || uncredited+=" ${f##*/}"
-done
-check "every picture in data/wallpapers has its author, page, licence and changes in CREDITS.txt${uncredited:+: not$uncredited}" test -z "$uncredited"
 big=$(find "$PICS" -type f -size +3M -printf '%f ')
 check "...and none is over 3 MB: git keeps them forever${big:+: $big}" test -z "$big"
 check "...there is at least the wren" test -f "$PICS/eurasian-wren.jpg"
@@ -348,5 +343,27 @@ fresh4
 jpg "$DESK4/mine.jpg" 2000
 x4 --remove
 check "nothing chosen: your pictures in the desktop folder stay, and sway is left alone" bash -c '[ -f "$1/mine.jpg" ] && ! grep -q reload "$2"' _ "$DESK4" "$T/sway"
+
+# The credits that ship: each picture has its block, set out for someone to read: its author,
+# page, licence and changes, or it can't be shipped
+for d in "$HERE/data/wallpapers" "$HERE/data/wallpapers/shock"; do
+    check "${d##*/}/CREDITS.txt: every picture has a credit, a page and a licence" python3 -I -c '
+import os, re, sys
+d = sys.argv[1]
+blocks = {}
+for chunk in open(os.path.join(d, "CREDITS.txt")).read().split("\n\n"):
+    lines = chunk.strip("\n").split("\n")
+    if re.fullmatch(r"[^ ]+\.(jpg|png)", lines[0]):
+        blocks[lines[0]] = lines[1:]
+pics = [f for f in os.listdir(d) if f.endswith((".jpg", ".png"))]
+assert sorted(pics) == sorted(blocks), set(pics) ^ set(blocks)
+for name, lines in blocks.items():
+    text = "\n".join(lines)
+    for field in ("Title:", "Credit:", "Page:", "Licence:", "Changes:"):
+        assert re.search(r"^    " + field + " ", text, re.M), (name, field)
+    assert re.search(r"^    Page: +https://", text, re.M), name
+' "$d"
+    check "...and nothing bunched up: no long line but a web address" bash -c '! awk "length(\$0) > 110 && !/^ +(Page: +)?https?:[^ ]*$/" "$1" | grep -q .' _ "$d/CREDITS.txt"
+done
 
 [ "$fails" -eq 0 ]

@@ -2,9 +2,48 @@ Pictures for the wallpapers extra's "strong" choice, which is off unless you tic
 They show real violence and death, and nudity. They are here as artwork and history,
 and each keeps its own licence: the MIT licence of Wren Linux's scripts doesn't cover them.
 
-delhi-riots-2020.jpg: Delhi Riots 2020 (3). Credit: Banswalhemant. https://commons.wikimedia.org/wiki/File:Delhi_Riots_2020_(3).jpg. Licence: CC BY-SA 4.0, https://creativecommons.org/licenses/by-sa/4.0/. Changes: resized to 2560 wide, details in the file removed.
-nude-recumbent-woman.jpg: Nude recumbent woman by Jean-Christophe Destailleur. Credit: Jean-Christophe Destailleur. https://commons.wikimedia.org/wiki/File:Nude_recumbent_woman_by_Jean-Christophe_Destailleur.jpg. Licence: CC BY-SA 3.0, https://creativecommons.org/licenses/by-sa/3.0/. Changes: resized to 2560 wide, details in the file removed.
-paris-riots-2026-1.jpg: Paris riots, 17 October 2026 - Firefighters extinguishing a burning car - JJxFile 0041. Credit: Jorge Jaramillo. https://commons.wikimedia.org/wiki/File:Paris_riots,_17_October_2026_-_Firefighters_extinguishing_a_burning_car_-_JJxFile_0041.jpg. Licence: CC BY-SA 4.0, https://creativecommons.org/licenses/by-sa/4.0/. Changes: resized to 2560 wide, details in the file removed.
-paris-riots-2026-2.jpg: Paris riots, 17 October 2026 - Firefighters extinguishing a burning car - JJxFile 0044. Credit: Jorge Jaramillo. https://commons.wikimedia.org/wiki/File:Paris_riots,_17_October_2026_-_Firefighters_extinguishing_a_burning_car_-_JJxFile_0044.jpg. Licence: CC BY-SA 4.0, https://creativecommons.org/licenses/by-sa/4.0/. Changes: resized to 2560 wide, details in the file removed.
-saigon-execution-1968.jpg: Saigon Execution. Credit: Eddie Adams / Associated Press. https://commons.wikimedia.org/wiki/File:Saigon_Execution.jpg. Licence: Public domain, as Commons lists it. Changes: details in the file removed, compressed again.
-thich-quang-duc-1963.jpg: Thích Quảng Đức self-immolation. Credit: Malcolm Browne for the Associated Press. https://commons.wikimedia.org/wiki/File:Th%C3%ADch_Qu%E1%BA%A3ng_%C4%90%E1%BB%A9c_self-immolation.jpg. Licence: Public domain, as Commons lists it. Changes: resized to 2560 wide, details in the file removed.
+delhi-riots-2020.jpg
+    Title:   Delhi Riots 2020 (3)
+    Credit:  Banswalhemant
+    Page:    https://commons.wikimedia.org/wiki/File:Delhi_Riots_2020_(3).jpg
+    Licence: CC BY-SA 4.0
+             https://creativecommons.org/licenses/by-sa/4.0/
+    Changes: resized to 2560 wide, details in the file removed
+
+nude-recumbent-woman.jpg
+    Title:   Nude recumbent woman by Jean-Christophe Destailleur
+    Credit:  Jean-Christophe Destailleur
+    Page:    https://commons.wikimedia.org/wiki/File:Nude_recumbent_woman_by_Jean-Christophe_Destailleur.jpg
+    Licence: CC BY-SA 3.0
+             https://creativecommons.org/licenses/by-sa/3.0/
+    Changes: resized to 2560 wide, details in the file removed
+
+paris-riots-2026-1.jpg
+    Title:   Paris riots, 17 October 2026 - Firefighters extinguishing a burning car - JJxFile 0041
+    Credit:  Jorge Jaramillo
+    Page:    https://commons.wikimedia.org/wiki/File:Paris_riots,_17_October_2026_-_Firefighters_extinguishing_a_burning_car_-_JJxFile_0041.jpg
+    Licence: CC BY-SA 4.0
+             https://creativecommons.org/licenses/by-sa/4.0/
+    Changes: resized to 2560 wide, details in the file removed
+
+paris-riots-2026-2.jpg
+    Title:   Paris riots, 17 October 2026 - Firefighters extinguishing a burning car - JJxFile 0044
+    Credit:  Jorge Jaramillo
+    Page:    https://commons.wikimedia.org/wiki/File:Paris_riots,_17_October_2026_-_Firefighters_extinguishing_a_burning_car_-_JJxFile_0044.jpg
+    Licence: CC BY-SA 4.0
+             https://creativecommons.org/licenses/by-sa/4.0/
+    Changes: resized to 2560 wide, details in the file removed
+
+saigon-execution-1968.jpg
+    Title:   Saigon Execution
+    Credit:  Eddie Adams / Associated Press
+    Page:    https://commons.wikimedia.org/wiki/File:Saigon_Execution.jpg
+    Licence: Public domain, as Commons lists it
+    Changes: details in the file removed, compressed again
+
+thich-quang-duc-1963.jpg
+    Title:   Thích Quảng Đức self-immolation
+    Credit:  Malcolm Browne for the Associated Press
+    Page:    https://commons.wikimedia.org/wiki/File:Th%C3%ADch_Qu%E1%BA%A3ng_%C4%90%E1%BB%A9c_self-immolation.jpg
+    Licence: Public domain, as Commons lists it
+    Changes: resized to 2560 wide, details in the file removed

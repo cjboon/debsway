@@ -86,7 +86,11 @@ collection() {
 # ("Webb: Stars brewing in a nebulous cauldron"), else its tidied file name
 label() {
     local base=${1##*/} src="" title
-    title=$(awk -v b="$base: " 'index($0, b) == 1 { print substr($0, length(b) + 1); exit }' "$COLL/CREDITS.txt" 2>/dev/null)
+    # (the name on a line of its own, its title under it; or, from an install from before,
+    # all of it on one line: "NAME: TITLE. Credit: ...")
+    title=$(awk -v n="$base" -v b="$base: " '
+        $0 == n { getline; if (sub(/^ *Title: */, "")) print; exit }
+        index($0, b) == 1 { print substr($0, length(b) + 1); exit }' "$COLL/CREDITS.txt" 2>/dev/null)
     title=${title%%. Credit:*}
     case $base in
         nasa_*) src=NASA ;; webb_*) src=Webb ;;
