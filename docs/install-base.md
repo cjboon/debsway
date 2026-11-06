@@ -330,14 +330,14 @@ loads `console.conf` only on a text console, so a tmux in a foot window under sw
 ### Wallpaper and theme
 
 **`wallpaper.sh`** is your own wallpaper: the newest JPEG or PNG in `~/Pictures/wren/desktop` goes up at every
-login and sway reload (Super+Shift+c). With the folder empty, your sway config's own `output * bg` line or sway's
-plain background stays.
+login and sway reload (Super+Shift+c). With the folder empty you get the default, a wren for the theme in use,
+which swaps when the theme does. Your sway config's own `output * bg` line stays instead, if it has one.
 
 | Key or command | What it does |
 |---|---|
 | Super+] and Super+[ | Step through `~/Pictures/Wallpapers` as the wallpaper |
 | Super+Shift+w | Lists it by name, with "0  No wallpaper" first (wmenu). The one chosen is copied into the desktop folder, so it stays |
-| Super+\ | Back to no wallpaper: the theme's plain background, until you choose one or copy in a newer picture |
+| Super+\ | No wallpaper, not even a wren: the theme's plain background, until you choose one or copy in a newer picture |
 | `wallpaper status` | Which picture is used, and why a file isn't (a file that only says it is a JPEG or PNG, over 50 MB) |
 
 - A JPEG or PNG in `~/Pictures/wren/firefox` is the sandboxed Firefox's New Tab background instead of the fox. A

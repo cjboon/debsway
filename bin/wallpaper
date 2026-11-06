@@ -1,8 +1,9 @@
 #!/bin/bash
 # wallpaper: written by Wren Linux parts/wallpaper.sh
 # Your own picture on the desktop: the newest JPEG or PNG in
-# ~/Pictures/wren/desktop becomes the wallpaper; with none there, nothing
-# changes (your sway config's "output * bg" line, or sway's plain background).
+# ~/Pictures/wren/desktop becomes the wallpaper; with none there, the default: a
+# wren for the theme in use, so a theme switch (it reloads sway) swaps the wren.
+# A background of your own in your sway config ("output * bg") stays instead.
 # sway runs it at every start and reload (parts/wallpaper.sh).
 #   wallpaper           put the picture up (or nothing, if there is none)
 #   wallpaper next      the next picture in ~/Pictures/Wallpapers (Super+]),
@@ -24,6 +25,7 @@ CACHE=${XDG_CACHE_HOME:-$HOME/.cache}/wren
 # wallpaper, since this file's time)
 CURRENT=$CACHE/chosen-wallpaper
 MAX_BYTES=$((50 * 1024 * 1024))
+DEFAULTS=$HOME/.local/share/wren/wallpapers
 
 # why_not FILE: empty if FILE can be the wallpaper, else the reason
 why_not() {
@@ -53,6 +55,17 @@ newest() {
         if [ -z "$best" ] || [ "$f" -nt "$best" ]; then best=$f; fi
     done
     [ -n "$best" ] && echo "$best"
+}
+
+# default_picture: the wren for the theme in use, unless your sway config sets a
+# background of its own, or the defaults aren't here
+default_picture() {
+    local theme f
+    if grep -qsE '^[[:space:]]*output[[:space:]].*[[:space:]]bg[[:space:]]' "$HOME/.config/sway/config"; then return 1; fi
+    theme=$(head -c 16 "${XDG_CONFIG_HOME:-$HOME/.config}/wren/theme" 2>/dev/null)
+    [ "$theme" = light ] || theme=dark
+    f=$DEFAULTS/default-$theme.jpg
+    [ -f "$f" ] && echo "$f"
 }
 
 # shown TEXT: TEXT without control characters (a file name can hold escape codes)
@@ -86,12 +99,16 @@ label() {
     shown "${src:+$src: }$title"
 }
 
-# apply: the newest picture in DIR goes up
+# apply: the newest picture in DIR goes up, else the default
 apply() {
     local pic ext link old
-    pic=$(newest) || return 0
-    # "no wallpaper" was chosen after this picture: the plain background stays
-    if [ "$(cat "$CURRENT" 2>/dev/null)" = none ] && [ ! "$pic" -nt "$CURRENT" ]; then return 0; fi
+    if pic=$(newest); then
+        # "no wallpaper" was chosen after this picture: the plain background stays
+        if [ "$(cat "$CURRENT" 2>/dev/null)" = none ] && [ ! "$pic" -nt "$CURRENT" ]; then return 0; fi
+    else
+        [ "$(cat "$CURRENT" 2>/dev/null)" != none ] || return 0
+        pic=$(default_picture) || return 0
+    fi
     # sway reads the path inside a command line, where a quote or a ; in a file
     # name would end it: hand sway a link with a name made of digits only. The
     # name changes with the picture, so sway starts the new one.
@@ -184,7 +201,12 @@ case ${1:-} in
                 echo "Wallpaper: $(shown "${pic##*/}") (from $DIR)"
             fi
         else
-            echo "Wallpaper: the default (no picture in $DIR)"
+            if pic=$(default_picture); then
+                pic=${pic##*/default-}
+                echo "Wallpaper: the default wren (${pic%.jpg}), with no picture in $DIR"
+            else
+                echo "Wallpaper: the default (no picture in $DIR)"
+            fi
         fi
         for d in "$DIR" "$COLL"; do
             for f in "$d"/*; do

@@ -71,6 +71,44 @@ touch "$D/new.JPG"
 wp status
 check "a picture bigger than 50 MB isn't used" grep -q "new.JPG: bigger than 50 MB" "$T/out"
 
+# ---- the default: a wren for each theme
+rm -f "$D"/*
+DF=$T/home/.local/share/wren/wallpapers
+mkdir -p "$DF" "$T/home/.config/wren" "$T/home/.config/sway"
+jpg "$DF/default-dark.jpg"; jpg "$DF/default-light.jpg"
+up() { readlink "$(sed -E 's/.* bg "([^"]*)".*/\1/' "$T/sway")"; }
+wp
+check "no picture of yours: the default wren goes up, the dark one in the dark theme" test "$(up)" = "$DF/default-dark.jpg"
+wp status
+check "...and status says so" grep -q "the default wren (dark)" "$T/out"
+echo light >"$T/home/.config/wren/theme"
+wp
+check "the light theme: the light wren (a theme switch reloads sway, which runs this)" test "$(up)" = "$DF/default-light.jpg"
+echo dark >"$T/home/.config/wren/theme"
+wp
+check "...and back again" test "$(up)" = "$DF/default-dark.jpg"
+echo 'x; reboot' >"$T/home/.config/wren/theme"
+wp
+check "a theme file saying something else: dark" test "$(up)" = "$DF/default-dark.jpg"
+rm "$T/home/.config/wren/theme"
+jpg "$D/mine.jpg"
+wp
+check "a picture of yours wins, in any theme" test "$(up)" = "$D/mine.jpg"
+rm "$D/mine.jpg"
+wp none
+wp
+check "\"no wallpaper\" means no wren either" not grep -q " bg " "$T/sway"
+rm -f "$C/chosen-wallpaper"
+printf 'output * bg /some/where/mine.png fill\n' >"$T/home/.config/sway/config"
+wp
+check "a background of your own in your sway config stays" not grep -q " bg " "$T/sway"
+printf '# output * bg /usr/share/backgrounds/sway/x.png fill\n' >"$T/home/.config/sway/config"
+wp
+check "...a commented-out line isn't one" test "$(up)" = "$DF/default-dark.jpg"
+rm -f "$T/home/.config/sway/config" "$DF"/*
+wp
+check "with the defaults gone, sway is left alone" test ! -s "$T/sway"
+
 # ---- choosing from ~/Pictures/Wallpapers: next, previous, pick
 rm -f "$D"/*
 CO=$T/home/Pictures/Wallpapers
@@ -173,9 +211,14 @@ if env -u SWAYSOCK WP_TEST_PATH="$T/fake:$PATH" HOME="$P/home" bash "$R/parts/wa
 check "the part: sway runs wallpaper at every start and reload" grep -qx "exec_always $P/home/.local/bin/wallpaper" "$P/home/.config/sway/config.d/wallpaper.conf"
 check "...Super+] and Super+[ step through the pictures, Super+Shift+w lists them, Super+\\ is none" \
     bash -c 'grep -qx "bindsym \$mod+bracketright exec $2/wallpaper next" "$1" && grep -qx "bindsym \$mod+bracketleft exec $2/wallpaper previous" "$1" && grep -qx "bindsym \$mod+Shift+w exec $2/wallpaper pick" "$1" && grep -qx "bindsym \$mod+backslash exec $2/wallpaper none" "$1"' _ "$P/home/.config/sway/config.d/wallpaper.conf" "$P/home/.local/bin"
+check "...the two default wrens, and their credits" \
+    bash -c 'd=$1/.local/share/wren/wallpapers; cmp -s "$d/default-light.jpg" "$2/wren-explored.jpg" && cmp -s "$d/default-dark.jpg" "$2/wren-juvenile.jpg" && grep -q "^wren-juvenile.jpg: " "$d/CREDITS.txt"' _ "$P/home" "$HERE/data/wallpapers"
+check "...which get no extra: it costs the base about 2 MB" bash -c '[ "$(du -sk "$1/.local/share/wren/wallpapers" | cut -f1)" -lt 4000 ]' _ "$P/home"
+check "...its README doesn't promise pictures from outside" not grep -qE 'NASA|Budgie' "$P/home/Pictures/wren/README.txt"
 check "...the command is installed, the desktop and firefox folders made, with a README" \
     bash -c '[ -x "$1/.local/bin/wallpaper" ] && [ -d "$1/Pictures/wren/desktop" ] && [ -d "$1/Pictures/wren/firefox" ] && grep -q "Super+Shift+c" "$1/Pictures/wren/README.txt" && grep -q "^firefox/" "$1/Pictures/wren/README.txt"' _ "$P/home"
 env -u SWAYSOCK WP_TEST_PATH="$T/fake:$PATH" HOME="$P/home" bash "$R/parts/wallpaper.sh" --remove >"$T/out" 2>&1
+check "...--remove takes the default wrens" test ! -e "$P/home/.local/share/wren/wallpapers/default-dark.jpg"
 check "...--remove takes the snippet and the command, and leaves your pictures" \
     bash -c '[ ! -e "$1/.config/sway/config.d/wallpaper.conf" ] && [ ! -e "$1/.local/bin/wallpaper" ] && [ -d "$1/Pictures/wren/desktop" ]' _ "$P/home"
 check "it's in the base" bash -c '. "$1/packages.sh"; printf "%s\n" "${PARTS[@]}" | grep -qx wallpaper' _ "$HERE"
