@@ -109,4 +109,35 @@ printf '%s\n' '# sway config' 'set $mod Mod4' >"$CONF"
 printf '\n\n' | keys --welcome >/dev/null 2>&1
 check "pressing Enter keeps Super" grep -qx 'set $mod Mod4' "$CONF"
 
+# help and update, as commands Super+d finds: there's no terminal there, so each opens a window.
+# (setsid: no terminal at all, as under sway. script: a real one.)
+mkdir -p "$T/l"
+printf '#!/bin/sh\necho "foot $*" >>"%s/l/ran"\n' "$T" >"$T/l/foot"
+printf '#!/bin/sh\necho "keys $*" >>"%s/l/ran"\n' "$T" >"$T/l/keys"
+printf '#!/bin/sh\necho "wrenctl $*" >>"%s/l/ran"\n' "$T" >"$T/l/wrenctl"
+chmod +x "$T/l/"*
+mkdir -p "$T/lh/.local/bin"
+ln -s "$T/l/keys" "$T/lh/.local/bin/keys"
+launch() { # HOW COMMAND
+    rm -f "$T/l/ran"
+    case $1 in
+        none) HOME="$T/lh" PATH="$T/l:$PATH" setsid -w sh "$HERE/bin/$2" </dev/null >/dev/null 2>&1 ;;
+        tty) HOME="$T/lh" PATH="$T/l:$PATH" script -qfec "sh $HERE/bin/$2" /dev/null </dev/null >/dev/null 2>&1 ;;
+    esac
+    cat "$T/l/ran" 2>/dev/null
+}
+check "help from Super+d: the cheat sheet in a window of its own, as Super+? opens it" bash -c '
+    grep -q "^foot .*--app-id=wren-keys .*/keys$" <<<"$1"' _ "$(launch none help)"
+check "update from Super+d: wrenctl update in a window" bash -c '
+    grep -q "^foot .*--app-id=wren-update .*wrenctl update" <<<"$1"' _ "$(launch none update)"
+check "...which stays, so what it said (an error too) can be read" grep -q 'Press Enter to close' "$HERE/bin/update"
+if command -v script >/dev/null; then
+    check "help in a terminal: right there, no second window" test "$(launch tty help)" = "keys "
+    check "update in a terminal: right there" test "$(launch tty update)" = "wrenctl update"
+fi
+check "the base installs both" bash -c '
+    grep -q "^COMMANDS=(.* help .*update\b" "$1" && sed -n "/^# files:/p" "$1" | grep -q "bin/help bin/update"' _ "$HERE/parts/core-commands.sh"
+check "...and can take them out again (remove_bin looks for this line)" grep -q 'written by Wren Linux' "$HERE/bin/help" "$HERE/bin/update"
+check "the sheet mentions them" grep -q 'help, update' "$HERE/data/keys.txt"
+
 [ "$fails" -eq 0 ]

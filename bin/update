@@ -1,0 +1,8 @@
+#!/bin/sh
+# update: written by Wren Linux parts/core-commands.sh
+# Brings Wren Linux up to date (wrenctl update), as a command that Super+d finds. There
+# is no terminal there (/dev/tty, not stdin: sway gives what it starts tty1 as stdin), so
+# it opens a window, which stays until you have read how it went: an error too.
+if (: </dev/tty) 2>/dev/null; then exec wrenctl update; fi
+# shellcheck disable=SC2016  # nothing to expand: the words are for the inner sh
+exec foot -o colors.alpha=0.85 --app-id=wren-update sh -c 'wrenctl update; echo; printf "Press Enter to close. "; read -r _'

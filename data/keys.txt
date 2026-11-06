@@ -11,6 +11,7 @@
     Super+Enter            terminal (foot)
     Super+d                launcher: type a name, Enter, e.g.
                            firefox, incognito, keepassxc, sparrow
+                           (help, update: this page; bring Wren Linux up to date)
     Super+Shift+q          close the window
     Super+?                this page
     Super+m                the Wren menu (or click Wren Menu in the bar)

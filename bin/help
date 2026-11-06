@@ -1,0 +1,7 @@
+#!/bin/sh
+# help: written by Wren Linux parts/core-commands.sh
+# The key cheat sheet, as a command that Super+d finds. There is no terminal there
+# (/dev/tty, not stdin: sway gives what it starts tty1 as stdin), so it opens a window.
+# Typed in bash, help is bash's own: the sheet is keys there, or Super+?.
+if (: </dev/tty) 2>/dev/null; then exec "$HOME/.local/bin/keys"; fi
+exec foot -o colors.alpha=0.85 --app-id=wren-keys "$HOME/.local/bin/keys"

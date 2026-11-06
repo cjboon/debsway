@@ -1,19 +1,19 @@
 #!/bin/bash
 # The small commands the base desktop installs for itself: keys (the cheat
-# sheet), wren-welcome (its first-login screen), timer, display-scale and
-# sway-status (the bar). install-base.sh puts them in place while it sets sway
+# sheet), wren-welcome (its first-login screen), timer, display-scale,
+# sway-status (the bar), and help and update, for Super+d to find. install-base.sh puts them in place while it sets sway
 # up; this part does the same again so that wrenctl --update, which only reruns
 # parts and extras, can bring them up to date when they change. It also
 # installs ncal, whose cal draws the month in timer's screen, and links the
 # documentation into ~/Documents/wren-docs.
 # Usage: bash core-commands.sh [--remove]
 # status: bin:timer
-# files: data/keys.txt data/alarm.wav bin/keys bin/wren-welcome bin/timer lib/alarm-sounds.py bin/display-scale bin/sway-status
+# files: data/keys.txt data/alarm.wav bin/keys bin/wren-welcome bin/timer lib/alarm-sounds.py bin/help bin/update bin/display-scale bin/sway-status
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
 KEYS="$HOME/.local/share/wren/keys.txt"
-COMMANDS=(keys wren-welcome timer display-scale sway-status)
+COMMANDS=(keys wren-welcome timer display-scale sway-status help update)
 # The documentation, easy to find: links to the docs of the Wren Linux in use
 DOCS="$HOME/Documents/wren-docs"
 
