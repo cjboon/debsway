@@ -207,7 +207,7 @@ With the extras:
   (`extras/security-key.sh`): sudo then also needs a touch of your hardware key, which never gives
   its secret out.
 
-  A sudo that is still remembered (sudo keeps it a few minutes, in the terminal it was typed in)
+  A sudo that is still remembered (sudo keeps it a minute, in the terminal it was typed in)
   needs no touch, and a program in that terminal can use it.
 
   Lose every registered key and sudo is closed to you (the extra's page says how to get back in).
