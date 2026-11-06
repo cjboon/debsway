@@ -1,0 +1,162 @@
+#!/bin/bash
+# tether: written by Wren Linux parts/tether.sh
+# Uses a phone's mobile data through its USB cable. Plug the phone in and turn on
+# USB tethering on it (Android: Settings > Network > Hotspot & tethering; iPhone:
+# tap Trust, then Personal Hotspot, with wrenctl install phone-tethering), then:
+#   tether           finds the phone, shows it, asks, and connects
+#   tether --list    only shows what it finds
+#   tether --watch   sway starts this: while you are offline, a phone appearing
+#                    opens a window that runs tether, once per plug-in
+# It never connects unless you say so, since any USB device can claim to be a network
+# card, and whoever runs that network chooses your route and may choose your DNS. It
+# only looks at USB devices with the drivers phones use (USB network adapters use some of
+# them too, so read what it shows you). With NetworkManager running it asks that; without
+# it, the DHCP client there is, with your sudo password. Either way it sends no name for
+# this computer, and leaves secure DNS (parts/secure-dns.sh) alone.
+set -uo pipefail
+# (dhcpcd and dhclient are in sbin, which a normal user's PATH doesn't have; a test
+# gives its own pretend programs)
+export PATH=${WREN_TETHER_PATH:-/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin}
+
+# (a test points these elsewhere)
+SYS=${WREN_SYS:-/sys}
+RESOLV=${WREN_RESOLV:-/etc/resolv.conf}
+COOLDOWN=${WREN_TETHER_COOLDOWN:-30}
+DRIVERS='rndis_host cdc_ether cdc_ncm ipheth'
+
+say() { printf '%s\n' "$*"; }
+die() { printf 'tether: %s\n' "$*" >&2; exit 1; }
+
+# driver_of IF: its driver, if it is a USB network device with no radio
+driver_of() {
+    local d=$SYS/class/net/$1
+    [ -e "$d/device/driver" ] && [ ! -e "$d/wireless" ] || return 1
+    # a USB network device's parent chain goes through a USB interface
+    [ "$(basename "$(readlink -f "$d/device/subsystem")")" = usb ] || return 1
+    basename "$(readlink -f "$d/device/driver")"
+}
+# phones: the interfaces with a phone's driver, one per line: NAME DRIVER
+phones() {
+    local d n drv
+    for d in "$SYS"/class/net/*; do
+        [ -e "$d" ] || continue
+        n=${d##*/}
+        [[ $n =~ ^[A-Za-z0-9_.-]{1,15}$ ]] || continue
+        drv=$(driver_of "$n") || continue
+        case " $DRIVERS " in *" $drv "*) printf '%s %s\n' "$n" "$drv" ;; esac
+    done
+}
+# online: a default route exists
+online() { [ -n "$(ip -4 route show default 2>/dev/null)" ] || [ -n "$(ip -6 route show default 2>/dev/null)" ]; }
+secure_dns_on() { [ ! -L "$RESOLV" ] && grep -qsE '^# Written by Wren Linux (parts|extras)/secure-dns\.sh' "$RESOLV"; }
+nm_running() { command -v nmcli >/dev/null && [ "$(nmcli -t -f RUNNING general 2>/dev/null)" = running ]; }
+has_ipv4() { ip -4 -o addr show dev "$1" scope global 2>/dev/null | grep -q inet; }
+
+# connect_nm IF: a connection for this one device that doesn't start by itself, and
+# sends no name (its own setting, so that holds without parts/random-mac.sh). One
+# from an earlier plug-in goes first: a phone's device name can change each time.
+connect_nm() {
+    local con
+    while IFS= read -r con; do
+        case $con in tether-*) nmcli connection delete "$con" >/dev/null 2>&1 || true ;; esac
+    done < <(nmcli -g NAME connection show 2>/dev/null)
+    nmcli connection add type ethernet ifname "$1" con-name "tether-$1" connection.autoconnect no \
+        ipv4.dhcp-send-hostname no ipv6.dhcp-send-hostname no ipv6.ip6-privacy 2 >/dev/null &&
+        nmcli connection up "tether-$1" >/dev/null
+}
+
+# connect_dhcp IF: as root, the first client there is. Left to their own settings,
+# dhcpcd and dhclient send this computer's name (seen in a DHCP server's log), so
+# each gets a settings file of its own, without that. busybox sends none.
+connect_dhcp() {
+    local ifc=$1 opts=()
+    sudo ip link set "$ifc" up || return 1
+    if command -v dhcpcd >/dev/null; then
+        # (while secure DNS is on, resolv.conf stays pointed at it)
+        if secure_dns_on; then opts+=(--nohook resolv.conf); fi
+        printf 'option domain_name_servers, routers, subnet_mask\nnoipv4ll\n' | sudo tee /run/wren-tether-dhcpcd.conf >/dev/null
+        sudo dhcpcd -4 -w -t 30 -f /run/wren-tether-dhcpcd.conf "${opts[@]}" "$ifc"
+    elif command -v dhclient >/dev/null; then
+        # (dhclient's own script reads the same "make_resolv_conf" hook secure DNS sets)
+        printf 'request subnet-mask, broadcast-address, routers, domain-name-servers;\n' | sudo tee /run/wren-tether-dhclient.conf >/dev/null
+        sudo dhclient -4 -1 -cf /run/wren-tether-dhclient.conf "$ifc"
+    elif command -v busybox >/dev/null; then
+        sudo tee /run/wren-tether-udhcpc.sh >/dev/null <<'SCRIPT'
+#!/bin/sh
+case $1 in
+    deconfig) ip -4 addr flush dev "$interface"; ip link set "$interface" up ;;
+    bound | renew)
+        ip -4 addr flush dev "$interface"
+        ip addr add "$ip/${mask:-24}" dev "$interface"
+        [ -z "$router" ] || ip route replace default via "${router%% *}" dev "$interface"
+        # (not while secure DNS points it at Unbound, or something else owns the file)
+        if [ -n "$dns" ] && [ ! -L /etc/resolv.conf ] &&
+            ! grep -qE '^# Written by Wren Linux (parts|extras)/secure-dns\.sh' /etc/resolv.conf 2>/dev/null; then
+            for d in $dns; do echo "nameserver $d"; done >/etc/resolv.conf
+        fi ;;
+esac
+SCRIPT
+        sudo chmod 755 /run/wren-tether-udhcpc.sh
+        sudo busybox udhcpc -i "$ifc" -s /run/wren-tether-udhcpc.sh -n -q -t 10
+    else
+        die "there is no DHCP client here (dhcpcd, dhclient or busybox). Install one: sudo apt install dhcpcd-base"
+    fi
+}
+
+connect() {
+    if nm_running && [ "$(nmcli -t -f GENERAL.STATE device show "$1" 2>/dev/null)" != "GENERAL.STATE:10 (unmanaged)" ]; then
+        connect_nm "$1"
+    else
+        connect_dhcp "$1"
+    fi
+}
+
+ask_and_connect() {
+    local found n=0 name driver reply
+    found=$(phones)
+    if [ -z "$found" ]; then
+        say "No phone found. Plug it in with a USB cable that carries data, and turn on USB tethering."
+        say "  Android: Settings > Network > Hotspot & tethering > USB tethering"
+        say "  iPhone:  tap Trust, then Settings > Personal Hotspot (needs: wrenctl install phone-tethering)"
+        return 1
+    fi
+    n=$(wc -l <<<"$found")
+    [ "$n" = 1 ] || die "more than one found; unplug the others:"$'\n'"$found"
+    read -r name driver <<<"$found"
+    say "Found a USB network device: $name ($driver)."
+    say "A phone looks like this, but so can other USB devices. Whoever runs it can see where your traffic goes."
+    online && say "You are online already; connecting may change the way your traffic goes."
+    read -r -p "Connect through it? [y/N] " reply </dev/tty || reply=
+    [[ $reply =~ ^[Yy] ]] || { say "Nothing was changed."; return 0; }
+    connect "$name" || die "couldn't get a connection through $name. Is tethering on, on the phone?"
+    say "Connected through $name."
+}
+
+# watch: one window per plug-in, only while offline. (No root: ip monitor is yours.)
+watch() {
+    local name driver last_name='' last_at=0 now
+    [ -n "${SWAYSOCK:-}" ] || die "--watch runs in sway."
+    while IFS= read -r _; do
+        # (sway is gone: so is this, at the next change)
+        swaymsg -t get_version >/dev/null 2>&1 || exit 0
+        while read -r name driver; do
+            [ -n "$name" ] || continue
+            online && continue
+            now=$(date +%s)
+            [ "$name" = "$last_name" ] && [ $((now - last_at)) -lt "$COOLDOWN" ] && continue
+            last_name=$name last_at=$now
+            swaymsg exec "foot --app-id=wren-run --title='Phone tethering' $(readlink -f -- "$0") --hold" >/dev/null 2>&1
+        done <<<"$(phones)"
+    done < <(ip monitor link)
+}
+
+case ${1:-} in
+    "") ask_and_connect ;;
+    --list) phones ;;
+    --watch) watch ;;
+    --hold)
+        # in the watcher's window: what happened stays readable until Enter
+        ask_and_connect || true
+        read -r -p "Press Enter to close. " _ </dev/tty || true ;;
+    *) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+esac

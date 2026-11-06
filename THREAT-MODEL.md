@@ -269,6 +269,11 @@ With the extras:
   whenever the screen locks, and closed its key isn't in memory. While it
   is open it protects nothing, and what programs keep about its files
   elsewhere (thumbnails, recent-file lists, swap) isn't covered.
+- **A USB device pretending to be a network card.** One can choose your route, and may
+  choose your DNS. `tether` (`parts/tether.sh`) asks before connecting a device with a driver
+  phones use, and NetworkManager is told not to connect those by itself, but it can't tell a phone
+  from another device with that driver. NetworkManager still connects a device with any other
+  driver by itself, and `wifi.sh` uses any cable or tether it finds, sending this computer's name.
 - **Physical tampering.** Someone with the laptop alone for a while
   could install a hardware keylogger or tamper with the boot process.
   Wren Linux doesn't set up Secure Boot measurement or tamper evidence.

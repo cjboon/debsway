@@ -214,6 +214,7 @@ dev_test backup "What backups leave out (extras/backup.sh), in a pretend home" "
 dev_test tor-service "Who keeps the system tor service on (lib/tor.sh), on a pretend /etc" "tor service checks"
 
 # --------------------------------------------------------------------
+dev_test tether "A phone over USB (bin/tether, parts/tether.sh), on a pretend /sys" "tether checks"
 dev_test clock "The clock: NTP and the time zone (parts/clock.sh), with a pretend timedatectl" "clock checks"
 
 # --------------------------------------------------------------------
