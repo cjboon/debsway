@@ -103,6 +103,22 @@ if [ "${1:-}" = --dns ]; then dns; exit 0; fi
 WATCH_RUN=${WREN_WATCH_RUN:-/run/wren-watch}
 startup() { if [ -r "$WATCH_RUN/$(id -un)" ]; then echo "startup changed"; fi; }
 if [ "${1:-}" = --startup ]; then startup; exit 0; fi
+# updates: says so when security updates have stopped working (parts/unattended-upgrades.sh):
+# today's download failed though there's a network, or nothing has come for 3 days on a
+# computer that has been on and online for 12 hours. Nothing while offline.
+UPDATE_RUN=${WREN_UPDATE_RUN:-/run/wren-updates}
+UPDATE_STAMP=${WREN_UPDATE_STAMP:-/var/lib/apt/periodic/update-stamp}
+UPDATE_DROPIN=${WREN_UPDATE_DROPIN:-/etc/systemd/system/apt-daily.service.d/60-wren-update-result.conf}
+updates() {
+    [ -e "$UPDATE_DROPIN" ] || return 0
+    [ -n "$(ip route show default 2>/dev/null)$(ip -6 route show default 2>/dev/null)" ] || return 0
+    if [ "$(cat "$UPDATE_RUN/state" 2>/dev/null)" = failed ]; then echo "updates failed"; return 0; fi
+    up=$(cut -d. -f1 "${WREN_UPTIME:-/proc/uptime}" 2>/dev/null)
+    [ "${up:-0}" -ge 43200 ] || return 0
+    [ -n "$(find "$UPDATE_STAMP" -mmin -4320 2>/dev/null)" ] || echo "updates old"
+}
+UPDATE_HELP="Security updates aren't reaching this computer. To see why: sudo apt update. If apt goes through Tor, its bridge may be down: bash parts/apt-tor.sh chooses again."
+if [ "${1:-}" = --updates ]; then updates; exit 0; fi
 # json TEXT: TEXT made safe to put inside a JSON string (a network name can hold quotes)
 json() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
 
@@ -127,6 +143,16 @@ block() {
     printf ',{"name":"%s","full_text":" | %s","separator":false,"separator_block_width":0}' "$1" "$(json "$2")"
 }
 
+# alert NAME TEXT: like block, but hard to miss: yellow in sway's bar, bold in tmux's
+alert() {
+    [ -n "$2" ] || return 0
+    if [ -n "$TMUX_BAR" ]; then
+        printf ' | #[range=user|%s,bold,fg=yellow]%s#[norange,nobold,default]' "$1" "$(printf '%s' "$2" | sed 's/#/##/g')"
+        return 0
+    fi
+    printf ',{"name":"%s","full_text":" | %s","color":"#ffd000","urgent":true,"separator":false,"separator_block_width":0}' "$1" "$(json "$2")"
+}
+
 # --battery: the sentence a click on bat shows (console-click uses it)
 if [ "${1:-}" = --battery ]; then
     echo "Battery $(battery | sed 's/^bat //; s/+$//'): $(battery_time)"
@@ -138,7 +164,7 @@ fi
 if [ "${1:-}" = --tmux ]; then
     TMUX_BAR=1
     printf '#[range=user|menu]wren#[norange]%s%s%s%s%s%s%s' \
-        "$(block wifi "$(wifi)")" "$(block startup "$(startup)")$(block dns "$(dns)")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
+        "$(block wifi "$(wifi)")" "$(alert updates "$(updates)")$(alert startup "$(startup)")$(block dns "$(dns)")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
         "$(block bat "$(battery)")" "$(block timer "$(timer_text)")" "$(block date "$(date +"$(clock_format)")")"
     exit 0
 fi
@@ -216,6 +242,8 @@ while read -r event <&3; do
         *'"name":"bright"'*'"button":5,'*) "$HOME/.local/bin/brightness" down ;;
         *'"name":"date"'*'"button":1,'* | *'"name":"timer"'*'"button":1,'*)
             open_or_close wren-timer foot -o colors.alpha=0.85 --app-id=wren-timer "$HOME/.local/bin/timer" ;;
+        *'"name":"updates"'*'"button":1,'*)
+            command -v notify-send >/dev/null && notify-send -a wren -u critical "Security updates" "$UPDATE_HELP" ;;
         *'"name":"startup"'*'"button":1,'*)
             # shellcheck disable=SC2016  # expanded by the inner sh, on purpose
             open_or_close wren-watch foot -o colors.alpha=0.85 --app-id=wren-watch sh -c \
@@ -233,8 +261,13 @@ trap 'kill $reader 2>/dev/null; rm -f "$PIDFILE"' EXIT
 
 echo '{"version":1,"click_events":true}'
 echo '['
-dns_was='' startup_was=''
+dns_was='' startup_was='' updates_was=''
 while :; do
+    updates_now=$(updates)
+    if [ -n "$updates_now" ] && [ -z "$updates_was" ] && command -v notify-send >/dev/null; then
+        notify-send -a wren -u critical "Security updates" "$UPDATE_HELP"
+    fi
+    updates_was=$updates_now
     startup_now=$(startup)
     if [ -n "$startup_now" ] && [ -z "$startup_was" ] && command -v notify-send >/dev/null; then
         notify-send -a wren -u critical "Your startup files changed" \
@@ -248,7 +281,7 @@ while :; do
     fi
     dns_was=$dns_now
     printf '[{"name":"menu","full_text":"wren","separator":false,"separator_block_width":0}%s%s%s%s%s%s%s],\n' \
-        "$(block wifi "$(wifi)")" "$(block startup "$startup_now")$(block dns "$dns_now")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
+        "$(block wifi "$(wifi)")" "$(alert updates "$updates_now")$(alert startup "$startup_now")$(block dns "$dns_now")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
         "$(block bat "$(battery)")" "$(block timer "$(timer_text)")" "$(block date "$(date +"$(clock_format)")")"
     # wait returns early when SIGUSR1 arrives; the sleep ends by itself
     sleep 5 &

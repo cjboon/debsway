@@ -70,7 +70,12 @@ if [ ${#fw_tables[@]} -gt 0 ]; then
     fi
 fi
 if is_installed unattended-upgrades && grep -qs 'Unattended-Upgrade "1"' "$ETC/apt/apt.conf.d/20auto-upgrades"; then
-    glance x "Security updates install by themselves"
+    # (is it working? the same as the bar says: bin/sway-status)
+    if [ -n "$(sh "$WREN_DIR/bin/sway-status" --updates 2>/dev/null)" ]; then
+        glance "~" "Security updates are set up, but aren't arriving: sudo apt update shows why"
+    else
+        glance x "Security updates install by themselves"
+    fi
 else
     glance " " "Security updates don't install by themselves: bash parts/unattended-upgrades.sh"
 fi

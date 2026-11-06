@@ -1,0 +1,23 @@
+#!/bin/sh
+# wren-update-result: written by Wren Linux parts/unattended-upgrades.sh
+# Installed as /usr/local/libexec/wren-update-result. systemd runs it, as root, when each daily
+# update of the package lists ends. It writes how that went where the bar can read it:
+#   ok        the lists were fetched in the last day and a half
+#   offline   they weren't, and there's no network: nothing is wrong
+#   failed    they weren't, though there's a network: a mirror, a Tor bridge or DNS is at fault
+# The daily job counts as done only if every download worked: apt-get update alone exits 0
+# with every server out of reach, so the job is run with APT::Update::Error-Mode "any".
+# (a test points these elsewhere)
+stamp=${WREN_UPDATE_STAMP:-/var/lib/apt/periodic/update-stamp}
+run=${WREN_UPDATE_RUN:-/run/wren-updates}
+export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+
+if [ -n "$(find "$stamp" -mmin -2160 2>/dev/null)" ]; then
+    state=ok
+elif [ -z "$(ip route show default 2>/dev/null)" ] && [ -z "$(ip -6 route show default 2>/dev/null)" ]; then
+    state=offline
+else
+    state=failed
+fi
+mkdir -p "$run" && chmod 755 "$run"
+printf '%s\n' "$state" >"$run/state.new" && chmod 644 "$run/state.new" && mv "$run/state.new" "$run/state"
