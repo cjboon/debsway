@@ -12,9 +12,9 @@ wrenctl git [DIR]                       your name, email and push login (DIR, or
 wrenctl gh rulesets [OWNER/REPO]        on GitHub: only you update main, nobody force-pushes or deletes it
 ```
 
-git keeps the history of a folder of files; it comes from Debian. GitHub's command line tool, gh,
-isn't installed: git needs only a token to push, and pull requests, issues and the like are on
-GitHub's site, in the browser.
+git keeps the history of a folder of files; it comes from Debian. It also offers GitHub's command
+line tool, gh, from Debian (Enter means yes). gh is only installed then, and stays logged out: git
+needs no more than a token to push, and logging in is yours to choose, with `wrenctl gh`.
 
 The script installs git and makes `main` the first branch of new repositories. It asks nothing else:
 your name and email on commits, and how git logs in to push, are `git-helper.sh`'s, run when you
@@ -23,7 +23,7 @@ want them (`wrenctl git`).
 It asks for your name and email (and, for GitHub, offers your no-reply address, looked up from your
 public profile, since GitHub refuses pushes that carry an email you keep private), then how git logs
 in over https: a token you paste at each push (nothing saved), the same kept in memory for an hour,
-or, if you installed gh yourself, gh's login through a web page (saved in plain text).
+or, if you installed gh, gh's login through a web page (saved in plain text).
 
 `wrenctl git DIR`, or `wrenctl git` inside a repository, does this for any repository of yours, on
 any server. `wrenctl gh` (`gh-helper.sh`) installs gh, from Debian, when you want it, with a
@@ -50,6 +50,8 @@ day's expiry is enough, and it is asked for hidden and not saved.
 ```
 # git
 sudo apt install --no-install-recommends git
+# GitHub's gh, if you like (it stays logged out until you log it in: wrenctl gh)
+sudo apt install --no-install-recommends gh
 # New repositories start on a branch called main
 git config --global init.defaultBranch main
 ```
@@ -78,6 +80,6 @@ To undo (your settings stay in `~/.gitconfig`):
 ```
 # git is marked "automatic" instead of purged, since other programs can need
 # it: autoremove takes it out only if nothing does
-sudo apt-mark auto git
+sudo apt-mark auto git gh
 sudo apt autoremove --purge
 ```

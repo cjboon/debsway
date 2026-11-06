@@ -194,8 +194,39 @@ mv "$T/gitconfig" "$HOME/.gitconfig"
 check "it never pushes" bash -c '! grep -qE "(^|[[:space:]])(g|git( -C [^ ]+)?) push" "$1"' _ "$HERE/git-helper.sh"
 check "the git extra asks no name, email or login during an install: it points to git-helper.sh" bash -c '
     ! grep -qE "user\.(name|email)|auth login" "$1/extras/git.sh" && grep -q "git-helper.sh" "$1/extras/git.sh" && ! grep -q WREN_GH_LOGIN "$1/install-base.sh"' _ "$HERE"
-check "...and installs no gh: it isn't in its packages, its status line or install-base.sh" bash -c '
-    ! grep -qE "apt_install .*\bgh\b|apt:gh" "$1/extras/git.sh" && ! grep -q WREN_SETUP_GH "$1/install-base.sh"' _ "$HERE"
+check "...and gh is only offered: it isn't on its status line, and install-base.sh sets nothing up for it" bash -c '
+    ! grep -q "apt:gh" "$1/extras/git.sh" && ! grep -q WREN_SETUP_GH "$1/install-base.sh"' _ "$HERE"
 check "the README's way back to GitHub is git-helper.sh" grep -q 'bash ~/wren/git-helper.sh' "$HERE/README.md"
+
+# ---- extras/git.sh: gh offered, installed only, never logged in ----
+# In a copy of Wren Linux with a pretend sudo: what apt would be given is written down
+G=$T/gitx
+mkdir -p "$G/r/extras" "$G/bin" "$G/home"
+sed 's|^export PATH=.*|export PATH="$GIT_TEST_PATH"|' "$HERE/lib.sh" >"$G/r/lib.sh"
+for f in pins.sh packages.sh lib data docs bin; do ln -s "$HERE/$f" "$G/r/$f"; done
+cp "$HERE/extras/git.sh" "$G/r/extras/git.sh"
+cat >"$G/bin/sudo" <<PRETEND
+#!/bin/sh
+echo "sudo \$*" >>"$G/calls"
+case \$1 in -v | -n) exit 0 ;; esac
+case "\$*" in *apt-get*install*.deb*) for f; do case \$f in *.deb) dpkg-deb -f "\$f" Depends >>"$G/depends" ;; esac; done ;; esac
+exit 0
+PRETEND
+printf '#!/bin/sh\necho "deb.debian.org"\n' >"$G/bin/getent"
+printf '#!/bin/sh\necho "gh $*" >>"%s/calls"\n' "$G" >"$G/bin/gh"
+chmod +x "$G/bin/"*
+gitx() { # ANSWER
+    rm -f "$G/calls" "$G/depends"
+    printf '%s\n' "$1" >"$G/answers"
+    HOME=$G/home GIT_TEST_PATH="$G/bin:$PATH" WREN_SUDO=$G/bin/sudo WREN_TEST_ANSWERS=$G/answers bash "$G/r/extras/git.sh" </dev/null >"$G/out" 2>&1
+}
+gitx ''
+check "the git extra offers gh, Enter meaning yes, and it says where its login is" bash -c '
+    grep -q "gh" "$1" && grep -q "wrenctl gh" "$2"' _ "$G/depends" "$G/out"
+check "...and asks" grep -q 'Also install gh.*\[Y/n\]' "$G/out"
+check "...it never logs in during the install" bash -c '! grep -q "^gh " "$1"' _ "$G/calls"
+gitx n
+check "...no: git only" bash -c '! grep -qw "gh" "$1"' _ "$G/depends"
+check "...and it says how to get it later" grep -q 'wrenctl gh' "$G/out"
 
 [ "$fails" -eq 0 ]
