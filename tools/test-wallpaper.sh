@@ -2,11 +2,10 @@
 # Checks bin/wallpaper (the newest real JPEG or PNG in ~/Pictures/wren/desktop
 # goes up; a file that only says it's a picture, an odd file name or an empty
 # folder changes nothing), parts/wallpaper.sh (the sway snippet), and
-# extras/wallpapers.sh (Budgie's unpacked from Debian's package, never
-# installed: no sudo, no package script, no links; --remove keeping what you
-# added, and what an earlier version fetched from NASA and ESA).
-# Uses a pretend swaymsg, a pretend apt-get download serving a package built here,
-# and a home in a temp folder; SWAYSOCK is unset, so the running sway isn't
+# extras/wallpapers.sh (copies pictures that come with Wren Linux, fetches nothing,
+# strong only if ticked; --remove keeping what you added, and what an earlier
+# version fetched from NASA and ESA), and the credits of the pictures themselves.
+# Uses a pretend swaymsg and a home in a temp folder; SWAYSOCK is unset, so the running sway isn't
 # touched. Run by test.sh, or:  bash tools/test-wallpaper.sh
 # shellcheck disable=SC2016  # the inner shells expand their own variables
 HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
@@ -164,7 +163,6 @@ cp "$HERE/extras/wallpapers.sh" "$R/extras/"
 cp "$HERE/parts/wallpaper.sh" "$R/parts/"
 H=$T/xhome
 mkdir -p "$H"
-xw() { : >"$T/apt"; env -u SWAYSOCK WP_TEST_PATH="$T/fake:$PATH" HOME="$H" bash "$R/extras/wallpapers.sh" "$@" >"$T/out" 2>&1 </dev/null; }
 [ "$(WP_TEST_PATH="$T/fake:$PATH" bash -c '. "$1/lib.sh"; command -v sudo' _ "$R")" = "$T/fake/sudo" ] || { echo "  FAIL  the real sudo would run; stopping"; exit 1; }
 
 
@@ -182,122 +180,96 @@ check "...--remove takes the snippet and the command, and leaves your pictures" 
     bash -c '[ ! -e "$1/.config/sway/config.d/wallpaper.conf" ] && [ ! -e "$1/.local/bin/wallpaper" ] && [ -d "$1/Pictures/wren/desktop" ]' _ "$P/home"
 check "it's in the base" bash -c '. "$1/packages.sh"; printf "%s\n" "${PARTS[@]}" | grep -qx wallpaper' _ "$HERE"
 
-# ---- extras/wallpapers.sh, with packages built here
-# mkdeb NAME: a package like Debian's wallpaper ones
-mkdeb() {
-    local b=$T/build/$1
-    mkdir -p "$b/DEBIAN" "$b/usr/share/doc/$1" "$b/usr/share/backgrounds/$1"
-    printf 'Package: %s\nVersion: 1\nArchitecture: all\nMaintainer: t <t@t>\nDescription: t\n' "$1" >"$b/DEBIAN/control"
-    # a package script that must never run
-    printf '#!/bin/sh\ntouch %s/postinst-ran\n' "$T" >"$b/DEBIAN/postinst"
-    chmod 755 "$b/DEBIAN/postinst"
-    echo "Licence: CC-BY-SA-4.0" >"$b/usr/share/doc/$1/copyright"
-    png "$b/usr/share/backgrounds/$1/big.png"
-    png "$b/usr/share/backgrounds/$1/icon.png" 3000
-    echo '<svg/>' >"$b/usr/share/backgrounds/$1/vector.svg"
-    ln -s /etc/passwd "$b/usr/share/backgrounds/$1/link.png"
-}
-mkdeb budgie-backgrounds
-# two pictures with the same name in different folders
-for th in evening morning; do
-    mkdir -p "$T/build/budgie-backgrounds/usr/share/backgrounds/budgie/$th"
-    jpg "$T/build/budgie-backgrounds/usr/share/backgrounds/budgie/$th/1920x1080.jpg"
-done
-mkdir -p "$T/debs"
-chmod -R go+rX "$T/build" && dpkg-deb -Zxz --root-owner-group --build "$T/build/budgie-backgrounds" "$T/debs/budgie-backgrounds.deb" >/dev/null
-cat >"$T/fake/apt-get" <<EOF
-#!/bin/sh
-echo "apt-get \$*" >>"$T/apt"
-[ "\$1" = download ] || exit 1
-for a; do p=\$a; done
-[ -f "$T/debs/\$p.deb" ] || { echo "E: Unable to locate package \$p" >&2; exit 100; }
-cp "$T/debs/\$p.deb" "./\${p}_1_all.deb"
-EOF
-# Nothing may run python3 for pictures any more: no site's download is left
-cat >"$T/fake/python3" <<EOF
-#!/bin/sh
-echo "python3 \$*" >>"$T/apt"
-EOF
-chmod +x "$T/fake/apt-get" "$T/fake/python3"
+# ---- extras/wallpapers.sh, with a small set of pictures of its own
+R3=$T/r3
+mkdir -p "$R3/extras" "$R3/lib" "$R3/data/wallpapers/shock"
+cp "$R/lib.sh" "$R3/lib.sh"
+for f in packages.sh pins.sh docs bin; do ln -s "$HERE/$f" "$R3/$f"; done
+for f in "$HERE"/lib/*; do ln -s "$f" "$R3/lib/${f##*/}"; done
+for f in "$HERE"/data/*; do [ "${f##*/}" = wallpapers ] || ln -s "$f" "$R3/data/${f##*/}"; done
+cp "$HERE/extras/wallpapers.sh" "$R3/extras/"
+P3=$R3/data/wallpapers
+jpg "$P3/wren.jpg"; png "$P3/nasa_new.png"; jpg "$P3/nasa_mine.jpg"
+printf 'Header line.\n\nwren.jpg: A wren. Credit: Someone. https://x.example/w. Licence: CC0.\nnasa_new.png: Space. Credit: NASA. https://x.example/n. Licence: PD.\nnasa_mine.jpg: Mine. Credit: NASA. https://x.example/m. Licence: PD.\n' >"$P3/CREDITS.txt"
+jpg "$P3/shock/hard.jpg"
+printf 'hard.jpg: Hard. Credit: Someone. https://x.example/h. Licence: CC0.\n' >"$P3/shock/CREDITS.txt"
+# nothing may be fetched or installed: every one of these logs, if it is run
+for c in apt-get wget curl python3; do printf '#!/bin/sh\necho "%s $*" >>"%s/apt"\n' "$c" "$T" >"$T/fake/$c"; chmod +x "$T/fake/$c"; done
+H=$T/h3
 W=$H/Pictures/Wallpapers
+mkdir -p "$W"
+# from before: a list with what an earlier version fetched, and a bigger nasa_mine.jpg
+jpg "$W/nasa_old.jpg"; jpg "$W/budgie_old.jpg"; jpg "$W/nasa_mine.jpg" 900000
+big=$(stat -c %s "$W/nasa_mine.jpg")
+printf 'nasa_old.jpg: Old. Credit: NASA.\n' >"$W/CREDITS.txt"
+printf 'nasa_old.jpg\nbudgie_old.jpg\nnasa_mine.jpg\nCREDITS.txt\n../mine.png\ninner/found.png\n' >"$W/.wren-wallpapers"
+png "$W/mine.png"; mkdir -p "$W/inner"; png "$W/inner/found.png"
+xw() { : >"$T/apt"; env -u SWAYSOCK WP_TEST_PATH="$T/fake:$PATH" HOME="$H" bash "$R3/extras/wallpapers.sh" "$@" >"$T/out" 2>&1; }
 xw
 rc=$?
-check "without a terminal: Budgie's, with apt-get download" grep -q "download.* budgie-backgrounds$" "$T/apt"
-check "...named after the source, and nothing else is fetched" \
-    bash -c '[ -f "$1/budgie_big.png" ] && ! grep -q "python3" "$2" && [ -z "$(find "$1" -name "nasa_*" -o -name "webb_*" -o -name "earth_*")" ]' _ "$W" "$T/apt"
-check "...Budgie's licence next to them" grep -q CC-BY-SA "$W/budgie_LICENCE.txt"
-check "...icons (small pictures) and SVGs stay out" bash -c '[ ! -e "$1/budgie_icon.png" ] && [ -z "$(find "$1" -name "*.svg")" ]' _ "$W"
-check "...no links come out (a .png pointing at /etc/passwd)" bash -c '[ ! -e "$1/budgie_link.png" ] && [ -z "$(find "$1" -type l)" ]' _ "$W"
-check "...nothing is installed: no sudo, no package script ran" bash -c '[ ! -e "$1/sudo" ] && [ ! -e "$1/postinst-ran" ]' _ "$T"
-check "...two pictures with the same name both kept, under their own names" \
-    test "$(find "$W" -name 'budgie_*1920x1080.jpg' | wc -l)" = 2
-check "...the downloads are on the list" grep -qx budgie_big.png "$W/.wren-wallpapers"
-check "...a README, which says your own pictures can go there too" bash -c '[ ! -e "$1/personal" ] && grep -q "Your own pictures" "$1/README.txt"' _ "$W"
+check "without a terminal: the basic set is copied in" bash -c '[ -f "$1/wren.jpg" ] && [ -f "$1/nasa_new.png" ]' _ "$W"
+check "...and never the strong one" test ! -e "$W/hard.jpg"
+check "...nothing fetched, nothing installed: no apt, wget, python or sudo" bash -c '[ ! -s "$1/apt" ] && [ ! -e "$1/sudo" ]' _ "$T"
+check "...their credits join yours in CREDITS.txt, in the form bin/wallpaper reads" \
+    bash -c 'grep -q "^wren.jpg: A wren. Credit:" "$1" && grep -q "^nasa_old.jpg: Old" "$1" && ! grep -q "Header line" "$1"' _ "$W/CREDITS.txt"
+check "...a picture you already have stays yours, bigger original and all" test "$(stat -c %s "$W/nasa_mine.jpg")" = "$big"
+check "...a README, which says your own pictures can go there too" grep -q "Your own pictures" "$W/README.txt"
 check "...and where to find more for your own screen, with its licence" \
     bash -c 'grep -q "https://www.pexels.com/search/desktop%20wallpaper/" "$1/README.txt" && grep -q "https://www.pexels.com/license/" "$1/README.txt"' _ "$W"
 check "...and the run succeeds" test "$rc" -eq 0
 n=$(find "$W" -type f | wc -l)
 xw
-check "run again: the same files, nothing doubled" bash -c '[ "$(find "$1" -type f | wc -l)" = "$2" ] && [ "$(sort "$1/.wren-wallpapers" | uniq -d | wc -l)" = 0 ]' _ "$W" "$n"
+check "run again: the same files, no credit doubled" \
+    bash -c '[ "$(find "$1" -type f | wc -l)" = "$2" ] && [ "$(sort "$1/CREDITS.txt" | uniq -d | wc -l)" = 0 ]' _ "$W" "$n"
 echo "my notes" >"$W/README.txt"
 xw
 check "a README you rewrote yourself is left alone" grep -qx "my notes" "$W/README.txt"
 rm "$W/README.txt"
-mv "$T/debs/budgie-backgrounds.deb" "$T/kept.deb"
-xw
-rc=$?
-check "a download failing is said, and the run fails" bash -c '[ "$1" -ne 0 ] && grep -q "Not downloaded: budgie" "$2"' _ "$rc" "$T/out"
-mv "$T/kept.deb" "$T/debs/budgie-backgrounds.deb"
-png "$W/mine.png"
-mkdir -p "$W/inner"; png "$W/inner/found.png"
-echo "../mine.png" >>"$W/.wren-wallpapers"
-echo "inner/found.png" >>"$W/.wren-wallpapers"
-# what an earlier version downloaded from NASA and ESA, still on the list: yours to keep now
-for f in nasa_A1.jpg webb_B2.jpg earth_B2.jpg; do jpg "$W/$f"; echo "$f" >>"$W/.wren-wallpapers"; done
-echo "nasa_A1.jpg: credit" >"$W/CREDITS.txt"; echo CREDITS.txt >>"$W/.wren-wallpapers"
+
+# With a terminal: the list. A stand-in for lib/checklist.sh; script(1) gives the run a terminal
+rm "$R3/lib/checklist.sh"
+cat >"$R3/lib/checklist.sh" <<'EOF'
+# shellcheck shell=bash
+checklist() { printf '%s\n' "${ITEMS[@]}" >"$CL_SEEN"; read -ra chosen <"$CL_PICK"; [ -n "${chosen[*]}" ]; }
+EOF
+ty() { echo "$1" >"$T/pick"; env -u SWAYSOCK WP_TEST_PATH="$T/fake:$PATH" HOME="$H" CL_SEEN="$T/seen" CL_PICK="$T/pick" script -qec "bash $R3/extras/wallpapers.sh" /dev/null >"$T/out" 2>&1 </dev/null; }
+ty 'basic strong'
+check "the list: basic ticked, strong not, and it says what strong holds" \
+    bash -c 'grep -A2 -x basic "$1" | tail -1 | grep -qx ON && grep -A2 -x strong "$1" | tail -1 | grep -qx OFF && grep -A1 -x strong "$1" | grep -qi "violence and death, and nudity"' _ "$T/seen"
+check "...no Budgie and no \"none\" to pick" bash -c '! grep -qix -e budgie -e none "$1"' _ "$T/seen"
+check "ticked: the strong pictures come too, with their credits" bash -c '[ -f "$1/hard.jpg" ] && grep -q "^hard.jpg: Hard" "$1/CREDITS.txt"' _ "$W"
+ty basic
+check "unticked again: they go, and their credits" bash -c '[ ! -e "$1/hard.jpg" ] && ! grep -q "^hard.jpg" "$1/CREDITS.txt" && [ -f "$1/wren.jpg" ]' _ "$W"
+ty strong
+check "strong alone: no basic ones are forced on you" bash -c '[ -f "$1/hard.jpg" ]' _ "$W"
+ty basic
+mv "$P3/shock" "$T/shock-away"
+ty basic
+check "with no strong set in this copy, it isn't offered" not grep -qx strong "$T/seen"
+mv "$T/shock-away" "$P3/shock"
+
 xw --remove
-check "--remove takes out what it put there" \
-    bash -c '[ ! -e "$1/budgie_big.png" ] && [ ! -e "$1/.wren-wallpapers" ]' _ "$W"
+check "--remove takes out the copied pictures and their credits" \
+    bash -c '[ ! -e "$1/wren.jpg" ] && [ ! -e "$1/nasa_new.png" ] && ! grep -q "^wren.jpg" "$1/CREDITS.txt" && [ ! -e "$1/.wren-shipped" ]' _ "$W"
+check "...and what an earlier version fetched from Debian" test ! -e "$W/budgie_old.jpg"
 check "...but never the NASA and ESA pictures an earlier version fetched, or their credits" \
-    bash -c '[ -f "$1/nasa_A1.jpg" ] && [ -f "$1/webb_B2.jpg" ] && [ -f "$1/earth_B2.jpg" ] && [ -f "$1/CREDITS.txt" ]' _ "$W"
+    bash -c '[ -f "$1/nasa_old.jpg" ] && [ -f "$1/nasa_mine.jpg" ] && grep -q "^nasa_old.jpg" "$1/CREDITS.txt"' _ "$W"
 check "...and keeps what you added, in the folder or below, whatever the list says" \
     bash -c '[ -f "$1/mine.png" ] && [ -f "$1/inner/found.png" ]' _ "$W"
 check "...no sudo there either" test ! -e "$T/sudo"
-
-# "No wallpapers downloaded, I'll find my own", ticked next to Budgie in the list
-# (a stand-in for lib/checklist.sh; script(1) gives the run a terminal)
-R2=$T/r2
-mkdir -p "$R2/extras" "$R2/lib"
-cp "$R/lib.sh" "$R2/lib.sh"
-for f in packages.sh pins.sh data docs bin; do ln -s "$HERE/$f" "$R2/$f"; done
-for f in "$HERE"/lib/*; do ln -s "$f" "$R2/lib/${f##*/}"; done
-rm "$R2/lib/checklist.sh"
-cat >"$R2/lib/checklist.sh" <<'EOF'
-# shellcheck shell=bash
-checklist() { printf '%s\n' "${ITEMS[@]}" >"$CL_SEEN"; chosen=(budgie none); }
-EOF
-cp "$HERE/extras/wallpapers.sh" "$R2/extras/"
-H2=$T/h2
-mkdir -p "$H2"
-: >"$T/apt"
-env -u SWAYSOCK WP_TEST_PATH="$T/fake:$PATH" HOME="$H2" CL_SEEN="$T/seen" script -qec "bash $R2/extras/wallpapers.sh" /dev/null >"$T/out" 2>&1 </dev/null
-check "the list has \"No wallpapers downloaded, I'll find my own\", unticked" \
-    bash -c 'grep -A2 -x none "$1" | sed -n 2,3p | paste -sd"|" | grep -qx "No wallpapers downloaded, I.ll find my own|OFF"' _ "$T/seen"
-check "...ticked: nothing is downloaded, whatever else is ticked" test ! -s "$T/apt"
-check "...but the folder, its README and its list are set up (the extra counts as installed)" \
-    bash -c '[ -f "$1/README.txt" ] && [ -f "$1/.wren-wallpapers" ] && [ -z "$(find "$1" -name "*.jpg")" ]' _ "$H2/Pictures/Wallpapers"
-check "...and it says where your own pictures go" grep -q "Put pictures (JPEG or PNG) in" "$T/out"
 
 # ---- the pictures that ship with Wren Linux: each named in the credits, with its author,
 # page and licence, or it can't be shipped
 PICS=$HERE/data/wallpapers
 uncredited=
-for f in "$PICS"/*.jpg "$PICS"/*.jpeg "$PICS"/*.png; do
+for f in "$PICS"/*.jpg "$PICS"/*.jpeg "$PICS"/*.png "$PICS"/shock/*.jpg "$PICS"/shock/*.png; do
     [ -e "$f" ] || continue
-    awk -v n="${f##*/}" '$0 == n { on = 1; next } /^$/ { on = 0 } on' "$PICS/CREDITS.txt" >"$T/credit" 2>/dev/null
-    grep -q '^Author: ' "$T/credit" && grep -q '^Source: https://' "$T/credit" && grep -q '^Licence: ' "$T/credit" || uncredited+=" ${f##*/}"
+    line=$(grep -F "${f##*/}: " "${f%/*}/CREDITS.txt" | grep -m1 "^${f##*/}: ")
+    grep -q '\. Credit: .*https://.*Licence: .*Changes: ' <<<"$line" || uncredited+=" ${f##*/}"
 done
-check "every picture in data/wallpapers has its author, page and licence in CREDITS.txt${uncredited:+: not$uncredited}" test -z "$uncredited"
+check "every picture in data/wallpapers has its author, page, licence and changes in CREDITS.txt${uncredited:+: not$uncredited}" test -z "$uncredited"
+big=$(find "$PICS" -type f -size +3M -printf '%f ')
+check "...and none is over 3 MB: git keeps them forever${big:+: $big}" test -z "$big"
 check "...there is at least the wren" test -f "$PICS/eurasian-wren.jpg"
 check "...and the README says the MIT licence doesn't cover them" grep -q 'data/wallpapers/' "$HERE/README.md"
 

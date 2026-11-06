@@ -141,7 +141,7 @@ none=$(pick / zzzz ' ' '\t' ' ' '\r')
 check "...nothing matching: it says so, and nothing can be checked" bash -c '[ -z "$1" ] && grep -aq "Nothing matches" "$2"' _ "$none" "$T/drawn"
 check "...a click on a narrowed line checks that line" test "$(pick / del '\t' click:delta '\r')" = delta
 check "...it never draws a control character you typed" test "$(pick / $'\x01\x02' del '\t' ' ' '\r')" = delta
-# CL_ALONE: a "none of these" box (the wallpapers' "No wallpapers downloaded")
+# CL_ALONE: a "none of these" box
 cat >"$T/alone.sh" <<'EOF'
 . "$D/lib.sh"
 . "$D/lib/checklist.sh"

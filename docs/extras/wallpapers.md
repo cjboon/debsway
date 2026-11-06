@@ -3,8 +3,8 @@
 ## SYNOPSIS
 
 ```
-wrenctl install wallpapers                     download Budgie's, or nothing ("I'll find my own"); pictures go in ~/Pictures/Wallpapers
-wrenctl remove wallpapers                      take out what it downloaded (your own pictures stay)
+wrenctl install wallpapers                     choose basic and/or strong; pictures go in ~/Pictures/Wallpapers
+wrenctl remove wallpapers                      take out what it put there (your own pictures stay)
 wrenctl manual wallpapers                      print the manual steps below
 
 Super+] / Super+[                              step through them as your wallpaper
@@ -12,17 +12,19 @@ wallpaper pick                                 choose one by name
 ```
 
 Pictures to choose your wallpaper from (the base's `~/Pictures/wren/desktop`, `parts/wallpaper.sh`),
-in `~/Pictures/Wallpapers`: `budgie_`, Budgie's photos from Debian. The package is only downloaded with
-`apt-get download` (checked against Debian's signed package lists, through Tor when apt goes through
-Tor) and its pictures unpacked as you, so nothing is installed, no package script runs and no sudo is
-needed.
+copied into `~/Pictures/Wallpapers` from `data/wallpapers/`. They come with Wren Linux, so nothing is
+downloaded and Wren Linux's signature covers them. `CREDITS.txt` names each one's author, page, licence and
+what was changed.
 
-An earlier version also fetched pictures from NASA and ESA (`nasa_`, `webb_`, `earth_`, with
-`CREDITS.txt`). If you have them they stay yours: neither an update nor `wrenctl remove wallpapers`
-touches them.
+- **basic**, ticked at first: wrens, art, Earth and space.
+- **strong**, never on unless you tick it: real violence and death, and nudity. Without a terminal to ask
+  on, it isn't copied. Unticking it later takes those pictures out again.
 
-Ticking "No wallpapers downloaded, I'll find my own" downloads nothing and only sets up the folder
-and its README. Pictures of your own (an image search, saved through Firefox into `~/Downloads`) can
+An earlier version fetched pictures from NASA, ESA and Debian. NASA's and ESA's (`nasa_`, `webb_`, `earth_`)
+stay yours: neither an update nor `wrenctl remove wallpapers` touches them, and a picture you already have
+isn't replaced by a smaller one.
+
+Pictures of your own (an image search, saved through Firefox into `~/Downloads`) can
 go in the same folder: Wren Linux never changes or removes them.
 
 Pexels has more for your own screen: <https://www.pexels.com/search/desktop%20wallpaper/>. They're free to
@@ -35,25 +37,20 @@ Super+] and Super+[ step through the folder as your wallpaper, and `wallpaper pi
 
 ## LIMITS
 
+- Most need a credit if you share them on, and some must be shared under the same licence:
+  `CREDITS.txt` says which.
+- Commons lists some pictures as public domain, and Wren Linux hasn't confirmed that further.
 - Pictures from an image search are usually someone's copyright: fine on your own screen, not to
   share on.
 
 ## MANUAL INSTALL
 
 ```
-# Budgie's: downloaded (apt checks it against Debian's signed lists), its
-# pictures and licence unpacked, nothing installed
-mkdir -p ~/Pictures/Wallpapers /tmp/wp && cd /tmp/wp
-apt-get download budgie-backgrounds
-dpkg-deb -x budgie-backgrounds_*.deb x
-find x -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) -size +100k |
-    while read -r f; do cp "$f" ~/Pictures/Wallpapers/budgie_"${f##*/}"; done
-cp x/usr/share/doc/budgie-backgrounds/copyright ~/Pictures/Wallpapers/budgie_LICENCE.txt
-cd && rm -rf /tmp/wp
+mkdir -p ~/Pictures/Wallpapers
+cp -n @WREN_DIR@/data/wallpapers/*.jpg @WREN_DIR@/data/wallpapers/*.png \
+    @WREN_DIR@/data/wallpapers/CREDITS.txt ~/Pictures/Wallpapers/
+# Only if you want the strong ones: real violence and death, and nudity
+# cp -n @WREN_DIR@/data/wallpapers/shock/*.jpg ~/Pictures/Wallpapers/
 ```
 
-To undo:
-
-```
-cd ~/Pictures/Wallpapers && rm -f budgie_*
-```
+To undo: delete the pictures you copied, from `~/Pictures/Wallpapers`.

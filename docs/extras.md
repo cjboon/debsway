@@ -172,8 +172,8 @@ text files).
 
 **[`archive-tools`](extras/archive-tools.md)**: unzip, zip, 7z, bzip2 and zstd for archives
 
-**[`wallpapers`](extras/wallpapers.md)**: Fills `~/Pictures/Wallpapers` with Budgie's photos to
-choose from, or sets it up for your own
+**[`wallpapers`](extras/wallpapers.md)**: Fills `~/Pictures/Wallpapers` with pictures that come
+with Wren Linux: wrens, art, Earth and space. Stronger ones only if you tick them
 
 ## Coding
 
