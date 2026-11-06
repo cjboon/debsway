@@ -1,7 +1,8 @@
 #!/bin/sh
 # Status line for swaybar: Wren Menu (click: the menu) | wifi (click: nmtui) | dns OFF (only while
 # secure DNS is off; click: on) | volume (scroll: louder/quieter,
-# click: mute) | brightness (scroll) | battery (click: time left) | next timer | date
+# click: mute) | brightness (scroll) | battery (click: time left; yellow at 15%, flashing red at
+# 5%, with a notification at each) | next timer | date
 # (click on the time or a timer: the timer menu; the format is set by `timer clock`)
 # Written by Wren Linux install-base.sh. Each part only shows when this
 # system has what it needs, so it copes with anything missing or removed.
@@ -161,6 +162,38 @@ alert() {
     printf ',{"name":"%s","full_text":" | %s","color":"#ffd000","urgent":true,"separator":false,"separator_block_width":0}' "$1" "$(json "$2")"
 }
 
+# battery_level: low at 15% or less, critical at 5% or less, while it runs on the battery;
+# nothing otherwise (charging, full, plugged in and not charging, or no battery)
+battery_level() {
+    for b in "$POWER"/BAT*; do
+        [ -r "$b/capacity" ] || continue
+        case $(cat "$b/status" 2>/dev/null) in Charging | Full | "Not charging") return 0 ;; esac
+        cap=$(cat "$b/capacity")
+        if [ "$cap" -le 5 ]; then echo critical; elif [ "$cap" -le 15 ]; then echo low; fi
+        return 0
+    done
+}
+
+# battery_block [off]: the battery in the bar: yellow when low, red when critical (off: the
+# moment of a flash without the red). Backgrounds, so that it reads on either theme.
+battery_block() {
+    bb_text=$(battery)
+    bb_level=$(battery_level)
+    if [ -z "$bb_level" ] || [ "${1:-}" = off ]; then
+        block bat "$bb_text"
+        return 0
+    fi
+    if [ -n "$TMUX_BAR" ]; then
+        if [ "$bb_level" = critical ]; then bb_tmux=bold,blink,fg=red; else bb_tmux=bold,fg=yellow; fi
+        printf ' | #[range=user|bat,%s]%s#[norange,nobold,noblink,default]' "$bb_tmux" "$bb_text"
+        return 0
+    fi
+    if [ "$bb_level" = critical ]; then bb_bg=d00000 bb_fg=ffffff; else bb_bg=ffd000 bb_fg=000000; fi
+    printf ',{"full_text":" | ","separator":false,"separator_block_width":0}'
+    printf ',{"name":"bat","full_text":" %s ","background":"#%s","color":"#%s","separator":false,"separator_block_width":0}' \
+        "$(json "$bb_text")" "$bb_bg" "$bb_fg"
+}
+
 # --battery: the sentence a click on bat shows (console-click uses it)
 if [ "${1:-}" = --battery ]; then
     echo "Battery $(battery | sed 's/^bat //; s/+$//'): $(battery_time)"
@@ -173,7 +206,7 @@ if [ "${1:-}" = --tmux ]; then
     TMUX_BAR=1
     printf '#[range=user|menu]Wren Menu#[norange]%s%s%s%s%s%s%s' \
         "$(block wifi "$(wifi)")" "$(alert updates "$(updates)")$(alert whonix "$(whonix_due)")$(alert startup "$(startup)")$(block dns "$(dns)")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
-        "$(block bat "$(battery)")" "$(block timer "$(timer_text)")" "$(block date "$(date +"$(clock_format)")")"
+        "$(battery_block)" "$(block timer "$(timer_text)")" "$(block date "$(date +"$(clock_format)")")"
     exit 0
 fi
 # open_or_close APP-ID COMMAND...: a click on the bar opens that window, and a
@@ -217,7 +250,9 @@ fi
 echo $$ >"$PIDFILE"
 trap 'rm -f "$PIDFILE"' EXIT
 trap 'exit' TERM INT HUP
-trap ':' USR1
+# (a redraw asked for: also ends a flash, below)
+redraw_now=
+trap 'redraw_now=1' USR1
 
 # Clicks and scrolls arrive on stdin, one line of JSON each (sway puts spaces in it)
 exec 3<&0
@@ -274,7 +309,7 @@ trap 'kill $reader 2>/dev/null; rm -f "$PIDFILE"' EXIT
 
 echo '{"version":1,"click_events":true}'
 echo '['
-dns_was='' startup_was='' updates_was=''
+dns_was='' startup_was='' updates_was='' battery_was=''
 while :; do
     updates_now=$(updates)
     if [ -n "$updates_now" ] && [ -z "$updates_was" ] && command -v notify-send >/dev/null; then
@@ -293,10 +328,35 @@ while :; do
             "Lookups go to the network unencrypted. If you didn't switch it off, something running as you did. Click \"dns OFF\" in the bar to switch it on." 2>/dev/null
     fi
     dns_was=$dns_now
-    printf '[{"name":"menu","full_text":"Wren Menu","separator":false,"separator_block_width":0}%s%s%s%s%s%s%s],\n' \
-        "$(block wifi "$(wifi)")" "$(alert updates "$updates_now")$(alert whonix "$(whonix_due)")$(alert startup "$startup_now")$(block dns "$dns_now")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
-        "$(block bat "$(battery)")" "$(block timer "$(timer_text)")" "$(block date "$(date +"$(clock_format)")")"
-    # wait returns early when SIGUSR1 arrives; the sleep ends by itself
-    sleep 5 &
-    wait $!
+    # A notification on reaching each level, once; a charge starts that again
+    battery_now=$(battery_level)
+    if [ "$battery_now" != "$battery_was" ] && command -v notify-send >/dev/null; then
+        case $battery_was:$battery_now in
+            :low) notify-send -a wren "Battery low" "$(battery | sed 's/^bat //'). Plug it in soon." 2>/dev/null ;;
+            *:critical) notify-send -a wren -u critical "Battery very low" "$(battery | sed 's/^bat //'). Save your work and plug it in now." 2>/dev/null ;;
+        esac
+    fi
+    # (from critical up to low, say with a charge cut short, it doesn't warn again until it has charged)
+    if [ "$battery_was" != critical ] || [ "$battery_now" != low ]; then battery_was=$battery_now; fi
+    bar_start=$(block wifi "$(wifi)")$(alert updates "$updates_now")$(alert whonix "$(whonix_due)")$(alert startup "$startup_now")$(block dns "$dns_now")$(block vol "$(volume)")$(block bright "$(brightness)")
+    bar_end=$(block timer "$(timer_text)")$(block date "$(date +"$(clock_format)")")
+    draw() { # BATTERY-BLOCK
+        printf '[{"name":"menu","full_text":"Wren Menu","separator":false,"separator_block_width":0}%s%s%s],\n' "$bar_start" "$1" "$bar_end"
+    }
+    draw "$(battery_block)"
+    # Critical: the battery flashes, once a second; the rest is read again every 5 seconds as
+    # ever, which spares what is left of the battery
+    redraw_now=
+    if [ "$battery_now" = critical ]; then
+        for flash in off on off on off; do
+            sleep 1 &
+            wait $!
+            [ -z "$redraw_now" ] || break
+            if [ "$flash" = off ]; then draw "$(battery_block off)"; else draw "$(battery_block)"; fi
+        done
+    else
+        # wait returns early when SIGUSR1 arrives; the sleep ends by itself
+        sleep 5 &
+        wait $!
+    fi
 done
