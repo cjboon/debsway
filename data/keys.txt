@@ -1,7 +1,7 @@
   KEYS                                   Super = the Windows / Cmd key
   ──────────────────────────────────────────────────────────────────
   Press Esc to close this; arrows and Space scroll.
-  Open it again any time: Super+?, click Wren Linux > Help in the bar, or type  keys.
+  Open it again any time: Super+?, click Wren Menu > Help in the bar, or type  keys.
   (The Wren menu: arrows and Enter, or click; Space flips a switch. Esc closes every screen.)
   Lines for things you have not installed are left out; add them with wrenctl --apps.
   It is also the file ~/KEYS.txt.
@@ -13,7 +13,7 @@
                            firefox, incognito, keepassxc, sparrow
     Super+Shift+q          close the window
     Super+?                this page
-    Super+m                the Wren menu (or click Wren Linux in the bar)
+    Super+m                the Wren menu (or click Wren Menu in the bar)
     Super+] / Super+[      next / previous wallpaper; Super+Shift+w: pick one
     Super+\                no wallpaper (the theme's plain background)
 

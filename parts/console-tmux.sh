@@ -1,6 +1,6 @@
 #!/bin/bash
 # tmux with the sway desktop's look: a bar on top (workspace numbers, then
-# Wren Linux | wifi | vol | bright | bat | timer | date, with the same clicks), black
+# Wren Menu | wifi | vol | bright | bat | timer | date, with the same clicks), black
 # and gray, Alt+1 ... Alt+0 for workspaces, Alt+m for the Wren menu. It is
 # always installed, so a plain `tmux` after leaving sway looks the same, and the
 # console-only extra (extras/console-only.sh) only has to start it at login.

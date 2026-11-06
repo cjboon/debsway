@@ -736,7 +736,7 @@ for _ in 1 2 3 4 5 6 7 8 9 10; do [ ! -s "$T/oc/sid" ] || break; /bin/sleep 0.1;
 check "a window from the bar has a session of its own (a sway reload, which restarts the bar, doesn't close it)" \
     bash -c 'read -r pid sid <"$1" && [ "$pid" = "$sid" ]' _ "$T/oc/sid"
 # shellcheck disable=SC2016  # expanded by the inner shell or Python, on purpose
-check "the time, the Wi-Fi name and Wren Linux in the bar each open or close their window" bash -c '
+check "the time, the Wi-Fi name and Wren Menu in the bar each open or close their window" bash -c '
     grep -qF "open_or_close wren-timer foot -o colors.alpha=0.85 --app-id=wren-timer" "$1" &&
     grep -qF "open_or_close wren-nmtui foot -o colors.alpha=0.85 --app-id=wren-nmtui" "$1" &&
     grep -qF "open_or_close wren-run \"\$HOME/.local/bin/wren-menu\"" "$1"' _ "$HERE/bin/sway-status"
@@ -746,8 +746,9 @@ check "the menu marks itself busy before Update or Install apps, and unmarks aft
 
 # the bar
 check "the bar shows Wren Menu" grep -q '"full_text":"Wren Menu"' "$HERE/bin/sway-status"
+check "...and the text console's bar too" grep -q 'range=user|menu\]Wren Menu#' "$HERE/bin/sway-status"
 check "the bar has no separate Help any more" not grep -q '"name":"help"' "$HERE/bin/sway-status"
-check "a click on Wren Linux starts the menu" grep -q 'wren-menu' "$HERE/bin/sway-status"
+check "a click on Wren Menu starts the menu" grep -q 'wren-menu' "$HERE/bin/sway-status"
 
 # shellcheck disable=SC2016  # the inner bash, and the menu's own text
 # A script that waits at its end marks it, so the menu doesn't ask a second time;

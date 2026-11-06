@@ -1,5 +1,5 @@
 #!/bin/sh
-# Status line for swaybar: Wren Linux (click: its menu) | wifi (click: nmtui) | dns OFF (only while
+# Status line for swaybar: Wren Menu (click: the menu) | wifi (click: nmtui) | dns OFF (only while
 # secure DNS is off; click: on) | volume (scroll: louder/quieter,
 # click: mute) | brightness (scroll) | battery (click: time left) | next timer | date
 # (click on the time or a timer: the timer menu; the format is set by `timer clock`)
@@ -7,7 +7,7 @@
 # system has what it needs, so it copes with anything missing or removed.
 # Redraws every 5 seconds, or right away on SIGUSR1 (the brightness keys
 # send it; the PID is in $XDG_RUNTIME_DIR/sway-status.pid).
-# Speaks swaybar's JSON protocol so that a click on Wren Linux can be heard.
+# Speaks swaybar's JSON protocol so that a click on Wren Menu can be heard.
 
 PIDFILE=${XDG_RUNTIME_DIR:-/tmp}/sway-status.pid
 POWER=${WREN_POWER_DIR:-/sys/class/power_supply}   # (a test can point it elsewhere)
@@ -163,7 +163,7 @@ fi
 # each part a click range named like the bar's; then exit
 if [ "${1:-}" = --tmux ]; then
     TMUX_BAR=1
-    printf '#[range=user|menu]wren#[norange]%s%s%s%s%s%s%s' \
+    printf '#[range=user|menu]Wren Menu#[norange]%s%s%s%s%s%s%s' \
         "$(block wifi "$(wifi)")" "$(alert updates "$(updates)")$(alert startup "$(startup)")$(block dns "$(dns)")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
         "$(block bat "$(battery)")" "$(block timer "$(timer_text)")" "$(block date "$(date +"$(clock_format)")")"
     exit 0
