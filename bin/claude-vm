@@ -11,7 +11,7 @@
 #   claude-vm stop       power the VM off
 #   claude-vm pubkey     the VM's ssh public key (add it on your git host)
 #   claude-vm reset      back to how it was built (faster than rebuild; asks first)
-#   claude-vm rebuild    throw the VM away and build a fresh one (offers its new key to GitHub)
+#   claude-vm rebuild    throw the VM away and build a fresh one (asks first; offers its new key to GitHub)
 #   claude-vm --account NAME [COMMAND]   another account's VM (its own Claude
 #                        login and memories); set up with extras/claude-vm.sh --account NAME
 # Started from a launcher (wmenu on Super+d), claude-vm and claude-vm shell
@@ -77,6 +77,9 @@ fi
 # A rebuilt VM has a new ssh key, which the git host doesn't know yet. Offered only
 # on a terminal and only after a build that worked; Enter sends nothing.
 if [ "$cmd" = rebuild ]; then
+    printf 'This deletes the VM and everything in it, unpushed work and your Claude login too, then builds a new one. Go on? [y/N] '
+    IFS= read -r a || a=
+    [[ $a =~ ^[Yy] ]] || { echo "Nothing was changed."; exit 0; }
     sudo -n -u "$AGENT" "$SESSION" rebuild
     if { [ -t 0 ] || [ -n "${WREN_TEST_ANSWERS:-}" ]; } && command -v wrenctl >/dev/null; then
         printf 'Add the new VM key to GitHub so the agent can push (wrenctl gh deploy-key)? [y/N] '

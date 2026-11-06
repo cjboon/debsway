@@ -47,28 +47,33 @@ check "a known command is passed through to the session" \
 # A rebuild makes a new ssh key: GitHub's copy is offered, never done unasked
 printf '#!/bin/sh\necho "wrenctl $*" >>"%s/calls"\n[ ! -e "%s/wrenctl-fails" ]\n' "$T" "$T" >"$T/fake/wrenctl"
 chmod +x "$T/fake/wrenctl"
-rb() { printf '%s\n' "$1" | WREN_TEST_ANSWERS=1 run "${@:2}"; }
+rb() { printf '%b\n' "$1" | WREN_TEST_ANSWERS=1 run "${@:2}"; }
 : >"$T/calls"
-rb y rebuild >/dev/null 2>&1
-check "rebuild, you say yes: the VM first, then wrenctl gh deploy-key" bash -c '
+out=$(rb '' rebuild 2>&1)
+check "rebuild asks first: Enter changes nothing, and it says what would be lost" bash -c '
+    [ ! -s "$1" ] && grep -q "Nothing was changed" <<<"$2" && grep -q "unpushed" <<<"$2"' _ "$T/calls" "$out"
+: >"$T/calls"
+run rebuild </dev/null >/dev/null 2>&1
+check "...no terminal to answer on: nothing is thrown away" test ! -s "$T/calls"
+: >"$T/calls"
+rb 'y\ny' rebuild >/dev/null 2>&1
+check "...you say yes, twice: the VM first, then wrenctl gh deploy-key" bash -c '
     [ "$(sed -n 1p "$1")" = "sudo -n -u claude-vm /usr/local/libexec/claude-vm-session rebuild" ] &&
         [ "$(sed -n 2p "$1")" = "wrenctl gh deploy-key" ]' _ "$T/calls"
 : >"$T/calls"
-rb '' rebuild >/dev/null 2>&1
-check "...Enter: no key is sent anywhere" bash -c '! grep -q wrenctl "$1"' _ "$T/calls"
-: >"$T/calls"
-run rebuild </dev/null >/dev/null 2>&1
-check "...no terminal: it asks nothing and sends nothing" bash -c '! grep -q wrenctl "$1"' _ "$T/calls"
+rb 'y\n' rebuild >/dev/null 2>&1
+check "...yes, then Enter: a new VM, and no key is sent anywhere" bash -c '
+    grep -q "session rebuild" "$1" && ! grep -q wrenctl "$1"' _ "$T/calls"
 : >"$T/sudo-fails"; : >"$T/calls"
-rb y rebuild >/dev/null 2>&1 && rc=0 || rc=$?
+rb 'y\ny' rebuild >/dev/null 2>&1 && rc=0 || rc=$?
 check "...the build fails: it says so, and offers nothing" bash -c '[ "$1" -ne 0 ] && ! grep -q wrenctl "$2"' _ "$rc" "$T/calls"
 rm -f "$T/sudo-fails"
 : >"$T/wrenctl-fails"
-rb y rebuild >/dev/null 2>&1 && rc=0 || rc=$?
+rb 'y\ny' rebuild >/dev/null 2>&1 && rc=0 || rc=$?
 check "...the key isn't added: the rebuild itself still counts as done" test "$rc" = 0
 rm -f "$T/wrenctl-fails"
 touch "$T/rule-claude-vm-work"; : >"$T/calls"
-rb y --account work rebuild >/dev/null 2>&1
+rb 'y\ny' --account work rebuild >/dev/null 2>&1
 check "...--account NAME: that account's key" grep -qx "wrenctl gh deploy-key --account work" "$T/calls"
 rm -f "$T/rule-claude-vm-work"; : >"$T/calls"
 rb y status >/dev/null 2>&1
