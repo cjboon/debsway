@@ -40,6 +40,12 @@ To go on: `git fetch origin && git checkout -b claude-wip origin/claude-wip`. Be
    running `whonix update` through it. Ask how it went: did it finish, did a bookmark and a download survive, still
    Safest, did `whonix stop` end with no dialog? Then fill in docs/extras/whonix.md's LIMITS, which still say those
    weren't tried. Say only what they report.
+   Their first run through webtunnel: the Gateway updated; the Workstation's Tor Browser download (15 to 16) was cut
+   off (`curl: (56) unexpected eof`, status 17), and the script rolled back as designed. **To do, small and worth it:**
+   `data/whonix-update-browser` gives the download one chance. Retry a few times, with `update-torbrowser --resume`
+   (Whonix's own advice), keeping the checks as they are; a bridge is where this happens, and people on bridges have
+   the worst connections. It is written into the images at install, so it reaches people at their next install. Test
+   with `tools/test-whonix-update.sh`, failing first.
 3. Suggest a release when CI is green: 8d28954 (git guard) and those above are fixes people should take.
 
 ## The owner's decisions, in the order to do them
