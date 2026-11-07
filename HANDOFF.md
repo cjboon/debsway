@@ -36,10 +36,7 @@ To go on: `git fetch origin && git checkout -b claude-wip origin/claude-wip`. Be
    as its own user (10c772c). CI went green at 9860d15, so that was the cause of the red. Check CI on 10c772c.
    Also on `claude`: a699bbd, a bridge line Tor would refuse is refused when pasted (a stray word had stopped the
    owner's Gateway from starting Tor). CI green at 10c772c; check it at a699bbd.
-   The owner's own test, real Whonix on their computer: webtunnel connects (the first real try). They were then
-   running `whonix update` through it. Ask how it went: did it finish, did a bookmark and a download survive, still
-   Safest, did `whonix stop` end with no dialog? Then fill in docs/extras/whonix.md's LIMITS, which still say those
-   weren't tried. Say only what they report.
+   The owner's real test of Whonix through webtunnel is done, and is in docs/extras/whonix.md's LIMITS.
    Their first run through webtunnel: the Gateway updated; the Workstation's Tor Browser download (15 to 16) was cut
    off (`curl: (56) unexpected eof`, status 17), and the script rolled back as designed. **To do, small and worth it:**
    `data/whonix-update-browser` gives the download one chance. Retry a few times, with `update-torbrowser --resume`
@@ -47,7 +44,8 @@ To go on: `git fetch origin && git checkout -b claude-wip origin/claude-wip`. Be
    the worst connections. It is written into the images at install, so it reaches people at their next install. Test
    with `tools/test-whonix-update.sh`, failing first.
    A second run through webtunnel finished: "Whonix is up to date". The rollback on the first run really worked: 15
-   came back with the owner's bookmark and download. Ask them to confirm 16, bookmark, download and Safest now.
+   came back with the owner's bookmark and download. They confirmed 16, bookmark, download, Safest, and `whonix stop` with no dialog; a small bug: virt-manager's own
+   empty window stays open after `whonix stop`, which could close it.
    **The owner's decisions on `whonix update`, each with a failing test first, in the same files as the retry above:**
    - `data/whonix-update-browser`: carry over only Downloads and the bookmarks, not the whole profile, which would
      keep whatever a hacked page planted in it. Everything else fresh; Safest comes from
