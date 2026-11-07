@@ -24,9 +24,7 @@
 #    identity and ssh key, never yours.
 #  - Your user may run exactly one thing as claude-vm: the claude-vm-session
 #    script (a rule in /etc/sudoers.d). The claude-vm command calls it.
-# Needs KVM (VT-x/AMD-V and /dev/kvm). Without it, extras/claude-code.sh
-# runs Claude Code as its own user instead: lighter, but it shares your
-# kernel, so a kernel bug could get out (docs/extras.md compares the two).
+# Needs KVM (VT-x/AMD-V and /dev/kvm).
 # See THREAT-MODEL.md.
 # Another account (a second Claude login, apart from the first): --account
 # NAME makes the user claude-vm-NAME with a VM of its own (its own disk, keys

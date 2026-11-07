@@ -49,7 +49,7 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 ## Sandboxes and test machines
 
 - [Claude Code as you, with its own sandbox on](claude-regular.md) (retired)
-- [Claude Code in its own user](claude-code.md)
+- [Claude Code in its own user (retired)](claude-code.md)
 - [Claude Code inside a disposable virtual machine](claude-vm.md)
 - [opencode inside a disposable virtual machine](opencode-vm.md) (retired)
 - [A disposable practice server](mockvps-kvm.md)

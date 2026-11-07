@@ -1,5 +1,7 @@
 # Claude Code, as its own user (`extras/claude-code.sh`)
 
+**Retired.** An AI agent belongs behind the strongest wall Wren Linux has, and on this one it shares your kernel and your ~/projects: wrenctl install claude-vm. Its --remove leaves your files in ~/projects. `update.sh` offers to take it out (`wrenctl remove claude-code`); it is no longer offered to install. A computer that can't run VMs has no sandboxed Claude Code from Wren Linux.
+
 ## SYNOPSIS
 
 ```

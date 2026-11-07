@@ -96,7 +96,7 @@ These are extras (`wrenctl --apps`). `wrenctl manual NAME` shows each step by ha
 | Extra | What it adds |
 |---|---|
 | `firefox-sandbox` | Firefox as its own locked-down user, with uBlock Origin, HTTPS-Only Mode, no JavaScript JIT, and `incognito`, a throwaway one |
-| `claude-vm`, `claude-code` | A coding agent in a disposable VM, or as its own user, walled off from your files |
+| `claude-vm` | A coding agent in a disposable VM, walled off from your files |
 | `media`, `pdf-viewer`, `gimp` | Opening pictures, video and PDFs in a sandbox |
 | `yt-dlp` | A video downloader as its own locked user |
 | `tor-browser`, `whonix`, `onionshare`, `onion-site` | Tor, with bridges, checked downloads, and Tor Browser at Safest |

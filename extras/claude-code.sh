@@ -1,4 +1,5 @@
 #!/bin/bash
+# retired: An AI agent belongs behind the strongest wall Wren Linux has, and on this one it shares your kernel and your ~/projects: wrenctl install claude-vm. Its --remove leaves your files in ~/projects.
 # Claude Code (Anthropic's coding assistant for the terminal), from
 # Anthropic's signed apt repository. The repository key is only trusted
 # if it is exactly the key with fingerprint ANTHROPIC_FPR (pins.sh), as

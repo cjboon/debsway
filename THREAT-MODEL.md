@@ -119,7 +119,8 @@ doesn't make you invisible or untouchable. Use this page to decide what else you
   to save in, and never the network: a crafted picture in GIMP can reach `~/Pictures`, but not the
   rest of your files.
 
-  `claude` (`extras/claude-code.sh`) runs Claude Code as its own user, `claude-agent`, which has no
+  `claude` (`extras/claude-code.sh`, retired: `update.sh` offers to remove it, as an AI agent belongs in
+  the VM below) runs Claude Code as its own user, `claude-agent`, which has no
   password and can't read your home folder, ssh keys, passwords or browser profiles; it works in
   `~/projects`, which you share with it.
 
@@ -139,8 +140,7 @@ doesn't make you invisible or untouchable. Use this page to decide what else you
   account (`--account NAME`) is another VM, run by its own user `claude-vm-NAME`, whose firewall
   lines let it reach only its own guest's console port, not the first VM's.
 
-  The two can be installed together. Use the VM if your computer has KVM (`docs/extras.md` says how
-  to check); `claude` is the weaker, lighter choice for computers that can't run it.
+  Wren Linux offers no sandboxed Claude Code to a computer that can't run the VM.
 
   `opencode-vm` (`extras/opencode-vm.sh`) is retired: it can't be newly installed, gets no more
   updates, and `update.sh` offers to remove it. If you still have it, it puts opencode in the same
