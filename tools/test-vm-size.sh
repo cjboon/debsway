@@ -47,8 +47,8 @@ check "4 GB: the smallest VM (2048), and a warning that it leaves the computer s
 check "a disk with 50 GB free: 20 GB kept free (30 GB at most), 30 GB suggested" test "$(vm_size_limits 11880 50000 | cut -d' ' -f3-4)" = "30000 30000"
 check "...with 30 GB free: the smallest disk, and a warning" \
     bash -c '[ "$(vm_size_limits 11880 30000 | cut -d" " -f3-4)" = "20000 20000" ] && vm_size_tight 11880 30000 | grep -q "Make room first"' _
-check "2 GB of memory: refused (the computer would be left too little to run), pointing to claude-code" \
-    bash -c '! o=$(vm_size_fits 1973 300000) && grep -q "too little to keep running" <<<"$o" && grep -q "wrenctl install claude-code" <<<"$o"' _
+check "2 GB of memory: refused (the computer would be left too little to run)" \
+    bash -c '! o=$(vm_size_fits 1973 300000) && grep -q "too little to keep running" <<<"$o"' _
 check "...and 20 GB free: refused (the VM's disk could fill it)" bash -c '! o=$(vm_size_fits 11880 20000) && grep -q "could fill it" <<<"$o"' _
 check "...6 GB and 30 GB free fit (with warnings)" vm_size_fits 6000 30000
 check "a computer with room to spare gets no warning" test -z "$(vm_size_tight 11880 300000)"

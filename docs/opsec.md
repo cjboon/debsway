@@ -563,7 +563,7 @@ Most break-ins start with a person being talked into something:
   anything your user (or `sudo`) can.
 - **Browser add-ons, phone apps and AI tools** get deep access. Fewer is safer.
 - **AI coding agents** run commands and write files. Run them where they can't
-  reach your keys and documents: `claude-vm` (a separate VM) or `claude` (a
+  reach your keys and documents: `claude-vm` (a separate VM; the older `claude` is retired: a
   separate user), and read what they leave before you run it.
 - **Updates:** turn on automatic security updates (Wren Linux does) and restart
   updated programs; "later" is when attacks happen.

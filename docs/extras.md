@@ -410,6 +410,9 @@ download too, which only that site sees.
 
 ## Which Claude Code sandbox? (`claude-vm.sh` or `claude-code.sh`)
 
+**`claude-code.sh` is retired: use `claude-vm.sh`.** An AI agent belongs behind the strongest wall Wren
+Linux has. What follows is for anyone who still has the older one.
+
 Both run Claude Code away from your files and your local network. They differ in how strong the wall
 is:
 

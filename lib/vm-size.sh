@@ -46,7 +46,7 @@ vm_size_limits() {
 # of disk)
 vm_size_fits() {
     [ $(($1 - VM_MEM_MIN)) -ge 2048 ] ||
-        { echo "This computer has $((($1 + 512) / 1024)) GB of memory: the smallest VM ($((VM_MEM_MIN / 1024)) GB) would leave it less than 2 GB, too little to keep running. Claude Code as its own user (wrenctl install claude-code) needs no VM."; return 1; }
+        { echo "This computer has $((($1 + 512) / 1024)) GB of memory: the smallest VM ($((VM_MEM_MIN / 1024)) GB) would leave it less than 2 GB, too little to keep running."; return 1; }
     [ $(($2 - VM_DISK_MIN)) -ge 5000 ] ||
         { echo "Only $(($2 / 1000)) GB of disk is free: the smallest VM disk ($((VM_DISK_MIN / 1000)) GB) could fill it. Make room first (at least $(((VM_DISK_MIN + 5000) / 1000)) GB free)."; return 1; }
 }
