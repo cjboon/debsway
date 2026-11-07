@@ -12,6 +12,8 @@ internet. So:
 - This VM is yours to change. You have sudo without a password: install what you need
   and test real installs here (extras, firewalls, users, services, VMs inside it with
   `/dev/kvm`). The owner can reset or rebuild it, so nothing kept only here is safe.
+- Don't ask to look in a directory. Every directory in this VM is yours to read for work on Wren
+  Linux, without asking the owner first, or stopping to wait for an answer.
 - It is a bare Debian 13 server, not the Wren Linux desktop: no screen, and the base parts
   aren't installed. Say which results came from here and which still
   need the owner's machine (a window on the desktop, prompts typed by hand, the
