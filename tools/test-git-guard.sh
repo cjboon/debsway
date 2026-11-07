@@ -192,6 +192,24 @@ check "a real worktree still works after all that" bash -c "cd '$T/home/projects
 mkdir -p "$P/nested" && (cd "$P/nested" && real init -q)
 check "a clean repository inside a clean repository works" bash -c "cd '$P/nested' && bash '$GUARD' status"
 rm -rf "$P/nested"
+# a repository that lives inside this one, recorded as a submodule: git status goes into it, and
+# what its .git holds runs as you. Nothing above it is wrong, so the guard must look down too.
+N=$T/home/projects/holds-one
+mkdir -p "$N/deep/sub" && (cd "$N" && real init -q && cd deep/sub && real init -q && echo x >f && real add f && real commit -qm one)
+(cd "$N" && real add deep/sub 2>/dev/null && real commit -qm top)
+check "(the nested repository is recorded as a submodule)" bash -c "cd '$N' && /usr/bin/git ls-files -s | grep -q '^160000'"
+check "a clean repository recorded inside a clean one works" bash -c "cd '$N' && bash '$GUARD' status"
+printf '#!/bin/sh\ntouch "%s/nested-ran"\nexit 1\n' "$T" >"$T/nested-evil"
+chmod +x "$T/nested-evil"
+real -C "$N/deep/sub" config core.fsmonitor "$T/nested-evil"
+(cd "$N" && bash "$GUARD" status) >"$T/nested-out" 2>&1
+check "a setting in a nested repository: git status doesn't run its program" test ! -e "$T/nested-ran"
+check "...and the refusal says where it is" grep -q 'deep/sub/.git: config: core.fsmonitor' "$T/nested-out"
+real -C "$N/deep/sub" config --unset core.fsmonitor
+check "...and fine again once it is gone" bash -c "cd '$N' && bash '$GUARD' status"
+printf '#!/bin/sh\n' >"$N/deep/sub/.git/hooks/post-index-change"
+check "a hook in a nested repository is refused" bash -c "cd '$N' && ! bash '$GUARD' status"
+rm -rf "$N"
 
 # explicit choices pass straight through
 check "--git-dir is left alone" bash -c "cd '$P' && printf '#!/bin/sh\n' >.git/hooks/pre-commit && bash '$GUARD' --git-dir='$P/.git' status; r=\$?; rm -f .git/hooks/pre-commit; exit \$r"

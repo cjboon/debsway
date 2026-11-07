@@ -152,6 +152,15 @@ while :; do
     esac
 done
 
+# And every one inside it: git status goes into a repository recorded as a submodule, with
+# what its own .git says (a setting there runs as you), and any folder can be that
+while IFS= read -r -d '' d; do
+    [ "$d" != "$top/.git" ] || continue
+    n=${#problems[@]}
+    check_dot_git "${d%/.git}"
+    for ((p = n; p < ${#problems[@]}; p++)); do problems[p]="${d#"$top"/}: ${problems[p]}"; done
+done < <(find "$top" -name .git -prune -print0 2>/dev/null)
+
 if [ ${#problems[@]} -gt 0 ]; then
     {
         printf 'git: not running here. %s holds things that could run a program as you:\n' "${top/#$HOME/\~}/.git"

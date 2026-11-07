@@ -369,8 +369,8 @@ With the extras:
   and `.git/hooks` before you tell your own git to trust a repository it made.
 
   Wren Linux puts a guard in front of your git inside `~/projects` (`bin/git`): it refuses a bare
-  repository you did not name, and refuses to run when a repository's `.git/config` or `.git/hooks`
-  could run a program as you.
+  repository you did not name, and refuses to run when the `.git/config` or `.git/hooks` of a
+  repository, or of one above or inside it, could run a program as you.
 
   A file could change between that check and the run, so it stops a confused assistant, not one
   racing your keystrokes.
