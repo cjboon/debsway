@@ -66,9 +66,13 @@ if userns:
         sys.exit(1)
     if libc.unshare(CLONE_NEWUSER) != 0:
         fail("couldn't make a user namespace (error %d)." % ctypes.get_errno())
-    for name, text in (("setgroups", "deny"), ("uid_map", "%d %d 1" % (uid, uid)), ("gid_map", "%d %d 1" % (gid, gid))):
-        with open("/proc/self/" + name, "w") as f:
-            f.write(text)
+    # (a system can let the namespace be made and then refuse this: Ubuntu's AppArmor does)
+    try:
+        for name, text in (("setgroups", "deny"), ("uid_map", "%d %d 1" % (uid, uid)), ("gid_map", "%d %d 1" % (gid, gid))):
+            with open("/proc/self/" + name, "w") as f:
+                f.write(text)
+    except OSError as e:
+        fail("couldn't make a user namespace (%s)." % e.strerror)
 elif libc.prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0:
     fail("couldn't set no_new_privs (error %d)." % ctypes.get_errno())
 if libc.syscall(SYS_RESTRICT, fd, 0) != 0:
