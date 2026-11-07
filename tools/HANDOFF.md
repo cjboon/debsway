@@ -33,7 +33,9 @@ waiting on the owner.
 
 ## To plan and discuss with the owner: Claude Code's settings in the VM
 
-Nothing here is applied yet, in the old VM or in `extras/claude-vm.sh`. The owner runs with bypass
+**Decided 2026-11-07: the owner asked for all of these, plus `CLAUDE_CODE_DISABLE_MOUSE`, in every new VM.**
+Done in `data/claude-vm-provision.sh` (tested with `tools/test-claude-vm.sh`; not yet in a real VM build).
+Questions 2 and 3 below are still open. Before that, nothing here was applied. The owner runs with bypass
 permissions on (`claude-vm unattended`). The VM walls off the owner's computer, but a session is also
 signed in to the owner's Claude account, which the VM's network wall doesn't cover.
 

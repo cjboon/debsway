@@ -277,6 +277,11 @@ With the extras:
   work. That wall isn't one of those above, but then nothing asks before it pushes, or before it uses
   a service connected to your Claude account, even if a web page talked it into that.
 
+  The agent is signed in to your Claude account, which the VM doesn't wall off. Claude Code in the
+  VM is set to pass less between them (no connectors, Remote Control, messages to or from your other
+  sessions, Artifact tool or `/feedback`), but root in the VM can change those settings: they catch
+  mistakes, not an agent working against you. Connect to your account only what you'd let it use.
+
 - **What runs in the distribution VMs** (`extras/distro-vm.sh`: Kali, Tails, Arch), retired: they
   can't be newly installed, get no more updates, and `update.sh` offers to remove them.
 

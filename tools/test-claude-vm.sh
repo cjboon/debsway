@@ -289,6 +289,33 @@ check "the guest installs its security updates by itself, Claude Code's too" bas
 check "provisioning calls it on the guest's real file" \
     grep -q '^grub_no_wait /etc/default/grub' "$HERE/data/claude-vm-provision.sh"
 
+# Claude Code's settings in the guest: written fresh, or over a file that is there
+# shellcheck disable=SC2016  # run by the inner bash
+settings_run() { bash -c '
+    eval "$(sed -n "/^CLAUDE_SETTINGS=/,/^)\$/p; /^claude_settings() {/,/^}/p" "$1")"
+    claude_settings "$2"' _ "$HERE/data/claude-vm-provision.sh" "$1"; }
+cs=$T/claude/settings.json
+settings_run "$cs"
+key() { jq -c "$1" "$cs" 2>/dev/null; }
+check "the guest gets Claude Code's settings, as JSON Claude Code can read" jq -e . "$cs"
+check "...only its user may read them" test "$(stat -c %a "$cs")" = 600
+check "...no messages to or from your other sessions" test "$(key .isolatePeerMachines)/$(key .crossSessionInbound)" = 'true/"refuse"'
+check "...no Remote Control at start" test "$(key .remoteControlAtStartup)" = false
+check "...no claude.ai connectors, skills or plugins" \
+    test "$(key .disableClaudeAiConnectors)/$(key .syncClaudeAiSkills)/$(key .syncClaudeAiPlugins)" = true/false/false
+check "...no Artifact tool" test "$(key .enableArtifact)" = false
+check "...none of Claude Code's nonessential traffic, and no /feedback" \
+    test "$(key .env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC)/$(key .env.DISABLE_FEEDBACK_COMMAND)" = '"1"/"1"'
+check "...the mouse left to the terminal (selecting needs no Shift, Page Up scrolls)" \
+    test "$(key .env.CLAUDE_CODE_DISABLE_MOUSE)" = '"1"'
+printf '%s\n' '{"tui": "default", "remoteControlAtStartup": true, "env": {"EDITOR": "vim"}}' >"$cs"
+settings_run "$cs"
+check "over a file that is there: its own settings stay" test "$(key .tui)/$(key .env.EDITOR)" = '"default"/"vim"'
+check "...and Wren Linux's win where both say something" \
+    test "$(key .remoteControlAtStartup)/$(key .env.CLAUDE_CODE_DISABLE_MOUSE)" = 'false/"1"'
+check "provisioning writes them for the guest's user, and stops if it can't" bash -c '
+    grep -q "^claude_settings \"\$home/.claude/settings.json\" || die" "$1" && grep -q "^chown \"\$VM_USER:\$VM_USER\" \"\$home/.claude/settings.json\"" "$1"' _ "$HERE/data/claude-vm-provision.sh"
+
 # ---- Another account's VM: claude-vm-NAME, its own console port
 : >"$S/calls"
 echo claude-vm-work >"$S/me"

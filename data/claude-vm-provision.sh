@@ -33,6 +33,48 @@ key_ok() {
     awk -F: '/^pub:/ { exit ($2 ~ /[er]/) }' <<<"$out"
 }
 
+# Claude Code's settings in the guest. The VM walls off your computer, but the
+# agent is signed in to your Claude account, and that wall doesn't cover it:
+# these pass less between the VM and the account. No messages to or from your
+# other sessions (isolatePeerMachines, crossSessionInbound), no Remote Control
+# at start, no claude.ai connectors, skills or plugins, no Artifact tool, and
+# none of Claude Code's own nonessential traffic: telemetry, error reports,
+# /feedback (which sends the conversation). The mouse is left to the terminal,
+# so selecting text needs no Shift and Page Up scrolls (CLAUDE_CODE_DISABLE_MOUSE).
+# They guard against mistakes: root in the guest, which the agent has, can
+# change them.
+CLAUDE_SETTINGS=$(cat <<'JSON'
+{
+  "isolatePeerMachines": true,
+  "crossSessionInbound": "refuse",
+  "remoteControlAtStartup": false,
+  "disableClaudeAiConnectors": true,
+  "enableArtifact": false,
+  "syncClaudeAiSkills": false,
+  "syncClaudeAiPlugins": false,
+  "env": {
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "DISABLE_FEEDBACK_COMMAND": "1",
+    "CLAUDE_CODE_DISABLE_MOUSE": "1"
+  }
+}
+JSON
+)
+
+# claude_settings FILE (~/.claude/settings.json): those settings, over what the
+# file already says, if anything
+claude_settings() {
+    local f=$1 tmp
+    tmp=$(mktemp)
+    if [ -s "$f" ]; then
+        jq -s '.[0] * .[1]' "$f" - <<<"$CLAUDE_SETTINGS" >"$tmp" || { rm -f "$tmp"; return 1; }
+    else
+        printf '%s\n' "$CLAUDE_SETTINGS" >"$tmp"
+    fi
+    install -D -m 0600 "$tmp" "$f"
+    rm -f "$tmp"
+}
+
 # grub_no_wait FILE (/etc/default/grub): boot straight into Debian. The
 # guest has no screen, so GRUB's 5 s menu only adds to every start; a VM
 # that won't boot is rebuilt, not repaired from the menu.
@@ -91,6 +133,8 @@ visudo -cf /etc/sudoers.d/90-wren-agent >/dev/null || { rm -f /etc/sudoers.d/90-
 log "Setting up $VM_USER (projects folder, git identity, ssh key, CLAUDE.md)"
 run() { runuser -u "$VM_USER" -- "$@"; }
 run mkdir -p "$home/projects" "$home/.claude"
+claude_settings "$home/.claude/settings.json" || die "couldn't write Claude Code's settings"
+chown "$VM_USER:$VM_USER" "$home/.claude/settings.json"
 
 if [ ! -e "$home/.gitconfig" ]; then
     run git config --global user.name Claude

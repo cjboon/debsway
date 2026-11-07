@@ -79,6 +79,15 @@ change.
   (those reach beyond the VM). A web page it reads can talk it into these. Use it only with nothing
   private in the VM, and read what it pushes as you always should. There is no such command for
   `extras/claude-code.sh`, which shares `~/projects` with you.
+- The agent is signed in to your Claude account, and the VM's walls don't cover that. A VM built
+  since this was added sets Claude Code up to pass less between them (`data/claude-vm-provision.sh`,
+  in `~/.claude/settings.json` there): no messages to or from your other sessions, no Remote Control
+  (it isn't available at all then), no claude.ai connectors, skills or plugins, no Artifact tool,
+  and none of Claude Code's nonessential traffic (telemetry, error reports, `/feedback`, which sends
+  the conversation). It also leaves the mouse to the terminal, so selecting text needs no Shift and
+  Page Up scrolls. These guard against mistakes, not a hijacked agent, which has root there and can
+  change them. What holds is outside the VM: your review, the rules on your main branch, and what
+  your account is connected to. An older VM gets them with `claude-vm rebuild`.
 - Treat what it pushes as untrusted until you have read it (`claude-pull` shows it first).
 - Its ssh key on your git host can push wherever you allow: a deploy key on one repository is the
   narrowest, and a rule on the host that only your signed commits go into your main branch keeps it
