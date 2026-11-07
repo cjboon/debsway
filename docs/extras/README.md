@@ -88,6 +88,7 @@ nothing needs them. Either way, read the list apt shows before you say yes.
 - [Phone tethering over USB](phone-tethering.md)
 - [USB drives that mount by themselves, safely](udiskie.md)
 - [Closing the lid locks but doesn't suspend](lid-awake.md)
+- [Compressed memory](zram.md)
 - [One workspace: no workspace keys or buttons](one-workspace.md)
 - [Logging in on tty1 without the password](autologin.md)
 - [A webcam switch, off at every boot](webcam.md)

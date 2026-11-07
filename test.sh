@@ -393,6 +393,7 @@ dev_test launcher "The Super+d launcher line (lib/sway.sh), on pretend sway conf
 dev_test wren-cmd "The Wren Linux command and its man page (bin/wrenctl, data/wrenctl.1)" "Wren Linux command checks"
 
 # --------------------------------------------------------------------
+dev_test zram "Compressed memory (extras/zram.sh): its settings and page" "zram checks"
 dev_test dim "The fade before the screen locks (bin/dim-warning), with a pretend brightnessctl" "dim checks"
 
 # --------------------------------------------------------------------

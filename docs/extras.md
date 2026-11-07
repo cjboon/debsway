@@ -266,6 +266,8 @@ QEMU/KVM VM for trying out server setups, with snapshots and one-command removal
 `nosuid,nodev,noexec`; encrypted (LUKS) sticks ask for their passphrase (packages: udiskie, udisks2,
 cryptsetup, polkitd)
 
+**[`zram`](extras/zram.md)**: Compressed swap kept in memory, for more room, nothing on disk.
+
 **[`lid-awake`](extras/lid-awake.md)**: Closing the lid no longer suspends the laptop (Debian's
 default does): it locks the screen and turns the laptop's own panel off, while the network,
 downloads and the timer's alarms keep going; an external screen stays on.
