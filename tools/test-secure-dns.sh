@@ -242,15 +242,22 @@ check "a re-run keeps the switch where it was (on only at first, or if it was on
 # ---- login-check: a word at login if the Wi-Fi sign-in window left it off
 mkdir -p "$W/state/wren" "$W/nfake"
 printf '#!/bin/sh\necho "notify $*" >>"%s/notified"\n' "$W" >"$W/nfake/notify-send"
-chmod +x "$W/nfake/notify-send"
-lc() { XDG_STATE_HOME=$W/state WREN_RESOLV_CONF=$W/etc/resolv.conf PATH="$W/nfake:$PATH" bash "$HERE/bin/secure-dns" login-check 2>&1; }
+printf '#!/bin/sh\necho "sudo $*" >>"%s/sudo-calls"\n[ -e "%s/switch-works" ]\n' "$W" "$W" >"$W/nfake/sudo"
+chmod +x "$W/nfake/notify-send" "$W/nfake/sudo"
+lc() { WREN_SECDNS_RETRY=0 XDG_STATE_HOME=$W/state WREN_RESOLV_CONF=$W/etc/resolv.conf PATH="$W/nfake:$PATH" bash "$HERE/bin/secure-dns" login-check 2>&1; }
 echo "nameserver 192.168.1.1" >"$W/etc/resolv.conf"
 rm -f "$W/notified"
-check "login-check: off, but not left off by the sign-in window: nothing said" bash -c '[ -z "$(WAYLAND_DISPLAY=wayland-1 lc)" ] && [ ! -e "$1" ]' _ "$W/notified"
+check "login-check: off, but not left off by the sign-in window (you chose it): nothing said, and it stays off" bash -c '[ -z "$(WAYLAND_DISPLAY=wayland-1 lc)" ] && [ ! -e "$1" ] && [ ! -e "$2" ]' _ "$W/notified" "$W/sudo-calls"
 export -f lc; export HERE
 : >"$W/state/wren/secure-dns-left-off"
 WAYLAND_DISPLAY=wayland-1 lc >/dev/null
-check "...left off by it, still off, in sway: a notification" grep -q "notify .*Secure DNS is off" "$W/notified"
+check "...left off by it, and it can't come back, in sway: a notification" grep -q "notify .*Secure DNS is off" "$W/notified"
+check "...after a few tries, for a network still coming up" test "$(grep -c ' on$' "$W/sudo-calls")" = 3
+check "...never asking a password, at login" bash -c '! grep -qv "^sudo -n " "$1"' _ "$W/sudo-calls"
+rm -f "$W/notified"; touch "$W/switch-works"
+WAYLAND_DISPLAY=wayland-1 lc >/dev/null
+check "a power cut in the sign-in: on again by itself, without a word" bash -c '[ ! -e "$1" ] && [ ! -e "$2" ]' _ "$W/notified" "$W/state/wren/secure-dns-left-off"
+rm "$W/switch-works"; : >"$W/state/wren/secure-dns-left-off"
 check "...on a text console: a line in the terminal" bash -c 'out=$(WAYLAND_DISPLAY= lc); [[ $out == *"secure-dns on"* ]]'
 printf '%s\n' '# Written by Wren Linux parts/secure-dns.sh. Every name goes to Unbound on this' 'nameserver 127.0.0.1' >"$W/etc/resolv.conf"
 check "...on again by then: nothing said, and the mark goes" bash -c '[ -z "$(WAYLAND_DISPLAY= lc)" ] && [ ! -e "$1" ]' _ "$W/state/wren/secure-dns-left-off"

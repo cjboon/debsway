@@ -48,7 +48,20 @@ case $cmd in
             rm -f "$LEFT_OFF"
             exit 0
         fi
-        msg="Secure DNS is still off: the Wi-Fi sign-in window switched it off and didn't get to switch it on again. Switch it on: the Wren menu's Secure DNS line, or secure-dns on."
+        # A power cut in the sign-in, say: back on by itself. The switch puts it off again if names
+        # don't resolve (no network yet, so a few tries in the desktop, or a network that wants a
+        # sign-in). Only this: if you switched it off yourself, there is no such mark.
+        tries=1
+        if [ -n "${WAYLAND_DISPLAY:-}" ]; then tries=3; fi
+        while [ "$tries" -gt 0 ]; do
+            if sudo -n "$SWITCH" on >/dev/null 2>&1; then
+                rm -f "$LEFT_OFF"
+                exit 0
+            fi
+            tries=$((tries - 1))
+            if [ "$tries" -gt 0 ]; then sleep "${WREN_SECDNS_RETRY:-15}"; fi
+        done
+        msg="Secure DNS is still off: the Wi-Fi sign-in window switched it off and didn't get to switch it on again, and it couldn't come back by itself. Switch it on: the Wren menu's Secure DNS line, or secure-dns on."
         if [ -n "${WAYLAND_DISPLAY:-}" ] && command -v notify-send >/dev/null; then
             notify-send -a wren -u critical "Secure DNS is off" "$msg" 2>/dev/null || printf '%s\n' "$msg" >&2
         else
