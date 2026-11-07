@@ -54,14 +54,13 @@ Each finished, tested and pushed before the next. Told to the owner in this orde
    pages, firewalls, session scripts, and the lists naming them go too (`remove_no_abstract`,
    `TOR_SERVICE_MARKS`, `FIREWALLS`, `tools/test-sandbox-net.sh`...). The browser sandbox borrowed its
    window and clipboard design from wallet-sandbox: don't let it depend on those files.
-4. **Stop sharing `~/projects`, and remove the git guard** (`bin/git`, its test, its docs). The guard
-   checks files the agent can rewrite, and has had four bypasses. Instead the agent's work is in a
-   repository of its own, and the owner pulls from it, as with `claude-vm`. **Don't let the owner's git
-   read that repository directly**: its config and hooks are the agent's. Have the agent's user serve
-   it, through the one thing the sudo rule allows, so the owner's git sees only the protocol:
-   `git fetch --upload-pack='sudo -n -u claude-agent /usr/local/libexec/claude-session upload-pack'`
-   or similar, with the session script accepting only that. Try it for real, with a hostile repository.
-   Existing `~/projects` folders are people's work: migrate, never delete.
+4. **Claude Code as its own user (`extras/claude-code.sh`) is retired: `claude-vm` is the only sandbox for
+   an AI agent** (the owner, after asking whether Claude was sure: "vm is ultimately safest"). This replaces
+   the earlier plan to stop sharing `~/projects` and pull through an upload-pack: there is nothing left to
+   share. Retired the normal way: no new installs, `update.sh` offers its `--remove`, which leaves people's
+   `~/projects` alone. Delete it, `bin/git`, `bin/claude-session`, `bin/claude-sandbox`, `tools/test-git-guard.sh`
+   and the rest with the other retired extras in step 3, keeping `claude-pull`, `claude-share` and whatever
+   `claude-vm` installs. Wren as a whole stays usable without VM hardware: the owner decided this only for AI.
 5. **One shared sandbox launcher, `wren-sandbox`** (the owner let Claude pick the name). The session
    scripts repeat the same pieces: user check, wrapper, firewall check and watch, socket folder, sound.
    That is how a fix misses some of them. Do this last, when there is less to move: one sandbox at a
