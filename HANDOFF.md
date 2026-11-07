@@ -17,6 +17,9 @@ say plainly what ran and what didn't.
 - `claude-wip`: **unfinished and untested. Never merge it as it is, and never push it to `claude`.**
   It holds the commits below that aren't on `claude` yet, then one commit of work in progress.
 
+A Claude on another account (`claude --account NAME`) has another VM, with none of this one's files or
+memory: this file and GitHub are all it has. It needs its own deploy key (`wrenctl gh deploy-key --account NAME`).
+
 To go on: `git fetch origin && git checkout -b claude-wip origin/claude-wip`. Before anything goes to
 `claude`, split that last commit by topic, each with its tests.
 
@@ -28,16 +31,12 @@ To go on: `git fetch origin && git checkout -b claude-wip origin/claude-wip`. Be
    namespace be made and refuses to set it up, and the test's skip didn't recognise that. Fixed in
    9860d15 and reproduced with a lab AppArmor profile that denies `capability sys_admin`, but **not
    confirmed**: only CI on GitHub's Ubuntu host can. Check it after pushing.
-2. Commits waiting for `claude`, oldest first, none pushed there yet unless `git log origin/claude`
-   says so:
-   - 73e74c7 bridge lines private in remote-access and onion-site
-   - bec859a the bar copes with control characters in a Wi-Fi name
-   - 9860d15 the `--userns` refusal
-   - 051921c serial log cap for VMs, and QEMU's syscall filter for the onion site
-   A full suite was running on 9860d15 in a worktree at `/tmp/wt`, log in the session scratchpad
-   (`suite-c.log`), both gone if this VM restarted: run it again. Expected here: 141 ok, the one
-   `setup-vps` failure, and one warning about Tor Browser's AppArmor DNS fix if the lab is still on
-   this VM. 051921c also needs a full run before it goes.
+2. On `claude` already, suite clean: 8d28954 (git guard), 73e74c7 (bridge lines), bec859a (the bar), 9860d15
+   (the `--userns` refusal). Waiting, on local `claude` and copied onto `claude-wip`: 051921c (serial log cap,
+   the onion site's QEMU filter) and d59f057 (Claude Code as its own user retired). They need a full suite
+   before they go: `git worktree add /tmp/wt <commit>`, then `PATH=$PATH:/usr/sbin bash test.sh --offline`
+   with a hard `timeout` from there. Expected here: 141 ok (or one more for the new group), the one
+   `setup-vps` failure, and one warning about Tor Browser's AppArmor DNS fix if the lab is still on this VM.
 3. Suggest a release when CI is green: 8d28954 (git guard) and those above are fixes people should take.
 
 ## The owner's decisions, in the order to do them
@@ -54,7 +53,7 @@ Each finished, tested and pushed before the next. Told to the owner in this orde
    pages, firewalls, session scripts, and the lists naming them go too (`remove_no_abstract`,
    `TOR_SERVICE_MARKS`, `FIREWALLS`, `tools/test-sandbox-net.sh`...). The browser sandbox borrowed its
    window and clipboard design from wallet-sandbox: don't let it depend on those files.
-4. **Claude Code as its own user (`extras/claude-code.sh`) is retired: `claude-vm` is the only sandbox for
+4. **Claude Code as its own user (`extras/claude-code.sh`) is retired (d59f057): `claude-vm` is the only sandbox for
    an AI agent** (the owner, after asking whether Claude was sure: "vm is ultimately safest"). This replaces
    the earlier plan to stop sharing `~/projects` and pull through an upload-pack: there is nothing left to
    share. Retired the normal way: no new installs, `update.sh` offers its `--remove`, which leaves people's
