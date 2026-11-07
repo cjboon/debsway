@@ -87,6 +87,9 @@ vm_size_set() {
 
 # vm_size_remove USER: forgets USER's line
 vm_size_remove() {
+    if [ -f "${VM_SIZE_FILE%-size}-cpus" ]; then
+        sudo sed -i "/^$1 /d" "${VM_SIZE_FILE%-size}-cpus"
+    fi
     [ -f "$VM_SIZE_FILE" ] || return 0
     local tmp
     tmp=$(mktemp)
@@ -132,4 +135,25 @@ vm_size_choose() {
         die "Disk: $disk MB isn't between $VM_DISK_MIN and $max_disk (more could fill this computer's disk). Nothing was changed."
     vm_size_set "$user" "$mem" "$disk"
     note "Kept: $mem MB of memory (from the VM's next start), a disk of up to $disk MB (from its next build: claude-vm rebuild)."
+}
+
+# vm_cpus_choose USER N: keeps how many CPUs the VM gets, from its next start: at least 1, at
+# most all but 2 of this computer's (or 2, the engine's own default, on a small one). Root's file,
+# as for the size.
+VM_CPUS_FILE=${VM_SIZE_FILE%-size}-cpus
+vm_cpus_max() {
+    local n=$1
+    if [ "$n" -gt 4 ]; then echo "$((n - 2))"; else echo 2; fi
+}
+vm_cpus_choose() {
+    local tmp max
+    max=$(vm_cpus_max "$(nproc)")
+    [[ $2 =~ ^[0-9]{1,2}$ ]] && [ "$2" -ge 1 ] && [ "$2" -le "$max" ] ||
+        die "CPUs: $2 isn't between 1 and $max (this computer has $(nproc), and needs some for itself). Nothing changed."
+    tmp=$(mktemp)
+    { awk -v u="$1" '$1 != u' "$VM_CPUS_FILE" 2>/dev/null || true; echo "$1 $2"; } >"$tmp"
+    sudo install -d -o root -g root -m 0755 "${VM_CPUS_FILE%/*}"
+    sudo install -o root -g root -m 0644 "$tmp" "$VM_CPUS_FILE"
+    rm -f "$tmp"
+    note "Kept: $2 CPUs, from the VM's next start."
 }

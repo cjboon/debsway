@@ -40,7 +40,7 @@
 # and --disk MB choose it, then or later (memory from the VM's next start, the
 # disk from its next build, claude-vm rebuild).
 # Usage: bash claude-vm.sh [--remove | --manual | --account NAME | --remove-account NAME]
-#                          [--memory MB] [--disk MB]
+#                          [--memory MB] [--disk MB] [--cpus N]
 # summary: Claude Code in a disposable VM (no shared folder)
 # security: most
 # files: bin/no-abstract-sockets lib/claude-accounts.sh bin/claude-vm-net-check bin/sandbox-net-check
@@ -52,11 +52,12 @@ if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
 # --memory MB and --disk MB, wherever they are; the rest stays in order
-SIZE_MEM='' SIZE_DISK='' rest=()
+SIZE_MEM='' SIZE_DISK='' SIZE_CPUS='' rest=()
 while [ $# -gt 0 ]; do
     case $1 in
         --memory) [ $# -ge 2 ] || die "--memory needs a number of MB"; SIZE_MEM=$2; shift 2 ;;
         --disk) [ $# -ge 2 ] || die "--disk needs a number of MB"; SIZE_DISK=$2; shift 2 ;;
+        --cpus) [ $# -ge 2 ] || die "--cpus needs a number"; SIZE_CPUS=$2; shift 2 ;;
         *) rest+=("$1"); shift ;;
     esac
 done
@@ -223,6 +224,7 @@ if [ "${1:-}" = --account ] || [ "${1:-}" = --remove-account ]; then
     say "Its sudo rule"
     sudoers_rule "$ACCOUNT_SUDOERS"
     vm_size_choose "$AGENT" "$SIZE_MEM" "$SIZE_DISK"
+    [ -z "$SIZE_CPUS" ] || vm_cpus_choose "$AGENT" "$SIZE_CPUS"
     build_vm "$2"
     cat <<EOF
 
@@ -323,6 +325,7 @@ install_bin claude-pull
 install_bin claude-share
 
 vm_size_choose "$AGENT" "$SIZE_MEM" "$SIZE_DISK"
+[ -z "$SIZE_CPUS" ] || vm_cpus_choose "$AGENT" "$SIZE_CPUS"
 build_vm
 
 cat <<EOF

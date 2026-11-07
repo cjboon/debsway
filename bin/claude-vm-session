@@ -62,6 +62,9 @@ if [ -n "$size" ]; then
         echo "claude-vm-session: ignoring the size in /etc/wren/claude-vm-size ($size MiB): out of range." >&2
     fi
 fi
+# How many CPUs, likewise (extras/claude-vm.sh --cpus, lib/vm-size.sh): without a line, the engine's 2.
+cpus=$(awk -v u="$me" '$1 == u && $2 ~ /^[0-9]+$/ { print $2; exit }' /etc/wren/claude-vm-cpus 2>/dev/null) || true
+if [ -n "$cpus" ] && [ "$cpus" -ge 1 ] && [ "$cpus" -le 32 ]; then export VM_VCPUS=$cpus; fi
 export WEB_TUNNEL=0
 # QEMU's own syscall filter: the guest has root, so a bug in QEMU is what it would
 # aim for, and this limits what that process could then do (libvirt's usual set)

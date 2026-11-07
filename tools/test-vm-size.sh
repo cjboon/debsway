@@ -102,4 +102,23 @@ check "claude-vm.sh asks the size before building, for the first VM and for each
 check "...and forgets it when a VM is removed" bash -c 'grep -q "vm_size_remove claude-vm$" "$1" && grep -q "vm_size_remove \"\$AGENT\"" "$1"' _ "$X"
 check "the file is root's: the VM's user can't give itself more" grep -q 'sudo install -o root -g root -m 0644 "$tmp" "$VM_SIZE_FILE"' "$HERE/lib/vm-size.sh"
 
+
+# How many CPUs
+check "CPUs: an 8 CPU computer can give up to 6" test "$(vm_cpus_max 8)" = 6
+check "...a 4 CPU one up to 2, the default" test "$(vm_cpus_max 4)" = 2
+check "...a 2 CPU one too" test "$(vm_cpus_max 2)" = 2
+S=$HERE/bin/claude-vm-session
+check "the session reads root's file, and only numbers in reason" \
+    bash -c 'grep -q "/etc/wren/claude-vm-cpus 2>/dev/null) || true" "$1" && grep -q "\"\$cpus\" -le 32 \]; then export VM_VCPUS=\$cpus" "$1" && ! grep -q WREN_VM_CPUS "$1"' _ "$S"
+nproc() { echo 8; }
+cpus() { (vm_cpus_choose "$@") 2>&1; }
+cpus claude-vm 4 >/dev/null
+check "--cpus 4: kept in root's file" grep -qx 'claude-vm 4' "$T/etc/claude-vm-cpus"
+cpus claude-vm 6 >/dev/null
+check "...once, for that VM" test "$(grep -c '^claude-vm ' "$T/etc/claude-vm-cpus")" = 1
+out=$(cpus claude-vm 7)
+check "--cpus 7 of 8: refused, nothing changed" bash -c 'grep -q "isn.t between 1 and 6" <<<"$1" && grep -qx "claude-vm 6" "$2"' _ "$out" "$T/etc/claude-vm-cpus"
+out=$(cpus claude-vm 'x; rm')
+check "...and what isn't a number" grep -q "isn.t between" <<<"$out"
+
 [ "$fails" -eq 0 ]

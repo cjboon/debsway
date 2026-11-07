@@ -9,6 +9,7 @@ wrenctl manual claude-vm                          print the manual steps below
 wrenctl install claude-vm --account NAME          another account, in a VM of its own
 wrenctl install claude-vm --remove-account NAME   remove it (asks before deleting its user and VM)
 wrenctl install claude-vm --memory MB --disk MB   the VM's size (also with --account NAME)
+wrenctl install claude-vm --cpus N                how many CPUs it gets, from its next start (2 unless you choose)
 
 claude                 Claude Code; asks which if you set up more than one (Enter: the VM)
 claude-vm              Claude Code inside the VM (boots it; powers it off when you exit)
