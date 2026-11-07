@@ -24,6 +24,8 @@ mkdir -p "$HOME"
 P=$T/usr/share/wren
 mkdir -p "$P"
 (cd "$HERE" && git ls-files -co --exclude-standard | tar -cf - -T -) | tar -C "$P" -xf -
+# (claude-code is the example of a script in use here: as it would be, were it not retired)
+sed -i "/^# retired:/d" "$P/extras/claude-code.sh"
 chmod -R a-w "$P"
 # upgrade CMD...: what apt does: the files change in place, root's again after
 upgrade() { chmod -R u+w "$P"; (cd "$P" && "$@"); chmod -R a-w "$P"; }
