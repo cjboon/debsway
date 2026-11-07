@@ -446,7 +446,7 @@ checked against this Debian:
 - **`sysctl-hardening.sh`**: Debian already sets `dmesg_restrict`,
   `unprivileged_bpf_disabled`, `perf_event_paranoid` and
   `protected_symlinks`/`hardlinks`; this adds `kptr_restrict=2`,
-  `ptrace_scope=1`, `kexec_load_disabled=1`, `sysrq=4`, `io_uring_disabled=2`
+  `ptrace_scope=1`, `kexec_load_disabled=1`, `sysrq=0`, `io_uring_disabled=2`
   (io_uring, a frequent source of kernel exploits, off for everyone; a
   program that wants it, such as QEMU, falls back), a hardened BPF JIT,
   `protected_fifos/regular=2` and stricter network defaults (reverse-path

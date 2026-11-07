@@ -337,7 +337,8 @@ profile_autostart() {
 # >>> Wren Linux autostart >>>
 # What a text console login starts: ~/.config/wren/login says sway (tty1) or
 # console (tmux, any tty). When it ends and that file has changed, the other starts;
-# otherwise tmux's end logs out, and sway's leaves you at the shell.
+# otherwise tmux's end logs out, and sway's leaves you at the shell, if it ended by
+# itself: if not, it asks your password first.
 case "$(tty 2>/dev/null)" in
     /dev/tty[0-9]*)
         if [ -z "${WAYLAND_DISPLAY:-}" ] && [ -z "${TMUX:-}" ]; then
@@ -352,7 +353,34 @@ case "$(tty 2>/dev/null)" in
                     # console-font leaves this to say: detached on purpose, come back with the new font
                     [ ! -e "$HOME/.config/wren/console-redraw" ] || continue
                 elif [ "$(tty)" = /dev/tty1 ]; then
-                    env XDG_CURRENT_DESKTOP=sway sway
+                    # A sway that didn't end by itself (a crash, out of memory, killed) may
+                    # have been locked, so nothing starts again without your password, even
+                    # with autologin. In this boot only: restarting needs what it always did.
+                    r=$HOME/.local/state/wren/sway-running
+                    b=$(cat /proc/sys/kernel/random/boot_id 2>/dev/null)
+                    if [ -n "$b" ] && [ "$(cat "$r" 2>/dev/null)" = "$b" ]; then
+                        trap '' INT QUIT TSTP
+                        printf '\nsway stopped unexpectedly, perhaps while locked, and its windows are gone.\nYour password starts it again.\n'
+                        until su -c true "$(id -un)"; do sleep 1; done
+                        trap - INT QUIT TSTP
+                        rm -f "$r"
+                        # it can't start at all: you need the shell, to see why
+                        if [ -n "${q:-}" ]; then
+                            printf '\nsway keeps failing. Start it again: sway   Log out: exit\n'
+                            break
+                        fi
+                    fi
+                    mkdir -p "${r%/*}"
+                    printf '%s\n' "$b" >"$r"
+                    s=$(date +%s)
+                    rc=0
+                    env XDG_CURRENT_DESKTOP=sway sway || rc=$?
+                    if [ "$rc" != 0 ]; then
+                        q=
+                        [ "$(($(date +%s) - s))" -ge 10 ] || q=1
+                        continue
+                    fi
+                    rm -f "$r"
                 else
                     break
                 fi

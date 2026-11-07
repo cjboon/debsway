@@ -308,7 +308,8 @@ With the extras:
 - **Someone at the computer while you're logged in**, with autologin (`extras/autologin.sh`, which
   the base install sets up on an encrypted disk, or the stick's `--autologin`): switching it on (and
   typing the disk passphrase, on an encrypted disk) is enough to be you until the screen locks.
-  Without disk encryption, switching it on is enough.
+  Without disk encryption, switching it on is enough. If sway dies while it's running (a crash, out
+  of memory), the console asks your password before anything starts again; a restart doesn't.
 
 - **A laptop that's on, asleep or locked.** The disk key is in memory then. Shut down before leaving
   it somewhere or crossing a border. With `extras/lid-awake.sh` a closed lid means on and locked,

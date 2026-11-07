@@ -54,7 +54,7 @@ Everyone who installs Wren Linux gets these. The script named in each row does i
 | `kernel.kptr_restrict` | 0 | 2 | Hides kernel addresses, which exploits use |
 | `kernel.yama.ptrace_scope` | 0 | 1 | A program can only trace its own children |
 | `kernel.kexec_load_disabled` | 0 | 1 | No swapping in another kernel while running |
-| `kernel.sysrq` | 438 | 4 | Limits the magic keys to the secure attention key |
+| `kernel.sysrq` | 438 | 0 | Turns the magic keys off: from the keyboard, they could end a locked desktop |
 | `kernel.io_uring_disabled` | 0 | 2 | Off: where many recent kernel exploits came from |
 | `dev.tty.ldisc_autoload` | 1 | 0 | Users can't load terminal line disciplines |
 | `fs.protected_fifos` | 1 | 2 | Stricter about pipes in shared folders |

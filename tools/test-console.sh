@@ -46,6 +46,40 @@ sed -n '/^case "\$(tty/,/^esac/p' "$HOME/.profile" | sed 's|/dev/tty\[0-9\]\*|*|
 out=$(PATH=$T/lb:$PATH bash -c 'unset WAYLAND_DISPLAY TMUX; . "$1"; echo still-here' _ "$T/block.sh" 2>&1)
 check "exiting sway (mode unchanged) leaves you at the shell, saying how to start it again" \
     bash -c 'grep -qx still-here <<<"$1" && grep -q "Start it again: sway" <<<"$1"' _ "$out"
+# sway dying (a crash, out of memory, the secure attention key): it may have been locked, so
+# no open shell, and with autologin no fresh sway, without your password
+MARK=$HOME/.local/state/wren/sway-running
+printf '#!/bin/sh\necho su >>%s/ran; n=$(cat %s/su-fails 2>/dev/null || echo 0); [ "$n" = 0 ] || { echo $((n - 1)) >%s/su-fails; exit 1; }\n' "$T" "$T" "$T" >"$T/lb/su"
+printf '#!/bin/sh\n[ -s %s/sway-rc ] || exit 0; rc=$(head -n1 %s/sway-rc); sed -i 1d %s/sway-rc; echo "sway $rc" >>%s/ran; exit "$rc"\n' "$T" "$T" "$T" "$T" >"$T/lb/env"
+chmod +x "$T/lb/su"
+bl() { PATH=$T/lb:$PATH timeout 20 bash -c 'unset WAYLAND_DISPLAY TMUX; . "$1"; echo still-here' _ "$T/block.sh" 2>&1; }
+swap sway
+sed -n '/^case "\$(tty/,/^esac/p' "$HOME/.profile" | sed 's|/dev/tty\[0-9\]\*|*|' >"$T/block.sh"
+check "a clean end leaves no mark" test ! -e "$MARK"
+rm -f "$T/ran"; printf '0\n' >"$T/sway-rc"; out=$(bl)
+check "exiting sway on purpose: no password, as before" bash -c '! grep -q su "$1" && grep -qx still-here <<<"$2"' _ "$T/ran" "$out"
+check "...and no mark" test ! -e "$MARK"
+# a run that fails only after a while: (date says 20 seconds went by)
+printf '#!/bin/sh\nn=$(cat %s/clock 2>/dev/null || echo 1000); echo $((n + 20)) >%s/clock; echo $n\n' "$T" "$T" >"$T/lb/date"
+chmod +x "$T/lb/date"
+rm -f "$T/ran"; printf '139\n0\n' >"$T/sway-rc"; echo 2 >"$T/su-fails"; out=$(bl)
+check "sway crashes: the password comes first, as often as it's wrong, then sway starts again" \
+    test "$(paste -sd' ' "$T/ran")" = "sway 139 su su su sway 0"
+check "...it says why" grep -q 'stopped unexpectedly' <<<"$out"
+check "...and no open shell before the password" bash -c '[[ $1 != *still-here*stopped* ]]' _ "$out"
+# killed along with the shell (the secure attention key): autologin only starts this block again
+rm -f "$T/ran"; printf '0\n' >"$T/sway-rc"; cat /proc/sys/kernel/random/boot_id >"$MARK"; out=$(bl)
+check "a login after sway was killed, same boot: the password first" test "$(paste -sd' ' "$T/ran")" = "su sway 0"
+rm -f "$T/ran"; printf '0\n' >"$T/sway-rc"; echo another-boot >"$MARK"; out=$(bl)
+check "a mark from another boot (a power cut): no password here" test "$(paste -sd' ' "$T/ran")" = "sway 0"
+# sway can't start at all: after the password, the shell, to see why
+printf '#!/bin/sh\necho 1000\n' >"$T/lb/date"
+rm -f "$T/ran"; printf '1\n1\n1\n' >"$T/sway-rc"; out=$(bl)
+check "sway fails at once: the password, then the shell to see why" bash -c '[ "$(paste -sd" " "$1")" = "sway 1 su" ] && grep -qx still-here <<<"$2" && grep -q "keeps failing" <<<"$2"' _ "$T/ran" "$out"
+rm -f "$T/lb/date" "$T/lb/su" "$MARK"
+printf '#!/bin/sh\necho sway >>%s/ran\n' "$T" >"$T/lb/env"
+check "the magic keys are off: the secure attention key would end a locked sway" grep -qx 'kernel.sysrq = 0' "$HERE/data/sysctl-hardening.conf"
+check "an update writes the block again, if it's there" grep -q 'profile_autostart "$(login_mode)"' "$HERE/parts/core-commands.sh"
 swap console
 out=$(PATH=$T/lb:$PATH bash -c 'unset WAYLAND_DISPLAY TMUX; . "$1"; echo still-here' _ "$T/block.sh" 2>&1)
 check "...while leaving tmux (mode unchanged) logs out, as before" not grep -qx still-here <<<"$out"

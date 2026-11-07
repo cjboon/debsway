@@ -51,6 +51,9 @@ say "The base desktop's commands"
 # cal and ncal: the month in the timer screen (click the time in the bar)
 apt_install ncal
 for c in "${COMMANDS[@]}"; do install_bin "$c"; done
+# The login block in ~/.profile, as it is now: asks your password if sway died (lib/core.sh).
+# Only if it's there: you may have taken it out (README).
+if grep -qx '# >>> Wren Linux autostart >>>' "$HOME/.profile" 2>/dev/null; then profile_autostart "$(login_mode)"; fi
 mkdir -p "${KEYS%/*}"
 install -m 0644 "$WREN_DIR/data/keys.txt" "$KEYS"
 note "Cheat sheet: $KEYS"
