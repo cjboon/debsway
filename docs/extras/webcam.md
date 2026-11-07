@@ -16,8 +16,8 @@ device is disconnected, as if unplugged, so no program can open it at all;
 a webcam's own microphone goes with it. The root helper `bin/wren-camera`,
 installed as `/usr/local/libexec/wren-camera`, does it by writing the
 kernel's `authorized` switch of the camera's USB device. A rule in
-`/etc/sudoers.d` lets your user run it with `on` or `off` and nothing else, so
-the Wren menu needs no password, and a udev rule
+`/etc/sudoers.d` lets your user run it with `off` freely and `on` with your password, and nothing
+else, so a program running as you can't switch it on, and a udev rule
 (`data/webcam-off.rules`) switches each camera off as it appears.
 
 ## LIMITS
@@ -35,10 +35,10 @@ sudo install -o root -g root -m 0755 @WREN_DIR@/bin/wren-camera /usr/local/libex
 # The switch the Wren menu uses (wrenctl --camera calls it)
 install -D -m 0755 @WREN_DIR@/bin/radios ~/.local/bin/radios
 
-# Your user may run the helper with "on" or "off" and nothing else, as root,
-# without a password. visudo checks the rule before it goes in: never put a
+# Your user may run the helper with "off", and with the password "on", and
+# nothing else, as root. visudo checks the rule before it goes in: never put a
 # rule in /etc/sudoers.d that visudo hasn't passed.
-printf '%s ALL=(root) NOPASSWD: /usr/local/libexec/wren-camera on, /usr/local/libexec/wren-camera off\n' "$(id -un)" >/tmp/wren-camera
+printf '%s ALL=(root) NOPASSWD: /usr/local/libexec/wren-camera off\n%s ALL=(root) /usr/local/libexec/wren-camera on\n' "$(id -un)" "$(id -un)" >/tmp/wren-camera
 sudo visudo -cf /tmp/wren-camera
 sudo install -o root -g root -m 0440 /tmp/wren-camera /etc/sudoers.d/wren-camera
 rm /tmp/wren-camera

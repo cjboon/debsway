@@ -43,8 +43,8 @@ sudo install -o root -g root -m 0755 "$WREN_DIR/bin/wren-camera" "$HELPER"
 install_bin radios
 
 rule=$(mktemp)
-printf '# Written by Wren Linux extras/webcam.sh. %s may switch the webcam on and off,\n# and nothing else, as root.\n%s ALL=(root) NOPASSWD: %s on, %s off\n' \
-    "$(id -un)" "$(id -un)" "$HELPER" "$HELPER" >"$rule"
+printf '# Written by Wren Linux extras/webcam.sh. %s may switch the webcam off, and with the\n# password on (so a program running as you can'"'"'t), and nothing else, as root.\n%s ALL=(root) NOPASSWD: %s off\n%s ALL=(root) %s on\n' \
+    "$(id -un)" "$(id -un)" "$HELPER" "$(id -un)" "$HELPER" >"$rule"
 if ! sudo visudo -cf "$rule" >/dev/null; then
     rm -f "$rule"
     die "The sudoers rule didn't pass visudo's check, so it wasn't installed."

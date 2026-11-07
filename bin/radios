@@ -67,7 +67,14 @@ set_state() { # NAME on|off
                 rfkill block bluetooth
             fi ;;
         mic) wpctl set-mute "$SOURCE" "$([ "$2" = on ] && echo 0 || echo 1)" ;;
-        camera) sudo -n "$CAMERA" "$2" >/dev/null ;;
+        camera)
+            # On asks your password, so a program running as you can't switch it on. In the
+            # desktop, in a window of its own: this may have been started from the menu or a key.
+            if [ "$2" = off ]; then sudo -n "$CAMERA" off >/dev/null
+            elif [ -n "${WAYLAND_DISPLAY:-}" ] && command -v foot >/dev/null; then
+                foot --app-id=wren-run --title="Webcam on" sudo -p "Your password switches the webcam on: " "$CAMERA" on
+            else sudo -p "Your password switches the webcam on: " "$CAMERA" on >/dev/null
+            fi ;;
     esac
     # the bar shows the Wi-Fi name: have it look again (only if that pid really is sway-status)
     local pid

@@ -58,13 +58,13 @@ check "...and off says there is none" not cam off
 # The menu's Webcam line: radios with a pretend helper and sudo
 mkdir -p "$T/fake"
 printf '#!/bin/sh\ncase $1 in status) cat "%s/state" ;; on|off) echo "$1" >"%s/state" ;; esac\n' "$T" "$T" >"$T/fake/helper"
-printf '#!/bin/sh\necho "sudo $*" >>"%s/calls"\n[ "$1" != -n ] || shift\nexec "$@"\n' "$T" >"$T/fake/sudo"
+printf '#!/bin/sh\necho "sudo $*" >>"%s/calls"\n[ "$1" != -n ] || shift\n[ "$1" != -p ] || shift 2\nexec "$@"\n' "$T" >"$T/fake/sudo"
 chmod +x "$T/fake/"*
 r() { PATH="$T/fake:$PATH" WREN_CAMERA="$T/fake/helper" WREN_SYS="$T/nosys" bash "$HERE/bin/radios" "$@"; }
 echo off >"$T/state"
 check "the menu lists the webcam with its state" grep -qx 'camera off' <<<"$(r list)"
 r camera toggle
-check "switching it goes through sudo, with on or off only" grep -qx "sudo -n $T/fake/helper on" "$T/calls"
+check "switching it on goes through sudo, able to ask the password (no -n)" bash -c 'grep -q "^sudo -p .* $1 on$" "$2" && ! grep -q "^sudo -n .* on$" "$2"' _ "$T/fake/helper" "$T/calls"
 check "...and switches it" test "$(r camera status)" = on
 echo none >"$T/state"
 check "with no camera the menu has no Webcam line" not grep -q camera <<<"$(r list)"
@@ -73,6 +73,15 @@ check "the menu calls it Webcam" grep -q 'camera) name=Webcam' "$HERE/bin/wren-m
 # The pieces the extra installs
 check "udev runs it only for a whole USB device being added (not when switched on)" \
     grep -q 'ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", RUN+="/usr/local/libexec/wren-camera added %k"' "$HERE/data/webcam-off.rules"
-check "the sudo rule allows exactly on and off" grep -q 'NOPASSWD: %s on, %s off' "$HERE/extras/webcam.sh"
+printf '#!/bin/sh\necho "foot $*" >>"%s/calls"\nwhile [ "$1" != sudo ]; do shift; done\nexec "$@"\n' "$T" >"$T/fake/foot"
+chmod +x "$T/fake/foot"
+echo off >"$T/state"
+: >"$T/calls"
+WAYLAND_DISPLAY=wayland-1 r camera on
+check "in the desktop: in a window of its own, to type the password in" grep -q '^foot .*sudo -p' "$T/calls"
+: >"$T/calls"
+WAYLAND_DISPLAY=wayland-1 r camera off
+check "off: no window and no password" bash -c '! grep -q "^foot" "$1" && grep -q "^sudo -n .* off$" "$1"' _ "$T/calls"
+check "the sudo rule: off with no password, on only with it, and nothing else" bash -c 'grep -q "NOPASSWD: %s off.n%s ALL=(root) %s on" "$1"' _ "$HERE/extras/webcam.sh"
 
 [ "$fails" -eq 0 ]
