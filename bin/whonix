@@ -11,6 +11,9 @@
 #                   WHONIX_STOP_WAIT seconds (60) is left running, and it says so.
 #   whonix stop --force   the same, but one still running then is switched off,
 #                   as if its power button were held
+#   whonix live     the same as whonix, but nothing done in the Workstation is kept: its disk is
+#                   put back when it shuts down. The Gateway runs as usual, since a Gateway
+#                   that forgot would pick new Tor guards each time, which is worse.
 #   whonix update   update both, and Tor Browser, over Tor, with both shut down: the
 #                   Gateway first, then the Workstation. You see it in their windows, and
 #                   they power off when done. Your Tor Browser bookmarks are kept.
@@ -55,6 +58,38 @@ up() {
     # (its error message, not its output)
     # shellcheck disable=SC2069  # this order on purpose: keeps the error, drops the output
     err=$($v start "$1" 2>&1 >/dev/null) || fail "couldn't start $1: $err"
+}
+# What a live Workstation changed goes to a file next to its disk, which libvirt deletes when it
+# shuts down, but which a power cut leaves behind: gone before any start, not to linger.
+IMAGES=$HOME/.local/share/libvirt/images
+live_leftovers() { running Whonix-Workstation || rm -f "$IMAGES"/Whonix-Workstation*TRANSIENT*; }
+# live_xml OUT: the Workstation's settings, its disk marked to forget. virsh create starts it
+# from this copy, so the saved settings stay as they were, as with an update. (Whonix names its
+# disk through libvirt's storage pool, and libvirt only forgets on a disk named as a plain file.)
+live_xml() {
+    $v dumpxml --inactive Whonix-Workstation | python3 -I -c '
+import re, sys
+from xml.sax.saxutils import quoteattr
+out, images = sys.argv[1:3]
+def forget(m):
+    d = re.sub(r"(<disk\b[^>]*)type=.volume.", lambda t: t.group(1) + "type=\"file\"", m.group(0), count=1)
+    d = re.sub(r"<source\b[^>]*volume=.([^\x27\"]+).[^>]*/>", lambda s: "<source file=%s/>" % quoteattr(images + "/" + s.group(1)), d, count=1)
+    return d.replace("</disk>", "<transient/></disk>")
+x = sys.stdin.read()
+x, n = re.subn(r"<disk\b[^>]*device=.disk.[^>]*>.*?</disk>", forget, x, count=1, flags=re.S)
+if not n:
+    sys.exit("no disk in its settings")
+open(out, "w").write(x)' "$1" "$IMAGES"
+}
+live() {
+    # (running as usual, what it has done would be kept, whatever this said)
+    if running Whonix-Workstation; then fail "The Workstation is already running, and keeps what is done in it. Run whonix stop first."; fi
+    xml=$GW_NET/live.xml
+    live_xml "$xml" || fail "couldn't read the Workstation's settings."
+    # shellcheck disable=SC2069  # this order on purpose: keeps the error, drops the output
+    err=$($v create "$xml" 2>&1 >/dev/null) || { rm -f "$xml"; fail "couldn't start the Workstation: $err"; }
+    rm -f "$xml"
+    echo "Live: nothing done in the Workstation is kept when it shuts down. It does go to this computer's disk until then."
 }
 # console VM: its window, and back once that is open. virt-manager can stay in
 # front until its window closes, so it runs on its own, with what it says in a
@@ -349,7 +384,8 @@ lyrebird_check() {
 }
 
 case "${1:-start}" in
-    start) wait_for_update start; lyrebird_check; gateway_net && up Whonix-Gateway && up Whonix-Workstation && open_both ;;
+    start) wait_for_update start; lyrebird_check; live_leftovers; gateway_net && up Whonix-Gateway && up Whonix-Workstation && open_both ;;
+    live) wait_for_update start; lyrebird_check; live_leftovers; gateway_net && up Whonix-Gateway && live && open_both ;;
     gateway) wait_for_update gateway; lyrebird_check; gateway_net && up Whonix-Gateway && console Whonix-Gateway ;;
     stop)
         case ${2:-} in
@@ -362,5 +398,5 @@ case "${1:-start}" in
         esac ;;
     update) update ;;
     __update) update_locked ;;
-    *) echo "usage: whonix [start|gateway|stop [--force]|update]" >&2; exit 2 ;;
+    *) echo "usage: whonix [start|live|gateway|stop [--force]|update]" >&2; exit 2 ;;
 esac

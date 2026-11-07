@@ -35,7 +35,7 @@ case \$cmd in
         if [ -s "$T/deaf" ]; then sed -i 1d "$T/deaf"; exit 0; fi
         if grep -qx "\$1" "$T/obeys" 2>/dev/null; then echo "shut off" >"$T/state/\$1"; fi ;;
     dumpxml)
-        echo "<domain type='kvm'><name>\$2</name><serial type='pty'><target port='0'/></serial>"
+        echo "<domain type='kvm'><name>\$2</name><disk type='file' device='cdrom'><target dev='sdb'/></disk><disk type='volume' device='disk'><source pool='default' volume='Whonix-Workstation.qcow2'/><target dev='vda'/></disk><serial type='pty'><target port='0'/></serial>"
         [ -e "$T/wren-net" ] && echo "<qemu:commandline><qemu:arg value='{&quot;id&quot;: &quot;wren-gw-net&quot;}'/></qemu:commandline>"
         echo "</domain>" ;;
     create)
@@ -164,6 +164,26 @@ check "...with --force too" bash -c '[ "$1" = 0 ] && grep -q "nothing to stop" <
 echo running >"$T/state/Whonix-Gateway"; echo Whonix-Gateway >"$T/obeys"
 out=$(w stop 2>&1)
 check "...but not when one was running" not grep -q 'nothing to stop' <<<"$out"
+
+# whonix live: the Workstation forgets, the Gateway doesn't, and the saved settings stay
+reset
+mkdir -p "$T/home/.local/share/libvirt/images"
+touch "$T/home/.local/share/libvirt/images/Whonix-Workstation.qcow2" "$T/home/.local/share/libvirt/images/Whonix-Workstation.qcow2.TRANSIENT-Whonix-Workstation"
+w live >"$T/live.out" 2>&1
+check "whonix live: the Gateway as usual, the Workstation from a copy" test "$(grep -E '^virsh (start|create) W' "$T/calls" | paste -sd';')" = "virsh start Whonix-Gateway;virsh create Whonix-Workstation"
+check "...its disk marked to forget, and not the CD beside it" grep -q "<target dev='vda'/><transient/></disk>" "$T/created-Whonix-Workstation.xml"
+check "...named as a plain file, the only way libvirt forgets (a real libvirt refused the pool's name)" bash -c 'grep -q "<disk type=\"file\" device=.disk.><source file=\"$1/.local/share/libvirt/images/Whonix-Workstation.qcow2\"/>" "$2"' _ "$T/home" "$T/created-Whonix-Workstation.xml"
+check "...it says so, and that it does go to the disk meanwhile" grep -q 'nothing done in the Workstation is kept' "$T/live.out"
+check "...and removes what a power cut left of an earlier one" test ! -e "$T/home/.local/share/libvirt/images/Whonix-Workstation.qcow2.TRANSIENT-Whonix-Workstation"
+check "...but not the disk" test -e "$T/home/.local/share/libvirt/images/Whonix-Workstation.qcow2"
+reset
+echo running >"$T/state/Whonix-Workstation"
+out=$(w live 2>&1) && rc=0 || rc=$?
+check "the Workstation already running: refused, it wouldn't forget" bash -c '[ "$1" != 0 ] && grep -q "already running" <<<"$2" && ! grep -q "^virsh create W" "$3"' _ "$rc" "$out" "$T/calls"
+touch "$T/home/.local/share/libvirt/images/Whonix-Workstation.qcow2.TRANSIENT-x"
+w live >/dev/null 2>&1
+check "...and what it is using stays" test -e "$T/home/.local/share/libvirt/images/Whonix-Workstation.qcow2.TRANSIENT-x"
+rm -f "$T/home/.local/share/libvirt/images/Whonix-Workstation.qcow2.TRANSIENT-x"
 
 # A press in about the first 70 seconds after a start is lost (seen on a real Workstation)
 reset; echo running >"$T/state/Whonix-Workstation"; echo Whonix-Workstation >"$T/obeys"; echo lost >"$T/deaf"

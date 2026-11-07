@@ -13,6 +13,7 @@ whonix             start both VMs and open both, each on an empty workspace (or 
 whonix gateway     start the Gateway and open it (Tor settings, bridges)
 whonix stop        shut both down, right away and cleanly: save your work inside first
 whonix stop --force   the same, and one still running after 60 seconds is switched off
+whonix live        the same as whonix, but nothing done in the Workstation is kept after it shuts down
 whonix update      update both VMs and Tor Browser, keeping your bookmarks; they power off when done
 ```
 
@@ -101,6 +102,10 @@ the new card; `--bridges` then sets the DNS for the bridge you choose.
   `--bridges` gives the Gateway the rule, but nothing gives it to a Workstation that is already
   installed: back up what you keep in it, then `wrenctl remove whonix` (saying yes to deleting the
   disks) and `wrenctl install whonix`.
+- `whonix live` forgets what is done in the Workstation, not the Gateway: one that forgot would pick
+  new Tor guards each time, which makes you easier to find. Until it shuts down, what changes is
+  in a file beside its disk. That is deleted, not wiped, and a power cut leaves it until the next
+  start, so only your disk encryption protects it: it isn't memory-only, like Tails.
 - `whonix stop --force` switches off a VM still running after 60 seconds, as if its power button
   were held, which can leave its disk needing repair at the next boot.
 - A VM still starting doesn't hear its power button (a Workstation here, for about its first 70
