@@ -33,7 +33,10 @@ cat >"$T/fake/wpctl" <<FAKE
 [ -f "$T/mic" ] || exit 1
 case \$1 in
     get-volume) echo "Volume: 1.00\$([ "\$(cat "$T/mic")" = muted ] && echo ' [MUTED]')" ;;
-    set-mute) if [ "\$3" = 1 ]; then echo muted >"$T/mic"; else echo open >"$T/mic"; fi ;;
+    # (with $T/mic-stuck it takes the command and changes nothing, as a source PipeWire
+    # isn't ready with can)
+    set-mute) [ -e "$T/mic-stuck" ] && exit 0
+        if [ "\$3" = 1 ]; then echo muted >"$T/mic"; else echo open >"$T/mic"; fi ;;
 esac
 FAKE
 cat >"$T/fake/bluetoothctl" <<FAKE
@@ -72,6 +75,17 @@ check "mic off mutes the default microphone" test "$(r mic status)" = off
 check "...and nothing else changed" test "$(r wifi status)" = on
 r mic toggle
 check "mic toggle unmutes it" test "$(r mic status)" = on
+touch "$T/mic-stuck"
+r mic off 2>"$T/err"; rc=$?
+check "a mute that doesn't take: mic off fails with status 1" test "$rc" -eq 1
+check "...and says so, not that it is off" grep -q "didn't switch off" "$T/err"
+check "...and it really is still on" test "$(r mic status)" = on
+r mic toggle 2>/dev/null; rc=$?
+check "...toggle fails the same way" test "$rc" -eq 1
+rm -f "$T/mic-stuck"
+r mic off; rc=$?
+check "a mute that takes: status 0" test "$rc" -eq 0
+r mic on
 
 echo "unblocked blocked" >"$T/rf/wifi"
 check "a hardware switch is reported as blocked, not as off" test "$(r wifi status)" = blocked

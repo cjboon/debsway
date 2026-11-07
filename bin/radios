@@ -12,7 +12,8 @@
 # off, not just a program being told not to use it. The microphone is muted in
 # PipeWire: that is software, and a program that runs as you can unmute it
 # again; a hardware switch or a disabled device is the stronger kind.
-# Exit status: 0 done, 1 not available on this computer, 2 bad use.
+# Exit status: 0 done, 1 not available on this computer (or the microphone
+# didn't switch), 2 bad use.
 export PATH="$PATH:/usr/sbin:/sbin"
 SYS=${WREN_SYS:-/sys}
 SOURCE=@DEFAULT_AUDIO_SOURCE@
@@ -53,6 +54,7 @@ state() {
 }
 
 set_state() { # NAME on|off
+    local rc=0
     case $1 in
         wifi) if [ "$2" = on ]; then rfkill unblock wifi; else rfkill block wifi; fi ;;
         bluetooth)
@@ -66,7 +68,14 @@ set_state() { # NAME on|off
                 command -v bluetoothctl >/dev/null && bluetoothctl power off >/dev/null 2>&1
                 rfkill block bluetooth
             fi ;;
-        mic) wpctl set-mute "$SOURCE" "$([ "$2" = on ] && echo 0 || echo 1)" ;;
+        mic)
+            # Checked afterwards: a mute that didn't happen must not pass for one (the
+            # bar would say "mic ON" while this said off)
+            wpctl set-mute "$SOURCE" "$([ "$2" = on ] && echo 0 || echo 1)" || true
+            if [ "$(state mic)" != "$2" ]; then
+                echo "radios: the microphone didn't switch $2 (PipeWire refused, or it isn't ready yet: wpctl status)." >&2
+                rc=1
+            fi ;;
         camera)
             # On asks your password, so a program running as you can't switch it on. In the
             # desktop, in a window of its own: this may have been started from the menu or a key.
@@ -82,7 +91,7 @@ set_state() { # NAME on|off
     if [ -n "$pid" ] && { tr '\0' ' ' <"/proc/$pid/cmdline"; } 2>/dev/null | grep -q sway-status; then
         kill -USR1 "$pid" 2>/dev/null
     fi
-    return 0
+    return "$rc"
 }
 
 cmd=${1:-}

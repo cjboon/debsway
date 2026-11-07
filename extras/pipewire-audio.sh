@@ -47,7 +47,14 @@ bindsym $mod+F12 exec ~/.local/bin/volume up
 # The microphone starts muted. Sound is still starting at login, so it waits for it.
 exec ~/.local/bin/radios mic off --wait
 EOF
-# Muted now too, not only at the next login
-~/.local/bin/radios mic off >/dev/null 2>&1 || true
-note "The microphone is off until you switch it on (wrenctl --mic on, or the Wren menu)."
+# Muted now too, not only at the next login. PipeWire was only just started, so the
+# microphone may not be there yet: wait for it, as at login, and say so if it didn't work
+if "$BIN/radios" mic off --wait >/dev/null; then
+    note "The microphone is off until you switch it on (wrenctl --mic on, or the Wren menu)."
+elif ! "$BIN/radios" list 2>/dev/null | grep -q '^mic '; then
+    note "No microphone showed up; when one does, it is muted at your next login."
+else
+    warn "The microphone is still on: muting it didn't work. Switch it off: wrenctl --mic off"
+    warn "(the bar says \"mic ON\" while it is on; wpctl status shows what PipeWire has)"
+fi
 note "Check the sound with: wpctl status"

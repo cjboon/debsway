@@ -416,6 +416,7 @@ dev_test wifi-remove "wifi.sh --remove (lib/net.sh), on a pretend /etc" "wifi re
 
 # --------------------------------------------------------------------
 dev_test radios "Wi-Fi, Bluetooth and microphone switches (bin/radios), with pretend rfkill and wpctl" "radio switch checks"
+dev_test pipewire-audio "The sound extra mutes the microphone and says so only when it worked (extras/pipewire-audio.sh), with a pretend wpctl" "sound extra checks"
 
 # --------------------------------------------------------------------
 dev_test console "Console-only: the autostart swap, the tmux bar and its clicks" "console-only checks"
