@@ -17,13 +17,11 @@
 #       after it. Not found, your files differ from everything that was
 #       published (changed by you, or on the stick by someone else): it says
 #       so, and git status shows what differs.
-#  3. How git logs in to push, for a server reached over https (fetching needs
-#     no login):
-#       token   a token you paste at each push: nothing is saved (the safest)
-#       memory  the same, kept in memory for an hour after you paste it
-#       gh      GitHub's own login, through a web page: saved in plain text in
-#               ~/.config/gh, for every repository on your account
-#     Over ssh, git uses your ssh key: there is nothing to set.
+#  3. How you push to GitHub: over ssh, with a key of your own made for it
+#     (on a security key, or a key file with a passphrase), that no ssh-agent
+#     holds, checked against GitHub's host keys pinned in pins.sh. You add the
+#     key to your GitHub account once; it tests it before it changes anything.
+#     Fetching stays on the public address, and needs no key.
 # Usage: bash git-helper.sh         this copy of Wren Linux: steps 1 to 3
 #        bash git-helper.sh DIR     any git repository of yours: steps 1 and 3
 # (wrenctl git [DIR] runs it: for DIR, or the repository you are in)
@@ -38,10 +36,6 @@ GH=${WREN_GH:-gh}
 WGET=${WREN_WGET:-wget}
 NOREPLY=users.noreply.github.com
 
-# https_host URL: the server of an https address, with its port (empty otherwise)
-https_host() {
-    if [[ $1 =~ ^https://([^/@]+@)?([A-Za-z0-9.-]+(:[0-9]{1,5})?)(/|$) ]]; then echo "${BASH_REMATCH[2]}"; fi
-}
 # github_owner URL: the account in a GitHub address (github.com/OWNER/REPO)
 github_owner() {
     if [[ $1 =~ github\.com[:/]([A-Za-z0-9-]{1,39})/ ]]; then echo "${BASH_REMATCH[1]}"; fi
@@ -105,82 +99,113 @@ noreply_offer() {
     fi
 }
 
-# login REPO: how git logs in to push to REPO's server
-login() {
-    local repo=$1 url host owner how now options=(token memory)
-    url=$(git -C "$repo" remote get-url origin 2>/dev/null) || { note "$repo has no server (origin) yet, so there is no login to set."; return 0; }
-    host=$(https_host "$url")
-    if [ -z "$host" ]; then
-        case $url in
-            *@*:* | ssh://*) note "$url is reached over ssh: git logs in with your ssh key, nothing to set here." ;;
-        esac
+# Pushing to GitHub over ssh, with a key of your own that is only for GitHub: no token,
+# nothing saved by git, and a key no agent holds (ssh asks its passphrase at every push,
+# or a security key wants a touch), checked against GitHub's host keys in pins.sh.
+# (a test points these at pretend ones)
+SSH=${WREN_SSH:-ssh}
+KEYGEN=${WREN_SSH_KEYGEN:-ssh-keygen}
+GH_KEY=$HOME/.ssh/id_wren_github
+GH_KNOWN=$HOME/.ssh/known_hosts_github
+SSH_CONF=$HOME/.ssh/config
+SSH_BEGIN='# >>> Wren Linux github >>>'
+SSH_END='# <<< Wren Linux github <<<'
+
+# ssh_key: GH_KEY, made now if there is none: on a security key if you have one plugged in,
+# otherwise a key file with a passphrase (ssh-keygen asks for it)
+ssh_key() {
+    if [ -f "$GH_KEY" ] && [ -f "$GH_KEY.pub" ]; then
+        note "Your key for GitHub: $GH_KEY"
         return 0
     fi
-    owner=
-    if [ "$host" = github.com ]; then owner=$(github_owner "$url"); fi
-    say "Logging in to $host, to push (fetching needs no login)"
-    # what is set now
-    now=none
-    case $(git config --global --get-all "credential.https://$host.helper" 2>/dev/null | tail -n1) in
-        *"auth git-credential"*) now=gh ;;
-        cache*) now=memory ;;
-        store*) now=store ;;
-        "") if git config --global --get-all "credential.https://$host.helper" >/dev/null 2>&1; then now=token; fi ;;
-    esac
-    # git's store helper, for every server: it applies next to the one above
-    if git config --global --get-all credential.helper 2>/dev/null | grep -q '^store'; then now=store; fi
-    case $now in
-        token) note "Now: you paste a token at each push; nothing is saved." ;;
-        memory) note "Now: you paste a token, kept in memory for an hour." ;;
-        gh) note "Now: GitHub's gh login, saved in plain text in ~/.config/gh." ;;
-        store) warn "Now: git's store helper keeps your password or token in plain text (~/.git-credentials)." ;;
-        none) note "Now: git asks for a user name and password at each push." ;;
-    esac
-    if [ "$now" != none ] && [ "$now" != store ]; then
-        ask "Change it?" n || return 0
+    mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+    if ask "Is a security key (FIDO2) plugged in, to keep this key on? (each push then wants a touch)" n; then
+        "$KEYGEN" -t ed25519-sk -C wren-github -f "$GH_KEY" || { warn "No key was made; nothing was changed."; return 1; }
+    else
+        note "A key file, then. Give it a passphrase (KeePassXC can keep it): ssh asks for it at every push."
+        "$KEYGEN" -t ed25519 -C wren-github -f "$GH_KEY" || { warn "No key was made; nothing was changed."; return 1; }
     fi
-    note "token   paste a token at each push: nothing is saved here (the safest)"
-    note "memory  the same, kept in memory for an hour after you paste it"
-    if [ "$host" = github.com ] && command -v "$GH" >/dev/null; then
-        options+=(gh)
-        note "gh      log in through a web page: saved in plain text in ~/.config/gh,"
-        note "        readable by any program of yours, for every repository on your account"
-    fi
-    note "skip    leave it as it is"
-    options+=(skip)
-    choose how "How should git log in?" token "${options[@]}"
-    case $how in
-        skip) note "Left as it was."; return 0 ;;
-        gh)
-            "$GH" auth login --hostname github.com --git-protocol https && "$GH" auth setup-git ||
-                warn "That didn't work; nothing else was changed. Try again later: wrenctl git $repo"
-            return 0 ;;
+    case $(cut -d' ' -f1 "$GH_KEY.pub") in
+        sk-*) ;;
+        *) if "$KEYGEN" -y -P '' -f "$GH_KEY" >/dev/null 2>&1; then
+               warn "That key has no passphrase: anything running as you could push with it. Add one: ssh-keygen -p -f $GH_KEY"
+           fi ;;
     esac
-    # token or memory: no helper but git's own (an empty one drops the rest)
-    git config --global --replace-all "credential.https://$host.helper" ''
-    if [ "$how" = memory ]; then git config --global --add "credential.https://$host.helper" 'cache --timeout=3600'; fi
-    if [ -n "$owner" ]; then git config --global "credential.https://$host.username" "$owner"; fi
-    if [ "$host" = github.com ] && command -v "$GH" >/dev/null && "$GH" auth status --hostname github.com >/dev/null 2>&1; then
-        ask "gh is logged in too, its token saved in plain text. Log it out (the token there goes)?" y &&
-            "$GH" auth logout --hostname github.com
+}
+
+# ssh_settings: GitHub's host keys from pins.sh, in a file of their own, and one block at the
+# top of ~/.ssh/config (ssh takes the first value it finds) saying how to reach GitHub
+ssh_settings() {
+    local tmp
+    mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+    printf '%s\n' "$GITHUB_HOST_KEYS" >"$GH_KNOWN"
+    chmod 644 "$GH_KNOWN"
+    tmp=$(mktemp)
+    {
+        printf '%s\n' "$SSH_BEGIN" '# (written by Wren Linux git-helper.sh: wrenctl git sets it again)' \
+            'Host github.com' '    HostName github.com' '    User git' \
+            "    IdentityFile $GH_KEY" '    IdentitiesOnly yes' '    IdentityAgent none' '    AddKeysToAgent no' \
+            "    UserKnownHostsFile $GH_KNOWN" '    StrictHostKeyChecking yes' "$SSH_END"
+        [ ! -f "$SSH_CONF" ] || sed "\\|^$SSH_BEGIN\$|,\\|^$SSH_END\$|d" "$SSH_CONF"
+    } >"$tmp"
+    install -m 0600 "$tmp" "$SSH_CONF"
+    rm -f "$tmp"
+}
+
+# no_https_logins: what earlier versions set up for pushing over https, now not needed
+no_https_logins() {
+    if git config --global --get-regexp '^credential\.https://github\.com\.' >/dev/null 2>&1 &&
+        ask "git's https login settings for GitHub aren't needed any more. Remove them?" y; then
+        git config --global --remove-section credential.https://github.com 2>/dev/null || true
     fi
     if git config --global --get-all credential.helper 2>/dev/null | grep -q '^store' &&
-        ask "Stop git's store helper, so nothing is saved in plain text from now on?" y; then
+        ask "git's store helper keeps passwords and tokens in plain text. Stop it?" y; then
         git config --global --unset-all credential.helper '^store'
+    fi
+    if command -v "$GH" >/dev/null && "$GH" auth status --hostname github.com >/dev/null 2>&1 &&
+        ask "gh is logged in, its token saved on this computer. Log it out?" y; then
+        "$GH" auth logout --hostname github.com
     fi
     if [ -f "$HOME/.git-credentials" ]; then
         warn "$HOME/.git-credentials holds saved passwords or tokens in plain text. Delete it if you don't need them."
     fi
-    if [ "$host" = github.com ]; then
-        note "Make a token: https://github.com/settings/personal-access-tokens/new"
-        note "  Repository access: Only select repositories, this one ($(sed -E 's|.*github\.com[:/]||; s|\.git$||' <<<"$url"))"
-        note "  Repository permissions: Add permissions, Contents, then Read and write; and an expiry date"
-        note "Keep it in your password manager. At a push: user name ${owner:-yours}, password the token."
-    else
-        note "Make an access token on $host that may write to this repository, and keep it in your"
-        note "password manager. At a push: your user name there, and the token as the password."
+}
+
+# login REPO: how pushing to REPO's server works. On GitHub, over ssh with your own key; fetching
+# stays on the public address, so updates need no key. Elsewhere it changes nothing.
+login() {
+    local repo=$1 url path want said
+    url=$(git -C "$repo" remote get-url origin 2>/dev/null) || { note "$repo has no server (origin) yet, so there is no login to set."; return 0; }
+    case $url in
+        https://github.com/* | git@github.com:*) ;;
+        *) note "$url isn't on GitHub: pushing there takes the login that server asks for."; return 0 ;;
+    esac
+    path=$(sed -E 's#^(https://github\.com/|git@github\.com:)##; s#\.git$##' <<<"$url")
+    [[ $path =~ ^[A-Za-z0-9-]{1,39}/[A-Za-z0-9._-]{1,100}$ ]] || { warn "$url doesn't look like a GitHub repository; nothing set."; return 0; }
+    want=git@github.com:$path.git
+    say "Pushing to GitHub over ssh, with a key of your own"
+    if [ "$(git -C "$repo" remote get-url --push origin)" = "$want" ] && [ -f "$GH_KEY" ] &&
+        grep -qxF "$SSH_BEGIN" "$SSH_CONF" 2>/dev/null; then
+        ssh_settings
+        note "Already set up: pushes go over ssh with $GH_KEY (its settings written again)."
+        no_https_logins
+        return 0
     fi
-    note "(It shows nothing as you paste it; press Enter after.)"
+    ssh_key || return 0
+    ssh_settings
+    note "Add this key to your GitHub account, once: Settings, SSH and GPG keys, New SSH key"
+    note "(GitHub takes a key only there, or from a token, which this is to do without):"
+    printf '\n    %s\n\n' "$(cat "$GH_KEY.pub")"
+    ask "Added it? (Enter: yes)" y || { note "Run this again once it is there: wrenctl git $repo"; return 0; }
+    said=$("$SSH" -T git@github.com 2>&1 </dev/null || true)
+    if ! grep -q 'successfully authenticated' <<<"$said"; then
+        warn "GitHub didn't take the key yet ($(printable <<<"$said" | tail -n 1)). Nothing in $repo was changed."
+        warn "Check it is on your account, then run this again: wrenctl git $repo"
+        return 0
+    fi
+    git -C "$repo" remote set-url --push origin "$want"
+    note "Done: pushes go to $want with your key, and fetching stays on $url."
+    no_https_logins
 }
 
 need_tools git:git

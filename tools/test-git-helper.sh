@@ -103,7 +103,23 @@ echo "wget \$*" >>"$L/calls"
 [ -e "$L/api" ] || exit 4
 printf '{\n  "login": "someone",\n  "id": 4242,\n  "node_id": "U_x",\n  "followers": 7\n}\n'
 EOF
-chmod +x "$L/gh" "$L/wget"
+# a pretend ssh-keygen (makes the key files; -y -P '' works while $L/nopass exists) and ssh
+# (GitHub knows the key while $L/on-github exists)
+cat >"$L/ssh-keygen" <<EOF
+#!/bin/bash
+echo "ssh-keygen \$*" >>"$L/calls"
+if [ "\$1" = -y ]; then [ -e "$L/nopass" ]; exit; fi
+t=\$2 f=\${@: -1}
+echo private >"\$f"
+case \$t in ed25519-sk) echo "sk-ssh-ed25519@openssh.com AAAAGnNrLXNzaC1lZDI1NTE5QG9wZW5zc2guY29t wren-github" ;; *) echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKEYKEYKEY wren-github" ;; esac >"\$f.pub"
+EOF
+cat >"$L/ssh" <<EOF
+#!/bin/sh
+echo "ssh \$*" >>"$L/calls"
+if [ -e "$L/on-github" ]; then echo "Hi someone/wren-linux! You've successfully authenticated, but GitHub does not provide shell access." >&2; exit 1; fi
+echo "git@github.com: Permission denied (publickey)." >&2; exit 255
+EOF
+chmod +x "$L/gh" "$L/wget" "$L/ssh-keygen" "$L/ssh"
 # li DIR ANSWER...: git-helper.sh (DIR "-": this copy, $T/l), answering in turn
 li() {
     local d=$1
@@ -111,42 +127,50 @@ li() {
     : >"$L/calls"
     printf '%s\n' "$@" >"$L/answers"
     if [ "$d" = - ]; then
-        WREN_GH=${GHP:-$L/gh} WREN_WGET=$L/wget WREN_TEST_ANSWERS=$L/answers bash "$T/l/git-helper.sh" 2>&1
+        WREN_GH=${GHP:-$L/gh} WREN_WGET=$L/wget WREN_SSH=$L/ssh WREN_SSH_KEYGEN=$L/ssh-keygen WREN_TEST_ANSWERS=$L/answers bash "$T/l/git-helper.sh" 2>&1
     else
-        WREN_GH=${GHP:-$L/gh} WREN_WGET=$L/wget WREN_TEST_ANSWERS=$L/answers bash "$T/l/git-helper.sh" "$d" 2>&1
+        WREN_GH=${GHP:-$L/gh} WREN_WGET=$L/wget WREN_SSH=$L/ssh WREN_SSH_KEYGEN=$L/ssh-keygen WREN_TEST_ANSWERS=$L/answers bash "$T/l/git-helper.sh" "$d" 2>&1
     fi
 }
 helper() { git config --global --get-all "credential.https://$1.helper" | paste -sd'|'; }
 
-out=$(li - n n token)
-check "login: it says how it is now, and offers token, memory, gh and skip" bash -c '
-    grep -q "Now: git asks for a user name and password" <<<"$1" && grep -q "token / memory / gh / skip" <<<"$1"' _ "$out"
-check "...token: no helper but git's own, your GitHub user name from the address" bash -c '
-    [ "$(git config --global --get-all credential.https://github.com.helper | wc -l)" = 1 ] && [ -z "$(git config --global credential.https://github.com.helper)" ] &&
-    [ "$(git config --global credential.https://github.com.username)" = someone ]'
-check "...it says how to make a token for just this repository, and how to paste it" bash -c '
-    grep -q "settings/personal-access-tokens/new" <<<"$1" && grep -q "this one (someone/wren-linux)" <<<"$1" && grep -q "Contents, then Read and write" <<<"$1" && grep -q "shows nothing as you paste" <<<"$1"' _ "$out"
-check "...and gh logs in to nothing" bash -c '! grep -q "auth login" "$1"' _ "$L/calls"
-out=$(li - n n n)
-check "run again: it says a token is pasted each time, and no is no" bash -c 'grep -q "Now: you paste a token at each push" <<<"$1" && [ "$(helper github.com)" = "" ]' _ "$out"
-li - n n y memory >/dev/null
-check "memory: the token kept in memory for an hour" test "$(helper github.com)" = "|cache --timeout=3600"
-: >"$L/in"
-li - n n y gh >/dev/null
-check "gh: logs in through gh, and lets git use that login" bash -c '
-    grep -qx "gh auth login --hostname github.com --git-protocol https" "$1" && grep -qx "gh auth setup-git" "$1"' _ "$L/calls"
-git config --global --replace-all credential.https://github.com.helper '!/usr/bin/gh auth git-credential'
-out=$(li - n n y token y)
-check "from gh to a token: it says gh's login was in plain text, and logs gh out (y)" bash -c '
-    grep -q "Now: GitHub.s gh login, saved in plain text" <<<"$1" && grep -qx "gh auth logout --hostname github.com" "$2" && [ "$(helper github.com)" = "" ]' _ "$out" "$L/calls"
-out=$(li - n n y skip)
-check "skip: nothing changes" bash -c 'grep -q "Left as it was" <<<"$1" && [ "$(helper github.com)" = "" ]' _ "$out"
-out=$(GHP=$L/nothing li - n n y token)
-check "no gh: it isn't offered" bash -c '! grep -q "token / memory / gh" <<<"$1" && grep -q "token / memory / skip" <<<"$1"' _ "$out"
-git config --global credential.helper store
-out=$(li - n n token y)
-check "git's store helper: a warning that it keeps passwords in plain text, asked again, and stopped (y)" bash -c '
-    grep -q "plain text (~/.git-credentials)" <<<"$1" && grep -q "How should git log in" <<<"$1" && ! git config --global credential.helper' _ "$out"
+pushurl() { git -C "$T/l" remote get-url --push origin; }
+K=$HOME/.ssh/id_wren_github
+mkdir -p "$HOME/.ssh"; printf 'Host example\n    User me\n' >"$HOME/.ssh/config"
+# answers: your name and email kept (n), no no-reply address (n), then: a security key? added it?
+out=$(li - n n n y)
+check "ssh: a key of its own for GitHub, a key file (no security key)" bash -c '
+    grep -q "ssh-keygen -t ed25519 -C wren-github -f $2" "$1" && [ -f "$2.pub" ]' _ "$L/calls" "$K"
+check "...shown, with where to add it on GitHub" bash -c 'grep -q "AAAAC3NzaC1lZDI1NTE5AAAAIKEYKEYKEY" <<<"$1" && grep -q "SSH and GPG keys" <<<"$1"' _ "$out"
+check "...GitHub doesn't know it yet: the push address is left alone, and it says so" bash -c '
+    [ "$2" = https://github.com/someone/wren-linux.git ] && grep -q "didn.t take the key" <<<"$1"' _ "$out" "$(pushurl)"
+check "...GitHub's host keys from pins.sh, in a file of their own" bash -c '. "$1/pins.sh"; [ "$(cat "$2")" = "$GITHUB_HOST_KEYS" ]' _ "$HERE" "$HOME/.ssh/known_hosts_github"
+c=$HOME/.ssh/config
+check "...a block at the top of ~/.ssh/config: this key only, no agent, the pinned keys, strictly" bash -c '
+    [ "$(head -1 "$1")" = "# >>> Wren Linux github >>>" ] && grep -qx "    IdentityFile $2" "$1" && grep -qx "    IdentitiesOnly yes" "$1" &&
+    grep -qx "    IdentityAgent none" "$1" && grep -qx "    StrictHostKeyChecking yes" "$1" && grep -qx "    UserKnownHostsFile $3" "$1"' _ "$c" "$K" "$HOME/.ssh/known_hosts_github"
+check "...your own ssh settings kept below it, the file yours alone" bash -c 'tail -2 "$1" | grep -qx "Host example" && [ "$(stat -c %a "$1")" = 600 ]' _ "$c"
+touch "$L/on-github"
+out=$(li - n n y)
+check "GitHub knows it: the key made before is used, and git pushes over ssh" bash -c '
+    ! grep -q "ssh-keygen -t" "$2" && [ "$3" = git@github.com:someone/wren-linux.git ]' _ "$out" "$L/calls" "$(pushurl)"
+check "...while it fetches from the public address as before (updates need no key)" test "$(git -C "$T/l" remote get-url origin)" = https://github.com/someone/wren-linux.git
+out=$(li - n n)
+check "run again: already set up, the block written once" bash -c 'grep -q "Already set up" <<<"$1" && [ "$(grep -c "^# >>> Wren Linux github" "$2")" = 1 ]' _ "$out" "$c"
+git config --global credential.https://github.com.helper ''; git config --global credential.https://github.com.username someone
+git config --global credential.helper store; : >"$L/in"
+out=$(li - n n y y y)
+check "...the https logins of before: removed, git's plain-text store stopped, gh logged out (y)" bash -c '
+    ! git config --global --get-regexp "^credential\.https://github\.com\." && ! git config --global credential.helper && grep -qx "gh auth logout --hostname github.com" "$2"' _ "$out" "$L/calls"
+rm -f "$K" "$K.pub"; git -C "$T/l" remote set-url --push origin https://github.com/someone/wren-linux.git
+out=$(li - n n y y)
+check "a security key plugged in (y): the key is made on it" grep -q "ssh-keygen -t ed25519-sk -C wren-github -f $K" "$L/calls"
+check "...and no passphrase warning (the touch is what guards it)" bash -c '! grep -q "no passphrase" <<<"$1"' _ "$out"
+rm -f "$K" "$K.pub"; touch "$L/nopass"; git -C "$T/l" remote set-url --push origin https://github.com/someone/wren-linux.git
+out=$(li - n n n y)
+check "a key file without a passphrase: a warning, and how to add one" bash -c 'grep -q "no passphrase" <<<"$1" && grep -q "ssh-keygen -p -f" <<<"$1"' _ "$out"
+rm -f "$L/nopass" "$L/on-github"
+check "no token is made, asked for or saved anywhere" bash -c '! grep -qiE "personal-access-tokens|credential\.helper.*cache|auth login" "$1"' _ "$HERE/git-helper.sh"
 
 # The no-reply address: GitHub refuses pushes that carry an email kept private
 echo "# mine" >>"$T/l/README.md"
@@ -181,24 +205,20 @@ li "$T/any" y "" "jo2@example.org" >/dev/null
 check "...changed when you say so; Enter keeps the name" bash -c '
     [ "$(git config --global user.name)" = "Jo Doe" ] && [ "$(git config --global user.email)" = jo2@example.org ]'
 git -C "$T/any" remote add origin https://git.example.org:8443/me/x.git
-out=$(li "$T/any/" n token)
-check "...another https server: the token set for that server alone, no user name guessed" bash -c '
-    [ -z "$(git config --global credential.https://git.example.org:8443.helper)" ] && git config --global --get-all credential.https://git.example.org:8443.helper >/dev/null &&
-    ! git config --global credential.https://git.example.org:8443.username && grep -q "Make an access token on git.example.org:8443" <<<"$1" && ! grep -q "token / memory / gh" <<<"$1"' _ "$out"
-git -C "$T/any" remote set-url origin git@example.org:me/x.git
-out=$(li "$T/any" n)
-check "...over ssh: nothing to set" bash -c 'grep -q "over ssh" <<<"$1" && ! grep -q "How should git log in" <<<"$1"' _ "$out"
+out=$(li "$T/any/" n)
+check "...a server that isn't GitHub: nothing set, no key made" bash -c '
+    grep -q "isn.t on GitHub" <<<"$1" && ! grep -q ssh-keygen "$2" && ! git config --global --get-regexp "^credential\.https://git\.example"' _ "$out" "$L/calls"
 out=$(li "$T/nothere")
 check "...a folder that isn't a repository: refused" grep -q "isn't a git repository" <<<"$out"
 mv "$T/gitconfig" "$HOME/.gitconfig"
 check "it never pushes" bash -c '! grep -qE "(^|[[:space:]])(g|git( -C [^ ]+)?) push" "$1"' _ "$HERE/git-helper.sh"
 check "the git extra asks no name, email or login during an install: it points to git-helper.sh" bash -c '
     ! grep -qE "user\.(name|email)|auth login" "$1/extras/git.sh" && grep -q "git-helper.sh" "$1/extras/git.sh" && ! grep -q WREN_GH_LOGIN "$1/install-base.sh"' _ "$HERE"
-check "...and gh is only offered: it isn't on its status line, and install-base.sh sets nothing up for it" bash -c '
+check "...and nothing of gh: not on its status line, and install-base.sh sets nothing up for it" bash -c '
     ! grep -q "apt:gh" "$1/extras/git.sh" && ! grep -q WREN_SETUP_GH "$1/install-base.sh"' _ "$HERE"
 check "the README's way back to GitHub is git-helper.sh" grep -q 'bash ~/wren/git-helper.sh' "$HERE/README.md"
 
-# ---- extras/git.sh: gh offered, installed only, never logged in ----
+# ---- extras/git.sh: git only, nothing asked ----
 # In a copy of Wren Linux with a pretend sudo: what apt would be given is written down
 G=$T/gitx
 mkdir -p "$G/r/extras" "$G/bin" "$G/home"
@@ -221,12 +241,8 @@ gitx() { # ANSWER
     HOME=$G/home GIT_TEST_PATH="$G/bin:$PATH" WREN_SUDO=$G/bin/sudo WREN_TEST_ANSWERS=$G/answers bash "$G/r/extras/git.sh" </dev/null >"$G/out" 2>&1
 }
 gitx ''
-check "the git extra offers gh, Enter meaning yes, and it says where its login is" bash -c '
-    grep -q "gh" "$1" && grep -q "wrenctl gh" "$2"' _ "$G/depends" "$G/out"
-check "...and asks" grep -q 'Also install gh.*\[Y/n\]' "$G/out"
-check "...it never logs in during the install" bash -c '! grep -q "^gh " "$1"' _ "$G/calls"
-gitx n
-check "...no: git only" bash -c '! grep -qw "gh" "$1"' _ "$G/depends"
-check "...and it says how to get it later" grep -q 'wrenctl gh' "$G/out"
+check "the git extra: git only, no GitHub tool, nothing asked" bash -c '
+    grep -qw git "$1" && ! grep -qw gh "$1" && ! grep -q "\[Y/n\]\|\[y/N\]" "$2"' _ "$G/depends" "$G/out"
+check "...and it says where pushing over ssh is set up" grep -q 'wrenctl git' "$G/out"
 
 [ "$fails" -eq 0 ]

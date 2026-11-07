@@ -21,7 +21,6 @@ _wrenctl() {
             update | --update) words=(--since --all) ;;
             apps | --apps) words=(--list) ;;
             git | --git) mapfile -t COMPREPLY < <(compgen -d -- "$cur"); return 0 ;;
-            gh | --gh) words=(rulesets --logout) ;;
         esac
     fi
     [ ${#words[@]} -gt 0 ] || return 0

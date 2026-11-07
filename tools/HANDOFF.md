@@ -27,7 +27,7 @@ waiting on the owner.
 
 ## First: the new VM
 
-- The new VM has a new ssh key, for the owner to add as a deploy key (`wrenctl gh deploy-key`).
+- The VM needs no key on GitHub any more: its work goes to the owner with `claude-pull` (2026-11-07).
 - **Security findings were never in the repo.** They are in the old VM's private memory, and the owner
   was told them in person. Ask the owner; don't assume there are none because you can't see any.
 

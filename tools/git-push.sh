@@ -49,7 +49,8 @@ ask_username() {
 # address or another server doesn't, nor a login like gh's, which gives git the name itself.
 github_username() {
     local name helper
-    case $(g config --get remote.origin.url) in https://github.com/*) ;; *) return 0 ;; esac
+    # (pushing over ssh, as wrenctl git sets up, needs no user name)
+    case $(g config --get remote.origin.pushurl || g config --get remote.origin.url) in https://github.com/*) ;; *) return 0 ;; esac
     helper=$(g config --get-urlmatch credential.helper https://github.com || true)
     case $helper in "" | cache*) ;; *) return 0 ;; esac
     name=$(g config --get-urlmatch credential.username https://github.com || true)

@@ -324,8 +324,10 @@ bash ~/wren/git-helper.sh
 
 - First, your name and email for commits. On GitHub, it offers your no-reply address, since GitHub refuses
   pushes that carry an email you keep private.
-- At the end, how git logs in to push from here: a token you paste at each push (nothing saved), the same
-  kept in memory for an hour, or, with GitHub's gh installed by you, its login (saved in plain text).
+- At the end, pushing to GitHub over ssh with a key of its own: on a security key if one is plugged in,
+  otherwise a key file with a passphrase that ssh asks for at every push (no ssh-agent holds it). You add
+  the key to your GitHub account once, on its website; it tests the key before it changes anything. No
+  token is used or kept, and fetching stays on the public address.
 
 It never pushes by itself. `wrenctl git` does the same for any repository of yours (`wrenctl git DIR`, or run
 inside it).
@@ -337,20 +339,15 @@ inside it).
   says so. Look at `git -C ~/wren status` and `git -C ~/wren diff` before you run anything with sudo.
 - Once `pins.sh` names Wren Linux's signing key, it also refuses a server whose newest commit that key didn't sign.
 
-After that, `update.sh` (or `claude-pull`) shows what's new and asks before bringing it in. Plain `git pull`
-works too. (`claude-pull` is installed by the Claude Code sandboxes, `extras/claude-code.sh` and
-`extras/claude-vm.sh`.)
+After that, `update.sh` shows what's new and asks before bringing it in. Plain `git pull` works too.
 
-**If Claude Code pushes to the repository,** add the ssh key its sandbox prints as a deploy key on GitHub (with
-write access), replacing the old install's. `wrenctl gh deploy-key` does it from the command line, no browser:
+**If Claude works on it in `claude-vm`,** its work never goes through GitHub: `claude-pull`, in your copy,
+fetches the VM's branch `claude` over the VM's own ssh login, shows every commit, and brings it in on yes
+(`docs/extras/claude-vm.md`). The VM needs no key on GitHub; `claude-vm give PATH...` hands it files the same
+way, privately.
 
-- It reads the VM's key and adds it, with a token that stays on your computer, never in the VM.
-  Making the token is the one step in a browser: GitHub makes tokens nowhere else. Its link fills in
-  the form but can't pick the repository, so pick it yourself (Only select repositories). Don't delete
-  that token afterwards: GitHub deletes a deploy key along with the token that added it.
-- It checks the rules on `main` first and offers to add any that are missing. No key goes on while `main` is
-  open or can't be checked.
-- It then offers to remove the last VM's key, which a rebuild leaves on GitHub, still able to push.
+**main's rules on GitHub:** set once, on the website, so only you update `main` and nobody force-pushes or
+deletes it (`docs/extras/git.md` lists the boxes to tick). They don't check signatures: `update.sh` does.
 
 ## The `wrenctl` command
 

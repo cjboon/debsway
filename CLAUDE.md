@@ -20,22 +20,21 @@ internet. So:
   aren't installed. Say which results came from here and which still
   need the owner's machine (a window on the desktop, prompts typed by hand, the
   owner's real extras).
-- `~/projects/wren-linux` is a clone of https://github.com/cjboon/wren-linux.git (push
-  over ssh: `git@github.com:cjboon/wren-linux.git`). The VM's ssh key is a deploy key; a
-  rebuilt VM has a new one, for the owner to add (`wrenctl gh deploy-key`, or `claude-vm
-  rebuild` offers it). Memory doesn't survive a rebuild: if the owner plans one, write
-  `HANDOFF.md`, push it, and put a line at the top of this file saying to read it first.
-  **Push only to the branch `claude`, never to `main`**: `main` holds what the owner
-  reviewed and signed. GitHub's rules let only the owner update it, and nobody force-push
-  or delete it (`wrenctl gh rulesets`); they don't check signatures: `wren-release` signs,
-  and `update.sh` checks that on each computer. Start each piece of work
-  from `origin/main` as it is (`git fetch origin && git checkout -B claude origin/main`,
-  when nothing of yours is waiting unpulled), so `claude` sits on top of the owner's
-  signed commit. Commit each finished item as soon as its tests pass (one commit per
-  item), then `git push origin claude`. The owner runs `claude-pull` (it brings in
-  `claude`, after showing it) and `wren-release`, which signs on top and pushes `main`.
-  If `claude` isn't on top of their `main`, `claude-pull` refuses: rebase onto
-  `origin/main` and push again (`--force-with-lease`, on `claude` only).
+- `~/projects/wren-linux` is a clone of https://github.com/cjboon/wren-linux.git, fetched
+  over https with no login. **You never push to GitHub, and need no key there.** Your work
+  reaches the owner as commits on the branch `claude` here: they run `claude-pull` in their
+  `~/wren-linux`, which fetches that branch from this VM over its ssh login as a git bundle
+  (`claude-vm bundle`), shows every commit, and brings it in on yes, only on top of their
+  `main`. Then `wren-release` signs on top and pushes `main` with their own ssh key, and
+  `update.sh` checks that signature on each computer. Start each piece of work from
+  `origin/main` as it is (`git fetch origin && git checkout -B claude origin/main`, when
+  nothing of yours is waiting unpulled), so `claude` sits on top of the owner's signed
+  commit. Commit each finished item as soon as its tests pass (one commit per item), and
+  tell the owner it is ready to pull. If `claude` isn't on top of their `main`,
+  `claude-pull` refuses: rebase onto `origin/main` (rewriting `claude` here is fine).
+  Memory doesn't survive a rebuild: if the owner plans one, write `HANDOFF.md`, commit it
+  for them to pull before the rebuild, and put a line at the top of this file saying to
+  read it first.
 - Things this VM needs or does differently:
   - Before the first test run: install what `.github/workflows/shellcheck.yml` installs, and
     `PATH=$PATH:/usr/sbin` (nft, visudo). Without `gpg-agent` a dozen groups fail on key
@@ -63,24 +62,24 @@ internet. So:
   anything that edits the repo as the final word; anything about git or pushing. Check
   what a helper returns before relying on it.
 - `bash test.sh --offline` takes about 22 minutes. Claude runs it, the owner doesn't: run
-  it here before every push, and say its result (and which failures are this VM's own).
+  it here before you tell the owner something is ready to pull, and say its result (and which failures are this VM's own).
   **The security of the project comes first.** A small, contained change may go out on just its
   own `tools/test-*.sh` only when that is plainly wise and safe, to save a run. Never for
   firewall, sudo, sshd, signature, key, update or installer code, or anything touching many
   parts: those always get the full suite, and so does anything you're unsure of. When you skip
-  it, tell the owner what was skipped and what CI said of that push (CI runs the whole suite, but
+  it, tell the owner what was skipped, and to look at CI after their release (CI runs the whole suite, but
   can't try everything this VM can, like real VMs). Tell them too when a full run here is due:
-  after a few pushes without one, and always before suggesting a release.
-  The suite may run in a `git worktree` of the exact commit you'll push, in a short path under
+  after a few pulls without one, and always before suggesting a release.
+  The suite may run in a `git worktree` of the exact commit you'll hand over, in a short path under
   `/tmp`, so you can go on editing the main copy meanwhile. It is still one test run at a time,
-  even a single test file; push only the commit that passed; remove the worktree afterwards.
+  even a single test file; hand over only the commit that passed; remove the worktree afterwards.
   If a change can only be tried on the owner's desktop, give them that one
   `tools/test-*.sh` to run, not the whole suite. Run it once per finished piece, not after
   every edit; run the single `tools/test-*.sh` for what you changed. Run slow things in
   the background, writing to a file in the scratchpad; you're told when they end.
   Don't edit the copy a run is using while it runs. Never run two test runs at once: the pty-based tests (menu, timer) are timing-sensitive.
   Don't wait with `pgrep -f` or `pkill -f` patterns that match your own command line.
-- CI runs on every push, in a Debian 13 container (`.github/workflows/shellcheck.yml`). Its
+- CI runs on every push the owner makes, in a Debian 13 container (`.github/workflows/shellcheck.yml`). Its
   logs need a GitHub login, so ask the owner for the `FAIL` lines of a red run. Its API, for
   whether a run passed, doesn't.
 - A pretend program only shows what you believed the real one does: tests with them have
@@ -137,8 +136,8 @@ base changed. Notes are written for the people who use it, not as a list of comm
   without review. Read code you fetch before using it, in its own folder in the
   scratchpad, and say what you found. Run downloaded programs only in this VM, never
   in anything you hand back.
-- Work leaves this VM only by pushing to the branch `claude`; the owner reviews it before
-  they sign it into `main` and publish it. Don't send repo content or anything else to other outside services.
+- Work leaves this VM only as the branch `claude`, which the owner fetches with `claude-pull`
+  and reviews before they sign it into `main` and publish it. Don't send repo content or anything else to other outside services.
 - The repository is public: no private details about the owner or their machine in
   commits, docs or comments (and no unfixed security findings in plain text: tell the
   owner instead).

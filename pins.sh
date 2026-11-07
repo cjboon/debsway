@@ -14,8 +14,8 @@
 ANTHROPIC_FPR=31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE
 ANTHROPIC_KEY_URL=https://downloads.claude.ai/keys/claude-code.asc
 
-# GitHub's ssh host keys, so that Claude Code's own user knows it's really GitHub at its first
-# push (extras/claude-code.sh). In here rather than fetched, so Wren Linux's signature covers them.
+# GitHub's ssh host keys, so that pushing over ssh knows it's really GitHub from the first push
+# (git-helper.sh; extras/claude-code.sh). In here rather than fetched, so Wren Linux's signature covers them.
 # If GitHub replaces one, pushes fail loudly until this is updated: test.sh compares them online.
 # checked: 2026-11-06  api.github.com/meta; ssh to github.com; docs.github.com's fingerprints page
 GITHUB_HOST_KEYS='github.com ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEmKSENjQEezOmxkZMy7opKgwFB9nkt5YRrYMjNuG5N87uRgg6CLrbo5wAdT/y6v0mKV0U2w0WZ2YB/++Tpockg=

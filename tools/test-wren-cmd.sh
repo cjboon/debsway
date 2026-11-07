@@ -139,7 +139,6 @@ check "Tab after install: the extras" test "$(comp wrenctl install '')" = "claud
 check "...after --remove and manual too" bash -c '[ "$1" = "vim" ] && [ "$2" = "claude-vm vim" ]' _ "$(comp wrenctl --remove v)" "$(comp wrenctl manual '')"
 check "Tab after part: the parts" test "$(comp wrenctl part '')" = ufw
 check "Tab after --mic: on and off" test "$(comp wrenctl --mic '')" = "off on"
-check "Tab after gh: rulesets and --logout" test "$(comp wrenctl gh '')" = "--logout rulesets"
 check "nothing after the name" test -z "$(comp wrenctl install vim '')"
 check "the part installs the completion where bash-completion looks" \
     grep -q '"$WREN_DIR/data/wrenctl-completion.bash" "$COMPLETION"' "$HERE/parts/wren-menu.sh"

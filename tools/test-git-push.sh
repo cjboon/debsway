@@ -232,5 +232,12 @@ git config --global url."$T/O.git".insteadOf git@github.com:someone/wren.git
 git -C "$T/L" remote set-url origin git@github.com:someone/wren.git
 gp
 check "over ssh: not asked" not grep -q 'GitHub username' "$T/out"
+# (both addresses mean the pretend server)
+git config --global --add url."$T/O.git".insteadOf https://github.com/someone/wren.git
+git -C "$T/L" remote set-url origin https://github.com/someone/wren.git
+git -C "$T/L" remote set-url --push origin git@github.com:someone/wren.git
+commit 'something to push'
+gp n
+check "...fetching over https and pushing over ssh, as wrenctl git sets up: no name asked or shown" not grep -qE 'GitHub username|Pushing to GitHub as' "$T/out"
 
 [ "$fails" -eq 0 ]

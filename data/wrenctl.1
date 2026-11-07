@@ -102,39 +102,15 @@ and the extras.
 Set git up for you
 .RB ( git\-helper.sh ):
 the name and email on your commits (for GitHub, your no-reply address,
-since GitHub refuses pushes that carry an email kept private), and how git
-logs in to push over https: a token pasted at each push, the same kept in
-memory for an hour, or gh's login.
+since GitHub refuses pushes that carry an email kept private), and pushing
+to GitHub over ssh, with a key of your own made for it: on a security key, or a
+key file with a passphrase that ssh asks for at every push (no ssh-agent holds
+it), checked against GitHub's host keys pinned in pins.sh. No token is used or
+kept. Fetching stays on the public address.
 With no
 .IR DIR ,
 the repository you are in; outside one, your name and email, and a copy of
 Wren Linux from a stick is connected to the published one.
-.TP
-.B \-\-gh
-.RB [ rulesets
-.RI [ OWNER/REPO ]
-|
-.B deploy\-key
-.RI [ OWNER/REPO ]
-.RB [ \-\-account
-.IR NAME ]
-|
-.BR \-\-logout ]
-GitHub's gh
-.RB ( gh\-helper.sh ),
-from Debian, with a fine-grained token you make: nothing is saved unless you
-say so.
-.B rulesets
-adds the rules that keep a repository's main branch yours: only its admins
-update it, and nobody force-pushes or deletes it.
-.B deploy\-key
-adds the claude\-vm VM's ssh key to a repository as a deploy key that can
-write, so the agent can push, without a browser; the token stays on this
-computer, never in the VM. It checks the branch rules first, offers to add any
-that are missing, and adds no key while main is open or can't be checked: those
-rules keep the key off main. It then offers to remove an older key with the same
-title, which a rebuild leaves behind, still able to push.
-\fB\-\-logout\fR forgets a saved token.
 .TP
 .B \-\-test
 Check that the scripts, packages, downloads and signing keys still work

@@ -136,7 +136,7 @@ sudoers_rule() {
 }
 
 # build_vm: builds $AGENT's VM unless it has one (that is kept, with what is
-# unpushed in it)
+# not yet brought in with claude-pull)
 build_vm() {
     say "Building the VM"
     if sudo test -s "$AGENT_HOME/vm/$AGENT.qcow2"; then
@@ -146,12 +146,7 @@ build_vm() {
         note "and downloads a few hundred MB."
         if sudo -u "$AGENT" "$SESSION" install; then
             say "The VM is ready"
-            note "Its ssh public key (add it on your git host so the agent can push):"
-            sudo -u "$AGENT" "$SESSION" pubkey 2>/dev/null | sed 's/^/        /' || true
-            if ask "Add it to GitHub now (wrenctl gh deploy-key)?" n; then
-                bash "$WREN_DIR/gh-helper.sh" deploy-key ${1:+--account "$1"} ||
-                    warn "The key wasn't added. To try again: wrenctl gh deploy-key${1:+ --account $1}"
-            fi
+            note "The agent's work reaches you with claude-pull, from the VM itself: it needs no key on your git host."
         else
             warn "The build didn't finish. Try again with: claude-vm${1:+ --account $1} rebuild"
         fi
@@ -179,7 +174,7 @@ account() {
 }
 
 # remove_account NAME: its sudo rule and port, its VM powered off, and (if you
-# say so) the user and its home, with the VM disk and what is unpushed in it
+# say so) the user and its home, with the VM disk and what claude-pull hasn't brought in
 remove_account() {
     account "$1"
     sudo rm -f "$ACCOUNT_SUDOERS"
