@@ -99,6 +99,7 @@ apt_install "${pkgs[@]}"
 sudo sed -i "\\|^$BEGIN\$|,\\|^$END\$|d" "$TORRC"
 if [ "$BRIDGE_TYPE" != none ]; then
     { echo "$BEGIN"; tor_bridge_config; echo "$END"; } | sudo tee -a "$TORRC" >/dev/null
+    torrc_private "$TORRC"
 fi
 printf '%s\n' 'Written by Wren Linux parts/apt-tor.sh: the system tor service is used for apt.' | sudo tee "$MARK" >/dev/null
 

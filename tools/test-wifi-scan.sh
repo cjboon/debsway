@@ -50,4 +50,5 @@ check "...and every message that shows the name cleans it too" bash -c '
 check "nmcli and iwctl scans have a time limit too" \
     bash -c 'grep -q "timeout \"\$SCAN_TIMEOUT\" nmcli" "$1" && grep -q "timeout \"\$SCAN_TIMEOUT\" iwctl station \"\$IF\" get-networks" "$1"' _ "$HERE/wifi.sh"
 
+check "a network's name is cut down to plain characters when it asks for the password" grep -q 'Password for \\"$(printf .%s. "$SSID" | printable)' "$HERE/wifi.sh"
 [ "$fails" -eq 0 ]

@@ -287,6 +287,7 @@ if $any_tor; then
     # (the bridges only when asked here: a Tor that others set up keeps its own)
     if $tor_shared; then BRIDGE_TYPE=none; fi
     tor_block | sudo tee -a "$TORRC" >/dev/null
+    torrc_private "$TORRC"
     printf '%s\n' 'Written by Wren Linux extras/distro-vm.sh: the VMs set to Tor only use the system tor service.' |
         sudo tee "$MARK" >/dev/null
     if $tor_shared && systemctl is-active --quiet tor@default.service; then

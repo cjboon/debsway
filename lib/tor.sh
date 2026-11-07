@@ -297,3 +297,9 @@ onion_add_client() {
 tor_connected() {
     sudo journalctl _COMM=tor -n 200 --no-pager ${1:+--since "$1"} 2>/dev/null | grep -q 'Bootstrapped 100%'
 }
+
+# torrc_private FILE: bridge addresses are private, so root and Tor may read it, and nobody else:
+# not the sandboxes' users.
+torrc_private() {
+    sudo chown root:debian-tor "$1" 2>/dev/null && sudo chmod 640 "$1" || warn "Couldn't make $1 private: every user can read its bridge lines."
+}

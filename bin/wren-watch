@@ -35,9 +35,11 @@ FILES = [".profile", ".bash_profile", ".bash_login", ".bashrc", ".bash_logout", 
          ".xprofile", ".xsessionrc", ".zshrc", ".zprofile", ".zshenv", ".gitconfig", ".config/git/config",
          ".config/mimeapps.list", ".ssh/rc", ".ssh/config", ".ssh/authorized_keys",
          ".gnupg/gpg-agent.conf", ".gnupg/gpg.conf", ".config/wren/autostart",
-         ".tmux.conf", ".config/tmux/tmux.conf", ".vimrc", ".gdbinit", ".inputrc", ".wgetrc", ".curlrc"]
+         ".tmux.conf", ".config/tmux/tmux.conf", ".vimrc", ".gdbinit", ".inputrc", ".wgetrc", ".curlrc",
+         ".bash_aliases", ".bash_completion", ".config/foot/foot.ini"]
 DIRS = [".config/sway", ".config/autostart", ".config/systemd/user", ".local/share/systemd/user", ".config/environment.d",
-        ".local/bin", ".config/mako", ".local/share/applications", ".config/wren/on-lock.d"]
+        ".local/bin", ".config/mako", ".local/share/applications", ".config/wren/on-lock.d",
+        ".local/share/bash-completion", ".config/bash_completion.d"]
 out = []
 # through_link REL: a link on the way to it (~/.ssh pointing at root'"'"'s, say).
 # Root reads these files, so what is behind one is neither read nor copied.

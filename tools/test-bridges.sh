@@ -109,4 +109,7 @@ check "Snowflake: the plugin line" has '^ClientTransportPlugin snowflake exec /u
 check "Snowflake lines use front=, which Debian's client knows" lacks 'fronts=' "$(grep -v '^#' "$WREN_DIR/data/snowflake-bridges.txt")"
 check "built-in kinds write nothing to torrc" test -z "$(BRIDGE_TYPE=obfs4-builtin tor_bridge_config)"
 
+# Bridge addresses are private: every script that writes them to the system Tor's settings
+# shellcheck disable=SC2016  # the inner shell expands its own
+check "root and Tor may read the settings with the bridge lines, and nobody else" bash -c 'grep -q "chown root:debian-tor" "$1/lib/tor.sh" && grep -q "chmod 640" "$1/lib/tor.sh" && grep -q "torrc_private \"\$TORRC\"" "$1/parts/apt-tor.sh" && grep -q "torrc_private \"\$TORRC\"" "$1/extras/distro-vm.sh"' _ "$WREN_DIR"
 [ "$fails" -eq 0 ]

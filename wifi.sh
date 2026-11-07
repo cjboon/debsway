@@ -359,7 +359,7 @@ ask_network() {
 
 ask_password() {
     while :; do
-        read -r -s -p "Password for \"$SSID\" (Enter if it has none): " PASS </dev/tty || PASS=
+        read -r -s -p "Password for \"$(printf '%s' "$SSID" | printable)\" (Enter if it has none): " PASS </dev/tty || PASS=
         echo
         local n=${#PASS}
         if [ "$n" -eq 0 ] || { [ "$n" -ge 8 ] && [ "$n" -le 63 ]; } ||
