@@ -28,6 +28,7 @@ GH=${WREN_GH:-gh}
 RULE_ONLY_OWNER="main: only the owner updates it"
 RULE_NO_FORCE="main: no force-push, no delete"
 TOKEN_PAGE=https://github.com/settings/personal-access-tokens/new
+TOKEN_PAGE_LIST=https://github.com/settings/personal-access-tokens
 
 # secret VAR "Prompt": a line typed without showing it
 secret() {
@@ -62,12 +63,13 @@ token_help() {
     note "Keep it in your password manager. (Pasting shows nothing; press Enter after.)"
 }
 
-# admin_token_help OWNER: the same for changing OWNER's repository, by a link that
+# admin_token_help OWNER/REPO: the same for changing that repository, by a link that
 # fills in the form (GitHub's URL parameters; no parameter picks the repository)
 admin_token_help() {
     note "Make a token for this. The link fills in all but one choice:"
-    note "  $TOKEN_PAGE?name=wren-gh-helper&target_name=$1&expires_in=1&administration=write"
-    note "  Repository access: Only select repositories, the one you mean"
+    note "  $TOKEN_PAGE?name=wren-gh-helper&target_name=${1%%/*}&expires_in=1&administration=write"
+    note "  Repository access: pick Only select repositories, then $1 (the link can't;"
+    note "  without it the token can read the repository but change nothing)"
     note "  Check that Administration says Read and write, then Generate token."
     note "(Pasting shows nothing; press Enter after.)"
 }
@@ -114,7 +116,7 @@ gh_() { if [ -n "$tok" ]; then GH_TOKEN=$tok "$GH" "$@"; else "$GH" "$@"; fi; }
 token_for_this() {
     logged_in && return 0
     say "A token for this, used now and not saved"
-    admin_token_help "${1%%/*}"
+    admin_token_help "$1"
     secret tok "    Token: "
     token_ok "$tok" || die "That isn't a GitHub token; nothing was changed."
 }
@@ -212,6 +214,18 @@ deploy_key() {
 
     token_for_this "$repo"
 
+    # Can this token manage the repository's deploy keys at all? Asked first, so a
+    # token that can't fails here, before anything else is checked or changed
+    say "What the token may do on $repo"
+    existing=$(gh_ api "repos/$repo/keys" --jq '.[].key' 2>&1) || {
+        warn "GitHub won't show $repo's deploy keys to this token, so it can't add one. GitHub said: $(printable <<<"$existing" | tail -n 1)"
+        warn "On the token's page ($TOKEN_PAGE_LIST), check two things and save:"
+        warn "  Repository access: Only select repositories, $repo"
+        warn "  Repository permissions: Administration, Read and write"
+        die "Then run this again with the same token. No key was added, nothing was changed."
+    }
+    note "It may manage $repo's deploy keys."
+
     # Is main protected, so this write key can't reach it? Before the key goes on
     say "The rules on $repo's main"
     applied=$(gh_ api "repos/$repo/rules/branches/main" --jq '.[].type' 2>&1) ||
@@ -231,8 +245,6 @@ deploy_key() {
 
     say "The claude-vm key on $repo"
     # Already there? (match on the type and body, not the comment)
-    existing=$(gh_ api "repos/$repo/keys" --jq '.[].key') ||
-        die "GitHub didn't list $repo's deploy keys (the token needs Administration, Read and write, on $repo). No key was added."
     local title="wren-claude-vm${account:+-$account}"
     if grep -qxF "$body" <(awk '{print $1 " " $2}' <<<"$existing"); then
         note "The VM's key is already a deploy key on $repo; nothing was added."
@@ -260,7 +272,9 @@ EOF
     done <<<"$rows"
     note "The VM pushes to the branch claude; you bring its work in with claude-pull, after reviewing it."
     if [ -n "$tok" ]; then
-        note "The token wasn't saved. Made for this alone? Delete it: https://github.com/settings/personal-access-tokens"
+        # (GitHub's rule: deleting the token that added a deploy key deletes the key)
+        note "The token wasn't saved. Don't delete it: GitHub deletes the deploy key it added along with it."
+        note "It runs out by itself (a day, made from the link)."
     fi
 }
 

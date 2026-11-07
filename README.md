@@ -345,6 +345,9 @@ works too. (`claude-pull` is installed by the Claude Code sandboxes, `extras/cla
 write access), replacing the old install's. `wrenctl gh deploy-key` does it from the command line, no browser:
 
 - It reads the VM's key and adds it, with a token that stays on your computer, never in the VM.
+  Making the token is the one step in a browser: GitHub makes tokens nowhere else. Its link fills in
+  the form but can't pick the repository, so pick it yourself (Only select repositories). Don't delete
+  that token afterwards: GitHub deletes a deploy key along with the token that added it.
 - It checks the rules on `main` first and offers to add any that are missing. No key goes on while `main` is
   open or can't be checked.
 - It then offers to remove the last VM's key, which a rebuild leaves on GitHub, still able to push.

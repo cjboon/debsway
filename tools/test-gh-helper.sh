@@ -35,7 +35,10 @@ case "$*" in
     "api -X POST repos/"*"/rulesets --input -")
         cat >"$S/input.$n"; [ ! -e "$S/refuse" ] || exit 1
         if [ -e "$S/applied-after" ]; then cp "$S/applied-after" "$S/applied"; fi ;;
-    "api repos/"*"/keys --jq .[].key") cat "$S/have-keys" 2>/dev/null; true ;;
+    "api repos/"*"/keys --jq .[].key")
+        # (refuse-list: a token without the repository, or without Administration)
+        if [ -e "$S/refuse-list" ]; then echo "gh: Resource not accessible by personal access token (HTTP 403)" >&2; exit 1; fi
+        cat "$S/have-keys" 2>/dev/null; true ;;
     "api repos/"*'/keys --jq .[] | "\(.id) \(.title) \(.key)"') cat "$S/key-rows" 2>/dev/null; true ;;
     "api -X DELETE repos/"*"/keys/"*) [ ! -e "$S/refuse-delete" ] ;;
     "api -X POST repos/"*"/keys --input -") cat >"$S/input.$n"; [ ! -e "$S/refuse-key" ] ;;
@@ -168,7 +171,21 @@ check "...and it says the key was added, and that main is protected" bash -c '
 
 LINK='https://github.com/settings/personal-access-tokens/new?name=wren-gh-helper&target_name=someone&expires_in=1&administration=write'
 check "...the token's link fills in the owner, a day's expiry and the permission" grep -qF "$LINK" <<<"$out"
-check "...and says what the link can't fill in" grep -q "Only select repositories" <<<"$out"
+check "...and says what the link can't fill in: that repository, by name" grep -q "Only select repositories, then someone/wren-linux" <<<"$out"
+check "...and at the end: not to delete the token, as GitHub would delete the key with it" bash -c '
+    grep -q "Don.t delete it" <<<"$1" && grep -q "deletes the deploy key" <<<"$1" && ! grep -q "Delete it:" <<<"$1"' _ "$out"
+
+# A token that may not manage the keys (the repository not picked): it stops at once
+fresh
+cp "$T/all-applied" "$T/s/applied"
+touch "$T/s/refuse-list"
+out=$(dk "$T/tok") && rc=0 || rc=$?
+check "a token that can't manage the keys: it fails, before checking or changing anything else" bash -c '
+    [ "$1" -ne 0 ] && ! grep -q "rules/branches/main" "$2" && ! grep -q "api -X POST" "$2"' _ "$rc" "$T/s/calls"
+check "...and says what to check on the token's page, and to use the same token again" bash -c '
+    grep -q "Only select repositories, someone/wren-linux" <<<"$1" && grep -q "Administration, Read and write" <<<"$1" &&
+        grep -q "same token" <<<"$1" && grep -q "HTTP 403" <<<"$1"' _ "$out"
+rm -f "$T/s/refuse-list"
 fresh
 cp "$T/all-applied" "$T/s/applied"
 out=$(run "$T/tok" rulesets)
