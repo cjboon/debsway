@@ -218,6 +218,7 @@ if $bridge_block; then
     if [ "$BRIDGE_TYPE" != none ]; then
         { echo "# >>> Wren Linux onion-site bridges >>>"; tor_bridge_config; echo "# <<< Wren Linux onion-site bridges <<<"; } |
             sudo tee -a "$TORRC" >/dev/null
+        torrc_private "$TORRC"
     fi
 fi
 sudo install -d -m 0700 -o debian-tor -g debian-tor "$SVC_DIR" "$SVC_DIR/authorized_clients"

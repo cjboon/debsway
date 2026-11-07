@@ -194,6 +194,7 @@ if $bridge_block; then
     sudo sed -i "\\|^$BR_BEGIN\$|,\\|^$BR_END\$|d" "$TORRC"
     if [ "$BRIDGE_TYPE" != none ]; then
         { echo "$BR_BEGIN"; tor_bridge_config; echo "$BR_END"; } | sudo tee -a "$TORRC" >/dev/null
+        torrc_private "$TORRC"
     fi
 fi
 sudo sed -i "\\|^$BEGIN\$|,\\|^$END\$|d" "$TORRC"

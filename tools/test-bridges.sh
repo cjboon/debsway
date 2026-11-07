@@ -112,4 +112,13 @@ check "built-in kinds write nothing to torrc" test -z "$(BRIDGE_TYPE=obfs4-built
 # Bridge addresses are private: every script that writes them to the system Tor's settings
 # shellcheck disable=SC2016  # the inner shell expands its own
 check "root and Tor may read the settings with the bridge lines, and nobody else" bash -c 'grep -q "chown root:debian-tor" "$1/lib/tor.sh" && grep -q "chmod 640" "$1/lib/tor.sh" && grep -q "torrc_private \"\$TORRC\"" "$1/parts/apt-tor.sh" && grep -q "torrc_private \"\$TORRC\"" "$1/extras/distro-vm.sh"' _ "$WREN_DIR"
+# Every script that adds bridge lines to the system Tor's settings, not only the ones known today
+n=0
+# shellcheck disable=SC2016  # the name of a variable, as the scripts write it
+for f in "$WREN_DIR"/extras/*.sh "$WREN_DIR"/parts/*.sh; do
+    grep -q tor_bridge_config "$f" && grep -q '"\$TORRC"' "$f" || continue
+    n=$((n + 1))
+    check "${f##*/}: its bridge lines stay private" grep -q 'torrc_private "\$TORRC"' "$f"
+done
+check "(that looked at the four that do it)" test "$n" -ge 4
 [ "$fails" -eq 0 ]
