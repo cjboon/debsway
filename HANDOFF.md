@@ -58,6 +58,10 @@ To go on: `git fetch origin && git checkout -b claude-wip origin/claude-wip`. Be
      on. Check first that it is the only packaged file Wren edits. Fails closed: Tor just won't connect. Say in the docs
      that a hand-edited packaged file is replaced (dpkg keeps `.dpkg-old`), and to use /usr/local/etc. Correct the
      LIMITS and the comments that defend the old way; there's a test to change, and the notes in `extras/whonix.sh`.
+   The owner's desktop checks, all good: `whonix live` (forgets the Workstation's changes, keeps the rest), the bar's
+   mic and DNS warnings, dimming, the webcam password, Alt+SysRq+K on the lock screen. Not yet: `pkill -KILL -x sway`
+   from tty2 asking the password, and the battery colours and 3% shutdown. A small bug they saw: when the Wren menu asks
+   the password to turn the camera on, its background goes black, opaque (probably that window's foot options).
 3. Suggest a release when CI is green: 8d28954 (git guard) and those above are fixes people should take.
 
 ## The owner's decisions, in the order to do them
