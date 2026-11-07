@@ -118,4 +118,5 @@ each with what to run.
 
 - [docs/extras/](extras/README.md): one page for each optional program
 - [docs/opsec.md](opsec.md): laptops, USB drives, networks and passwords
+- [docs/passwords.md](passwords.md): good passwords, how strong random words are, and KeePassXC
 - [SECURITY.md](../SECURITY.md): how to report a problem

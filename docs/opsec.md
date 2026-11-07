@@ -296,6 +296,9 @@ with the phone's identity attached. See section 13.
 
 ## 6. Passwords and accounts
 
+[Good passwords, and how to keep them](passwords.md) has this in more detail, with how strong
+random words are.
+
 - **Use a password manager** (Wren Linux's `extras/keepassxc.sh`). It remembers a
   different, random password for every site, and you remember one.
 - **Never reuse passwords.** Sites get breached all the time, and a password

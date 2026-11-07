@@ -29,6 +29,7 @@ To learn:
 - [What an onion site is](docs/what-is-an-onion-site.md), and [a short history of Tor](docs/history-of-tor.md)
 - [What Monero is](docs/what-is-monero.md)
 - [A practical opsec guide](docs/opsec.md)
+- [Good passwords, and how to keep them](docs/passwords.md)
 - [A VPN before Tor: keeping your records away from your ISP](docs/vpn-before-tor.md)
 
 Wren Linux is based on Debian; it is not affiliated with or endorsed by the Debian project. (It was
