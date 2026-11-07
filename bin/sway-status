@@ -2,7 +2,8 @@
 # Status line for swaybar: Wren Menu (click: the menu) | wifi (click: nmtui) | dns OFF (only while
 # secure DNS is off; click: on) | volume (scroll: louder/quieter,
 # click: mute) | brightness (scroll) | battery (click: time left; yellow at 15%, flashing red at
-# 5%, with a notification at each) | next timer | date
+# 5%, with a notification at each) | next timer | date. Only while they're so: mem low, ssh login,
+# mic ON, cam ON, reboot needed, disk full, vault open.
 # (click on the time or a timer: the timer menu; the format is set by `timer clock`)
 # Written by Wren Linux install-base.sh. Each part only shows when this
 # system has what it needs, so it copes with anything missing or removed.
@@ -126,6 +127,27 @@ whonix_due() {
     [ -z "$(find "$WHONIX_STAMP" -mmin +$((${WHONIX_UPDATE_DAYS:-7} * 1440)) 2>/dev/null)" ] || echo "whonix update"
 }
 if [ "${1:-}" = --whonix ]; then whonix_due; exit 0; fi
+# What's on that you may want to know of, shown only while it is. These catch mistakes and careless
+# programs: something running as you could also change this bar, so no alert isn't proof of anything.
+RADIOS=$HOME/.local/bin/radios
+radio_on() { [ "$("$RADIOS" "$1" status 2>/dev/null)" = on ]; }
+mic_on() { if [ -x "$RADIOS" ] && radio_on mic; then echo "mic ON"; fi; }
+cam_on() { if [ -x "$RADIOS" ] && radio_on camera; then echo "cam ON"; fi; }
+# a login from another computer: who names where it came from
+ssh_login() { if who 2>/dev/null | grep -qE '\([0-9a-fA-F:.]+\)$'; then echo "ssh login"; fi; }
+# a package saying so, or a kernel newer than the running one: its fixes need a restart
+reboot_due() {
+    if [ -e "${WREN_REBOOT_FILE:-/run/reboot-required}" ]; then echo "reboot needed"; return 0; fi
+    # shellcheck disable=SC2012  # kernel versions: plain names
+    rd_newest=$(ls "${WREN_MODULES:-/lib/modules}" 2>/dev/null | sort -V | tail -n1)
+    if [ -n "$rd_newest" ] && [ "$rd_newest" != "$(uname -r)" ]; then echo "reboot needed"; fi
+}
+# 95% of the disk your home is on: updates and VMs start failing soon after
+disk_full() {
+    df_use=$(df -P "$HOME" 2>/dev/null | awk 'NR == 2 { sub(/%/, "", $5); print $5 }')
+    if [ "${df_use:-0}" -ge 95 ]; then echo "disk full"; fi
+}
+vault_open() { if [ -x "$HOME/.local/bin/vault" ] && mountpoint -q "$HOME/Vault" 2>/dev/null; then echo "vault open"; fi; }
 UPDATE_HELP="Security updates aren't reaching this computer. To see why: sudo apt update. If apt goes through Tor, its bridge may be down: bash parts/apt-tor.sh chooses again."
 if [ "${1:-}" = --updates ]; then updates; exit 0; fi
 # json TEXT: TEXT made safe to put inside a JSON string (a network name can hold quotes)
@@ -176,22 +198,37 @@ battery_level() {
 
 # battery_block [off]: the battery in the bar: yellow when low, red when critical (off: the
 # moment of a flash without the red). Backgrounds, so that it reads on either theme.
-battery_block() {
-    bb_text=$(battery)
-    bb_level=$(battery_level)
-    if [ -z "$bb_level" ] || [ "${1:-}" = off ]; then
-        block bat "$bb_text"
+battery_block() { level_block bat "$(battery)" "$(battery_level)" "${1:-}"; }
+# ram_level: low under 15% of memory left, critical under 5% (programs start being killed
+# not far below that). ram_block: nothing at all while there's enough.
+MEMINFO=${WREN_MEMINFO:-/proc/meminfo}
+ram_left() { awk '$1 == "MemTotal:" { t = $2 } $1 == "MemAvailable:" { a = $2 } END { if (t) print int(a * 100 / t) }' "$MEMINFO" 2>/dev/null; }
+ram_level() {
+    rl=$(ram_left)
+    [ -n "$rl" ] || return 0
+    if [ "$rl" -lt 5 ]; then echo critical; elif [ "$rl" -lt 15 ]; then echo low; fi
+}
+ram_block() {
+    rb_level=$(ram_level)
+    [ -z "$rb_level" ] || level_block ram "mem $(ram_left)% left" "$rb_level" "${1:-}"
+}
+# level_block NAME TEXT LEVEL [off]: yellow when low, red when critical; off: critical, in the
+# dark moment of a flash
+level_block() {
+    bb_text=$2 bb_level=$3
+    if [ -z "$bb_level" ] || { [ "${4:-}" = off ] && [ "$bb_level" = critical ]; }; then
+        block "$1" "$bb_text"
         return 0
     fi
     if [ -n "$TMUX_BAR" ]; then
         if [ "$bb_level" = critical ]; then bb_tmux=bold,blink,fg=red; else bb_tmux=bold,fg=yellow; fi
-        printf ' | #[range=user|bat,%s]%s#[norange,nobold,noblink,default]' "$bb_tmux" "$bb_text"
+        printf ' | #[range=user|%s,%s]%s#[norange,nobold,noblink,default]' "$1" "$bb_tmux" "$bb_text"
         return 0
     fi
     if [ "$bb_level" = critical ]; then bb_bg=d00000 bb_fg=ffffff; else bb_bg=ffd000 bb_fg=000000; fi
     printf ',{"full_text":" | ","separator":false,"separator_block_width":0}'
-    printf ',{"name":"bat","full_text":" %s ","background":"#%s","color":"#%s","separator":false,"separator_block_width":0}' \
-        "$(json "$bb_text")" "$bb_bg" "$bb_fg"
+    printf ',{"name":"%s","full_text":" %s ","background":"#%s","color":"#%s","separator":false,"separator_block_width":0}' \
+        "$1" "$(json "$bb_text")" "$bb_bg" "$bb_fg"
 }
 
 # --battery: the sentence a click on bat shows (console-click uses it)
@@ -205,8 +242,8 @@ fi
 if [ "${1:-}" = --tmux ]; then
     TMUX_BAR=1
     printf '#[range=user|menu]Wren Menu#[norange]%s%s%s%s%s%s%s' \
-        "$(block wifi "$(wifi)")" "$(alert updates "$(updates)")$(alert whonix "$(whonix_due)")$(alert startup "$(startup)")$(block dns "$(dns)")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
-        "$(battery_block)" "$(block timer "$(timer_text)")" "$(block date "$(date +"$(clock_format)")")"
+        "$(block wifi "$(wifi)")" "$(alert updates "$(updates)")$(alert whonix "$(whonix_due)")$(alert startup "$(startup)")$(alert ssh "$(ssh_login)")$(alert mic "$(mic_on)")$(alert cam "$(cam_on)")$(alert reboot "$(reboot_due)")$(alert disk "$(disk_full)")$(alert vault "$(vault_open)")$(block dns "$(dns)")" "$(block vol "$(volume)")" "$(block bright "$(brightness)")" \
+        "$(ram_block)$(battery_block)" "$(block timer "$(timer_text)")" "$(block date "$(date +"$(clock_format)")")"
     exit 0
 fi
 # open_or_close APP-ID COMMAND...: a click on the bar opens that window, and a
@@ -309,7 +346,7 @@ trap 'kill $reader 2>/dev/null; rm -f "$PIDFILE"' EXIT
 
 echo '{"version":1,"click_events":true}'
 echo '['
-dns_was='' startup_was='' updates_was='' battery_was=''
+dns_was='' startup_was='' updates_was='' battery_was='' ram_was='' ssh_was='' mic_was='' cam_was=''
 while :; do
     updates_now=$(updates)
     if [ -n "$updates_now" ] && [ -z "$updates_was" ] && command -v notify-send >/dev/null; then
@@ -338,21 +375,36 @@ while :; do
     fi
     # (from critical up to low, say with a charge cut short, it doesn't warn again until it has charged)
     if [ "$battery_was" != critical ] || [ "$battery_now" != low ]; then battery_was=$battery_now; fi
-    bar_start=$(block wifi "$(wifi)")$(alert updates "$updates_now")$(alert whonix "$(whonix_due)")$(alert startup "$startup_now")$(block dns "$dns_now")$(block vol "$(volume)")$(block bright "$(brightness)")
+    ram_now=$(ram_level)
+    if [ "$ram_now" != "$ram_was" ] && command -v notify-send >/dev/null; then
+        case $ram_was:$ram_now in
+            :low) notify-send -a wren "Memory low" "$(ram_left)% left. Close something soon: when it runs out, programs get killed." 2>/dev/null ;;
+            *:critical) notify-send -a wren -u critical "Memory nearly gone" "$(ram_left)% left. Close something now." 2>/dev/null ;;
+        esac
+    fi
+    if [ "$ram_was" != critical ] || [ "$ram_now" != low ]; then ram_was=$ram_now; fi
+    ssh_now=$(ssh_login) mic_now=$(mic_on) cam_now=$(cam_on)
+    if command -v notify-send >/dev/null; then
+        if [ -n "$ssh_now" ] && [ -z "$ssh_was" ]; then notify-send -a wren -u critical "Someone logged in over ssh" "If that wasn't you, the command who shows from where." 2>/dev/null; fi
+        if [ -n "$mic_now" ] && [ -z "$mic_was" ]; then notify-send -a wren "Microphone on" "If you didn't switch it on, something running as you did." 2>/dev/null; fi
+        if [ -n "$cam_now" ] && [ -z "$cam_was" ]; then notify-send -a wren "Webcam on" "If you didn't switch it on, something running as you did." 2>/dev/null; fi
+    fi
+    ssh_was=$ssh_now mic_was=$mic_now cam_was=$cam_now
+    bar_start=$(block wifi "$(wifi)")$(alert updates "$updates_now")$(alert whonix "$(whonix_due)")$(alert startup "$startup_now")$(alert ssh "$ssh_now")$(alert mic "$mic_now")$(alert cam "$cam_now")$(alert reboot "$(reboot_due)")$(alert disk "$(disk_full)")$(alert vault "$(vault_open)")$(block dns "$dns_now")$(block vol "$(volume)")$(block bright "$(brightness)")
     bar_end=$(block timer "$(timer_text)")$(block date "$(date +"$(clock_format)")")
     draw() { # BATTERY-BLOCK
         printf '[{"name":"menu","full_text":"Wren Menu","separator":false,"separator_block_width":0}%s%s%s],\n' "$bar_start" "$1" "$bar_end"
     }
-    draw "$(battery_block)"
-    # Critical: the battery flashes, once a second; the rest is read again every 5 seconds as
+    draw "$(ram_block)$(battery_block)"
+    # Critical: the battery or memory flashes, once a second; the rest is read again every 5 seconds as
     # ever, which spares what is left of the battery
     redraw_now=
-    if [ "$battery_now" = critical ]; then
+    if [ "$battery_now" = critical ] || [ "$ram_now" = critical ]; then
         for flash in off on off on off; do
             sleep 1 &
             wait $!
             [ -z "$redraw_now" ] || break
-            if [ "$flash" = off ]; then draw "$(battery_block off)"; else draw "$(battery_block)"; fi
+            if [ "$flash" = off ]; then draw "$(ram_block off)$(battery_block off)"; else draw "$(ram_block)$(battery_block)"; fi
         done
     else
         # wait returns early when SIGUSR1 arrives; the sleep ends by itself

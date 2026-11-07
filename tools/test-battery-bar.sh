@@ -17,6 +17,11 @@ mkdir -p "$T/bin" "$T/power/BAT0" "$T/home" "$T/run"
 printf '#!/bin/sh\necho "$*" >>"%s/notified"\n' "$T" >"$T/bin/notify-send"
 chmod +x "$T/bin/notify-send"
 : >"$T/notified"
+# (this computer's own memory and logins aren't to set anything off)
+printf '#!/bin/sh\n' >"$T/bin/who"
+chmod +x "$T/bin/who"
+printf 'MemTotal: 10000 kB\nMemAvailable: 5000 kB\n' >"$T/meminfo"
+export WREN_MEMINFO=$T/meminfo
 battery() { echo "$1" >"$T/power/BAT0/capacity"; echo "$2" >"$T/power/BAT0/status"; }
 run() { env HOME="$T/home" XDG_RUNTIME_DIR="$T/run" WREN_POWER_DIR="$T/power" PATH="$T/bin:$PATH" sh "$S" "$@"; }
 bar_bat() { # the battery's block in one line the bar is sent, as JSON
@@ -113,5 +118,72 @@ battery 15 Discharging; redraw
 check "charged, then down to 15% again: it warns again" test "$(count 'Battery low')" = 2
 kill "$barpid" 2>/dev/null
 wait 2>/dev/null
+
+# Memory: the same two levels, shown only then, with the battery plain
+mem() { printf 'MemTotal: 10000 kB\nMemAvailable: %s kB\n' "$1" >"$T/meminfo"; }
+bar_ram() { python3 -I -c '
+import json, sys
+for b in json.loads(sys.stdin.read().strip().rstrip(",")):
+    if b.get("name") == "ram":
+        print(json.dumps(b, sort_keys=True))'; }
+battery 80 Discharging
+mem 5000
+check "memory half free: nothing about it in the bar" test -z "$(one_line | bar_ram)"
+mem 1500
+check "15% left: still nothing" test -z "$(one_line | bar_ram)"
+mem 1400
+out=$(one_line | bar_ram)
+check "14% left: yellow, saying how much" bash -c 'grep -q "#ffd000" <<<"$1" && grep -q "mem 14% left" <<<"$1"' _ "$out"
+mem 400
+check "4% left: red" grep -q '#d00000' <<<"$(one_line | bar_ram)"
+flash=$(lines 4)
+check "...flashing: red, then not" test "$(grep -c '#d00000' <<<"$flash")" = 2
+check "...the battery stays plain meanwhile" not grep -q '"bat"[^}]*background' <<<"$flash"
+battery 15 Discharging
+check "...a low battery doesn't flash with it" test "$(lines 4 | grep -c '#ffd000')" = 4
+battery 80 Discharging
+check "the console bar has it too" grep -q 'bold,blink,fg=red\]mem 4% left' <<<"$(run --tmux)"
+mem 5000
+
+# The alerts: nothing while there's nothing to say, each one only while it's so
+bar_alerts() { one_line | python3 -I -c '
+import json, sys
+print(" ".join(b["name"] for b in json.loads(sys.stdin.read().strip().rstrip(",")) if b.get("urgent")))'; }
+mkdir -p "$T/home/.local/bin" "$T/modules"
+export WREN_REBOOT_FILE=$T/reboot-required WREN_MODULES=$T/modules
+uname -r >"$T/kernel"
+mkdir "$T/modules/$(cat "$T/kernel")"
+printf '#!/bin/sh\n[ ! -e "%s/ssh" ] || echo "user pts/0 2026-11-07 10:00 (203.0.113.9)"\necho "user tty1 2026-11-07 09:00"\n' "$T" >"$T/bin/who"
+printf '#!/bin/sh\ncat "%s/$1" 2>/dev/null || echo off\n' "$T" >"$T/home/.local/bin/radios"
+printf '#!/bin/sh\necho "F S U A %%s /"; echo "/dev/x 1 1 1 $(cat "%s/use") /"\n' "$T" | sed 's/%%s/Capacity/' >"$T/bin/df"
+printf '#!/bin/sh\n[ -e "%s/vault-open" ]\n' "$T" >"$T/bin/mountpoint"
+printf '#!/bin/sh\n' >"$T/home/.local/bin/vault"
+chmod +x "$T/bin/who" "$T/home/.local/bin/radios" "$T/bin/df" "$T/bin/mountpoint" "$T/home/.local/bin/vault"
+echo 50% >"$T/use"
+check "nothing on: no alerts" test -z "$(bar_alerts)"
+touch "$T/ssh"
+check "a login from another computer: ssh" grep -qw ssh <<<"$(bar_alerts)"
+rm "$T/ssh"
+echo on >"$T/mic"
+check "the microphone on: mic" grep -qw mic <<<"$(bar_alerts)"
+rm "$T/mic"
+echo on >"$T/camera"
+check "the webcam on: cam" grep -qw cam <<<"$(bar_alerts)"
+rm "$T/camera"
+touch "$T/reboot-required"
+check "a package asks for a restart: reboot" grep -qw reboot <<<"$(bar_alerts)"
+rm "$T/reboot-required"
+mkdir "$T/modules/99.0-newer"
+check "a newer kernel than the running one: reboot" grep -qw reboot <<<"$(bar_alerts)"
+rmdir "$T/modules/99.0-newer"
+echo 95% >"$T/use"
+check "the disk 95% full: disk" grep -qw disk <<<"$(bar_alerts)"
+echo 50% >"$T/use"
+touch "$T/vault-open"
+check "the vault open: vault" grep -qw vault <<<"$(bar_alerts)"
+rm "$T/vault-open"
+check "...and gone again: no alerts" test -z "$(bar_alerts)"
+touch "$T/ssh"; echo on >"$T/mic"
+check "the console bar has them too" bash -c 'grep -q "ssh login" <<<"$1" && grep -q "mic ON" <<<"$1"' _ "$(run --tmux)"
 rm -rf "$T"
 [ "$fails" -eq 0 ]
