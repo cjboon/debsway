@@ -46,6 +46,20 @@ To go on: `git fetch origin && git checkout -b claude-wip origin/claude-wip`. Be
    (Whonix's own advice), keeping the checks as they are; a bridge is where this happens, and people on bridges have
    the worst connections. It is written into the images at install, so it reaches people at their next install. Test
    with `tools/test-whonix-update.sh`, failing first.
+   A second run through webtunnel finished: "Whonix is up to date". The rollback on the first run really worked: 15
+   came back with the owner's bookmark and download. Ask them to confirm 16, bookmark, download and Safest now.
+   **The owner's decisions on `whonix update`, each with a failing test first, in the same files as the retry above:**
+   - `data/whonix-update-browser`: carry over only Downloads and the bookmarks, not the whole profile, which would
+     keep whatever a hacked page planted in it. Everything else fresh; Safest comes from
+     /usr/local/etc/torbrowser.d/user.js (check it applies on a fresh profile). `places.sqlite` holds bookmarks and is
+     itself a file a hacked browser could change: see if bookmarks alone can be taken out without running the browser.
+     Lost, and to be said in the docs: per-site NoScript choices, saved onion keys. Try it on a real profile.
+   - `data/whonix-update`: stop `--force-confold`, which silently keeps old config files, security fixes in them too.
+     Take the maintainer's version (`--force-confnew`, as Whonix's own tool), and put back Wren's one edit afterwards,
+     the `nameserver 10.0.2.3` line in the Gateway's `/etc/resolv.conf.whonix`, noting before the upgrade whether it was
+     on. Check first that it is the only packaged file Wren edits. Fails closed: Tor just won't connect. Say in the docs
+     that a hand-edited packaged file is replaced (dpkg keeps `.dpkg-old`), and to use /usr/local/etc. Correct the
+     LIMITS and the comments that defend the old way; there's a test to change, and the notes in `extras/whonix.sh`.
 3. Suggest a release when CI is green: 8d28954 (git guard) and those above are fixes people should take.
 
 ## The owner's decisions, in the order to do them
