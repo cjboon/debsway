@@ -320,8 +320,12 @@ settings_run() { bash -c '
     claude_settings "$2"' _ "$HERE/data/claude-vm-provision.sh" "$1"; }
 cs=$T/claude/settings.json
 settings_run "$cs"
-key() { jq -c "$1" "$cs" 2>/dev/null; }
-check "the guest gets Claude Code's settings, as JSON Claude Code can read" jq -e . "$cs"
+# key PATH: that setting as compact JSON, read with python3 (CI has no jq), e.g. key .env.EDITOR
+key() { python3 -I -c 'import json, sys
+v = json.load(open(sys.argv[1]))
+for k in sys.argv[2].strip(".").split("."): v = v[k]
+print(json.dumps(v, separators=(",", ":")))' "$cs" "$1" 2>/dev/null; }
+check "the guest gets Claude Code's settings, as JSON Claude Code can read" python3 -I -c 'import json, sys; json.load(open(sys.argv[1]))' "$cs"
 check "...only its user may read them" test "$(stat -c %a "$cs")" = 600
 check "...no messages to or from your other sessions" test "$(key .isolatePeerMachines)/$(key .crossSessionInbound)" = 'true/"refuse"'
 check "...no Remote Control at start" test "$(key .remoteControlAtStartup)" = false

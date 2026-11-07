@@ -62,12 +62,19 @@ JSON
 )
 
 # claude_settings FILE (~/.claude/settings.json): those settings, over what the
-# file already says, if anything
+# file already says, if anything (its own keys kept)
 claude_settings() {
     local f=$1 tmp
     tmp=$(mktemp)
     if [ -s "$f" ]; then
-        jq -s '.[0] * .[1]' "$f" - <<<"$CLAUDE_SETTINGS" >"$tmp" || { rm -f "$tmp"; return 1; }
+        # (a deep merge, as jq's *, in python3: the guest and CI both have it)
+        python3 -I -c 'import json, sys
+def merge(a, b):
+    for k, v in b.items():
+        a[k] = merge(a[k], v) if isinstance(v, dict) and isinstance(a.get(k), dict) else v
+    return a
+print(json.dumps(merge(json.load(open(sys.argv[1])), json.loads(sys.stdin.read())), indent=2))' "$f" <<<"$CLAUDE_SETTINGS" >"$tmp" ||
+            { rm -f "$tmp"; return 1; }
     else
         printf '%s\n' "$CLAUDE_SETTINGS" >"$tmp"
     fi
