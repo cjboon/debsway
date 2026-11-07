@@ -11,8 +11,14 @@
 # COMMAND can still make and use abstract sockets of its own.
 # Stops with an error if the kernel can't do it, unless
 # WREN_ALLOW_ABSTRACT_SOCKETS=1 is set (then COMMAND runs unrestricted).
+# Landlock asks for no_new_privs first, or for the rights to do without it. With
+# no_new_privs, AppArmor lets a confined program start nothing under another
+# profile, and Tor Browser's profile starts Tor that way. So --userns gets those
+# rights instead: COMMAND runs in a new user namespace where only this user's own
+# numbers exist. Root isn't one of them, so a setuid program or a file with
+# capabilities gives nothing there either, and the rights end at the exec.
 set -euo pipefail
-[ $# -ge 1 ] || { echo "usage: no-abstract-sockets COMMAND [ARGS...]" >&2; exit 2; }
+[ $# -ge 1 ] || { echo "usage: no-abstract-sockets [--userns] COMMAND [ARGS...]" >&2; exit 2; }
 code=$(cat <<'PY'
 import ctypes
 import os
@@ -23,8 +29,15 @@ SYS_CREATE, SYS_RESTRICT = 444, 446   # x86-64 numbers (arm64 uses the same ones
 CREATE_VERSION = 1
 SCOPE_ABSTRACT_UNIX_SOCKET = 1
 PR_SET_NO_NEW_PRIVS = 38
+CLONE_NEWUSER = 0x10000000
 
 libc = ctypes.CDLL(None, use_errno=True)
+userns = sys.argv[1] == "--userns"
+if userns:
+    del sys.argv[1]
+    if len(sys.argv) < 2:
+        print("usage: no-abstract-sockets [--userns] COMMAND [ARGS...]", file=sys.stderr)
+        sys.exit(2)
 
 
 def fail(why):
@@ -45,7 +58,18 @@ attr = struct.pack("QQQ", 0, 0, SCOPE_ABSTRACT_UNIX_SOCKET)
 fd = libc.syscall(SYS_CREATE, attr, len(attr), 0)
 if fd < 0:
     fail("Landlock refused the rule (error %d)." % ctypes.get_errno())
-if libc.prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0:
+if userns:
+    uid, gid = os.getuid(), os.getgid()
+    # (mapped, root would keep its rights inside: this is for a sandbox's own user)
+    if uid == 0 or gid == 0:
+        print("no-abstract-sockets: --userns is for a sandbox's user, not root.", file=sys.stderr)
+        sys.exit(1)
+    if libc.unshare(CLONE_NEWUSER) != 0:
+        fail("couldn't make a user namespace (error %d)." % ctypes.get_errno())
+    for name, text in (("setgroups", "deny"), ("uid_map", "%d %d 1" % (uid, uid)), ("gid_map", "%d %d 1" % (gid, gid))):
+        with open("/proc/self/" + name, "w") as f:
+            f.write(text)
+elif libc.prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) != 0:
     fail("couldn't set no_new_privs (error %d)." % ctypes.get_errno())
 if libc.syscall(SYS_RESTRICT, fd, 0) != 0:
     fail("Landlock couldn't apply the rule (error %d)." % ctypes.get_errno())
