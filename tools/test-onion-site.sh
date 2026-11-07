@@ -240,4 +240,42 @@ check "every command Wren Linux installs (install_bin's) says it is Wren Linux's
         grep -qi "written by Wren Linux" "$1/bin/$n" || { echo "$n"; exit 1; }
     done' _ "$HERE"
 
+# QEMU's syscall filter: strangers reach what runs in this VM
+check "its VM runs under QEMU's syscall filter, that may start nothing" bash -c '
+    grep -q "^FILTER=\$FILTER_UPDATE,spawn=deny$" "$1" &&
+    grep -q "QEMU_SANDBOX=\"\$FILTER\" \"\$MOCKVPS\" --start" "$1"' _ "$HERE/bin/onion-site-session"
+check "...only the update's run may: its relay to Tor is a program QEMU starts" \
+    grep -q 'GUEST_SOCKS="$SOCKS" QEMU_SANDBOX="$FILTER_UPDATE"' "$HERE/bin/onion-site-session"
+if command -v qemu-system-x86_64 >/dev/null; then
+    f=$(sed -n 's/^FILTER_UPDATE=//p' "$HERE/bin/onion-site-session")
+    timeout 2 qemu-system-x86_64 -sandbox "$f,spawn=deny" -machine none -nodefaults -display none -S >/dev/null 2>&1
+    check "...QEMU here takes those settings" test "$?" = 124
+fi
+
+# The serial log: a guest with root can write without end. The real function, a pretend QEMU
+E=$HERE/vendor/mockvps-kvm/mockvps-kvm.sh
+check "the serial log is appended to, so it can be emptied while QEMU writes" grep -q 'append=on" -serial chardev:serial0' "$E"
+check "...only the run's is capped, not the install's, which is only Debian's installer" grep -q 'if \[\[ $phase == run \]\]; then cap_serial_log "$log"; fi' "$E"
+C=$T/cap
+mkdir -p "$C"
+head -c 5000 /dev/zero >"$C/big.log"
+head -c 500 /dev/zero >"$C/small.log"
+/bin/sleep 1.5 &
+qemu=$!
+(
+    eval "$(sed -n '/^cap_serial_log() {/,/^}/p' "$E")"
+    export SERIAL_LOG_MAX=1000 SERIAL_LOG_EVERY=0.1
+    echo "$qemu" >"$C/pid"
+    PIDFILE=$C/pid
+    cap_serial_log "$C/big.log"
+    cap_serial_log "$C/small.log"
+)
+/bin/sleep 0.6
+check "...past its limit, it is emptied" test "$(stat -c %s "$C/big.log")" = 0
+check "...under it, it is left alone" test "$(stat -c %s "$C/small.log")" = 500
+wait "$qemu"
+/bin/sleep 0.4
+head -c 5000 /dev/zero >"$C/big.log"
+/bin/sleep 0.4
+check "...and with the VM gone, the watch is too" test "$(stat -c %s "$C/big.log")" = 5000
 [ "$fails" -eq 0 ]

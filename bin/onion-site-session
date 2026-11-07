@@ -37,6 +37,11 @@ export WORKDIR=$HOME/vm
 export WEB_TUNNEL=0
 WEB=127.0.0.1:18080:80
 SOCKS=10.0.2.100:9050
+# QEMU's own syscall filter, as for claude-vm: strangers reach what runs in this VM, so a bug in
+# QEMU is what a hacked site would aim for next, and this limits what that process could then do.
+# The update's relay to Tor is a program QEMU starts for each connection, so that run may start one.
+FILTER_UPDATE=on,obsolete=deny,elevateprivileges=deny,resourcecontrol=deny
+FILTER=$FILTER_UPDATE,spawn=deny
 
 MOCKVPS=/usr/local/libexec/onion-site-mockvps-kvm
 PROVISION=$HOME/.config/onion-site/provision.sh
@@ -84,7 +89,7 @@ running() { mockvps --status 2>/dev/null | grep -q Running; }
 boot() {
     echo "Starting the site's VM; this takes about a minute."
     net_ok
-    env NET_RESTRICT=1 HOST_FORWARDS="$WEB" "$MOCKVPS" --start 2>&1 |
+    env NET_RESTRICT=1 HOST_FORWARDS="$WEB" QEMU_SANDBOX="$FILTER" "$MOCKVPS" --start 2>&1 |
         sed -un 's/^==> /  /p; /^\(ERROR\|WARNING\):/p' ||
         die "could not start the VM (see $WORKDIR/${VM_NAME}-run.log)."
     watch_vm
@@ -128,7 +133,7 @@ case "${1:-}" in
         echo "Updating the VM's packages through Tor (slow)."
         rc=0
         net_ok
-        env NET_RESTRICT=1 HOST_FORWARDS="$WEB" GUEST_SOCKS="$SOCKS" PROVISION_FILES="$up" "$MOCKVPS" --start || rc=$?
+        env NET_RESTRICT=1 HOST_FORWARDS="$WEB" GUEST_SOCKS="$SOCKS" QEMU_SANDBOX="$FILTER_UPDATE" PROVISION_FILES="$up" "$MOCKVPS" --start || rc=$?
         # Never left running with the relay, whether the update worked or not
         mockvps --stop >/dev/null || true
         boot

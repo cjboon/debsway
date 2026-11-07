@@ -423,7 +423,8 @@ With the extras:
 - **Being found through your onion site**, if you run one (`extras/onion-site.sh`).
 
   Its VM has no network, so the site's own software can't give away your address, but the site is
-  only up while your computer is on: when it is up can link it to you.
+  only up while your computer is on: when it is up can link it to you. Its QEMU runs under a syscall
+  filter, as `claude-vm`'s does; a bug in QEMU or KVM could still get out.
 
   A hole in the app gets the VM and the site's data (not your computer), and anything you put in the
   site itself (names, metadata in files, writing style) is yours to watch.

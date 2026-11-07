@@ -878,7 +878,9 @@ define_cmd() {
   # shellcheck disable=SC2054
   QQA+=(-device virtio-rng-pci,rng=rng0)
   QQA+=(-display none)
-  QQA+=(-serial "file:$log")
+  # (appended to, so that cap_serial_log can empty the file while QEMU writes to it)
+  # shellcheck disable=SC2054  # commas belong to QEMU's option syntax
+  QQA+=(-chardev "file,id=serial0,path=${log//,/,,},append=on" -serial chardev:serial0)
   QQA+=(-monitor "unix:$MONITOR_SOCK,server,nowait")
   QQA+=(-pidfile "$PIDFILE")
   # Wren Linux: QEMU's own syscall filter, when the caller asks for it (claude-vm)
@@ -932,6 +934,22 @@ clear_stale_pidfile() {
   fi
 }
 
+# (Wren Linux) What a guest writes to its serial port lands in a file here, and a
+# guest with root can write without end: without this, until this computer's disk
+# is full. The file is emptied each time it passes SERIAL_LOG_MAX bytes (64 MiB), so
+# what is lost is old log. It is watched from outside, since a limit on QEMU's file
+# size would hit the VM's disk image too. It ends with the VM.
+cap_serial_log() {
+  local pid max=${SERIAL_LOG_MAX:-67108864}
+  pid="$(head -n1 "$PIDFILE" 2>/dev/null)" || return 0
+  [[ "$pid" =~ ^[0-9]+$ ]] || return 0
+  # shellcheck disable=SC2016  # expanded by the inner bash, on purpose
+  setsid -f bash -c 'while kill -0 "$1" 2>/dev/null; do
+      if [ "$(stat -c %s -- "$2" 2>/dev/null || echo 0)" -gt "$3" ]; then truncate -s 0 -- "$2"; fi
+      sleep "$4"
+    done' _ "$pid" "$1" "$max" "${SERIAL_LOG_EVERY:-2}" </dev/null >/dev/null 2>&1 || true
+}
+
 # Start the VM (phase 'install' or 'run'). QEMU writes its own pidfile
 # (-pidfile), which is what --stop/--status management uses.
 start_phase() {
@@ -953,6 +971,7 @@ start_phase() {
   for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
     if [[ -s "$PIDFILE" ]] && qemu_running; then
       log "QEMU is up (pid $(cat "$PIDFILE"))"
+      if [[ $phase == run ]]; then cap_serial_log "$log"; fi
       return 0
     fi
     sleep 0.3
