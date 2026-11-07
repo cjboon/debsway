@@ -219,5 +219,17 @@ rm "$T/vault-open"
 check "...and gone again: no alerts" test -z "$(bar_alerts)"
 touch "$T/ssh"; echo on >"$T/mic"
 check "the console bar has them too" bash -c 'grep -q "ssh login" <<<"$1" && grep -q "mic ON" <<<"$1"' _ "$(run --tmux)"
+rm "$T/ssh"; echo off >"$T/mic"
+
+# A network's name is whatever its owner typed: it must not break the bar, or the warnings go too
+printf '#!/bin/sh\nprintf "evil\\033[31m\\001\\177\\"quote\\\\\\t#[x]:802-11-wireless\\n"\n' >"$T/bin/nmcli"
+chmod +x "$T/bin/nmcli"
+touch "$T/ssh"
+check "control characters in a Wi-Fi name: the bar is still good JSON, with its warnings" grep -qw ssh <<<"$(bar_alerts)"
+wifi_shown=$(one_line | python3 -I -c '
+import json, sys
+print(next(b["full_text"] for b in json.loads(sys.stdin.read().strip().rstrip(",")) if b.get("name") == "wifi"))' 2>/dev/null)
+check "...the name shows without them, its quote kept" test "$wifi_shown" = ' | evil[31m"quote#[x]'
+rm "$T/ssh" "$T/bin/nmcli"
 rm -rf "$T"
 [ "$fails" -eq 0 ]

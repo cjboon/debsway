@@ -150,8 +150,9 @@ disk_full() {
 vault_open() { if [ -x "$HOME/.local/bin/vault" ] && mountpoint -q "$HOME/Vault" 2>/dev/null; then echo "vault open"; fi; }
 UPDATE_HELP="Security updates aren't reaching this computer. To see why: sudo apt update. If apt goes through Tor, its bridge may be down: bash parts/apt-tor.sh chooses again."
 if [ "${1:-}" = --updates ]; then updates; exit 0; fi
-# json TEXT: TEXT made safe to put inside a JSON string (a network name can hold quotes)
-json() { printf '%s' "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'; }
+# json TEXT: TEXT made safe to put inside a JSON string (a network name can hold quotes, and
+# control characters: one of those would break the bar, and with it every warning on it)
+json() { printf '%s' "$1" | LC_ALL=C tr -d '\000-\037\177' | sed 's/\\/\\\\/g; s/"/\\"/g'; }
 
 # clock_format: the date(1) format for the time, as chosen with `timer clock`
 clock_format() {
