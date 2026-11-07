@@ -14,6 +14,8 @@
 #   claude-vm status     is the VM running?
 #   claude-vm stop       power the VM off
 #   claude-vm pubkey     the VM's ssh public key (add it on your git host)
+#   claude-vm bundle NAME  the VM's branch claude of ~/projects/NAME, as a git bundle
+#                        on standard output (claude-pull uses it)
 #   claude-vm reset      back to how it was built (faster than rebuild; asks first)
 #   claude-vm rebuild    throw the VM away and build a fresh one (asks first; offers its new key to GitHub)
 #   claude-vm --account NAME [COMMAND]   another account's VM (its own Claude
@@ -51,8 +53,11 @@ cmd=${1:-connect}
 case "$cmd" in
     --resume) cmd=resume ;;
     connect | resume | unattended | shell | status | stop | pubkey | rebuild | reset) ;;
+    bundle)
+        [ $# -eq 2 ] || die "usage: claude-vm bundle NAME (a folder in the VM's ~/projects)"
+        [ ! -t 1 ] || die "that writes a git bundle, not text: send it to a file (claude-pull does)." ;;
     -h | --help)
-        sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'
+        sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'
         exit 0 ;;
     *) die "unknown command '$1'. Try: claude-vm --help" ;;
 esac
@@ -107,4 +112,5 @@ if [ -n "${CLAUDE_VM_HOLD:-}" ]; then
     [ "$rc" -eq 0 ] || hold
     exit "$rc"
 fi
+if [ "$cmd" = bundle ]; then exec sudo -n -u "$AGENT" "$SESSION" bundle "$2"; fi
 exec sudo -n -u "$AGENT" "$SESSION" "$cmd"

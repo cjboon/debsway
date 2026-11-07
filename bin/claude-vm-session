@@ -129,17 +129,21 @@ ensure_up() {
     fi
 }
 
-# Run a command in the guest over ssh, then power the VM off unless another
-# window is still logged in (our own ssh has ended, so who lists only others).
-# The disk is kept, so unpushed work is still there next time.
+# Power the VM off unless a window is still logged in (our own ssh has ended,
+# so who lists only others). The disk is kept, so work is still there next time.
+stop_if_unused() {
+    if [ "$(guest_ssh 'who | wc -l' 2>/dev/null || echo 1)" = 0 ]; then
+        echo "Powering the VM off." >&2
+        mockvps --stop >/dev/null 2>&1 || echo "claude-vm-session: could not power off; run: claude-vm stop" >&2
+    fi
+}
+
+# Run a command in the guest over ssh, in a terminal, then stop_if_unused.
 session_then_stop() {
     local rc=0
     ssh "${SSH_SAFE[@]}" -t -o StrictHostKeyChecking=accept-new -o HostKeyAlias="$VM_NAME" \
         -o IdentitiesOnly=yes -i "$KEY_FILE" -p "$SSH_HOST_PORT" "$VM_USER@$SSH_HOST_IP" "$1" || rc=$?
-    if [ "$(guest_ssh 'who | wc -l' 2>/dev/null || echo 1)" = 0 ]; then
-        echo "Powering the VM off."
-        mockvps --stop >/dev/null 2>&1 || echo "claude-vm-session: could not power off; run: claude-vm stop" >&2
-    fi
+    stop_if_unused
     return "$rc"
 }
 
@@ -166,6 +170,20 @@ case "${1:-connect}" in
     unattended)
         ensure_up
         session_then_stop 'cd ~/projects && exec claude --dangerously-skip-permissions'
+        ;;
+    bundle)
+        # The branch claude of ~/projects/NAME in the guest, as a git bundle on
+        # standard output, for claude-pull. Over guest_ssh, with no terminal (one
+        # would change the bytes). NAME is a plain folder name, so nothing of it
+        # can reach the guest's shell as anything but that.
+        repo=${2:-}
+        [[ $repo =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$ && $repo != *..* ]] ||
+            die "bundle needs the name of a folder in the VM's ~/projects (letters, digits, . _ -)."
+        ensure_up >&2
+        rc=0
+        guest_ssh "cd ~/projects/$repo && git bundle create - refs/heads/claude" || rc=$?
+        stop_if_unused
+        exit "$rc"
         ;;
     shell)
         ensure_up

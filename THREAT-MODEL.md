@@ -133,8 +133,8 @@ doesn't make you invisible or untouchable. Use this page to decide what else you
 
   For a stronger boundary, `claude-vm` (`extras/claude-vm.sh`) runs the agent inside a disposable
   Debian VM (QEMU/KVM) with no shared folder: a kernel bug that would let `claude-agent` escape its
-  user boundary reaches only a VM you can throw away, and the agent hands work back only by pushing
-  to a git host you pull from.
+  user boundary reaches only a VM you can throw away, and the agent hands work back only as commits
+  `claude-pull` fetches from the VM over its own ssh login, and shows you before anything comes in.
 
   The same kind of firewall, on its `claude-vm` user, keeps the guest off your network. Another
   account (`--account NAME`) is another VM, run by its own user `claude-vm-NAME`, whose firewall
@@ -271,7 +271,7 @@ With the extras:
   (`data/foot.ini`; a `foot.ini` of your own has to say `osc52=disabled` too).
 
   A bug in QEMU or KVM could still get out, and it reaches the internet, so nothing private belongs
-  in the VM. Read what it pushes.
+  in the VM. Read what it hands you.
 
   `claude-vm unattended` also turns off Claude Code's own permission prompts, for leaving it to
   work. That wall isn't one of those above, but then nothing asks before it pushes, or before it uses
@@ -384,8 +384,8 @@ With the extras:
   sandbox can use your audio server, which could also record the microphone. `claude-unsandboxed`
   and starting `/usr/bin/mpv` by full path skip the sandboxes.
 
-  `claude-vm` shares no folder with you, so this whole row is lighter for it — the only way out is a
-  git push you review before merging — but a VM is not a perfect wall: the remaining path is a QEMU
+  `claude-vm` shares no folder with you, so this whole row is lighter for it — its work reaches you
+  only through `claude-pull`, which shows you each commit first — but a VM is not a perfect wall: the remaining path is a QEMU
   or hypervisor escape (a smaller, more scrutinised surface than the shared kernel `claude-agent`
   runs on), and work you pull in is still untrusted until you have read it.
 

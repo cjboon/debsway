@@ -9,8 +9,8 @@
 # user: an empty ~/projects, its own git identity and ssh key (never yours),
 # and a short CLAUDE.md telling the agent where it is. The guest reaches the
 # internet (Claude's servers, git hosts) but nothing on your machine or
-# network; its only way to hand work back is to push to a git host you pull
-# from. Nothing here runs as you or touches your files.
+# network; it hands work back as commits on a branch claude, which you fetch
+# from it with claude-pull. Nothing here runs as you or touches your files.
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
@@ -167,13 +167,15 @@ from the person's real computer.
   real installs here. The person can put the VM back to its clean state.
 - Your git identity is Claude <noreply@anthropic.com> and your ssh key is
   `~/.ssh/id_ed25519`, made here, never theirs.
-- **How your work reaches them:** commit and push to the git host (run the
-  project's tests first). This VM has no shared folder with their machine on
-  purpose; pushing to a remote they pull from is the only way out. They
-  review your commits before merging. The person adds your ssh public key on
-  the host before your first push: ask them.
+- **How your work reaches them:** commit to a branch named `claude` in the
+  repository's folder in `~/projects` (run the project's tests first). They
+  run `claude-pull` in their copy of it (a folder of the same name), which
+  fetches that branch from this VM over its ssh login, shows them every
+  commit, and brings it in only if they say yes. This VM has no shared folder
+  with their machine on purpose; that is the only way out. You need no push
+  access to any git host for it: fetch from the public address, never push.
 - The VM can be thrown away and rebuilt at any time, so keep nothing here
-  that you have not pushed.
+  that they have not brought in.
 CLAUDEMD
 run chmod 600 "$home/.claude/CLAUDE.md" 2>/dev/null || true
 chown "$VM_USER:$VM_USER" "$home/.claude/CLAUDE.md"
@@ -181,6 +183,6 @@ chown "$VM_USER:$VM_USER" "$home/.claude/CLAUDE.md"
 log "Booting without GRUB's menu wait"
 grub_no_wait /etc/default/grub || log "Couldn't update GRUB; the VM still boots, 5 s slower."
 
-log "Claude Code installed. The guest's ssh public key (add it on your git host):"
+log "Claude Code installed. The guest's ssh public key (only if it is to push to a git host itself):"
 cat "$home/.ssh/id_ed25519.pub"
 log "Provisioning finished."

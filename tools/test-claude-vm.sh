@@ -59,6 +59,12 @@ check "...for another account too, as that account's user" \
     grep -qx "sudo -n -u claude-vm-work /usr/local/libexec/claude-vm-session resume" "$T/calls"
 rm -f "$T/rule-claude-vm-work"
 : >"$T/calls"
+run bundle wren-linux >/dev/null
+check "claude-vm bundle NAME goes to the session with that name" \
+    grep -qx "sudo -n -u claude-vm /usr/local/libexec/claude-vm-session bundle wren-linux" "$T/calls"
+: >"$T/calls"
+check "...without a name: refused, nothing started" bash -c '! bash "$1/bin/claude-vm" bundle >/dev/null 2>&1 && [ ! -s "$2" ]' _ "$HERE" "$T/calls"
+: >"$T/calls"
 run status
 check "a known command is passed through to the session" \
     grep -qx "sudo -n -u claude-vm /usr/local/libexec/claude-vm-session status" "$T/calls"
@@ -230,6 +236,18 @@ check "...with Claude Code's own permission prompts on: only unattended leaves t
 : >"$S/calls"
 session resume >/dev/null 2>&1
 check "resume: Claude Code in the VM, listing its earlier conversations to go on with" grep -q "^ssh .*cd ~/projects && exec claude --resume\$" "$S/calls"
+: >"$S/calls"
+rm -f "$S/vm-running"
+bout=$(session bundle wren-linux 2>/dev/null)
+check "bundle: the guest writes the branch claude of ~/projects/NAME as a bundle" \
+    grep -q "^ssh .*BatchMode=yes.* cd ~/projects/wren-linux && git bundle create - refs/heads/claude\$" "$S/calls"
+check "...over ssh with no terminal (one would change the bytes)" bash -c '! grep "git bundle" "$1" | grep -q -- " -t "' _ "$S/calls"
+check "...starting a stopped VM first, its messages kept off the bundle" bash -c 'grep -qx -- "mockvps --start" "$1" && [ -z "$2" ]' _ "$S/calls" "$bout"
+for bad in '../x' 'a;reboot' 'a b' '.hidden' '' '$(id)'; do
+    : >"$S/calls"
+    session bundle "$bad" >/dev/null 2>&1
+    check "...a name like '$bad': refused, nothing reaches the guest" bash -c '! grep -q "^ssh" "$1"' _ "$S/calls"
+done
 : >"$S/calls"
 session unattended >/dev/null 2>&1
 check "unattended: Claude Code in the VM, with its prompts off" grep -q "^ssh .*cd ~/projects && exec claude --dangerously-skip-permissions" "$S/calls"
@@ -421,43 +439,65 @@ check "...some text: not shown" test -z "$(LC_ALL=en_US.UTF-8 session pubkey 2>/
 mv "$S/ssh-saved" "$S/bin/ssh"; rm -f "$S/vm-running" "$S/guest-says" "$S/home/vm/claude-vm.qcow2"
 check "a clean snapshot after install and rebuild" test "$(grep -c '^        clean_snapshot$' "$HERE/bin/claude-vm-session")" = 2
 check "reset asks first, and no answer changes nothing" bash -c 'grep -q "Nothing was changed" "$1" && grep -q "\[y/N\]" "$1"' _ "$HERE/bin/claude-vm"
-# A commit message with a terminal escape in it, through the real claude-pull
+# ---- claude-pull: the VM's branch claude, as a bundle (a pretend claude-vm makes a
+# real one from a repository standing in for the guest's ~/projects/b)
 GP=$(mktemp -d) || { echo "  FAIL  couldn't make a temp folder (is /tmp full?)"; exit 1; }
+mkdir -p "$GP/bin"
+# (what it sends: $GP/send-garbage, $GP/send-big, or a bundle; it writes down how it was called)
+cat >"$GP/bin/claude-vm" <<FAKE
+#!/bin/bash
+echo "claude-vm \$*" >>"$GP/calls"
+printf 'guest says \033]52;c;eA==\007hi\n' >&2
+name=\${!#}
+if [ -e "$GP/send-garbage" ]; then echo "not a bundle"; exit 0; fi
+if [ -e "$GP/send-big" ]; then head -c 3000000 /dev/zero; exit 0; fi
+exec git -C "$GP/vm/\$name" bundle create - refs/heads/claude 2>/dev/null
+FAKE
+chmod +x "$GP/bin/claude-vm"
+pull() { ( cd "$GP/b" && printf '%s\n' "${1:-}" | PATH="$GP/bin:$PATH" HOME=$GP GIT_CONFIG_NOSYSTEM=1 WREN_PULL_MAX_MB=2 bash "$HERE/bin/claude-pull" "${@:2}" ) >"$GP/out" 2>&1; }
 # shellcheck disable=SC2030,SC2031  # each ( ) sets its own HOME, on purpose
 # (set -e, and every git told which copy it works in: a step that fails stops
-# here, never committing or pushing in the folder the test was started from)
+# here, never committing in the folder the test was started from)
 ( set -e
   export HOME=$GP GIT_CONFIG_NOSYSTEM=1
   git config --global user.name t; git config --global user.email t@e; git config --global init.defaultBranch main; git config --global commit.gpgsign false
-  git init -q --bare "$GP/s.git"; git clone -q "$GP/s.git" "$GP/a" 2>/dev/null
-  git -C "$GP/a" commit -q --allow-empty -m first; git -C "$GP/a" push -q origin main
-  git clone -q "$GP/s.git" "$GP/b" 2>/dev/null
-  git -C "$GP/a" commit -q --allow-empty -m "$(printf 'evil\033]52;c;x\007done')"; git -C "$GP/a" push -q origin main
-  cd "$GP/b"; bash "$HERE/bin/claude-pull" </dev/null >"$GP/out" 2>&1 )
-check "claude-pull shows the commit" grep -q 'evil' "$GP/out"
-check "...without the terminal escape in its message" bash -c '! LC_ALL=C grep -q "$(printf "\033")" "$1"' _ "$GP/out"
-# shellcheck disable=SC2030,SC2031  # each ( ) sets its own HOME, on purpose
-# A branch "claude" on the server: that is what comes in, the owner's own branch
-# on the server isn't touched; and one that isn't on top of theirs: refused
-( set -e
-  export HOME=$GP GIT_CONFIG_NOSYSTEM=1
-  git -C "$GP/b" merge -q --ff-only origin/main
-  git -C "$GP/a" checkout -q -b claude; git -C "$GP/a" commit -q --allow-empty -m from-claude-branch
-  git -C "$GP/a" push -q origin claude
-  git -C "$GP/a" checkout -q main; git -C "$GP/a" commit -q --allow-empty -m on-main-only; git -C "$GP/a" push -q origin main
-  cd "$GP/b"; echo y | bash "$HERE/bin/claude-pull" >"$GP/out2" 2>&1 )
-check "claude-pull: with a branch claude on the server, that is what it shows and brings in" bash -c '
-    grep -q from-claude-branch "$1" && ! grep -q on-main-only "$1" &&
-    [ "$(git -C "$2" log -1 --format=%s)" = from-claude-branch ]' _ "$GP/out2" "$GP/b"
+  git init -q "$GP/b"; git -C "$GP/b" commit -q --allow-empty -m first
+  mkdir -p "$GP/vm"; git clone -q "$GP/b" "$GP/vm/b" 2>/dev/null
+  git -C "$GP/vm/b" checkout -q -b claude
+  git -C "$GP/vm/b" commit -q --allow-empty -m "$(printf 'evil\033]52;c;x\007done')" )
+pull n
+check "claude-pull asks the VM for the branch claude of the folder of this name" grep -qx "claude-vm bundle b" "$GP/calls"
+check "...shows the commit" grep -q 'evil' "$GP/out"
+check "...without the terminal escape in its message, or in what the VM says" bash -c '! LC_ALL=C grep -q "$(printf "\033")" "$1"' _ "$GP/out"
+check "...and n changes nothing" test "$(git -C "$GP/b" log -1 --format=%s)" = first
+pull y
+check "y brings it in, on top" bash -c '[ "$(git -C "$1" log -1 --format=%s)" = "$(git -C "$2" log -1 --format=%s claude)" ]' _ "$GP/b" "$GP/vm/b"
+pull y
+check "nothing new: it says so" grep -q 'Up to date' "$GP/out"
+: >"$GP/calls"
+pull n --account work
+check "--account NAME asks that account's VM" grep -qx "claude-vm --account work bundle b" "$GP/calls"
 # shellcheck disable=SC2031
 ( export HOME=$GP GIT_CONFIG_NOSYSTEM=1
   set -e
   git -C "$GP/b" commit -q --allow-empty -m signed-by-owner
-  git -C "$GP/a" checkout -q claude; git -C "$GP/a" reset -q --hard HEAD~1
-  git -C "$GP/a" commit -q --allow-empty -m not-on-top; git -C "$GP/a" push -q -f origin claude
-  cd "$GP/b"; echo y | bash "$HERE/bin/claude-pull" >"$GP/out3" 2>&1 || true )
-check "...one not on top of what you have: refused, and says so" bash -c '
-    grep -q "isn.t on top of what you have" "$1" && [ "$(git -C "$2" log -1 --format=%s)" = signed-by-owner ]' _ "$GP/out3" "$GP/b"
+  git -C "$GP/vm/b" commit -q --allow-empty -m not-on-top )
+pull y
+check "a branch not on top of what you have: refused, and says so" bash -c '
+    grep -q "isn.t on top of what you have" "$1" && [ "$(git -C "$2" log -1 --format=%s)" = signed-by-owner ]' _ "$GP/out" "$GP/b"
+rm -rf "$GP/b/.git/refs/claude-vm"
+touch "$GP/send-garbage"
+pull y
+check "the VM sends something that isn't a bundle: refused, nothing kept" bash -c '
+    grep -q "isn.t a git bundle" "$1" && ! git -C "$2" rev-parse -q --verify refs/claude-vm/claude' _ "$GP/out" "$GP/b"
+rm -f "$GP/send-garbage"; touch "$GP/send-big"
+pull y
+check "...more than the limit: refused" bash -c 'grep -q "more than 2 MB" "$1" && ! git -C "$2" rev-parse -q --verify refs/claude-vm/claude' _ "$GP/out" "$GP/b"
+rm -f "$GP/send-big"
+git -C "$GP/vm/b" branch -q -m claude other 2>/dev/null
+pull y
+check "no branch claude in the VM: it fails and says so" grep -q "didn't send its branch claude" "$GP/out"
+check "claude-pull checks every object it takes in" grep -q 'fetch.fsckObjects=true' "$HERE/bin/claude-pull"
 rm -rf "$GP"
 
 [ "$fails" -eq 0 ]

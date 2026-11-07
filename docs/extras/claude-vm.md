@@ -17,11 +17,12 @@ claude-vm resume       the same, going on with an earlier conversation (also: cl
 claude-vm unattended   the same, with Claude Code's permission prompts off, for leaving it to work
 claude-vm shell        a plain shell in the VM
 claude-vm status | stop
-claude-vm pubkey       the VM's ssh public key (add it on your git host; wrenctl gh deploy-key does it for GitHub)
+claude-vm pubkey       the VM's ssh public key, if you want it to push to a git host itself (claude-pull doesn't need it)
+claude-vm bundle NAME  the VM's branch claude of ~/projects/NAME, as a git bundle (claude-pull uses it)
 claude-vm rebuild      throw the VM away and build a fresh one (asks first; offers its new key to GitHub)
 claude-vm reset        back to how it was built (faster than rebuild; asks first)
 claude-share PATH...   give the agent files to look at, on a public branch (it shows them and asks); --done deletes them
-claude-pull            in your copy of a repository: shows what the agent pushed, brings it in on y
+claude-pull            in your copy of a repository: shows what the agent committed in the VM, brings it in on y
 claude-vm --account NAME [resume|shell|status|stop|pubkey|rebuild]   the same, for that account's VM
 ```
 
@@ -29,9 +30,11 @@ Claude Code inside a disposable Debian virtual machine (QEMU/KVM), so a kernel b
 out of a user-level sandbox only reaches a VM you can delete.
 
 A locked user, `claude-vm` (no password, no login), runs the one QEMU process; the guest's disk is
-its own and there is no shared folder: the agent hands work back only by pushing to a git host (to a
-branch `claude`, so your own branch stays yours), which you bring into your own copy with
-`claude-pull`.
+its own and there is no shared folder. The agent hands work back as commits on a branch `claude` in
+the VM's `~/projects/NAME`. `claude-pull`, run in your copy of that repository (a folder of the same
+name), fetches that branch over the VM's own ssh login as a git bundle, has git check it and every
+object in it, shows you each commit, and brings it in on top of what you have only if you say yes:
+no git host in between, and nothing of yours the VM can write to.
 
 QEMU's user-mode networking turns the guest's traffic into ordinary sockets owned by `claude-vm`, so
 a firewall rule on that user (`data/claude-vm-firewall.nft`) governs the guest: the internet yes,
@@ -68,16 +71,16 @@ change.
   older VM needs `claude-vm rebuild`, or `sudo apt update && sudo apt upgrade` in `claude-vm shell`.
 - The agent has sudo without a password in the VM, so treat everything in it as under its control,
   including what the VM tells you. A VM built before this has no such rule and no clean snapshot:
-  `claude-vm rebuild` adds both, and deletes what isn't pushed.
+  `claude-vm rebuild` adds both, and deletes what `claude-pull` hasn't brought in.
 - QEMU runs under its own syscall filter, and the VM won't start unless the firewall is active, and
   an ssh login that forwards nothing. Its terminal output still reaches your terminal.
 - A bug in QEMU or KVM could reach this computer; a VM is a stronger wall than a user, not a perfect
   one.
 - It reaches the internet, so what it reads can leave the VM.
 - `claude-vm unattended` takes away Claude Code's own prompts, so nothing asks before it acts: not
-  before a push with its ssh key, and not before it uses a service connected to your Claude account
+  before a push with its ssh key (if you gave it to a git host), and not before it uses a service connected to your Claude account
   (those reach beyond the VM). A web page it reads can talk it into these. Use it only with nothing
-  private in the VM, and read what it pushes as you always should. There is no such command for
+  private in the VM, and read what it hands you as you always should. There is no such command for
   `extras/claude-code.sh`, which shares `~/projects` with you.
 - The agent is signed in to your Claude account, and the VM's walls don't cover that. A VM built
   since this was added sets Claude Code up to pass less between them (`data/claude-vm-provision.sh`,
@@ -88,10 +91,10 @@ change.
   Page Up scrolls. These guard against mistakes, not a hijacked agent, which has root there and can
   change them. What holds is outside the VM: your review, the rules on your main branch, and what
   your account is connected to. An older VM gets them with `claude-vm rebuild`.
-- Treat what it pushes as untrusted until you have read it (`claude-pull` shows it first).
-- Its ssh key on your git host can push wherever you allow: a deploy key on one repository is the
-  narrowest, and a rule on the host that only your signed commits go into your main branch keeps it
-  to its `claude` branch.
+- Treat what it hands you as untrusted until you have read it (`claude-pull` shows it first).
+- `claude-pull` needs no key of the VM's on your git host. If you put one there anyway, it can push
+  wherever you allow: a deploy key on one repository is the narrowest, and a rule on the host that
+  only you update your main branch keeps it to its `claude` branch.
 - Two accounts' VMs are as far apart as two VMs on one computer: a bug in QEMU or KVM is the way
   between them too.
 

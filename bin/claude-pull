@@ -1,39 +1,63 @@
 #!/bin/bash
-# claude-pull [DIR]: written by Wren Linux extras/claude-code.sh
-# Brings what Claude pushed to GitHub into your own copy of a repository
+# claude-pull [--account NAME] [DIR]: written by Wren Linux extras/claude-vm.sh
+# Brings Claude's work from the claude-vm VM into your copy of a repository
 # (default: the one you're in), after showing you what it changes. Nothing
 # comes in unless you say yes, and only on top of what you have.
-# Claude's work comes from the branch "claude" when the server has one (your
-# own branch then stays yours: Claude can't push to it, only you, signed);
-# otherwise from the branch yours tracks.
+# Claude commits to the branch "claude" in the VM's ~/projects/FOLDER, where
+# FOLDER is the name of this copy's folder. That branch comes over the VM's own
+# ssh login as a git bundle (claude-vm bundle): no git host in between, and the
+# VM has no way to write anywhere of yours. git checks the bundle and every
+# object in it; what it holds stays in refs/claude-vm/claude until you say yes.
+# --account NAME: that account's VM.
 set -euo pipefail
 
+MAX_MB=${WREN_PULL_MAX_MB:-500}   # a whole repository's bundle; more is not one (the test sets less)
+[[ $MAX_MB =~ ^[0-9]+$ ]] || { echo "claude-pull: WREN_PULL_MAX_MB is a number of MB." >&2; exit 1; }
 die() { printf 'claude-pull: %s\n' "$*" >&2; exit 1; }
+# Text from the VM, without control characters (an escape sequence could steer
+# your terminal), the 8-bit ones in their UTF-8 form too
+printable() { LC_ALL=C sed 's/\xc2[\x80-\x9f]//g' | LC_ALL=C tr -d '\000-\010\013-\037\177'; }
 
+account=
+if [ "${1:-}" = --account ]; then
+    [ $# -ge 2 ] || die "--account needs a name"
+    account=$2
+    shift 2
+fi
 cd "${1:-.}"
 git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "$PWD is not a git repository."
 # A hooks folder that came in with the pull would run as you
 [ -z "$(git config core.hooksPath)" ] || die "core.hooksPath is set here; remove it first: git config --unset core.hooksPath"
-git fetch --quiet
-remote=$(git config "branch.$(git rev-parse --abbrev-ref HEAD).remote" 2>/dev/null || echo origin)
-git fetch --quiet "$remote" claude 2>/dev/null || true
-if git rev-parse --verify --quiet "refs/remotes/$remote/claude" >/dev/null; then
-    from=$remote/claude
-else
-    from='@{upstream}'
-fi
+name=$(basename -- "$(git rev-parse --show-toplevel)")
+command -v claude-vm >/dev/null || die "claude-vm isn't installed: wrenctl install claude-vm"
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+echo "Asking the VM${account:+ $account} for its branch claude in ~/projects/$name..."
+rc=0
+claude-vm ${account:+--account "$account"} bundle "$name" 2> >(printable >&2) |
+    head -c $((MAX_MB * 1024 * 1024 + 1)) >"$tmp/claude.bundle" || rc=$?
+[ "$(stat -c %s "$tmp/claude.bundle")" -le $((MAX_MB * 1024 * 1024)) ] ||
+    die "the VM sent more than $MAX_MB MB, which is no bundle of a repository. Nothing changed."
+[ "$rc" -eq 0 ] ||
+    die "the VM didn't send its branch claude (is there one in ~/projects/$name?). Nothing changed."
+git bundle verify "$tmp/claude.bundle" >/dev/null 2>&1 ||
+    die "what the VM sent isn't a git bundle git accepts. Nothing changed."
+git -c fetch.fsckObjects=true -c transfer.fsckObjects=true fetch --quiet --no-tags \
+    "$tmp/claude.bundle" "+refs/heads/claude:refs/claude-vm/claude" ||
+    die "git didn't accept what the VM sent. Nothing changed."
+from=refs/claude-vm/claude
+
 if [ -z "$(git rev-list "HEAD..$from")" ]; then
-    echo "Up to date: nothing new on GitHub."
+    echo "Up to date: nothing new from the VM."
     exit 0
 fi
-# (without control characters: a commit message from the VM could steer your terminal)
-# (the 8-bit controls too, in their UTF-8 form: some terminals obey those as well)
-git --no-pager log --stat --format='%n%h %s%n%b' "HEAD..$from" | LC_ALL=C sed 's/\xc2[\x80-\x9f]//g' | LC_ALL=C tr -d '\000-\010\013-\037\177'
+git --no-pager log --stat --format='%n%h %s%n%b' "HEAD..$from" | printable
 echo
-echo "From $from. Every changed line: git diff HEAD...$from"
+echo "From the VM's branch claude. Every changed line: git diff HEAD...$from"
 read -rp "Bring these in? [y/N] " answer
 case $answer in
     [yY]*) git merge --ff-only "$from" ||
-        die "Not brought in: $from isn't on top of what you have. Ask Claude to start again from your branch as it is on the server." ;;
+        die "Not brought in: it isn't on top of what you have. Ask Claude to start again from your branch as it is now." ;;
     *) echo "Nothing changed." ;;
 esac
