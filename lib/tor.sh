@@ -89,6 +89,9 @@ read_bridges() {
             webtunnel) [[ $line =~ ^webtunnel\ [^\ ]+\ [0-9A-Fa-f]{40}\ .*url=https:// ]] && ok=true ;;
             obfs4) [[ $line =~ ^obfs4\ [^\ ]+:[0-9]+\ [0-9A-Fa-f]{40}\ .*cert= ]] && ok=true ;;
         esac
+        # Every word after the fingerprint is NAME=VALUE. Tor refuses a line with anything else,
+        # and won't start at all: better said now than found out later
+        [[ $line =~ ^[a-z0-9]+\ [^\ ]+\ [0-9A-Fa-f]{40}(\ [^\ =]+=[^\ ]+)+$ ]] || ok=false
         if ! $ok || [[ $line == *[\"\\]* ]]; then
             warn "Skipped, not a $kind bridge line. Those look like: $kind ADDRESS:PORT FINGERPRINT ..."
             continue

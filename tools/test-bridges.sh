@@ -107,6 +107,25 @@ conf=$(BRIDGE_TYPE=snowflake tor_bridge_config)
 check "Snowflake: both bridges" test "$(grep -c '^Bridge snowflake ' <<<"$conf")" = 2
 check "Snowflake: the plugin line" has '^ClientTransportPlugin snowflake exec /usr/bin/snowflake-client' "$conf"
 check "Snowflake lines use front=, which Debian's client knows" lacks 'fronts=' "$(grep -v '^#' "$WREN_DIR/data/snowflake-bridges.txt")"
+# A line Tor would refuse, stopping it from starting, is refused here: every word after the fingerprint is NAME=VALUE
+F=0123456789ABCDEF0123456789ABCDEF01234567
+reads() { (
+    BRIDGES=()
+    answers=$(mktemp)
+    printf '%s\n\n' "$2" >"$answers"
+    # shellcheck disable=SC2317,SC2329  # read_bridges calls it
+    note() { :; }
+    # shellcheck disable=SC2317,SC2329  # read_bridges calls it
+    warn() { :; }
+    WREN_TEST_ANSWERS=$answers read_bridges "$1" >/dev/null 2>&1
+    rm -f "$answers"
+    echo "${#BRIDGES[@]}"
+) 8<&-; }
+check "a good obfs4 line is taken" test "$(reads obfs4 "obfs4 1.2.3.4:443 $F cert=abc iat-mode=0")" = 1
+check "a good webtunnel line is taken" test "$(reads webtunnel "webtunnel [2001:db8::1]:443 $F url=https://a.example/x ver=0.0.1")" = 1
+check "a stray word at the end is refused (Tor: not a k=v item)" test "$(reads obfs4 "obfs4 1.2.3.4:443 $F cert=abc iat-mode=0 a")" = 0
+check "...in a webtunnel line too" test "$(reads webtunnel "webtunnel 1.2.3.4:443 $F url=https://a.example/x a")" = 0
+check "...and in the middle" test "$(reads obfs4 "obfs4 1.2.3.4:443 $F a cert=abc")" = 0
 check "built-in kinds write nothing to torrc" test -z "$(BRIDGE_TYPE=obfs4-builtin tor_bridge_config)"
 
 # Bridge addresses are private: every script that writes them to the system Tor's settings
