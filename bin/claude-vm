@@ -1,11 +1,13 @@
 #!/bin/bash
-# claude-vm [connect|unattended|shell|status|stop|pubkey|rebuild]: written by Wren Linux
+# claude-vm [connect|resume|unattended|shell|status|stop|pubkey|rebuild]: written by Wren Linux
 # extras/claude-vm.sh
 # Claude Code inside a disposable virtual machine, not on your computer. The
 # VM has its own disk and no shared folder with you: the agent's only way to
 # hand work back is to push to a git host you pull from (claude-pull). It can
 # reach the internet but nothing on your machine or local network.
 #   claude-vm            start the VM, run Claude Code in it, power it off on exit
+#   claude-vm resume     the same, going on with an earlier conversation: Claude Code
+#                        lists them (also: claude-vm --resume)
 #   claude-vm unattended the same, with Claude Code's own permission prompts off, for
 #                        leaving it to work: a prompt nobody answers stops the work
 #   claude-vm shell      a plain shell in the VM
@@ -47,9 +49,10 @@ fi
 
 cmd=${1:-connect}
 case "$cmd" in
-    connect | unattended | shell | status | stop | pubkey | rebuild | reset) ;;
+    --resume) cmd=resume ;;
+    connect | resume | unattended | shell | status | stop | pubkey | rebuild | reset) ;;
     -h | --help)
-        sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'
+        sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'
         exit 0 ;;
     *) die "unknown command '$1'. Try: claude-vm --help" ;;
 esac
@@ -57,7 +60,7 @@ esac
 # Started from wmenu or another launcher there is no terminal to talk in, and
 # ssh would quietly give up: open one in sway and run again inside it. (No
 # controlling terminal, /dev/tty: what sway starts gets tty1 as stdin, out of sight)
-if [ "$cmd" = connect ] || [ "$cmd" = unattended ] || [ "$cmd" = shell ]; then
+if [ "$cmd" = connect ] || [ "$cmd" = resume ] || [ "$cmd" = unattended ] || [ "$cmd" = shell ]; then
     if ! { : </dev/tty; } 2>/dev/null && [ -n "${WAYLAND_DISPLAY:-}" ] && command -v foot >/dev/null; then
         exec foot --title="Claude (VM${account:+ $account})" env CLAUDE_VM_HOLD=1 "$0" ${account:+--account "$account"} "$cmd"
     fi

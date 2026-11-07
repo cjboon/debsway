@@ -45,6 +45,20 @@ check "claude-vm unattended goes to the session as that, by name" \
     grep -qx "sudo -n -u claude-vm /usr/local/libexec/claude-vm-session unattended" "$T/calls"
 check "...and says what it leaves out, and what still holds" bash -c 'grep -q "without asking" <<<"$1" && grep -q "pushes" <<<"$1"' _ "$out"
 : >"$T/calls"
+run resume
+check "claude-vm resume goes to the session as resume" \
+    grep -qx "sudo -n -u claude-vm /usr/local/libexec/claude-vm-session resume" "$T/calls"
+: >"$T/calls"
+run --resume
+check "...and so does claude-vm --resume" \
+    grep -qx "sudo -n -u claude-vm /usr/local/libexec/claude-vm-session resume" "$T/calls"
+: >"$T/calls"
+touch "$T/rule-claude-vm-work"
+run --account work --resume
+check "...for another account too, as that account's user" \
+    grep -qx "sudo -n -u claude-vm-work /usr/local/libexec/claude-vm-session resume" "$T/calls"
+rm -f "$T/rule-claude-vm-work"
+: >"$T/calls"
 run status
 check "a known command is passed through to the session" \
     grep -qx "sudo -n -u claude-vm /usr/local/libexec/claude-vm-session status" "$T/calls"
@@ -213,6 +227,9 @@ check "it shows mockvps's steps while it waits" grep -qx '  Waiting for SSH on 1
 check "but not mockvps's closing summary" bash -c "! grep -q 'VM is ready' <<<'$out'"
 check "then it logs in and starts Claude Code" grep -q "^ssh .*cd ~/projects && exec claude" "$S/calls"
 check "...with Claude Code's own permission prompts on: only unattended leaves them out" bash -c '! grep -q -- "dangerously-skip-permissions" "$1"' _ "$S/calls"
+: >"$S/calls"
+session resume >/dev/null 2>&1
+check "resume: Claude Code in the VM, listing its earlier conversations to go on with" grep -q "^ssh .*cd ~/projects && exec claude --resume\$" "$S/calls"
 : >"$S/calls"
 session unattended >/dev/null 2>&1
 check "unattended: Claude Code in the VM, with its prompts off" grep -q "^ssh .*cd ~/projects && exec claude --dangerously-skip-permissions" "$S/calls"

@@ -13,6 +13,7 @@ wrenctl install claude-vm --cpus N                how many CPUs it gets, from it
 
 claude                 Claude Code; asks which if you set up more than one (Enter: the VM)
 claude-vm              Claude Code inside the VM (boots it; powers it off when you exit)
+claude-vm resume       the same, going on with an earlier conversation (also: claude-vm --resume)
 claude-vm unattended   the same, with Claude Code's permission prompts off, for leaving it to work
 claude-vm shell        a plain shell in the VM
 claude-vm status | stop
@@ -21,7 +22,7 @@ claude-vm rebuild      throw the VM away and build a fresh one (asks first; offe
 claude-vm reset        back to how it was built (faster than rebuild; asks first)
 claude-share PATH...   give the agent files to look at, on a public branch (it shows them and asks); --done deletes them
 claude-pull            in your copy of a repository: shows what the agent pushed, brings it in on y
-claude-vm --account NAME [shell|status|stop|pubkey|rebuild]   the same, for that account's VM
+claude-vm --account NAME [resume|shell|status|stop|pubkey|rebuild]   the same, for that account's VM
 ```
 
 Claude Code inside a disposable Debian virtual machine (QEMU/KVM), so a kernel bug that would get

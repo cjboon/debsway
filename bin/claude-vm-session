@@ -158,6 +158,11 @@ case "${1:-connect}" in
         # -t for a real terminal; run Claude Code in the guest's projects folder
         session_then_stop 'cd ~/projects && exec claude'
         ;;
+    resume)
+        ensure_up
+        # Claude Code lists the conversations it kept in the guest, to pick one and go on
+        session_then_stop 'cd ~/projects && exec claude --resume'
+        ;;
     unattended)
         ensure_up
         session_then_stop 'cd ~/projects && exec claude --dangerously-skip-permissions'
