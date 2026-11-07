@@ -34,6 +34,12 @@ To go on: `git fetch origin && git checkout -b claude-wip origin/claude-wip`. Be
 2. On `claude`, suite clean here (141 ok but for `setup-vps`): the git guard, bridge lines, the bar, the
    `--userns` refusal, the serial log cap and the onion site's QEMU filter, and the retirement of Claude Code
    as its own user (10c772c). CI went green at 9860d15, so that was the cause of the red. Check CI on 10c772c.
+   Also on `claude`: a699bbd, a bridge line Tor would refuse is refused when pasted (a stray word had stopped the
+   owner's Gateway from starting Tor). CI green at 10c772c; check it at a699bbd.
+   The owner's own test, real Whonix on their computer: webtunnel connects (the first real try). They were then
+   running `whonix update` through it. Ask how it went: did it finish, did a bookmark and a download survive, still
+   Safest, did `whonix stop` end with no dialog? Then fill in docs/extras/whonix.md's LIMITS, which still say those
+   weren't tried. Say only what they report.
 3. Suggest a release when CI is green: 8d28954 (git guard) and those above are fixes people should take.
 
 ## The owner's decisions, in the order to do them
