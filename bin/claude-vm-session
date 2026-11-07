@@ -185,6 +185,17 @@ case "${1:-connect}" in
         stop_if_unused
         exit "$rc"
         ;;
+    give)
+        # A tar stream on standard input (claude-vm give made it from your files),
+        # unpacked in the guest in a new folder of ~/given that this names itself
+        ensure_up >&2
+        dest=given/$(date -u +%Y%m%d-%H%M%S)
+        rc=0
+        guest_ssh "mkdir -p ~/$dest && tar -x --no-same-owner -C ~/$dest" || rc=$?
+        if [ "$rc" -eq 0 ]; then echo "Given: ~/$dest in the VM. Tell the agent to look there."; fi
+        stop_if_unused
+        exit "$rc"
+        ;;
     shell)
         ensure_up
         session_then_stop 'cd ~/projects 2>/dev/null; exec bash -l'

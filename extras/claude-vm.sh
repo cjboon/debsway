@@ -320,7 +320,8 @@ install_bin claude
 # How you bring the agent's pushed work into your own copy, after reviewing
 # it. Shared with extras/claude-code.sh, which installs the same command.
 install_bin claude-pull
-install_bin claude-share
+# (claude-share gave the agent files on a public branch; claude-vm give does it privately)
+remove_bin claude-share
 
 vm_size_choose "$AGENT" "$SIZE_MEM" "$SIZE_DISK"
 [ -z "$SIZE_CPUS" ] || vm_cpus_choose "$AGENT" "$SIZE_CPUS"

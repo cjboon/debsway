@@ -16,6 +16,8 @@
 #   claude-vm pubkey     the VM's ssh public key (add it on your git host)
 #   claude-vm bundle NAME  the VM's branch claude of ~/projects/NAME, as a git bundle
 #                        on standard output (claude-pull uses it)
+#   claude-vm give PATH... files or folders for the agent to look at, copied into the
+#                        VM's ~/given (it shows every name and asks first)
 #   claude-vm reset      back to how it was built (faster than rebuild; asks first)
 #   claude-vm rebuild    throw the VM away and build a fresh one (asks first; offers its new key to GitHub)
 #   claude-vm --account NAME [COMMAND]   another account's VM (its own Claude
@@ -49,15 +51,64 @@ if [ -n "$account" ]; then
     AGENT=claude-vm-$account
 fi
 
+# give PATH...: copies of the files and folders named (regular files only: links and
+# anything hidden, at any depth, left out; never all of your home), shown by name
+# and asked about, then sent as one tar stream to the session, which unpacks it in
+# a new folder of the VM's ~/given that it names itself
+MAX_GIVE_MB=${WREN_GIVE_MAX_MB:-500}
+give() {
+    local work path real f answer total located
+    work=$(mktemp -d)
+    trap 'rm -rf "$work"' EXIT
+    mkdir "$work/give"
+    for path in "$@"; do
+        [ -e "$path" ] || die "there is no $path."
+        [ ! -L "$path" ] || die "$path is a link: name what it points to."
+        real=$(realpath -- "$path")
+        case $HOME/ in "$real"/*) die "$path holds your whole home folder: name the folder you mean." ;; esac
+        # ~/.ssh, ~/.gnupg...: where keys and passwords live
+        case $real in */.*) die "$path is hidden, or in a hidden folder: copy it elsewhere, if you do mean it." ;; esac
+        if [ -d "$path" ]; then
+            (cd "$path" && find . -type f -not -path '*/.*' -print0) |
+                while IFS= read -r -d '' f; do
+                    mkdir -p "$work/give/${real##*/}/$(dirname "$f")"
+                    cp -- "$path/$f" "$work/give/${real##*/}/$f"
+                done
+        else
+            [ -f "$path" ] || die "$path isn't a file or a folder."
+            cp -- "$path" "$work/give/"
+        fi
+    done
+    mapfile -d '' -t files < <(cd "$work/give" && find . -type f -print0 | sort -z)
+    [ ${#files[@]} -gt 0 ] || die "nothing to give there (hidden files and links are left out)."
+    total=$(du -sm "$work/give" | cut -f1)
+    [ "$total" -le "$MAX_GIVE_MB" ] || die "$total MB in all, over $MAX_GIVE_MB MB. Give fewer."
+    echo "This goes into the VM${account:+ $account}, which reaches the internet: what is there can leave it."
+    # (%q: a file name can't steer your terminal)
+    for f in "${files[@]}"; do printf '  %q\n' "${f#./}"; done
+    echo "${#files[@]} files, about $total MB. Leave out your own photos (they can say where they were taken) and anything private."
+    if command -v exiftool >/dev/null; then
+        # shellcheck disable=SC2016  # exiftool's own variables
+        located=$(cd "$work/give" && exiftool -q -r -if '$GPSLatitude' -p '$Directory/$FileName' . 2>/dev/null || true)
+        [ -z "$located" ] || { echo "THESE SAY WHERE THEY WERE TAKEN:"; printf '%s\n' "$located"; }
+    else
+        echo "(Hidden details in the files weren't checked: exiftool isn't installed.)"
+    fi
+    read -rp "Give them to the agent? [y/N] " answer || answer=
+    case $answer in [yY]*) ;; *) echo "Nothing was given."; return 0 ;; esac
+    tar -C "$work/give" --owner=0 --group=0 --numeric-owner -cf - . | sudo -n -u "$AGENT" "$SESSION" give
+}
+
 cmd=${1:-connect}
 case "$cmd" in
     --resume) cmd=resume ;;
     connect | resume | unattended | shell | status | stop | pubkey | rebuild | reset) ;;
+    give) [ $# -ge 2 ] || die "usage: claude-vm give PATH... (files or folders for the agent)" ;;
     bundle)
         [ $# -eq 2 ] || die "usage: claude-vm bundle NAME (a folder in the VM's ~/projects)"
         [ ! -t 1 ] || die "that writes a git bundle, not text: send it to a file (claude-pull does)." ;;
     -h | --help)
-        sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'
+        sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'
         exit 0 ;;
     *) die "unknown command '$1'. Try: claude-vm --help" ;;
 esac
@@ -113,4 +164,5 @@ if [ -n "${CLAUDE_VM_HOLD:-}" ]; then
     exit "$rc"
 fi
 if [ "$cmd" = bundle ]; then exec sudo -n -u "$AGENT" "$SESSION" bundle "$2"; fi
+if [ "$cmd" = give ]; then shift; give "$@"; exit; fi
 exec sudo -n -u "$AGENT" "$SESSION" "$cmd"

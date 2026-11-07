@@ -309,7 +309,6 @@ install_bin claude-sandbox
 install_bin claude
 install_bin claude-unsandboxed
 install_bin claude-pull
-install_bin claude-share
 install_bin git
 
 cat <<EOF

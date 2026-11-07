@@ -218,7 +218,6 @@ dev_test tor-service "Who keeps the system tor service on (lib/tor.sh), on a pre
 dev_test dhcp-no-name "This computer's name stays off the networks it joins (lib/net.sh, wifi.sh)" "DHCP name checks"
 dev_test update-watch "Saying when security updates stop arriving (bin/wren-update-result, the bar)" "update watch checks"
 dev_test what-wren-adds "What Wren Linux adds to Debian (docs/what-wren-adds.md), against the scripts" "what it adds checks"
-dev_test claude-share "Giving Claude files to look at (bin/claude-share), with a real git server" "claude-share checks"
 dev_test tether "A phone over USB (bin/tether, parts/tether.sh), on a pretend /sys" "tether checks"
 dev_test clock "The clock: NTP and the time zone (parts/clock.sh), with a pretend timedatectl" "clock checks"
 

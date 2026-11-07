@@ -20,7 +20,7 @@ mkdir -p "$T/fake"
 # the call (and fails if $T/sudo-fails is there); a pretend foot writes down how it was started
 cat >"$T/fake/sudo" <<EOF
 #!/bin/sh
-case "\$*" in *" -l "*) [ -e "$T/rule-\$3" ] ;; *) echo "sudo \$*" >>"$T/calls"; [ ! -e "$T/sudo-fails" ] ;; esac
+case "\$*" in *" -l "*) [ -e "$T/rule-\$3" ] ;; *" give") echo "sudo \$*" >>"$T/calls"; cat >"$T/given.tar" ;; *) echo "sudo \$*" >>"$T/calls"; [ ! -e "$T/sudo-fails" ] ;; esac
 EOF
 printf '#!/bin/sh\necho "foot $*" >>"%s/calls"\n' "$T" >"$T/fake/foot"
 chmod +x "$T/fake/sudo" "$T/fake/foot"
@@ -64,6 +64,26 @@ check "claude-vm bundle NAME goes to the session with that name" \
     grep -qx "sudo -n -u claude-vm /usr/local/libexec/claude-vm-session bundle wren-linux" "$T/calls"
 : >"$T/calls"
 check "...without a name: refused, nothing started" bash -c '! bash "$1/bin/claude-vm" bundle >/dev/null 2>&1 && [ ! -s "$2" ]' _ "$HERE" "$T/calls"
+: >"$T/calls"
+# give: copies of what you name, shown and asked about, sent to the session as tar
+G=$T/give; mkdir -p "$G/notes/sub" "$G/notes/.secret" "$HOME"
+echo a >"$G/a.txt"; echo b >"$G/notes/sub/b.txt"; echo s >"$G/notes/.hidden"; echo k >"$G/notes/.secret/key"
+ln -s "$G/a.txt" "$G/notes/link"; echo e >"$G/$(printf 'odd\033[31mname')"
+gout=$(printf 'y\n' | run give "$G/a.txt" "$G/notes" "$G/$(printf 'odd\033[31mname')" 2>&1)
+check "give: what you name goes to the session's give, on y" grep -qx "sudo -n -u claude-vm /usr/local/libexec/claude-vm-session give" "$T/calls"
+check "...files, and a folder's files under its name" bash -c 'l=$(tar -tf "$1"); grep -qx "./a.txt" <<<"$l" && grep -qx "./notes/sub/b.txt" <<<"$l"' _ "$T/given.tar"
+check "...nothing hidden at any depth, and no links" bash -c '! tar -tf "$1" | grep -qE "hidden|secret|link"' _ "$T/given.tar"
+check "...every name shown first, without a terminal escape" bash -c 'grep -q "a.txt" <<<"$1" && grep -q "b.txt" <<<"$1" && ! LC_ALL=C grep -q "$(printf "\033")" <<<"$1"' _ "$gout"
+check "...and it says the VM reaches the internet" grep -q 'reaches the internet' <<<"$gout"
+: >"$T/calls"; rm -f "$T/given.tar"
+printf 'n\n' | run give "$G/a.txt" >/dev/null 2>&1
+check "...n: nothing is given" bash -c '! grep -q " give" "$1" && [ ! -e "$2" ]' _ "$T/calls" "$T/given.tar"
+for bad in "$HOME" "$G/notes/.secret" "$G/notes/link" "$G/missing"; do
+    : >"$T/calls"
+    check "...refused, nothing sent: ${bad#"$T"/}" bash -c '! printf "y\n" | bash "$1/bin/claude-vm" give "$2" >/dev/null 2>&1 && ! grep -q " give" "$3"' _ "$HERE" "$bad" "$T/calls"
+done
+: >"$T/calls"
+check "...more than the limit: refused" bash -c '! printf "y\n" | WREN_GIVE_MAX_MB=0 bash "$1/bin/claude-vm" give "$2" >/dev/null 2>&1 && ! grep -q " give" "$3"' _ "$HERE" "$G/a.txt" "$T/calls"
 : >"$T/calls"
 run status
 check "a known command is passed through to the session" \
@@ -248,6 +268,11 @@ for bad in '../x' 'a;reboot' 'a b' '.hidden' '' '$(id)'; do
     session bundle "$bad" >/dev/null 2>&1
     check "...a name like '$bad': refused, nothing reaches the guest" bash -c '! grep -q "^ssh" "$1"' _ "$S/calls"
 done
+: >"$S/calls"
+gout=$(echo tar | session give 2>/dev/null)
+check "give: the guest unpacks it in a new folder of ~/given the session names" \
+    grep -qE "^ssh .*BatchMode=yes.* mkdir -p ~/given/[0-9]{8}-[0-9]{6} && tar -x --no-same-owner -C ~/given/[0-9]{8}-[0-9]{6}\$" "$S/calls"
+check "...and says where" grep -qE '^Given: ~/given/[0-9]{8}-[0-9]{6} in the VM' <<<"$gout"
 : >"$S/calls"
 session unattended >/dev/null 2>&1
 check "unattended: Claude Code in the VM, with its prompts off" grep -q "^ssh .*cd ~/projects && exec claude --dangerously-skip-permissions" "$S/calls"

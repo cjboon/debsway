@@ -21,7 +21,7 @@ claude-vm pubkey       the VM's ssh public key, if you want it to push to a git 
 claude-vm bundle NAME  the VM's branch claude of ~/projects/NAME, as a git bundle (claude-pull uses it)
 claude-vm rebuild      throw the VM away and build a fresh one (asks first; offers its new key to GitHub)
 claude-vm reset        back to how it was built (faster than rebuild; asks first)
-claude-share PATH...   give the agent files to look at, on a public branch (it shows them and asks); --done deletes them
+claude-vm give PATH... give the agent files to look at, copied into the VM's ~/given (it shows every name and asks)
 claude-pull            in your copy of a repository: shows what the agent committed in the VM, brings it in on y
 claude-vm --account NAME [resume|shell|status|stop|pubkey|rebuild]   the same, for that account's VM
 ```
@@ -150,7 +150,6 @@ rm /tmp/wren-claude-vm
 install -D -m 0755 @WREN_DIR@/bin/claude-vm ~/.local/bin/claude-vm
 install -D -m 0755 @WREN_DIR@/bin/claude ~/.local/bin/claude
 install -D -m 0755 @WREN_DIR@/bin/claude-pull ~/.local/bin/claude-pull
-install -D -m 0755 @WREN_DIR@/bin/claude-share ~/.local/bin/claude-share
 
 # Build the VM (unattended, 10-20 minutes), then show its ssh key for your git host
 # Its size in MiB (memory, disk), if not the engine's 2048 and 20000; leave
