@@ -74,7 +74,7 @@ internet. So:
   `tools/test-*.sh` to run, not the whole suite. Run it once per finished piece, not after
   every edit; run the single `tools/test-*.sh` for what you changed. Run slow things in
   the background, writing to a file in the scratchpad; you're told when they end.
-  Don't edit files while a run is going. Never run two test runs at once: the pty-based tests (menu, timer) are timing-sensitive.
+  Don't edit the copy a run is using while it runs. Never run two test runs at once: the pty-based tests (menu, timer) are timing-sensitive.
   Don't wait with `pgrep -f` or `pkill -f` patterns that match your own command line.
 - CI runs on every push, in a Debian 13 container (`.github/workflows/shellcheck.yml`). Its
   logs need a GitHub login, so ask the owner for the `FAIL` lines of a red run. Its API, for
