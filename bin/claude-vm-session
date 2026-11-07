@@ -158,6 +158,10 @@ case "${1:-connect}" in
         # -t for a real terminal; run Claude Code in the guest's projects folder
         session_then_stop 'cd ~/projects && exec claude'
         ;;
+    unattended)
+        ensure_up
+        session_then_stop 'cd ~/projects && exec claude --dangerously-skip-permissions'
+        ;;
     shell)
         ensure_up
         session_then_stop 'cd ~/projects 2>/dev/null; exec bash -l'
@@ -199,5 +203,5 @@ case "${1:-connect}" in
         echo "The VM is back to how it was built."
         ;;
     uninstall) mockvps --uninstall --yes ;;
-    *) die "unknown subcommand '$1' (connect, shell, status, stop, pubkey, install, rebuild, reset, uninstall)." ;;
+    *) die "unknown subcommand '$1' (connect, unattended, shell, status, stop, pubkey, install, rebuild, reset, uninstall)." ;;
 esac

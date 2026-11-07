@@ -13,6 +13,7 @@ wrenctl install claude-vm --cpus N                how many CPUs it gets, from it
 
 claude                 Claude Code; asks which if you set up more than one (Enter: the VM)
 claude-vm              Claude Code inside the VM (boots it; powers it off when you exit)
+claude-vm unattended   the same, with Claude Code's permission prompts off, for leaving it to work
 claude-vm shell        a plain shell in the VM
 claude-vm status | stop
 claude-vm pubkey       the VM's ssh public key (add it on your git host; wrenctl gh deploy-key does it for GitHub)
@@ -72,6 +73,11 @@ change.
 - A bug in QEMU or KVM could reach this computer; a VM is a stronger wall than a user, not a perfect
   one.
 - It reaches the internet, so what it reads can leave the VM.
+- `claude-vm unattended` takes away Claude Code's own prompts, so nothing asks before it acts: not
+  before a push with its ssh key, and not before it uses a service connected to your Claude account
+  (those reach beyond the VM). A web page it reads can talk it into these. Use it only with nothing
+  private in the VM, and read what it pushes as you always should. There is no such command for
+  `extras/claude-code.sh`, which shares `~/projects` with you.
 - Treat what it pushes as untrusted until you have read it (`claude-pull` shows it first).
 - Its ssh key on your git host can push wherever you allow: a deploy key on one repository is the
   narrowest, and a rule on the host that only your signed commits go into your main branch keeps it

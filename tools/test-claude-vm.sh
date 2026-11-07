@@ -40,6 +40,11 @@ run
 check "no argument runs the session's connect subcommand as claude-vm" \
     grep -qx "sudo -n -u claude-vm /usr/local/libexec/claude-vm-session connect" "$T/calls"
 : >"$T/calls"
+out=$(run unattended 2>&1)
+check "claude-vm unattended goes to the session as that, by name" \
+    grep -qx "sudo -n -u claude-vm /usr/local/libexec/claude-vm-session unattended" "$T/calls"
+check "...and says what it leaves out, and what still holds" bash -c 'grep -q "without asking" <<<"$1" && grep -q "pushes" <<<"$1"' _ "$out"
+: >"$T/calls"
 run status
 check "a known command is passed through to the session" \
     grep -qx "sudo -n -u claude-vm /usr/local/libexec/claude-vm-session status" "$T/calls"
@@ -207,6 +212,12 @@ check "it says the VM is starting and how long that takes" grep -q 'Starting the
 check "it shows mockvps's steps while it waits" grep -qx '  Waiting for SSH on 127.0.0.1:2242' <<<"$out"
 check "but not mockvps's closing summary" bash -c "! grep -q 'VM is ready' <<<'$out'"
 check "then it logs in and starts Claude Code" grep -q "^ssh .*cd ~/projects && exec claude" "$S/calls"
+check "...with Claude Code's own permission prompts on: only unattended leaves them out" bash -c '! grep -q -- "dangerously-skip-permissions" "$1"' _ "$S/calls"
+: >"$S/calls"
+session unattended >/dev/null 2>&1
+check "unattended: Claude Code in the VM, with its prompts off" grep -q "^ssh .*cd ~/projects && exec claude --dangerously-skip-permissions" "$S/calls"
+check "...the prompts stay on in the lighter sandbox, which shares ~/projects with you" bash -c '! grep -q -- "dangerously-skip-permissions" "$1/bin/claude-session" "$1/bin/claude-sandbox" "$1/bin/claude"' _ "$HERE"
+: >"$S/calls"
 touch "$S/start-fails"
 : >"$S/calls"
 out=$(session connect 2>&1)

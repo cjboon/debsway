@@ -273,6 +273,10 @@ With the extras:
   A bug in QEMU or KVM could still get out, and it reaches the internet, so nothing private belongs
   in the VM. Read what it pushes.
 
+  `claude-vm unattended` also turns off Claude Code's own permission prompts, for leaving it to
+  work. That wall isn't one of those above, but then nothing asks before it pushes, or before it uses
+  a service connected to your Claude account, even if a web page talked it into that.
+
 - **What runs in the distribution VMs** (`extras/distro-vm.sh`: Kali, Tails, Arch), retired: they
   can't be newly installed, get no more updates, and `update.sh` offers to remove them.
 
