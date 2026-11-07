@@ -8,12 +8,12 @@
 # documentation into ~/Documents/wren-docs.
 # Usage: bash core-commands.sh [--remove]
 # status: bin:timer
-# files: data/keys.txt data/alarm.wav bin/keys bin/wren-welcome bin/timer lib/alarm-sounds.py bin/help bin/update bin/display-scale bin/sway-status bin/wren-empty-workspace
+# files: bin/wren-dim data/keys.txt data/alarm.wav bin/keys bin/wren-welcome bin/timer lib/alarm-sounds.py bin/help bin/update bin/display-scale bin/sway-status bin/wren-empty-workspace
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 need_user
 
 KEYS="$HOME/.local/share/wren/keys.txt"
-COMMANDS=(keys wren-welcome timer display-scale sway-status help update wren-empty-workspace)
+COMMANDS=(keys wren-welcome timer display-scale sway-status help update wren-empty-workspace wren-dim)
 # The documentation, easy to find: links to the docs of the Wren Linux in use
 DOCS="$HOME/Documents/wren-docs"
 
@@ -36,6 +36,7 @@ docs_links() {
 if [ "${1:-}" = --remove ]; then
     warn "These are what the desktop's keys, bar and first-login screen run."
     remove_snippet empty-workspace
+    remove_snippet dim
     for c in "${COMMANDS[@]}"; do remove_bin "$c"; done
     rm -f "$KEYS" "${KEYS%/*}/alarm.wav" "${KEYS%/*}/alarm-sounds.py"
     rm -rf "${KEYS%/*}/alarms"
@@ -65,6 +66,10 @@ install -m 0644 "$WREN_DIR/lib/alarm-sounds.py" "${KEYS%/*}/alarm-sounds.py"
 command -v python3 >/dev/null && python3 -I "${KEYS%/*}/alarm-sounds.py" make "${KEYS%/*}/alarms" ||
     warn "The alarm sounds weren't made, so alarms ring with the bell until you choose one: timer sound"
 # Code 49 is the key left of 1, whatever a layout calls it: it lines up with the workspace numbers
+put_snippet dim <<'EOF'
+# The other windows on a workspace fade, to show which has the focus (wren-dim off: not)
+exec ~/.local/bin/wren-dim
+EOF
 put_snippet empty-workspace <<'EOF'
 # The next empty workspace (Wren Linux parts/core-commands.sh)
 bindcode $mod+49 exec ~/.local/bin/wren-empty-workspace

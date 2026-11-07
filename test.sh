@@ -405,6 +405,7 @@ dev_test extras-flow "Choosing extras first and installing them after the base" 
 dev_test mpv-notice "mpv's one-time note when there is no sound" "mpv notice checks"
 
 # --------------------------------------------------------------------
+dev_test dim "Fading the windows without the focus (bin/wren-dim), in a real sway" "window fading checks"
 dev_test battery-bar "The low battery warning in the bar (bin/sway-status), with a pretend battery" "low battery checks"
 dev_test keys "The key cheat sheet shows only what is installed (bin/keys)" "cheat sheet checks"
 dev_test empty-workspace "The next empty workspace (bin/wren-empty-workspace), in a real sway" "empty workspace checks"
