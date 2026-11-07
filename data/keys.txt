@@ -31,6 +31,12 @@
                            (in the terminal Ctrl+w deletes a word instead:
                            close it with Super+Shift+q or by typing exit)
 
+@if browser-sandbox
+  TOR BROWSER, MULLVAD BROWSER (each in a window of its own)
+    Super+Ctrl+b           move a line of text in or out: it shows it to you first
+    ~/Browsers             what they saved, and what you give them
+
+@end
   WINDOWS
     Super+h j k l          move focus left / down / up / right (or arrows)
     Super+Shift+h j k l    move the window (or Shift+arrows)

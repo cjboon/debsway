@@ -21,7 +21,7 @@ updates. It runs on X11, so XWayland is installed.
 
 - It doesn't hide your address: without a VPN, sites see it and your network sees where you go.
 - It isn't Tor, and hiding your address doesn't hide who you are to a site you log in to.
-- It runs as you, with no sandbox from Wren Linux (the sandboxed Firefox and `incognito` are that).
+- It runs as you, with no sandbox from Wren Linux: `wrenctl install mullvad-browser-sandbox` is the same browser as its own user.
 - It keeps its own DNS over HTTPS, which secure DNS (`parts/secure-dns.sh`) can't stop.
 
 ## MANUAL INSTALL

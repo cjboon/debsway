@@ -26,8 +26,12 @@ protect against, and those manual steps.
 - `firefox-unsafe` runs Firefox as you; `firefox-esr` (and `x-www-browser`) open the sandboxed one.
   More below.
 
-**[`tor-browser`](extras/tor-browser.md)**: Tor Browser (Safest, JavaScript off, a bridge before its
-first connection if you need one: obfs4, webtunnel, Snowflake or meek). More below.
+**[`tor-browser`](extras/tor-browser.md)**: Tor Browser as its own user, in a window of its own
+(Safest, JavaScript off, a bridge before its first connection if you need one: obfs4, webtunnel,
+Snowflake or meek). More below.
+
+**[`mullvad-browser-sandbox`](extras/mullvad-browser-sandbox.md)**: Mullvad Browser as its own user:
+Tor Browser's anti-tracking without Tor, for use with a VPN
 
 **[`mullvad-browser-regular`](extras/mullvad-browser-regular.md)**: Mullvad Browser as you: Tor
 Browser's anti-tracking without Tor, for use with a VPN (no sandbox from Wren Linux)
@@ -360,9 +364,12 @@ Apps that only run on X11 (Tor Browser, Mullvad Browser, Sparrow, Feather, Simpl
 XWayland; log out and back in once after the first one, because sway only notices XWayland when it
 starts.
 
-**Tor Browser.** Debian's `torbrowser-launcher` is in the **contrib** section, so the script turns
-contrib on (and `--remove` turns it off, if the script turned it on). Before Tor Browser's first
-start it writes a `user.js` into its profile: the Safest security level, JavaScript off, and a
+**Tor Browser.** It runs as its own user, `tor-browser`, with none of your files, in a window of its
+own, and a firewall keeps it off this computer and your network. It doesn't force the browser through
+Tor: a hacked browser could go straight out and show your address, which Whonix stops. Debian's
+`torbrowser-launcher`, for the AppArmor profiles it brings, is in the **contrib** section, so the
+script turns contrib on (and `--remove` turns it off, if the script turned it on). Before Tor Browser's
+first start it writes a `user.js` into its profile: the Safest security level, JavaScript off, and a
 bridge if you say you need one (it asks first, then offers obfs4, webtunnel, Snowflake or meek: see
 [Bridges](install-base.md#bridges)), so its very first connection goes through it. These are
 reapplied at every start; run the script again to change them. It also fixes Tor's AppArmor profile

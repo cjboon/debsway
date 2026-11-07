@@ -112,6 +112,20 @@ doesn't make you invisible or untouchable. Use this page to decide what else you
 
   It shares your kernel, and the files it brings are still untrusted.
 
+- **A hacked page in Tor Browser or Mullvad Browser reaching your files.** `tor-browser`
+  (`extras/tor-browser.sh`) and `mullvad-browser` (`extras/mullvad-browser-sandbox.sh`) each run as
+  a user of their own, with no password, login or access to your files, in a window system of their
+  own, so they can't read your screen or your other windows; a line of text crosses only when you
+  ask, after you have seen it, and files through `~/Browsers`.
+
+  A firewall rule keeps each off this computer and your network. Tor Browser's may reach only
+  itself here: an answer from a listener of any other user doesn't get out.
+
+  That wall is around your files, not your address. Browser and Tor are one user, so a hacked Tor
+  Browser could go straight out and show your address: Whonix is what stops that. A hacked browser
+  can also change its own program files (it has to be able to update itself), which stays inside
+  that user. They share your kernel: a kernel bug could still get out.
+
 - **A booby-trapped image or video, or a coding assistant that goes wrong, reaching your files.**
   `imv` and `mpv` (`extras/media.sh`) start inside bubblewrap: they see only the files you open,
   read-only, and have no network unless you give mpv a URL. zathura (`extras/pdf-viewer.sh`) runs in
@@ -242,7 +256,7 @@ With the extras:
 ## What it doesn't protect against
 
 - **A hacked sandbox sending data out.** Wren Linux's sandbox users (the sandboxed Firefox,
-  incognito, yt-dlp, Claude's own user, the VMs) reach the internet, so one that is hacked can send
+  incognito, Tor Browser, Mullvad Browser, yt-dlp, Claude's own user, the VMs) reach the internet, so one that is hacked can send
   out what it can read.
 
   Their DNS goes only to the resolver this computer uses (`parts/sandbox-dns.sh`), which keeps them
@@ -302,7 +316,8 @@ With the extras:
   `/usr/share/wren`, so such a program can't change them to wait for your password; from your own
   copy in `~/wren` it could.) `claude-regular` (`extras/claude-regular.sh`, retired: `update.sh`
   offers to remove it) and `mullvad-browser-regular` run as you on purpose, for ease: a hacked page
-  in Mullvad Browser reaches your files, and so does `firefox-unsafe` (Debian's `firefox-esr`, moved
+  in that Mullvad Browser reaches your files, as it does in a Tor Browser or Mullvad Browser started by
+  its full path in `/usr/bin`, and so does `firefox-unsafe` (Debian's `firefox-esr`, moved
   there when the sandboxed Firefox is installed, so that `firefox-esr` by name opens the sandbox;
   without the sandbox, `firefox-esr` itself).
 

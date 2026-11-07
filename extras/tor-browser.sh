@@ -1,25 +1,35 @@
 #!/bin/bash
-# Tor Browser through Debian's torbrowser-launcher. On first run it
-# downloads Tor Browser from torproject.org and checks its signature;
-# it also keeps it updated. The launcher is in Debian's contrib section,
-# so this turns contrib on in your apt sources, and --remove turns it
-# off again if this script was what turned it on.
-# Tor Browser runs on X11 on purpose (less fingerprintable), so XWayland
-# is installed too.
-# Before Tor Browser's first start this also writes a user.js into its
-# profile: the Safest security level, JavaScript off, and a bridge if you
-# need one (it asks first, then offers obfs4, webtunnel, Snowflake or meek),
-# so its very first connection goes through it. Firefox
-# applies user.js at every start, so these come back after a restart even
-# if changed in the browser; run this again to change them.
-# If prep/fetch-tor-browser.sh saved a copy into ../offline/torbrowser, that copy is
-# checked and installed, so nothing is fetched from torproject.org.
+# Tor Browser as its own locked-down user, tor-browser, so a hacked page doesn't reach your
+# files. It has no password or login, and its own home (/home/tor-browser), where the browser
+# lives and updates itself through Tor.
+#  - It opens inside cage, a tiny Wayland compositor shown as one window in your sway, with a
+#    private X server: Tor Browser runs on X11 on purpose (less fingerprintable), and on X11 any
+#    program can read every window and key. A restricted socket (bin/wayland-restrict) keeps it
+#    from your screen.
+#  - A firewall rule (data/tor-browser-firewall.nft) keeps it off this computer and your local
+#    network. It doesn't force the browser through Tor: browser and Tor are one user, so a
+#    hacked browser could go straight out and show your address. Whonix is what stops that.
+#  - Nothing crosses by itself. A line of text goes through browser-sandbox clip (Super+Ctrl+b),
+#    which shows it to you first; files through ~/Browsers/tor-browser.
+#  - Debian's torbrowser-launcher is installed for the AppArmor profiles it brings, which confine
+#    the browser and its Tor. The browser itself is the Tor Project's, checked against their key
+#    (prep/fetch-tor-browser.sh): contrib is turned on for the launcher, and --remove turns it off
+#    again if this script was what turned it on.
+#  - Before its first start this writes a user.js into its profile: the Safest security level,
+#    JavaScript off, and a bridge if you need one (it asks first, then offers obfs4, webtunnel,
+#    Snowflake or meek), so its very first connection goes through it. Firefox applies user.js at
+#    every start, so these come back after a restart even if changed in the browser; run this
+#    again to change them.
+# /usr/bin/torbrowser-launcher, by its full path, still runs as you. A copy you already had there
+# is left alone, and --remove asks about it.
 # Usage: bash tor-browser.sh [--remove | --manual]
-# summary: Tor Browser, with a bridge if you need one
+# summary: Tor Browser as its own user, with a bridge if needed
 # security: most
-# status: apt:torbrowser-launcher
+# status: file:/usr/local/bin/tor-browser
+# files: lib/browser-sandbox.sh bin/browser-sandbox bin/browser-session data/tor-browser-firewall.nft data/tor-browser-safest.js prep/fetch-tor-browser.sh bin/no-abstract-sockets bin/wayland-restrict bin/sandbox-net-check
 . "$(dirname -- "${BASH_SOURCE[0]}")/../lib.sh"
 . "$WREN_DIR/lib/appimage.sh"
+. "$WREN_DIR/lib/browser-sandbox.sh"
 if [ "${1:-}" = --manual ]; then print_manual; exit; fi
 need_user
 
@@ -104,6 +114,33 @@ fix_apparmor_dns() {
     fi
 }
 
+# Its profile lets the browser save only in its own Downloads, and reach sound only at the
+# usual places: this lets it save in the folder you share with it, and reach its own sound
+# server, in memory. Both are this user's alone.
+BROWSER_PROFILE=/etc/apparmor.d/torbrowser.Browser.firefox
+BROWSER_LOCAL=/etc/apparmor.d/local/torbrowser.Browser.firefox
+SANDBOX_BEGIN='# >>> Wren Linux: Tor Browser as its own user >>>'
+fix_apparmor_browser() {
+    [ -f "$BROWSER_PROFILE" ] || return 0
+    if ! sudo grep -qxF "$SANDBOX_BEGIN" "$BROWSER_LOCAL" 2>/dev/null; then
+        printf '%s\n' "$SANDBOX_BEGIN" \
+            "$BROWSER_FILES/tor-browser/ rw," "$BROWSER_FILES/tor-browser/** rwk," \
+            'owner /dev/shm/tor-browser.*/run/pulse/ r,' 'owner /dev/shm/tor-browser.*/run/pulse/native rw,' \
+            "$DNS_END" | sudo tee -a "$BROWSER_LOCAL" >/dev/null
+    fi
+    if [ -d /sys/kernel/security/apparmor ]; then
+        sudo apparmor_parser -r "$BROWSER_PROFILE"
+    fi
+}
+
+unfix_apparmor_browser() {
+    [ -f "$BROWSER_LOCAL" ] || return 0
+    sudo sed -i "\\|^$SANDBOX_BEGIN\$|,\\|^$DNS_END\$|d" "$BROWSER_LOCAL"
+    if [ -f "$BROWSER_PROFILE" ] && [ -d /sys/kernel/security/apparmor ]; then
+        sudo apparmor_parser -r "$BROWSER_PROFILE" || true
+    fi
+}
+
 unfix_apparmor_dns() {
     [ -f "$TOR_LOCAL" ] || return 0
     sudo sed -i "\\|^$DNS_BEGIN\$|,\\|^$DNS_END\$|d" "$TOR_LOCAL"
@@ -114,66 +151,78 @@ unfix_apparmor_dns() {
     fi
 }
 
-# torbrowser-launcher unpacks Tor Browser here. Unpacking only adds files,
-# so a user.js written before the first download is there at first start.
-TBB="$HOME/.local/share/torbrowser/tbb/$(uname -m)/tor-browser"
-PROFILE="$TBB/Browser/TorBrowser/Data/Browser/profile.default"
-USERJS="$PROFILE/user.js"
+NAME=tor-browser
+# Where it lives. (Under /home, in the folder the launcher would use: that is where its AppArmor
+# profile attaches. It isn't confined anywhere else.)
+TB_BASE=/home/$NAME/.local/share/torbrowser/tbb/$(uname -m)
+TBB=$TB_BASE/tor-browser
+PROFILE=$TBB/Browser/TorBrowser/Data/Browser/profile.default
+USERJS=$PROFILE/user.js
+# A copy from before it had a user of its own, which ran as you
+OLD_USERJS=$HOME/.local/share/torbrowser/tbb/$(uname -m)/tor-browser/Browser/TorBrowser/Data/Browser/profile.default/user.js
 JS_BEGIN='// >>> Wren Linux extras/tor-browser.sh >>>'
 JS_END='// <<< Wren Linux <<<'
-
 OFFLINE="$OFFLINE_DIR/torbrowser"
-TBL_SETTINGS="$HOME/.config/torbrowser/settings.json"
 
-# Unpack the copy prep/fetch-tor-browser.sh saved, checked against the key it
-# saved, so torbrowser-launcher finds Tor Browser installed and just runs it
-install_offline_copy() {
+# install_browser: unpacks the newest copy prep/fetch-tor-browser.sh saved, checked against the
+# developers' key, as its user, from standard input: it can't reach your files, and nothing is
+# written as root in its home. It fetches one if there is none. Once there, it updates itself.
+install_browser() {
     local copies tarball
-    [ ! -e "$TBB/start-tor-browser.desktop" ] || return 0
+    if as_browser "$NAME" test -e "$TBB/Browser/start-tor-browser"; then
+        note "Tor Browser is there already (it updates itself, through Tor)."
+        return 0
+    fi
     copies=("$OFFLINE"/tor-browser-linux-"$(uname -m)"-*.tar.xz)
     if [ ! -f "${copies[-1]}" ]; then
-        note "No saved copy in $OFFLINE, so torbrowser-launcher will download Tor Browser."
-        return 0
+        note "Downloading Tor Browser from torproject.org, without Tor: your network can see that"
+        note "you fetched it (not what you do with it). prep/fetch-tor-browser.sh on another"
+        note "network, beforehand, saves a copy that is used instead."
+        bash "$WREN_DIR/prep/fetch-tor-browser.sh" || die "Couldn't fetch Tor Browser. Nothing was started."
+        copies=("$OFFLINE"/tor-browser-linux-"$(uname -m)"-*.tar.xz)
     fi
     tarball=$(printf '%s\n' "${copies[@]}" | sort -V | tail -1)
     verify_detached "$TB_FPR" "$OFFLINE/tor-browser-developers.asc" "$tarball.asc" "$tarball" ||
         die "The saved copy $tarball didn't pass its signature check. Run prep/fetch-tor-browser.sh again."
-    mkdir -p "$(dirname -- "$TBB")"
-    tar -xJf "$tarball" -C "$(dirname -- "$TBB")"
-    # Without a settings file the launcher doesn't look for an installed
-    # Tor Browser and downloads one; it fills in its other settings itself
-    if [ ! -f "$TBL_SETTINGS" ]; then
-        mkdir -p "$(dirname -- "$TBL_SETTINGS")"
-        echo '{"installed": true}' >"$TBL_SETTINGS"
-    fi
+    as_browser "$NAME" mkdir -p "$TB_BASE"
+    as_browser "$NAME" tar -xJ -C "$TB_BASE" <"$tarball" || die "Couldn't unpack $tarball."
     note "Installed Tor Browser from $(basename -- "$tarball"), checked against the developers' key."
 }
 
-tor_browser_running() { pgrep -f "^$TBB/Browser/firefox" >/dev/null; }
+tor_browser_running() { pgrep -u "$NAME" >/dev/null 2>&1; }
+
+# our_block: what user.js holds from an earlier run: its own, or the copy that ran as you. It
+# comes from a file a hacked browser could change, so the callers below take only what is
+# shaped as it should be.
+our_block() {
+    { as_browser "$NAME" cat "$USERJS" 2>/dev/null || cat "$OLD_USERJS" 2>/dev/null || true; } |
+        sed -n "\|^$JS_BEGIN\$|,\|^$JS_END\$|p"
+}
 
 # Our block's bridge lines, if any, from an earlier run
 current_bridges() {
-    [ -f "$USERJS" ] || return 0 # first run: nothing saved yet
-    sed -n "\|^$JS_BEGIN\$|,\|^$JS_END\$|p" "$USERJS" 2>/dev/null |
-        sed -n 's/^user_pref("torbrowser\.settings\.bridges\.bridge_strings\.[0-9]*", "\(.*\)");$/\1/p'
+    local line
+    our_block | sed -n 's/^user_pref("torbrowser\.settings\.bridges\.bridge_strings\.[0-9]*", "\(.*\)");$/\1/p' |
+        while IFS= read -r line; do
+            if [[ $line =~ ^(obfs4|webtunnel)\ [^\"\\[:cntrl:]]+$ ]]; then printf '%s\n' "$line"; fi
+        done
 }
 
 # Our block's built-in bridge type (obfs4, snowflake, meek), if any
 current_builtin() {
-    [ -f "$USERJS" ] || return 0
-    sed -n "\|^$JS_BEGIN\$|,\|^$JS_END\$|p" "$USERJS" 2>/dev/null |
-        sed -n 's/^user_pref("torbrowser\.settings\.bridges\.builtin_type", "\(.*\)");$/\1/p' | head -1
+    case $(our_block | sed -n 's/^user_pref("torbrowser\.settings\.bridges\.builtin_type", "\(.*\)");$/\1/p' | head -1) in
+        obfs4) echo obfs4 ;;
+        snowflake) echo snowflake ;;
+        meek) echo meek ;;
+    esac
 }
 
-# Safest and JavaScript off (data/tor-browser-safest.js), plus bridges
+# Safest and JavaScript off (data/tor-browser-safest.js), plus bridges. Written by its user,
+# from standard input.
 write_userjs() {
     local i tmp
-    mkdir -p "$PROFILE"
-    chmod 700 "$PROFILE"
-    tmp=$(mktemp "$PROFILE/.user.js.XXXXXX")
-    if [ -f "$USERJS" ]; then
-        sed "\|^$JS_BEGIN\$|,\|^$JS_END\$|d" "$USERJS" >"$tmp"
-    fi
+    tmp=$(mktemp)
+    as_browser "$NAME" cat "$USERJS" 2>/dev/null | sed "\|^$JS_BEGIN\$|,\|^$JS_END\$|d" >"$tmp" || true
     {
         echo "$JS_BEGIN"
         cat "$WREN_DIR/data/tor-browser-safest.js"
@@ -192,12 +241,13 @@ write_userjs() {
         esac
         echo "$JS_END"
     } >>"$tmp"
-    chmod 600 "$tmp"
-    mv "$tmp" "$USERJS"
+    # shellcheck disable=SC2016  # expanded by the inner bash, on purpose
+    as_browser "$NAME" bash -c 'umask 077; mkdir -p "$1"; cat >"$1/.user.js.wren"; mv -f "$1/.user.js.wren" "$1/user.js"' _ "$PROFILE" <"$tmp"
+    rm -f "$tmp"
     # Bridges saved earlier from the browser's settings would be used too,
     # so drop them; Tor Browser rewrites prefs.js from user.js at start.
-    if [ "$BRIDGE_TYPE" != none ] && [ -f "$PROFILE/prefs.js" ]; then
-        sed -i '/^user_pref("torbrowser\.settings\.bridges\.bridge_strings\./d' "$PROFILE/prefs.js"
+    if [ "$BRIDGE_TYPE" != none ]; then
+        as_browser "$NAME" sed -i '/^user_pref("torbrowser\.settings\.bridges\.bridge_strings\./d' "$PROFILE/prefs.js" 2>/dev/null || true
     fi
 }
 
@@ -220,30 +270,33 @@ prepare_profile() {
         pick_bridges tor-browser
     fi
     write_userjs
-    note "Tor Browser starts at the Safest level with JavaScript off ($USERJS)."
+    note "Tor Browser starts at the Safest level with JavaScript off."
     if [ "$BRIDGE_TYPE" != none ]; then
         note "Its first connection goes through a bridge: $(bridge_summary)."
     else
         note "No bridge: Tor Browser connects to Tor directly. Run this again to set one up,"
         note "or choose one in its settings before you click Connect."
     fi
-    if [ ! -e "$TBB/start-tor-browser.desktop" ]; then
-        note "Note: the first run downloads Tor Browser from torproject.org without Tor,"
-        note "so your network can see that you fetched it (not what you do with it)."
-    fi
 }
 
 if [ "${1:-}" = --remove ]; then
+    browser_remove "$NAME"
+    sudo rm -f /usr/local/bin/torbrowser-launcher
+    remove_wayland_restrict
+    remove_no_abstract
+    remove_net_check
+    unfix_apparmor_browser
     unfix_apparmor_dns
     apt_purge torbrowser-launcher
     disable_contrib
+    # The copy from before it had a user of its own
     if [ -d "$HOME/.local/share/torbrowser" ] &&
-        ask "Also delete the downloaded Tor Browser and its bookmarks (~/.local/share/torbrowser)?" n; then
+        ask "Also delete the older Tor Browser that ran as you, and its bookmarks (~/.local/share/torbrowser)?" n; then
         rm -rf "$HOME/.local/share/torbrowser" "$HOME/.cache/torbrowser" "$HOME/.config/torbrowser"
         note "Deleted."
-    elif [ -f "$USERJS" ]; then
-        sed -i "\|^$JS_BEGIN\$|,\|^$JS_END\$|d" "$USERJS"
-        note "Took the Wren Linux settings out of $USERJS; Tor Browser keeps their last values."
+    elif [ -f "$OLD_USERJS" ]; then
+        sed -i "\|^$JS_BEGIN\$|,\|^$JS_END\$|d" "$OLD_USERJS"
+        note "Took the Wren Linux settings out of $OLD_USERJS; that copy keeps their last values."
     fi
     exit
 fi
@@ -253,13 +306,43 @@ enable_contrib
 # A fresh update, so apt sees the contrib packages
 unset WREN_APT_UPDATED
 
-say "Installing torbrowser-launcher"
+say "Installing what it needs"
+# torbrowser-launcher: the AppArmor profiles; cage, xwayland: its window and private X server;
+# xclip, wl-clipboard: browser-sandbox clip; acl: sharing the socket and the folder; nftables,
+# python3: the firewall and its check, wayland-restrict; the pipewire ones: its sound server, and
+# pw-cat, the player of yours that reads its one pipe; xz-utils: unpacking it
 need_xwayland
-apt_install torbrowser-launcher xz-utils
+apt_install torbrowser-launcher xz-utils cage xclip wl-clipboard acl nftables python3 \
+    pipewire-bin pipewire-pulse wireplumber
 fix_apparmor_dns
-install_offline_copy
 
-say "Tor Browser security level and bridges"
+say "The $NAME user"
+browser_user "$NAME" "Wren Linux sandboxed Tor Browser"
+fix_apparmor_browser
+browser_files "$NAME"
+
+say "The commands"
+install_bin wayland-restrict
+install_no_abstract
+install_net_check
+browser_commands "$NAME"
+# By the name you may know it from: /usr/local/bin comes first
+sudo ln -sfn browser-sandbox /usr/local/bin/torbrowser-launcher
+browser_allow "$NAME"
+
+say "Keeping $NAME off this computer and your network"
+browser_firewall "$NAME"
+browser_clip_key
+
+say "Tor Browser"
+install_browser
+
+say "Tor Browser's security level and bridges"
 prepare_profile
-note "Run it with: torbrowser-launcher   (or Super+d)"
-note "The first run downloads Tor Browser and checks its signature."
+if [ -d "$HOME/.local/share/torbrowser/tbb" ]; then
+    note "You also have a Tor Browser that runs as you, in ~/.local/share/torbrowser: left alone, and no"
+    note "longer started by name. To keep its bookmarks, export them to a file there, and import that"
+    note "from ~/Browsers/tor-browser."
+fi
+note "Run it with: tor-browser   (or Super+d)"
+note "Text in or out: Super+Ctrl+b, which shows it first. Files: ~/Browsers/tor-browser."

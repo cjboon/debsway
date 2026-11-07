@@ -1,0 +1,151 @@
+# Handoff: read this first (notes for the next Claude working on Wren Linux)
+
+Written 2026-11-07. Remove this file, and its line at the top of CLAUDE.md, once the work below is
+done or has moved on. This file is public: **no unfixed security findings go in it, or in any commit
+or doc.** The owner has been told those in person; ask them.
+
+Greet the owner, say what you found here, and report early and often: they dislike a long silent
+read. Commit each finished small step. Lives may depend on this project: fail safe, test for real,
+say plainly what ran and what didn't.
+
+## Where the work is
+
+- `main`: what the owner reviewed and signed. Only they update it.
+- `claude`: finished, tested work, for `claude-pull`. Push only there, and only after reading a full
+  suite result, in a separate command from the test. `set -e` doesn't stop at a failing `test && x`:
+  that committed a failing fix twice, and pushed a failed suite once.
+- `claude-wip`: **unfinished and untested. Never merge it as it is, and never push it to `claude`.**
+  It holds the commits below that aren't on `claude` yet, then one commit of work in progress.
+
+To go on: `git fetch origin && git checkout -b claude-wip origin/claude-wip`. Before anything goes to
+`claude`, split that last commit by topic, each with its tests.
+
+## First things to do
+
+1. **CI is red on `main` since 50c098b** (the step running `test.sh --offline`). Its logs need a
+   login, so ask the owner for the `FAIL` lines; the API shows only which step failed. Likely cause:
+   `no-abstract-sockets --userns` gave a Python traceback where Ubuntu's AppArmor lets a user
+   namespace be made and refuses to set it up, and the test's skip didn't recognise that. Fixed in
+   9860d15 and reproduced with a lab AppArmor profile that denies `capability sys_admin`, but **not
+   confirmed**: only CI on GitHub's Ubuntu host can. Check it after pushing.
+2. Commits waiting for `claude`, oldest first, none pushed there yet unless `git log origin/claude`
+   says so:
+   - 73e74c7 bridge lines private in remote-access and onion-site
+   - bec859a the bar copes with control characters in a Wi-Fi name
+   - 9860d15 the `--userns` refusal
+   - 051921c serial log cap for VMs, and QEMU's syscall filter for the onion site
+   A full suite was running on 9860d15 in a worktree at `/tmp/wt`, log in the session scratchpad
+   (`suite-c.log`), both gone if this VM restarted: run it again. Expected here: 141 ok, the one
+   `setup-vps` failure, and one warning about Tor Browser's AppArmor DNS fix if the lab is still on
+   this VM. 051921c also needs a full run before it goes.
+3. Suggest a release when CI is green: 8d28954 (git guard) and those above are fixes people should take.
+
+## The owner's decisions, in the order to do them
+
+Each finished, tested and pushed before the next. Told to the owner in this order.
+
+1. **Tor Browser and Mullvad Browser sandboxes, with Tor as a user of its own.** See below.
+2. **A warning when updates stop arriving** (bar and `status.sh`): someone in the way can quietly hold
+   updates back for ever, and `update.sh` only says so if you run it. Wren Linux's own updates; the
+   bar already has this for Debian's (`updates()` in `bin/sway-status`). Being offline isn't a failure.
+3. **Delete the retired extras**: `grep -l '^# retired:' extras/*` (wallet-sandbox, distro-vm,
+   opencode-vm, claude-regular). `update.sh` offers each one's `--remove` to whoever still has it, so
+   leave one small way to clean up rather than strand them, and say what you did. Their tests, docs,
+   pages, firewalls, session scripts, and the lists naming them go too (`remove_no_abstract`,
+   `TOR_SERVICE_MARKS`, `FIREWALLS`, `tools/test-sandbox-net.sh`...). The browser sandbox borrowed its
+   window and clipboard design from wallet-sandbox: don't let it depend on those files.
+4. **Stop sharing `~/projects`, and remove the git guard** (`bin/git`, its test, its docs). The guard
+   checks files the agent can rewrite, and has had four bypasses. Instead the agent's work is in a
+   repository of its own, and the owner pulls from it, as with `claude-vm`. **Don't let the owner's git
+   read that repository directly**: its config and hooks are the agent's. Have the agent's user serve
+   it, through the one thing the sudo rule allows, so the owner's git sees only the protocol:
+   `git fetch --upload-pack='sudo -n -u claude-agent /usr/local/libexec/claude-session upload-pack'`
+   or similar, with the session script accepting only that. Try it for real, with a hostile repository.
+   Existing `~/projects` folders are people's work: migrate, never delete.
+5. **One shared sandbox launcher, `wren-sandbox`** (the owner let Claude pick the name). The session
+   scripts repeat the same pieces: user check, wrapper, firewall check and watch, socket folder, sound.
+   That is how a fix misses some of them. Do this last, when there is less to move: one sandbox at a
+   time, each tried for real. `docs/architecture.md` says what they have in common.
+
+Then the older list: hidepid for sandbox users (exempt what logind and polkit need; try bwrap and
+Firefox's own sandbox for real), `wrnctl` as a second name for `wrenctl` with Tab completion (a real
+command, not an alias), the test speed report (slowest: package 398 s, shellcheck 152 s, whonix cmd
+86 s), `whonix sysmaint`, the permissions part, the rest of the security review, the pentest.
+
+The owner has not decided these, which Claude recommended, and is thinking about them: a feature
+freeze until Wren has been attacked; the pentest before new work; an outside human reviewer before
+people in danger rely on it; the installer steering people at real risk to Tails or Whonix. Don't add
+other new features meanwhile.
+
+The owner also asked whether to add Anthropic's courses to the Learn bookmarks. Claude advised against
+it in the Programming folder, offered a line in the Claude pages instead, and has no answer yet.
+
+## The browser sandboxes: where they stand
+
+On `claude-wip`. **Written, and never run as a whole.**
+
+- `lib/browser-sandbox.sh`, `bin/browser-sandbox` (the command, and the clipboard),
+  `bin/browser-session` (what the owner may run as that user), `data/{tor,mullvad}-browser-firewall.nft`,
+  `extras/tor-browser.sh` (reworked), `extras/mullvad-browser-sandbox.sh` (new, beside `-regular`),
+  `tools/test-browser-sandbox.sh` (62 checks pass; registered), docs, THREAT-MODEL, key sheet, menu.
+- Facts found by real tests, don't lose them:
+  - Tor Browser's AppArmor profile attaches only under `/home/*`, so its home is `/home/tor-browser`.
+  - Under no_new_privs AppArmor refuses browser -> Tor (`px`), so Tor never starts: its session uses
+    `no-abstract-sockets --userns` (Landlock without no_new_privs; caps 0, root unmapped, sudo gives
+    nothing). Mullvad's profile is `flags=(unconfined)`: the plain wrapper.
+  - A bridge's program listens on a port the system picks, on 127.0.0.1, and Tor connects to it. A
+    plain firewall breaks every bridge. Opening those ports opens the owner's services too. The answer,
+    proven with real sockets (`fw-try.py` in `~/browser-lab`, if this VM still has it): mark that user's
+    loopback connections with `ct mark`, and reject a marked connection's answer from any other user.
+    **The rule letting answers out must say `ct direction reply`**: without it a new connection, whose
+    source port is high too, goes out unmarked to anything on this computer. That bug passed for
+    strict until it was tried. `tools/test-browser-sandbox.sh` fails 8 ways if it comes back.
+  - `no launcher window`: `torbrowser-launcher` exits after starting the browser, which would close cage.
+- **Still to do for it:**
+  1. **Tor as its own user** (owner's decision): user e.g. `tor-browser-tor` running Tor with the bridge
+     in its torrc; the browser with Tor Browser's own switches for using an outside Tor (`TOR_SKIP_LAUNCH`
+     and friends; look at how Whonix's Workstation starts it, a lab Whonix may be in
+     `~/.local/share/libvirt/images`). Then the browser's firewall: on this computer only Tor's SOCKS port,
+     **and nothing to the internet at all**, which is the point: a hacked browser has no way out but Tor.
+     Check it from the browser's user, also that its updater and New Identity still work, and what a user
+     loses (the bridge settings screen; the installer chooses bridges). Say that limit plainly. Replace the
+     lines in `docs/extras/tor-browser.md` and THREAT-MODEL that say a hacked browser can go around Tor,
+     only once that is proven.
+  2. Real install in this VM: `bash extras/tor-browser.sh`, then in a headless sway
+     (`WLR_BACKENDS=headless WLR_RENDERER=pixman`) with `grim` for pictures: the window opens; Tor
+     bootstraps, directly and through a bridge (Snowflake needs no lines); `ss` and a capture show nothing
+     but Tor leaving; the firewall from its own user (LAN, loopback); it can't read the owner's home; X0's
+     abstract socket refused; downloads reach `~/Browsers/NAME` and the owner can read them; the clipboard
+     both ways; `journalctl -k | grep -i apparmor` for denials (the rule for the folder, and for sound, were
+     written without being tried); `nft flush ruleset` ends it within seconds. The same for Mullvad.
+     `pipewire-bin`, `wl-clipboard` aren't on this VM until something installs them.
+  3. `--remove` for real; a reinstall over a kept home; an owner who already had Tor Browser as themselves.
+  4. "Tried here" lines in LIMITS saying only what ran. `tools/test-manual.sh`, `test-sandbox-net.sh`,
+     `test-wren-menu.sh`, `test-tor-service.sh`; then the full suite; split the commit; push to `claude`.
+- This VM's lab, if it survived: `~/browser-lab` (Tor Browser 15.0.25 in `tb/`, Mullvad 16.0 unpacked in
+  `deb/mb`, `mb.deb`, `tbl.deb`), user `tor-browser` made by hand, AppArmor profiles loaded by hand. The
+  user `agentx` and `/tmp/gg.*` are from a test: remove them. Prefer not fetching Tor Browser again (140 MB,
+  and the owner's network can be slow): ask before big downloads.
+
+## Done this session (on `claude`, or in the list above)
+
+- The git guard looked only at a repository and those above it, not inside it. Fixed in 8d28954.
+- Finding 2's fix had missed `remote-access` and `onion-site`. The test now covers every script that
+  writes bridge lines to the system torrc, not a list of names.
+
+## How to work here
+
+CLAUDE.md has the rules. Also learned the hard way:
+
+- Run a check, read the exit code, commit in a **separate** command. See above.
+- A test must fail on the old code: put the bug back and see. A pretend program shows only what you
+  believed the real one does; `docs/maintaining.md` says how to try things for real here.
+- One test run at a time, each under a hard `timeout`. `/tmp` is a RAM disk, wiped by a restart.
+- Never put a line that ends a here-document inside the file you're writing with one (a real `EOF` in a
+  function cut a file in half): use the Write tool for files.
+- A safety check refuses `rm` inside an inner `bash -c`. Don't work around it: don't need the removal.
+- Never turn on an input firewall in this VM. Stop lab processes by number, never a broad `pkill`.
+- The owner reads the code, and has said not to ask about implementation choices: take them and say so.
+  They want docs and scripts easy to read, for contributors. Plain words, short sentences.
+- When the session ends, the owner is owed **a full rundown of all security-relevant information**: what
+  was found, fixed and left, what ran for real and what didn't. Give it to them directly, not in a commit.

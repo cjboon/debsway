@@ -1,0 +1,173 @@
+#!/bin/bash
+# browser-sandbox: written by Wren Linux lib/browser-sandbox.sh, installed as
+# /usr/local/bin/browser-sandbox, with the names tor-browser and torbrowser-launcher
+# (extras/tor-browser.sh) and mullvad-browser (extras/mullvad-browser-sandbox.sh) linked to it.
+#   tor-browser [URL...]                 Tor Browser as its own user
+#   mullvad-browser [URL...]             Mullvad Browser as its own user
+#   browser-sandbox clip [in|out] [NAME] move one line of text in or out of an open
+#                                        browser (NAME: tor-browser or mullvad-browser)
+# Each runs as its own user, in a window system of its own, with no way to your files,
+# your screen or your other windows, and a firewall keeps it off your computer and network.
+# Nothing crosses by itself. browser-sandbox clip shows you the text first, and takes
+# one line of plain text: letters, numbers and ASCII punctuation, so no look-alike letters
+# and nothing that can steer your terminal. Files: ~/Browsers/NAME.
+# /usr/bin/torbrowser-launcher and /usr/bin/mullvad-browser, by their full path, run as you.
+set -euo pipefail
+
+die() { printf '%s: %s\n' "${0##*/}" "$*" >&2; exit 1; }
+
+SESSION=/usr/local/libexec/browser-session
+BROWSERS="tor-browser mullvad-browser"
+# One line, plain text. Long enough for a long address.
+CLIP_MAX=4096
+
+name_ok() { case ${1:-} in tor-browser | mullvad-browser) ;; *) return 1 ;; esac; }
+
+[ "$(id -u)" -ne 0 ] || die "run it as your normal user, not root."
+rt=${XDG_RUNTIME_DIR:-}
+[ -n "$rt" ] && [ -d "$rt" ] || die "XDG_RUNTIME_DIR isn't set."
+command -v flock >/dev/null || die "flock is missing (package util-linux)."
+
+# is_open NAME: its lock is held. (The only way to know: nothing else lasts.)
+is_open() {
+    local free=1
+    exec 8>"$rt/$1.lock"
+    if flock -n 8; then free=0; fi
+    exec 8>&-
+    [ "$free" = 1 ]
+}
+
+# clip_ok TEXT: at most CLIP_MAX characters of printable ASCII, on one line
+clip_ok() {
+    local LC_ALL=C
+    [ ${#1} -le "$CLIP_MAX" ] && [[ $1 =~ ^[\ -~]+$ ]]
+}
+
+clip() {
+    local way='' name='' open=() b text a
+    while [ $# -gt 0 ]; do
+        case $1 in
+            in | out) way=$1 ;;
+            *) name_ok "$1" || die "usage: browser-sandbox clip [in|out] [tor-browser|mullvad-browser]"; name=$1 ;;
+        esac
+        shift
+    done
+    command -v wl-copy >/dev/null || die "wl-copy is missing (package wl-clipboard)."
+    if [ -z "$name" ]; then
+        for b in $BROWSERS; do
+            if is_open "$b"; then open+=("$b"); fi
+        done
+        [ ${#open[@]} -gt 0 ] || die "no sandboxed browser is open."
+        [ ${#open[@]} -eq 1 ] || die "more than one is open; name one: browser-sandbox clip ${way:-in|out} NAME"
+        name=${open[0]}
+    fi
+    is_open "$name" || die "$name isn't open."
+    if [ -z "$way" ]; then
+        printf 'Into %s, from your clipboard (i), or out of %s, to your clipboard (o)? ' "$name" "$name"
+        IFS= read -r a || a=
+        case $a in
+            i | I) way=in ;;
+            o | O) way=out ;;
+            *) die "nothing was moved." ;;
+        esac
+    fi
+    if [ "$way" = in ]; then
+        text=$(wl-paste -n -t text 2>/dev/null | head -c $((CLIP_MAX + 1))) || true
+    else
+        text=$(sudo -n -u "$name" "$SESSION" clip-out 2>/dev/null | head -c $((CLIP_MAX + 1))) || true
+    fi
+    # Checked before it is shown: from a browser, it isn't to be trusted
+    [ -n "$text" ] || die "that clipboard is empty, so nothing was moved."
+    clip_ok "$text" || die "that isn't one line of plain text of at most $CLIP_MAX characters, so nothing was moved."
+    if [ "$way" = in ]; then
+        printf 'Into %s:\n\n  %s\n\nSend it? [y/N] ' "$name" "$text"
+    else
+        printf 'Out of %s:\n\n  %s\n\nCopy it to your clipboard? [y/N] ' "$name" "$text"
+    fi
+    IFS= read -r a || a=
+    [[ $a =~ ^[Yy] ]] || die "nothing was moved."
+    if [ "$way" = in ]; then
+        printf '%s' "$text" | sudo -n -u "$name" "$SESSION" clip-in || die "it didn't get there."
+    else
+        printf '%s' "$text" | wl-copy
+    fi
+    printf 'Done.\n'
+}
+
+case ${0##*/} in
+    tor-browser | torbrowser-launcher) name=tor-browser ;;
+    mullvad-browser) name=mullvad-browser ;;
+    *)
+        case ${1:-} in
+            clip) shift; clip "$@"; exit ;;
+            # A key: in a window of its own, which stays until you have read it
+            clip-window)
+                rc=0
+                ( clip ) || rc=$?
+                printf 'Press Enter to close. '
+                IFS= read -r _ || true
+                exit "$rc" ;;
+            *) die "usage: browser-sandbox clip [in|out] [tor-browser|mullvad-browser]" ;;
+        esac ;;
+esac
+
+for a in "$@"; do
+    [[ $a =~ ^https?://[^[:space:]]+$ ]] || die "only http:// and https:// addresses can be opened."
+done
+[ -n "${WAYLAND_DISPLAY:-}" ] || die "it needs your sway session; start sway first."
+case $WAYLAND_DISPLAY in
+    */*) die "WAYLAND_DISPLAY should be a plain name like wayland-1." ;;
+esac
+[ -S "$rt/$WAYLAND_DISPLAY" ] || die "can't find your Wayland socket ($rt/$WAYLAND_DISPLAY)."
+restrict=$HOME/.local/bin/wayland-restrict
+[ -x "$restrict" ] || restrict=$(command -v wayland-restrict) || die "wayland-restrict is missing. Run: wrenctl install $name"
+command -v setfacl >/dev/null || die "setfacl is missing (package acl)."
+sudo -n -u "$name" -l "$SESSION" >/dev/null 2>&1 || die "your user isn't set up to start it. Run: wrenctl install $name"
+
+exec 9>"$rt/$name.lock"
+flock -n 9 || die "it is already open."
+
+# What it is handed is in a new folder with a name nobody can guess, and passage is given
+# to that alone: never through your runtime folder, or your home.
+SHARE_ROOT=${WREN_SHARE_ROOT:-/dev/shm}
+[ -d "$SHARE_ROOT" ] || die "$SHARE_ROOT (memory) isn't available."
+# Left by a crash or a power cut (the lock above says this one isn't running)
+find "$SHARE_ROOT" -maxdepth 1 -user "$(id -un)" -name "wren-$name.*" -exec rm -rf {} + 2>/dev/null || true
+share=$(mktemp -d "$SHARE_ROOT/wren-$name.XXXXXXXX") || die "couldn't make a folder in $SHARE_ROOT."
+sock=$share/$name-wayland
+fifo=$share/$name-audio.fifo
+player=
+audio_arg=-
+
+# shellcheck disable=SC2317,SC2329  # runs from the EXIT trap
+cleanup() {
+    if [ -n "$player" ]; then kill "$player" 2>/dev/null || true; fi
+    if [ -n "${WL_PID:-}" ]; then kill "$WL_PID" 2>/dev/null || true; fi
+    rm -rf "$share"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM HUP
+
+# 9>&-: wayland-restrict must not inherit the lock. It ends when cleanup kills it, or
+# when this script dies (its standard input closes).
+coproc WL { "$restrict" "$sock" "$name" 9>&-; }
+IFS= read -r -t 10 line <&"${WL[0]}" && [ "$line" = ready ] ||
+    die "couldn't make a restricted Wayland socket (needs sway 1.9 or newer; see above)."
+setfacl -m "u:$name:--x" "$share"
+setfacl -m "u:$name:rw-" "$sock"
+
+# The sound pipe: the browser writes, a player of yours reads and plays it. Only raw
+# sound can come through it, and it hears nothing of yours.
+if command -v pw-cat >/dev/null && [ -S "$rt/pipewire-0" ]; then
+    mkfifo -m 600 "$fifo"
+    setfacl -m "u:$name:rw-" "$fifo"
+    # 9>&-: the player must not inherit the lock, or it outlives us holding it
+    ( exec pw-cat -p -a --format s16 --rate 48000 --channels 2 --media-role Movie - <"$fifo" 9>&- ) &
+    player=$!
+    audio_arg=$name-audio.fifo
+fi
+
+rc=0
+sudo -n -u "$name" "$SESSION" start "$share" "${sock##*/}" "$audio_arg" "$@" || rc=$?
+exit "$rc"

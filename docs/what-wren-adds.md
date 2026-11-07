@@ -99,7 +99,8 @@ These are extras (`wrenctl --apps`). `wrenctl manual NAME` shows each step by ha
 | `claude-vm`, `claude-code` | A coding agent in a disposable VM, or as its own user, walled off from your files |
 | `media`, `pdf-viewer`, `gimp` | Opening pictures, video and PDFs in a sandbox |
 | `yt-dlp` | A video downloader as its own locked user |
-| `tor-browser`, `whonix`, `onionshare`, `onion-site` | Tor, with bridges, checked downloads, and Tor Browser at Safest |
+| `tor-browser`, `whonix`, `onionshare`, `onion-site` | Tor, with bridges and checked downloads, and Tor Browser at Safest, as its own user |
+| `mullvad-browser-sandbox` | Mullvad Browser as its own user |
 | `mullvad-vpn` | A VPN, from Mullvad's signed repository |
 | `backup`, `vault` | Encrypted backups, and an encrypted folder that locks itself |
 | `keepassxc` | A password manager, locked at every screen lock |

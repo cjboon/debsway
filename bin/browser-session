@@ -1,0 +1,192 @@
+#!/bin/bash
+# browser-session: written by Wren Linux lib/browser-sandbox.sh
+# Runs as the user tor-browser or mullvad-browser (the browser-sandbox command starts it
+# through sudo; it is the only thing your user may run as them).
+#   start SHARE_DIR WAYLAND_DISPLAY AUDIO [URL...]   the browser, inside cage, a tiny
+#       Wayland compositor shown as one window in your sway. These browsers run on X11,
+#       where any program can read every window and key, so cage gives this one a private
+#       X server of its own, with nothing else on it.
+#   clip-in    standard input becomes the clipboard inside its window
+#   clip-out   prints the clipboard inside its window
+# The clipboard is never shared by itself: only these two, one at a time, when you ask
+# (browser-sandbox clip, which checks and shows the text).
+set -euo pipefail
+# 077: also makes XWayland's socket in /tmp/.X11-unix this user's alone
+umask 077
+export PATH=/usr/local/bin:/usr/bin:/bin
+
+die() { printf 'browser-session: %s\n' "$*" >&2; exit 1; }
+
+me=$(id -un)
+case $me in
+    # Tor Browser's AppArmor profile starts Tor under a profile of its own, which
+    # no_new_privs would refuse: see bin/no-abstract-sockets. Its profile only attaches
+    # to a browser under /home, so that is where this user's home is.
+    tor-browser) wrap=(--userns) put_back="sudo systemctl restart wren-tor-browser-firewall" ;;
+    mullvad-browser) wrap=() put_back="sudo systemctl restart wren-mullvad-browser-firewall" ;;
+    *) die "this runs as the user tor-browser or mullvad-browser; use their commands." ;;
+esac
+
+noabs=/usr/local/libexec/wren-no-abstract-sockets
+netcheck=/usr/local/libexec/wren-sandbox-net-check
+[ -x "$noabs" ] || die "$noabs is missing. Run: wrenctl install $me"
+[ -x "$netcheck" ] || die "$netcheck is missing. Run: wrenctl install $me"
+
+# Everything runs under it, from here on: XWayland's abstract socket is open to any user,
+# and Landlock is what keeps this browser from yours, and others from its own.
+# (sudo clears the environment, so your user can't set this and skip it.)
+if [ "${WREN_BROWSER_WRAPPED:-}" != 1 ]; then
+    WREN_BROWSER_WRAPPED=1 exec "$noabs" "${wrap[@]}" "$0" "$@"
+fi
+
+home=$(getent passwd "$me" | cut -d: -f6) || true
+[ "$home" = "/home/$me" ] || die "unexpected home folder for $me."
+
+# browser_display: its private X server, which its session wrote down. A hacked browser
+# can change that file, but this runs as the same user, so all it could do is lose the text.
+browser_display() {
+    local base d
+    base=$(find /dev/shm -maxdepth 1 -uid "$(id -u)" -name "$me.*" -print -quit)
+    [ -n "$base" ] || die "it isn't open."
+    d=$(head -c 16 "$base/run/display" 2>/dev/null) || die "its window isn't ready yet."
+    [[ $d =~ ^:[0-9]+$ ]] || die "its window isn't ready yet."
+    printf '%s' "$d"
+}
+
+cmd=${1:-}
+[ $# -eq 0 ] || shift
+case $cmd in
+    clip-in)
+        # xclip stays in the background holding the text, until the browser copies
+        # something else or its X server closes
+        DISPLAY=$(browser_display) xclip -selection clipboard -in >/dev/null 2>&1
+        exit ;;
+    clip-out)
+        DISPLAY=$(browser_display) timeout 5 xclip -selection clipboard -out
+        exit ;;
+    start) ;;
+    *) die "usage: browser-session start SHARE_DIR WAYLAND_DISPLAY AUDIO [URL...] | clip-in | clip-out" ;;
+esac
+
+"$netcheck" || die "the firewall that keeps it off your network isn't active, so it wasn't started. Run: $put_back"
+
+[ $# -ge 3 ] || die "usage: browser-session start SHARE_DIR WAYLAND_DISPLAY AUDIO [URL...]"
+host_dir=$1 host_wl=$2 audio=$3
+shift 3
+# These come from the user who called us, so nothing else is accepted
+[[ $host_dir =~ ^/dev/shm/wren-$me\.[A-Za-z0-9]+$ ]] || die "unexpected socket folder."
+[[ $host_wl =~ ^[A-Za-z0-9._-]+$ ]] || die "unexpected Wayland display name."
+[ -S "$host_dir/$host_wl" ] || die "can't reach the Wayland socket."
+[[ $audio == - || $audio == "$me-audio.fifo" ]] || die "unexpected sound pipe name."
+for a in "$@"; do
+    [[ $a =~ ^https?://[^[:space:]]+$ ]] || die "only http:// and https:// addresses can be opened."
+done
+if [ "$audio" != - ]; then
+    [ -p "$host_dir/$audio" ] || audio=-
+    for c in pipewire wireplumber pipewire-pulse; do
+        command -v "$c" >/dev/null || audio=-
+    done
+fi
+
+# Where it saves: the folder you share with it (~/Browsers/NAME on your side). Each browser looks
+# in its own Downloads, which is a link to that.
+files=/var/lib/wren-browsers/$me
+case $me in
+    tor-browser)
+        browser_dir=$home/.local/share/torbrowser/tbb/$(uname -m)/tor-browser/Browser
+        start_app=$browser_dir/start-tor-browser
+        [ -x "$start_app" ] || die "Tor Browser isn't here. Run: wrenctl install tor-browser"
+        downloads=$browser_dir/Downloads ;;
+    mullvad-browser)
+        start_app=/usr/lib/mullvad-browser/start-mullvad-browser
+        [ -x "$start_app" ] || die "Mullvad Browser isn't here. Run: wrenctl install mullvad-browser-sandbox"
+        downloads=$home/Downloads ;;
+esac
+[ -d "$files" ] || die "$files is missing. Run: wrenctl install $me"
+# (a real folder is left as it is if it has anything in it: those are its files)
+if [ ! -L "$downloads" ] && [ -d "$downloads" ]; then rmdir -- "$downloads" 2>/dev/null || true; fi
+if [ -L "$downloads" ] || [ ! -e "$downloads" ]; then ln -sfn "$files" "$downloads"; fi
+
+# share_files: what it saved, readable by you and nobody else. You are named in the folder's
+# default ACL, but a named user's entry counts only as far as the file's mask allows, and a
+# download saved as private (600) gets an empty mask. Only files this user owns, straight in
+# that folder. (As firefox-session's share_downloads.)
+share_files() {
+    find "$files" -maxdepth 1 -type f -user "$me" \( ! -perm -g=r -o -perm /g=x,o=rwx \) \
+        -exec setfacl -m g::-,o::-,m::rw {} + 2>/dev/null || true
+}
+
+[ -d /dev/shm ] || die "/dev/shm (memory) isn't available."
+# Left behind by a crash or a power cut (the browser-sandbox command allows one at a time)
+find /dev/shm -maxdepth 1 -name "$me.*" -uid "$(id -u)" -exec rm -rf {} + 2>/dev/null || true
+base=$(mktemp -d "/dev/shm/$me.XXXXXXXX")
+mkdir "$base/run" "$base/config"
+pid='' sharer=''
+
+cleanup() {
+    trap - EXIT INT TERM HUP
+    [ -z "$sharer" ] || kill "$sharer" 2>/dev/null || true
+    share_files
+    if [ -n "$pid" ]; then
+        kill -TERM -- "-$pid" 2>/dev/null || true
+        sleep 2
+        kill -KILL -- "-$pid" 2>/dev/null || true
+    fi
+    rm -rf "$base"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM HUP
+
+# Its own sound server, whose only output is a pipe into your user's player: no sound
+# cards and no microphone to reach (as in incognito)
+if [ "$audio" != - ]; then
+    mkdir -p "$base/config/pipewire/pipewire.conf.d"
+    cat >"$base/config/pipewire/pipewire.conf.d/10-wren.conf" <<EOT
+context.modules = [
+  { name = libpipewire-module-pipe-tunnel
+    args = {
+      tunnel.mode = sink
+      pipe.filename = "$host_dir/$audio"
+      audio.format = S16LE
+      audio.rate = 48000
+      audio.channels = 2
+      audio.position = [ FL FR ]
+      node.name = $me-out
+      node.description = "$me"
+    }
+  }
+]
+EOT
+fi
+
+# One session: the sound server (if any), then cage, with the browser in it. Closing it
+# all is one signal to the group. The browser connects only to cage's X server.
+# shellcheck disable=SC2016  # expanded by the inner bash, on purpose
+start='
+    waitfor() { for _ in $(seq 50); do [ -S "$1" ] && return 0; sleep 0.1; done; return 1; }
+    if [ -n "$BROWSER_AUDIO" ]; then
+        XDG_CONFIG_HOME=$BROWSER_CONFIG pipewire &
+        if waitfor "$XDG_RUNTIME_DIR/pipewire-0"; then
+            XDG_CONFIG_HOME=$BROWSER_CONFIG wireplumber -p policy &
+            XDG_CONFIG_HOME=$BROWSER_CONFIG pipewire-pulse &
+            waitfor "$XDG_RUNTIME_DIR/pulse/native" || true
+        fi
+    fi
+    exec cage -d -- bash -c "printf %s \"\$DISPLAY\" >\"\$XDG_RUNTIME_DIR/display\"; exec \"\$@\"" browser-start "$@"'
+cd "$home"
+setsid env -i \
+    PATH="$PATH" LANG=C.UTF-8 WREN_BROWSER_WRAPPED=1 \
+    HOME="$home" XDG_RUNTIME_DIR="$base/run" BROWSER_CONFIG="$base/config" \
+    BROWSER_AUDIO="$([ "$audio" != - ] && echo 1)" PULSE_SERVER="unix:$base/run/pulse/native" \
+    WAYLAND_DISPLAY="$host_dir/$host_wl" WLR_BACKENDS=wayland WLR_RENDERER=pixman \
+    GDK_BACKEND=x11 MOZ_ENABLE_WAYLAND=0 LIBGL_ALWAYS_SOFTWARE=1 GTK_USE_PORTAL=0 \
+    DBUS_SESSION_BUS_ADDRESS=disabled: \
+    bash -c "$start" browser-session "$start_app" "$@" &
+pid=$!
+"$netcheck" --watch "$pid" &
+# What it saves becomes readable for you as it lands, and what it saved earlier too
+share_files
+while kill -0 "$pid" 2>/dev/null; do sleep 2; share_files; done &
+sharer=$!
+wait "$pid" || true

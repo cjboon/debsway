@@ -1,0 +1,32 @@
+# Keeps the sandboxed Mullvad Browser's user (mullvad-browser) off your computer and your
+# local network (Wren Linux extras/mullvad-browser-sandbox.sh). Only its traffic is touched.
+# A hacked page can still reach the internet, through your VPN if one is connected.
+# DNS goes only to the resolver this computer uses (parts/sandbox-dns.sh).
+
+table inet wren_mullvad_browser
+delete table inet wren_mullvad_browser
+
+table inet wren_mullvad_browser {
+    # The resolver this computer uses, kept up to date by wren-sandbox-dns
+    set resolvers {
+        type ipv4_addr
+    }
+    chain output {
+        type filter hook output priority 0; policy accept;
+        meta skuid "mullvad-browser" jump mullvad_browser
+    }
+
+    chain mullvad_browser {
+        ip daddr @resolvers udp dport 53 accept
+        ip daddr @resolvers tcp dport 53 accept
+        # Anything addressed to this computer itself goes out through "lo"
+        # (admin-prohibited: how bin/sandbox-net-check tells this from a closed port)
+        oifname "lo" reject with icmpx admin-prohibited
+        ip daddr { 0.0.0.0/8, 10.0.0.0/8, 100.64.0.0/10, 127.0.0.0/8,
+                   169.254.0.0/16, 172.16.0.0/12, 192.168.0.0/16,
+                   224.0.0.0/4, 255.255.255.255 } reject
+        # No IPv6 at all: on a network with global addresses, the router and other
+        # computers have addresses no fixed rule can tell from the internet's
+        meta nfproto ipv6 reject
+    }
+}

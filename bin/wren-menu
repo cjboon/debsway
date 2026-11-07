@@ -240,7 +240,7 @@ RADIOS=$HOME/.local/bin/radios
 # web_browser: the browser links open in (mimeapps.list), or the first one
 # installed; text_editor: Mousepad, if installed. Each prints its command, or nothing.
 # (WREN_MENU_BROWSERS and WREN_MENU_EDITORS: a test's own lists)
-BROWSERS=${WREN_MENU_BROWSERS-/usr/local/bin/firefox /usr/bin/firefox-esr /usr/bin/mullvad-browser}
+BROWSERS=${WREN_MENU_BROWSERS-/usr/local/bin/firefox /usr/bin/firefox-esr /usr/local/bin/mullvad-browser /usr/bin/mullvad-browser}
 EDITORS=${WREN_MENU_EDITORS-$HOME/.local/bin/mousepad /usr/bin/mousepad}
 web_browser() {
     local app c
@@ -261,7 +261,7 @@ text_editor() {
 }
 # app NAME...: the first of these commands that is installed, from APPS (where
 # Wren Linux and Debian put them; WREN_MENU_APPS: a test's own list)
-APPS=${WREN_MENU_APPS-/usr/bin/torbrowser-launcher $HOME/.local/bin/whonix $HOME/.local/bin/gimp $HOME/.local/bin/sparrow $HOME/.local/bin/feather /usr/bin/electrum /usr/bin/thunar /usr/bin/keepassxc /usr/bin/signal-desktop $HOME/.local/bin/simplex $HOME/.local/bin/claude $HOME/.local/bin/opencode-vm $HOME/.local/bin/vault $HOME/.local/bin/backup $HOME/.local/bin/wren-autostart $HOME/.local/bin/theme $HOME/.local/bin/secure-dns /usr/local/bin/wifi-signin}
+APPS=${WREN_MENU_APPS-/usr/local/bin/tor-browser /usr/bin/torbrowser-launcher $HOME/.local/bin/whonix $HOME/.local/bin/gimp $HOME/.local/bin/sparrow $HOME/.local/bin/feather /usr/bin/electrum /usr/bin/thunar /usr/bin/keepassxc /usr/bin/signal-desktop $HOME/.local/bin/simplex $HOME/.local/bin/claude $HOME/.local/bin/opencode-vm $HOME/.local/bin/vault $HOME/.local/bin/backup $HOME/.local/bin/wren-autostart $HOME/.local/bin/theme $HOME/.local/bin/secure-dns /usr/local/bin/wifi-signin}
 app() {
     local want c
     for want; do
@@ -284,7 +284,7 @@ if [ -n "${SWAYSOCK:-}" ] && command -v swaymsg >/dev/null; then
     BROWSER=$(web_browser) EDITOR_CMD=$(text_editor)
     FILES_CMD=$(app thunar) PASSWORDS_CMD=$(app keepassxc) CLAUDE_CMD=$(claude_cmd)
     SIGNAL_CMD=$(app signal-desktop) SIMPLEX_CMD=$(app simplex) OPENCODE_CMD=$(app opencode-vm)
-    TOR_CMD=$(app torbrowser-launcher) WHONIX_CMD=$(app whonix) GIMP_CMD=$(app gimp)
+    TOR_CMD=$(app tor-browser torbrowser-launcher) WHONIX_CMD=$(app whonix) GIMP_CMD=$(app gimp)
     SPARROW_CMD=$(app sparrow) FEATHER_CMD=$(app feather) ELECTRUM_CMD=$(app electrum)
     # A throwaway window for a Wi-Fi sign-in page (it switches secure DNS off
     # while it is open, and on again after)
