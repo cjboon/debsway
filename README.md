@@ -25,6 +25,7 @@ No desktop environment, display manager, tray or settings app: one compositor an
 To learn:
 
 - [What Debian is, and why Wren Linux is based on it](docs/what-is-debian.md), and [its history](docs/history-of-debian.md)
+- [What free and open source software is, and what it has built](docs/what-is-foss.md)
 - [GPG in plain words](docs/gpg.md)
 - [What an onion site is](docs/what-is-an-onion-site.md), and [a short history of Tor](docs/history-of-tor.md)
 - [What Monero is](docs/what-is-monero.md)
