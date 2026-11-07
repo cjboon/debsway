@@ -119,6 +119,40 @@ check "charged, then down to 15% again: it warns again" test "$(count 'Battery l
 kill "$barpid" 2>/dev/null
 wait 2>/dev/null
 
+# A clean shutdown at 3%, after a last chance to plug in
+printf '#!/bin/sh\necho "$*" >>"%s/systemctl"\n' "$T" >"$T/bin/systemctl"
+chmod +x "$T/bin/systemctl"
+battery 5 Discharging
+check "5%: it says it will shut down at 3%" grep -q 'bat 5% - shuts down cleanly at 3%, plug in now' <<<"$(run --tmux)"
+battery 80 Discharging
+export WREN_BATTERY_SHUTDOWN_WAIT=3
+: >"$T/notified"; rm -f "$T/systemctl"
+env HOME="$T/home" XDG_RUNTIME_DIR="$T/run" WREN_POWER_DIR="$T/power" PATH="$T/bin:$PATH" sh "$S" >"$T/out" 2>&1 </dev/null &
+i=0
+while [ "$i" -lt 50 ] && [ ! -s "$T/run/sway-status.pid" ]; do /bin/sleep 0.1; i=$((i + 1)); done
+barpid=$(cat "$T/run/sway-status.pid")
+/bin/sleep 1
+battery 4 Discharging; redraw
+check "4%: no shutdown" test ! -e "$T/systemctl"
+battery 3 Discharging; redraw
+check "3%: a warning first, not a shutdown" bash -c 'grep -q "Shutting down soon" "$1" && [ ! -e "$2" ]' _ "$T/notified" "$T/systemctl"
+check "...the bar says so" grep -q 'shutting down, plug in now' "$T/out"
+battery 3 Charging; redraw; /bin/sleep 3; redraw
+check "plugged in within the minute: called off" test ! -e "$T/systemctl"
+battery 2 Discharging; redraw; /bin/sleep 3.5; redraw
+check "left on the battery: a clean power off" grep -qx poweroff "$T/systemctl"
+kill "$barpid" 2>/dev/null
+wait 2>/dev/null
+rm -f "$T/systemctl"
+mkdir -p "$T/home/.config/wren"; touch "$T/home/.config/wren/no-battery-shutdown"
+env HOME="$T/home" XDG_RUNTIME_DIR="$T/run" WREN_POWER_DIR="$T/power" PATH="$T/bin:$PATH" sh "$S" >/dev/null 2>&1 </dev/null &
+/bin/sleep 5
+kill "$(cat "$T/run/sway-status.pid")" 2>/dev/null
+wait 2>/dev/null
+check "with no-battery-shutdown in your settings: it stays on" test ! -e "$T/systemctl"
+rm -f "$T/home/.config/wren/no-battery-shutdown"
+unset WREN_BATTERY_SHUTDOWN_WAIT
+
 # Memory: the same two levels, shown only then, with the battery plain
 mem() { printf 'MemTotal: 10000 kB\nMemAvailable: %s kB\n' "$1" >"$T/meminfo"; }
 bar_ram() { python3 -I -c '

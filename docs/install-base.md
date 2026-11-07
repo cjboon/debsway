@@ -59,7 +59,8 @@ the screen lock and sudo still ask for yours. On a disk that isn't encrypted it 
   Apps, Wi-Fi, Settings, System and Power, and Help
 - your Wi-Fi name
 - volume and brightness, which you can scroll
-- a battery you can click for the time left
+- a battery you can click for the time left, which warns at 15% and 5%, and shuts down cleanly at 3%
+  (a file `~/.config/wren/no-battery-shutdown` stops that)
 
 **The key cheat sheet:** `Super+?`, the `keys` command, or `~/KEYS.txt` (a link to the one copy).
 The first time sway starts, it asks whether sway's shortcuts use Super, the Windows key, or Alt.

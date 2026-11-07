@@ -2,7 +2,7 @@
 # Status line for swaybar: Wren Menu (click: the menu) | wifi (click: nmtui) | dns OFF (only while
 # secure DNS is off; click: on) | volume (scroll: louder/quieter,
 # click: mute) | brightness (scroll) | battery (click: time left; yellow at 15%, flashing red at
-# 5%, with a notification at each) | next timer | date. Only while they're so: mem low, ssh login,
+# 5%, with a notification at each, and a clean shutdown at 3%) | next timer | date. Only while they're so: mem low, ssh login,
 # mic ON, cam ON, reboot needed, disk full, vault open.
 # (click on the time or a timer: the timer menu; the format is set by `timer clock`)
 # Written by Wren Linux install-base.sh. Each part only shows when this
@@ -198,7 +198,26 @@ battery_level() {
 
 # battery_block [off]: the battery in the bar: yellow when low, red when critical (off: the
 # moment of a flash without the red). Backgrounds, so that it reads on either theme.
-battery_block() { level_block bat "$(battery)" "$(battery_level)" "${1:-}"; }
+battery_block() {
+    bb_level=$(battery_level)
+    if [ "$bb_level" = critical ]; then
+        if [ "$(battery_shutting_down)" = yes ]; then bb_say=" - shutting down, plug in now"; else bb_say=" - shuts down cleanly at 3%, plug in now"; fi
+    else
+        bb_say=
+    fi
+    level_block bat "$(battery)$bb_say" "$bb_level" "${1:-}"
+}
+# battery_shutting_down: yes at 3% or less on the battery. A clean shutdown beats the power
+# just going: programs get to clean up after themselves, and VMs' disks to close.
+# ~/.config/wren/no-battery-shutdown turns it off.
+battery_shutting_down() {
+    [ "$(battery_level)" = critical ] && [ ! -e "$HOME/.config/wren/no-battery-shutdown" ] || return 0
+    for b in "$POWER"/BAT*; do
+        [ -r "$b/capacity" ] || continue
+        if [ "$(cat "$b/capacity")" -le 3 ] 2>/dev/null; then echo yes; fi
+        return 0
+    done
+}
 # ram_level: low under 15% of memory left, critical under 5% (programs start being killed
 # not far below that). ram_block: nothing at all while there's enough.
 MEMINFO=${WREN_MEMINFO:-/proc/meminfo}
@@ -346,7 +365,7 @@ trap 'kill $reader 2>/dev/null; rm -f "$PIDFILE"' EXIT
 
 echo '{"version":1,"click_events":true}'
 echo '['
-dns_was='' startup_was='' updates_was='' battery_was='' ram_was='' ssh_was='' mic_was='' cam_was=''
+dns_was='' startup_was='' updates_was='' battery_was='' ram_was='' ssh_was='' mic_was='' cam_was='' shutdown_at=''
 while :; do
     updates_now=$(updates)
     if [ -n "$updates_now" ] && [ -z "$updates_was" ] && command -v notify-send >/dev/null; then
@@ -372,6 +391,17 @@ while :; do
             :low) notify-send -a wren "Battery low" "$(battery | sed 's/^bat //'). Plug it in soon." 2>/dev/null ;;
             *:critical) notify-send -a wren -u critical "Battery very low" "$(battery | sed 's/^bat //'). Save your work and plug it in now." 2>/dev/null ;;
         esac
+    fi
+    # At 3%, a last minute to plug in; plugged in, it is called off. (One odd reading won't do it.)
+    if [ "$(battery_shutting_down)" = yes ]; then
+        if [ -z "$shutdown_at" ]; then
+            shutdown_at=$(($(date +%s) + ${WREN_BATTERY_SHUTDOWN_WAIT:-60}))
+            command -v notify-send >/dev/null && notify-send -a wren -u critical "Shutting down soon" "The battery is at 3%: this computer shuts down cleanly in a minute. Plug it in to stop that, and save your work." 2>/dev/null
+        elif [ "$(date +%s)" -ge "$shutdown_at" ]; then
+            systemctl poweroff
+        fi
+    else
+        shutdown_at=
     fi
     # (from critical up to low, say with a charge cut short, it doesn't warn again until it has charged)
     if [ "$battery_was" != critical ] || [ "$battery_now" != low ]; then battery_was=$battery_now; fi
