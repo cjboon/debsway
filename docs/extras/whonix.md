@@ -123,8 +123,12 @@ the new card; `--bridges` then sets the DNS for the bridge you choose.
   start afterwards stayed up and ran no update, and the saved settings hadn't changed. The windows
   opened and closed in a real sway with no screen, and closing the terminal didn't stop the update.
 
-  Not tried: a real screen and keyboard, a bridge during an update, a real power cut (only stopped
-  by force in a test with pretend programs), a bad signature on a real download.
+  Tried on a real computer, with a real screen and a webtunnel bridge: a first update whose Tor Browser
+  download was cut off put the old browser back whole, with a bookmark and a download; the next one
+  took Tor Browser from 15 to 16 with both still there and Safest on, and `whonix stop` then asked nothing.
+
+  Not tried: a real power cut (only stopped by force in a test with pretend programs), a bad signature
+  on a real download.
 - An update doesn't clean a VM that is already hacked: something running as root inside it could
   fake the result, or undo the update. What a VM says only decides whether the reminder stays.
 - `whonix update` connects to Tor, as Whonix does: your network sees that as it sees any start of
@@ -151,9 +155,8 @@ the new card; `--bridges` then sets the DNS for the bridge you choose.
   `--bridges` asks you to start the Gateway once and shut it down from inside first, so its journal
   is replayed.
 - The Gateway's own network was tried here with Whonix 18.2.4.2 under passt (its outside card is
-  eth0, Tor reaches its relays), and Snowflake through it connected on a real install. webtunnel was
-  tried here only up to lyrebird starting and looking up a bridge's address: a real webtunnel bridge
-  (from bridges.torproject.org) is yours to try.
+  eth0, Tor reaches its relays), and Snowflake and a real webtunnel bridge through it connected on a
+  real install.
 
 ## MANUAL INSTALL
 
